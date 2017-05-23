@@ -31,7 +31,6 @@ import Haskus.Format.Binary.Get
 import Haskus.Format.Binary.Put
 import Haskus.Format.Binary.Enum
 import Haskus.Format.Binary.Ptr
-import Haskus.Format.Binary.Bits ((.|.), shiftL)
 import Haskus.Format.Binary.Storable
 import Haskus.Format.Binary.Word
 
@@ -49,7 +48,7 @@ instance CEnum Endianness
 data WordGetters = WordGetters
    { wordGetter8  :: Get Word8   -- ^ Read a Word8
    , wordGetter16 :: Get Word16  -- ^ Read a Word16
-   , wordGetter32 :: Get Word32  -- ^ Read a Word132
+   , wordGetter32 :: Get Word32  -- ^ Read a Word32
    , wordGetter64 :: Get Word64  -- ^ Read a Word64
    }
 
@@ -57,7 +56,7 @@ data WordGetters = WordGetters
 data WordPutters = WordPutters
    { wordPutter8  :: Word8  -> Put -- ^ Write a Word8
    , wordPutter16 :: Word16 -> Put -- ^ Write a Word16
-   , wordPutter32 :: Word32 -> Put -- ^ Write a Word132
+   , wordPutter32 :: Word32 -> Put -- ^ Write a Word32
    , wordPutter64 :: Word64 -> Put -- ^ Write a Word64
    }
 
@@ -85,7 +84,7 @@ data WordSize
 data ExtendedWordGetters = ExtendedWordGetters
    { extwordGetter8  :: Get Word8   -- ^ Read a Word8
    , extwordGetter16 :: Get Word16  -- ^ Read a Word16
-   , extwordGetter32 :: Get Word32  -- ^ Read a Word132
+   , extwordGetter32 :: Get Word32  -- ^ Read a Word32
    , extwordGetter64 :: Get Word64  -- ^ Read a Word64
    , extwordGetterN  :: Get Word64  -- ^ Read a native size word into a Word64
    }
@@ -94,7 +93,7 @@ data ExtendedWordGetters = ExtendedWordGetters
 data ExtendedWordPutters = ExtendedWordPutters
    { extwordPutter8  :: Word8  -> Put -- ^ Write a Word8
    , extwordPutter16 :: Word16 -> Put -- ^ Write a Word16
-   , extwordPutter32 :: Word32 -> Put -- ^ Write a Word132
+   , extwordPutter32 :: Word32 -> Put -- ^ Write a Word32
    , extwordPutter64 :: Word64 -> Put -- ^ Write a Word64
    , extwordPutterN  :: Word64 -> Put -- ^ Write a Word64 into a native size word
    }
@@ -122,11 +121,12 @@ getExtendedWordPutters endian ws = ExtendedWordPutters pw8 pw16 pw32 pw64 pwN
 -- | Detect the endianness of the host memory
 getHostEndianness :: IO Endianness
 getHostEndianness = do
-   -- Write a 32 bit Int and check byte ordering
-   let magic = 1 .|. shiftL 8 2 .|. shiftL 16 3 .|. shiftL 24 4 :: Word32
+   -- Write a 32 bit word and check byte ordering
+   let magic = 0x01020304 :: Word32
    alloca $ \p -> do
       poke p magic
       rs <- peekArray 4 (castPtr p :: Ptr Word8)
+      print (show rs)
       return $ if rs == [1,2,3,4] then BigEndian else LittleEndian
 
 -- | Detected host endianness
@@ -174,13 +174,17 @@ instance ByteReversable Word64 where
 
 
 -- | Force a data to be read/stored as big-endian
-newtype AsBigEndian a    = AsBigEndian a    deriving (Eq,Ord,Enum,Num,Integral,Real)
+newtype AsBigEndian a
+   = AsBigEndian a
+   deriving (Eq,Ord,Enum,Num,Integral,Real)
 
 instance Show a => Show (AsBigEndian a) where
    show (AsBigEndian a) = show a
 
 -- | Force a data to be read/stored as little-endian
-newtype AsLittleEndian a = AsLittleEndian a deriving (Eq,Ord,Enum,Num,Integral,Real)
+newtype AsLittleEndian a
+   = AsLittleEndian a
+   deriving (Eq,Ord,Enum,Num,Integral,Real)
 
 instance Show a => Show (AsLittleEndian a) where
    show (AsLittleEndian a) = show a
