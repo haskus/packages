@@ -13,7 +13,7 @@
 --
 -- Unions are storable and can contain any storable data.
 -- 
--- Use 'fromUnion' to read a alternative:
+-- Use 'fromUnion' to read an alternative:
 --
 -- @
 -- {-# LANGUAGE DataKinds #-}
@@ -34,12 +34,13 @@
 -- @
 --
 -- Use 'toUnion' to create a new union:
--- @
 --
+-- @
 -- let
 --    u2 :: Union '[Word32, Vector 4 Word8]
 --    u2 = toUnion (0x12345678 :: Word32)
 -- @
+--
 module Haskus.Format.Binary.Union
    ( Union
    , fromUnion
