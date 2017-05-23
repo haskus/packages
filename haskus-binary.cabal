@@ -1,0 +1,101 @@
+name:                haskus-binary
+version:             0.6.0.0
+synopsis:            Haskus binary format manipulation
+license:             BSD3
+license-file:        LICENSE
+author:              Sylvain Henry
+maintainer:          sylvain@haskus.fr
+homepage:            http://www.haskus.org/system
+copyright:           Sylvain Henry 2017
+category:            System
+build-type:          Simple
+cabal-version:       >=1.20
+
+description:
+   A set of types and tools to manipulate binary data, memory, etc. In
+   particular to interface Haskell data types with foreign data types (C
+   structs, unions, enums, etc.).
+
+source-repository head
+  type: git
+  location: git://github.com/haskus/haskus-binary.git
+
+library
+  exposed-modules:
+
+    Haskus.Format.Binary.Bits
+    Haskus.Format.Binary.Bits.Basic
+    Haskus.Format.Binary.Bits.Reverse
+    Haskus.Format.Binary.Bits.Order
+    Haskus.Format.Binary.Bits.Get
+    Haskus.Format.Binary.Bits.Put
+
+    Haskus.Format.Binary.BitSet
+    Haskus.Format.Binary.BitField
+    Haskus.Format.Binary.Buffer
+    Haskus.Format.Binary.BufferList
+    Haskus.Format.Binary.BufferBuilder
+    Haskus.Format.Binary.Enum
+    Haskus.Format.Binary.Endianness
+    Haskus.Format.Binary.FixedPoint
+    Haskus.Format.Binary.Get
+    Haskus.Format.Binary.Put
+    Haskus.Format.Binary.VariableLength
+    Haskus.Format.Binary.Vector
+    Haskus.Format.Binary.Union
+    Haskus.Format.Binary.Unum
+    Haskus.Format.Binary.Record
+    Haskus.Format.Binary.Storable
+    Haskus.Format.Binary.Word
+    Haskus.Format.Binary.Ptr
+
+    Haskus.Format.Binary.Layout
+
+    Haskus.Utils.Memory
+
+  other-modules:
+
+  build-depends:       
+         base                      >= 4.9 && < 4.10
+      ,  haskus-utils              >= 0.6
+      ,  cereal                    >= 0.5
+      ,  bytestring                >= 0.10
+      ,  mtl                       >= 2.2
+
+  build-tools: 
+  ghc-options:          -Wall
+  default-language:     Haskell2010
+  hs-source-dirs:       src/lib
+
+test-suite tests
+   type:                exitcode-stdio-1.0
+   main-is:             Main.hs
+   hs-source-dirs:      src/tests/
+   ghc-options:         -O2 -Wall -threaded
+   default-language:    Haskell2010
+   other-modules:
+         Haskus.Tests.Format.Binary
+      ,  Haskus.Tests.Common
+      ,  Haskus.Tests.Format.Binary.Bits
+      ,  Haskus.Tests.Format.Binary.GetPut
+      ,  Haskus.Tests.Format.Binary.Vector
+
+   build-depends:    
+         base
+      ,  haskus-binary
+      ,  haskus-utils
+      ,  tasty                   >= 0.11
+      ,  tasty-quickcheck        >= 0.8
+      ,  QuickCheck              >= 2.8
+      ,  bytestring
+
+Benchmark bench-BitReverse
+   type:               exitcode-stdio-1.0
+   main-is:            BitReverse.hs
+   hs-source-dirs:     src/bench
+   ghc-options:         -Wall -threaded -O3
+   default-language:     Haskell2010
+   build-depends:
+         base
+      ,  haskus-binary
+      ,  criterion
