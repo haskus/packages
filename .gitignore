@@ -1,0 +1,14 @@
+dist
+*.swp
+*.out
+*.log
+*.aux
+*.toc
+*.pdf
+*.swo
+*.swn
+*.o
+*.hi
+cabal.sandbox.config
+.cabal-sandbox
+.stack-work

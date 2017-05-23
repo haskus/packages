@@ -1,0 +1,19 @@
+resolver: lts-8.15
+packages:
+- '.'
+
+#extra-deps: []
+
+#flags: []
+
+#extra-package-dbs: []
+
+# ghc-options:
+
+# Allow a newer minor version of GHC than the snapshot specifies
+# compiler-check: newer-minor
+#
+# To test with GHC head, uncomment this and add "ghc-stage2" aliased as "ghc" in
+# the PATH
+#compiler: ghc-8.0.1.20161117
+#system-ghc: true

@@ -1,0 +1,83 @@
+name:                haskus-utils
+version:             0.6.0.0
+synopsis:            Haskus utility modules
+license:             BSD3
+license-file:        LICENSE
+author:              Sylvain Henry
+maintainer:          sylvain@haskus.fr
+homepage:            http://www.haskus.org/system
+copyright:           Sylvain Henry 2017
+category:            System
+build-type:          Simple
+cabal-version:       >=1.20
+
+description:
+   Various utility modules used by Haskus packages.
+
+source-repository head
+  type: git
+  location: git://github.com/haskus/haskus-utils.git
+
+library
+  exposed-modules:
+    Haskus.Utils.ContFlow
+    Haskus.Utils.Variant
+    Haskus.Utils.Monad
+    Haskus.Utils.Parser
+    Haskus.Utils.HArray
+    Haskus.Utils.Flow
+    Haskus.Utils.MultiState
+    Haskus.Utils.HList
+    Haskus.Utils.Embed
+    Haskus.Utils.List
+    Haskus.Utils.Map
+    Haskus.Utils.Maybe
+    Haskus.Utils.Types
+    Haskus.Utils.Types.List
+    Haskus.Utils.Types.Generics
+    Haskus.Utils.STM
+    Haskus.Utils.STM.TEq
+    Haskus.Utils.STM.TMap
+    Haskus.Utils.STM.TSet
+    Haskus.Utils.STM.TList
+    Haskus.Utils.STM.TTree
+    Haskus.Utils.STM.Future
+    Haskus.Utils.STM.TGraph
+    Haskus.Utils.Tuple
+
+  other-modules:
+
+  build-depends:       
+         base                      >= 4.8
+      ,  containers                >= 0.5
+      ,  list-t                    >= 0.4
+      ,  stm                       >= 2.4
+      ,  stm-containers            >= 0.2
+      ,  vector                    >= 0.11
+      ,  transformers              >= 0.4
+      ,  mtl                       >= 2.2
+      ,  template-haskell          >= 2.10
+      ,  file-embed                >= 0.0.10
+      ,  extra                     >= 1.4
+
+  build-tools: 
+  ghc-options:          -Wall -O2
+  default-language:     Haskell2010
+  hs-source-dirs:       src/lib
+
+test-suite tests
+   type:                exitcode-stdio-1.0
+   main-is:             Main.hs
+   hs-source-dirs:      src/tests
+   ghc-options:         -O2 -Wall -threaded
+   default-language:    Haskell2010
+   other-modules:
+         Haskus.Tests.Utils
+      ,  Haskus.Tests.Utils.HArray
+      ,  Haskus.Tests.Utils.Variant
+
+   build-depends:    
+         base
+      ,  haskus-utils
+      ,  tasty                   >= 0.11
+      ,  tasty-quickcheck        >= 0.8
