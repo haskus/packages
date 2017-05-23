@@ -91,10 +91,10 @@ putBits n w s@(BitPutState builder b o bo) = s'
 -- | Put a Buffer
 --
 -- Examples: 3 bits are already written in the current byte
---    BB: ABCDEFGH IJKLMNOP -> xxxABCDE FGHIJKLM NOPxxxxx
---    LL: ABCDEFGH IJKLMNOP -> LMNOPxxx DEFGHIJK xxxxxABC
---    BL: ABCDEFGH IJKLMNOP -> xxxPONML KJIHGFED CBAxxxxx
---    LB: ABCDEFGH IJKLMNOP -> EDCBAxxx MLKJIHGF xxxxxPON
+-- @  BB: ABCDEFGH IJKLMNOP -> xxxABCDE FGHIJKLM NOPxxxxx @
+-- @  LL: ABCDEFGH IJKLMNOP -> LMNOPxxx DEFGHIJK xxxxxABC @
+-- @  BL: ABCDEFGH IJKLMNOP -> xxxPONML KJIHGFED CBAxxxxx @
+-- @  LB: ABCDEFGH IJKLMNOP -> EDCBAxxx MLKJIHGF xxxxxPON @
 putBitsBuffer :: Buffer -> BitPutState -> BitPutState
 putBitsBuffer bs s
    | isBufferEmpty bs = s
@@ -116,7 +116,7 @@ flushIncomplete s@(BitPutState b w o bo)
   | o == 0    = s
   | otherwise = BitPutState (b `mappend` B.fromWord8 w) 0 0 bo
 
--- | Get a lazy byte string
+-- | Get a buffer list
 getBitPutBufferList :: BitPutState -> BufferList
 getBitPutBufferList = toBufferList . bitPutStateBuilder . flushIncomplete 
 

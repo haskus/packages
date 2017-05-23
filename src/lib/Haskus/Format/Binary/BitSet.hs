@@ -71,8 +71,8 @@ import Haskus.Format.Binary.Storable
 -- | A bit set: use bitwise operations (fast!) and minimal storage (sizeOf
 -- basetype)
 --
--- b is the base type (Bits b)
--- a is the element type (Enum a)
+-- * b is the base type (Bits b)
+-- * a is the element type (Enum a)
 --
 -- The elements in the Enum a are flags corresponding to each bit of b starting
 -- from the least-significant bit.

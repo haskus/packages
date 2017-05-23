@@ -17,10 +17,11 @@
 -- have a Word16 split into 3 fields X, Y and Z composed of 5, 9 and 2 bits
 -- respectively.
 --
---                   X             Y          Z
---  w :: Word16 |0 0 0 0 0|0 0 0 0 0 0 0 0 0|0 0|
+-- @                  X             Y          Z   @
+-- @ w :: Word16 |0 0 0 0 0|0 0 0 0 0 0 0 0 0|0 0| @
 -- 
 -- You define it as follows:
+--
 -- @
 -- {-# LANGUAGE DataKinds #-}
 --
@@ -48,6 +49,7 @@
 -- @
 --
 -- Fields can also be 'BitSet' or 'EnumField':
+--
 -- @
 -- {-# LANGUAGE DataKinds #-}
 --
@@ -61,6 +63,7 @@
 --                        ]
 -- w = BitFields 0x0102
 -- @
+--
 module Haskus.Format.Binary.BitField
    ( BitFields (..)
    , bitFieldsBits

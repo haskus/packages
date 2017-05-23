@@ -4,7 +4,7 @@
 -- | Reverse bits
 --
 -- There are several algorithms performing the same thing here (reversing bits
--- into words of different sizes). There are benchmarks for them in Haskus's
+-- into words of different sizes). There are benchmarks for them in the 
 -- "bench" directory. The fastest one for the current architecture should be
 -- selected below. If you find that another algorithm is faster on your
 -- architecture, please report it.
@@ -87,7 +87,7 @@ instance BitReversable Word where
 -- suggested a better version that loops while v is not 0, so rather than
 -- iterating over all bits it stops early. 
 
--- | Obvious recursive verion
+-- | Obvious recursive version
 reverseBitsObvious :: FiniteBits a => a -> a
 reverseBitsObvious x = rec x (x `shiftR` 1) (finiteBitSize x - 1)
    where

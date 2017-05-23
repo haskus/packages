@@ -109,10 +109,10 @@ getBitsChecked m n s
 -- | Read the given number of Word8 and return them in a Buffer
 --
 -- Examples:
---    BB: xxxABCDE FGHIJKLM NOPxxxxx -> ABCDEFGH IJKLMNOP
---    LL: LMNOPxxx DEFGHIJK xxxxxABC -> ABCDEFGH IJKLMNOP
---    BL: xxxPONML KJIHGFED CBAxxxxx -> ABCDEFGH IJKLMNOP
---    LB: EDCBAxxx MLKJIHGF xxxxxPON -> ABCDEFGH IJKLMNOP
+-- @  BB: xxxABCDE FGHIJKLM NOPxxxxx -> ABCDEFGH IJKLMNOP @
+-- @  LL: LMNOPxxx DEFGHIJK xxxxxABC -> ABCDEFGH IJKLMNOP @
+-- @  BL: xxxPONML KJIHGFED CBAxxxxx -> ABCDEFGH IJKLMNOP @
+-- @  LB: EDCBAxxx MLKJIHGF xxxxxPON -> ABCDEFGH IJKLMNOP @
 getBitsBuffer :: Word -> BitGetState -> Buffer
 getBitsBuffer n (BitGetState bs o bo) =
    if n == 0

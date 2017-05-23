@@ -78,15 +78,15 @@ bitsFromString xs = foldl' b zeroBits (reverse xs `zip` [0..])
       b _ (c,_)   = error $ "Invalid character in the string: " ++ [c]
 
 
--- | Take n bits at offset o and put them in the least-significant
--- bits of the result
+-- | `getBitRange bo offset n c` takes n bits at offset in c and put them in the
+-- least-significant bits of the result
 getBitRange :: (BitReversable b, FiniteBits b) => BitOrder -> Word -> Word -> b -> b
 {-# INLINE getBitRange #-}
 getBitRange bo o n c = case bo of
-      BB -> maskLeastBits n $ c             `shiftR` d
-      BL -> maskLeastBits n $ reverseBits c `shiftR` o'
-      LB -> maskLeastBits n $ reverseBits c `shiftR` d
-      LL -> maskLeastBits n $ c             `shiftR` o'
+      BB -> maskLeastBits n $ c             `unsafeShiftR` d
+      BL -> maskLeastBits n $ reverseBits c `unsafeShiftR` o'
+      LB -> maskLeastBits n $ reverseBits c `unsafeShiftR` d
+      LL -> maskLeastBits n $ c             `unsafeShiftR` o'
    where 
       o' = fromIntegral o
       d  = finiteBitSize c - fromIntegral n - fromIntegral o

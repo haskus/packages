@@ -24,9 +24,9 @@ import Haskus.Format.Binary.Storable
 import Haskus.Utils.Types
 
 -- | Fixed-point number
--- `w` is the backing type
--- `i` is the number of bits for the integer part (before the readix point)
--- `f` is the number of bits for the fractional part (after the radix point)
+-- * `w` is the backing type
+-- * `i` is the number of bits for the integer part (before the readix point)
+-- * `f` is the number of bits for the fractional part (after the radix point)
 newtype FixedPoint w (i :: Nat) (f :: Nat) = FixedPoint (BitFields w
    '[ BitField i "integer"    w
     , BitField f "fractional" w

@@ -24,8 +24,10 @@ import Data.Data
 -- EnumField b a: directly store the value of enum "a" as a "b"
 -----------------------------------------------------------------------------
 
--- | Store enum 'a' as a 'b'
-newtype EnumField b a = EnumField a deriving (Show,Eq)
+-- | Store enum `a` as a `b`
+newtype EnumField b a
+   = EnumField a
+   deriving (Show,Eq)
 
 instance
       ( Storable b
@@ -64,7 +66,9 @@ toEnumField = EnumField
 -- Extended Enum
 -----------------------------------------------------------------------------
 
--- | By default, use fromEnum/toEnum to convert from/to an Integral.
+-- | Extended Enum
+--
+-- By default, use fromEnum and toEnum to convert from and to an Integral.
 --
 -- But it can be overloaded to perform transformation before using
 -- fromEnum/toEnum. E.g. if values are shifted by 1 compared to Enum values,
@@ -82,13 +86,17 @@ class CEnum a where
 -- | Make an enum with the last constructor taking a parameter for the rest of
 -- the range
 --
--- E.g., data T = A | B | C | D Word8
+-- @
+-- data T = A | B | C | D Word8
+--
 -- makeEnumWithCustom :: Int -> T
 -- makeEnumWithCustom x = case x of
 --    0 -> A
 --    1 -> B
 --    2 -> C
 --    n -> D (n - 3)
+-- @
+--
 makeEnumWithCustom :: forall a i. (Data a,Integral i) => i -> a
 {-# INLINE makeEnumWithCustom #-}
 makeEnumWithCustom x =
@@ -104,13 +112,17 @@ makeEnumWithCustom x =
 -- | Make an enum with the last constructor taking a parameter for the rest of
 -- the range, but don't build the last constructor
 --
--- E.g., data T = A | B | C | D Word8
+-- @
+-- data T = A | B | C | D Word8
+--
 -- makeEnumMaybe :: Int -> T
 -- makeEnumMaybe x = case x of
 --    0 -> Just A
 --    1 -> Just B
 --    2 -> Just C
 --    n -> Nothing
+-- @
+--
 makeEnumMaybe :: forall a i. (Data a,Integral i) => i -> Maybe a
 {-# INLINE makeEnumMaybe #-}
 makeEnumMaybe x =
