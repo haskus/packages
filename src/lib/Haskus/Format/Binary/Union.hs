@@ -58,6 +58,8 @@ import Haskus.Format.Binary.Ptr
 
 import System.IO.Unsafe (unsafePerformIO)
 
+import qualified Foreign.Storable as FS
+
 
 -- TODO: rewrite rules
 -- poke p (toUnion x) = poke (castPtr p) x
@@ -170,3 +172,14 @@ instance
 
    pokeIO ptr (Union fp) = withForeignPtr fp $ \p ->
       memCopy (castPtr ptr) p (sizeOfT' @(Union l))
+
+
+-- compatibility instance with Foreign.Storable
+instance
+   ( HFoldr' FoldSizeOf Word l Word
+   , HFoldr' FoldAlignment Word l Word
+   ) => FS.Storable (Union l) where
+   sizeOf     = fromIntegral . unionSize
+   alignment  = fromIntegral . unionAlignment
+   peek       = peekIO
+   poke       = pokeIO
