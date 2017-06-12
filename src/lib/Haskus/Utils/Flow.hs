@@ -37,6 +37,9 @@ module Haskus.Utils.Flow
    -- * Monadic/applicative operators
    , when
    , unless
+   , whenM
+   , unlessM
+   , ifM
    , guard
    , void
    , forever
@@ -53,6 +56,8 @@ module Haskus.Utils.Flow
    , join
    , (<=<)
    , (>=>)
+   , loopM
+   , whileM
    -- * Named operators
    , flowMap
    , flowBind
