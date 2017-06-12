@@ -152,14 +152,14 @@ type family Generate (n :: Nat) (m :: Nat) :: [Nat] where
    Generate n m = n ': Generate (n+1) m
 
 -- | Check that a type is member of a type list
-type family IsMember a l :: Bool where
-   IsMember a l = IsMemberEx a l l
+type family IsMember a (l :: [*]) :: Bool where
+   IsMember a l = IsMemberEx l a l
 
 -- | Check that a type is member of a type list
-type family IsMemberEx a l (i :: [*]) :: Bool where
-   IsMemberEx a (a ': l) i = 'True
-   IsMemberEx a (b ': l) i = IsMemberEx a l i
-   IsMemberEx a '[]      i = TypeError ( 'Text "`"
+type family IsMemberEx (i :: [*]) a (l :: [*]) :: Bool where
+   IsMemberEx i a (a ': l) = 'True
+   IsMemberEx i a (b ': l) = IsMemberEx i a l
+   IsMemberEx i a '[]      = TypeError ( 'Text "`"
                                    ':<>: 'ShowType a
                                    ':<>: 'Text "'"
                                    ':<>: 'Text " is not a member of "
@@ -169,16 +169,16 @@ type family IsMemberEx a l (i :: [*]) :: Bool where
 -- | Check that a list is a subset of another
 type family IsSubset l1 l2 :: Bool where
    IsSubset l1 l1 = 'True
-   IsSubset l1 l2 = IsSubsetEx l1 l2 l2
+   IsSubset l1 l2 = IsSubsetEx l2 l1 l2
 
 -- | Helper for IsSubset
-type family IsSubsetEx l1 l2 i :: Bool where
-   IsSubsetEx '[] l2 i = 'True
-   IsSubsetEx l1 '[] i = TypeError (     'ShowType l1
+type family IsSubsetEx i l1 l2 :: Bool where
+   IsSubsetEx i '[] l2 = 'True
+   IsSubsetEx i l1 '[] = TypeError (     'ShowType l1
                                    ':$$: 'Text "is not a subset of"
                                    ':$$: 'ShowType i)
-   IsSubsetEx (x ': xs) (x ': ys) i = IsSubsetEx xs i i
-   IsSubsetEx (x ': xs) (y ': ys) i = IsSubsetEx (x ': xs) ys i
+   IsSubsetEx i (x ': xs) (x ': ys) = IsSubsetEx i xs i
+   IsSubsetEx i (x ': xs) (y ': ys) = IsSubsetEx i (x ': xs) ys
 
 -- | Get list indexes
 type family Indexes (l :: [*]) where
