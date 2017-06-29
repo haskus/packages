@@ -2,6 +2,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | Store an Enum in the given backing word type
 module Haskus.Format.Binary.Enum
@@ -26,19 +27,8 @@ import Data.Data
 
 -- | Store enum `a` as a `b`
 newtype EnumField b a
-   = EnumField a
-   deriving (Show,Eq)
-
-instance
-      ( Storable b
-      , Integral b
-      , CEnum a
-      ) => Storable (EnumField b a)
-   where
-      sizeOf _               = sizeOfT    @b
-      alignment _            = alignmentT @b
-      peekIO p               = (EnumField . toCEnum) <$> peek (castPtr p :: Ptr b)
-      pokeIO p (EnumField v) = poke (castPtr p :: Ptr b) (fromCEnum v)
+   = EnumField b
+   deriving (Show,Eq,Storable)
 
 instance
       ( Integral b
@@ -48,18 +38,18 @@ instance
    where
       type SizeOf (EnumField b a)    = SizeOf b
       type Alignment (EnumField b a) = Alignment b
-      staticPeekIO p                 = (EnumField . toCEnum) <$> staticPeek (castPtr p :: Ptr b)
-      staticPokeIO p (EnumField v)   = staticPoke (castPtr p :: Ptr b) (fromCEnum v)
+      staticPeekIO p                 = EnumField  <$> staticPeek (castPtr p :: Ptr b)
+      staticPokeIO p (EnumField v)   = staticPoke (castPtr p :: Ptr b) v
 
 -- | Read an enum field
-fromEnumField :: EnumField b a -> a
+fromEnumField :: (CEnum a, Integral b) => EnumField b a -> a
 {-# INLINE fromEnumField #-}
-fromEnumField (EnumField a) = a
+fromEnumField (EnumField b) = toCEnum b
 
 -- | Create an enum field
-toEnumField :: a -> EnumField b a
+toEnumField :: (CEnum a, Integral b) => a -> EnumField b a
 {-# INLINE toEnumField #-}
-toEnumField = EnumField
+toEnumField = EnumField . fromCEnum
 
 
 -----------------------------------------------------------------------------

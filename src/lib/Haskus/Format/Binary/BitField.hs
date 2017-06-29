@@ -183,7 +183,7 @@ instance (FiniteBits b, Integral b, CBitSet a) => Field (BitSet b a) where
    fromField = fromIntegral . BitSet.toBits
    toField   = BitSet.fromBits . fromIntegral
 
-instance CEnum a => Field (EnumField b a) where
+instance (Integral b, CEnum a) => Field (EnumField b a) where
    fromField = fromCEnum . fromEnumField
    toField   = toEnumField . toCEnum
 
