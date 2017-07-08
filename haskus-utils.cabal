@@ -48,7 +48,7 @@ library
   other-modules:
 
   build-depends:       
-         base                      >= 4.9 && < 4.10
+         base                      >= 4.9
       ,  containers                >= 0.5
       ,  list-t                    >= 0.4
       ,  stm                       >= 2.4
