@@ -56,7 +56,7 @@ library
   other-modules:
 
   build-depends:       
-         base                      >= 4.9 && < 4.10
+         base                      >= 4.9
       ,  haskus-utils              >= 0.6
       ,  cereal                    >= 0.5
       ,  bytestring                >= 0.10
