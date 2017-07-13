@@ -5,6 +5,7 @@ module Haskus.Utils.Maybe
    ( onNothing
    , onNothingM
    , fromMaybeM
+   , headMaybe
    , module Data.Maybe
    )
 where
@@ -24,4 +25,8 @@ fromMaybeM :: Monad m => m a -> m (Maybe a) -> m a
 fromMaybeM v f = f >>= \case
    Nothing -> v
    Just x  -> return x
-   
+
+-- | Get the head of the list if the latter is not empty
+headMaybe :: [a] -> Maybe a
+headMaybe []    = Nothing
+headMaybe (x:_) = Just x
