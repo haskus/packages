@@ -1,5 +1,5 @@
 name:                haskus-utils
-version:             0.7.0.0
+version:             0.8.0.0
 synopsis:            Haskus utility modules
 license:             BSD3
 license-file:        LICENSE
@@ -20,6 +20,7 @@ source-repository head
 
 library
   exposed-modules:
+    Haskus.Utils.Solver
     Haskus.Utils.ContFlow
     Haskus.Utils.Variant
     Haskus.Utils.Monad
