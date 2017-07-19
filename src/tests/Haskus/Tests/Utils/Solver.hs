@@ -10,7 +10,7 @@ import Test.Tasty.QuickCheck as QC
 
 import Haskus.Utils.Solver
 
-type C = Constraint Bool Int ()
+type C = Constraint Bool () Int
 
 testsSolver :: TestTree
 testsSolver = testGroup "Solver" $
