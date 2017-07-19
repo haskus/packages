@@ -7,6 +7,9 @@ module Haskus.Utils.Solver
    , constraintReduce
    , ruleReduce
    , MatchResult (..)
+   , getRuleTerminals
+   , getRulePredicates
+   , getConstraintPredicates
    )
 where
 
@@ -127,3 +130,24 @@ ruleReduce pred r = case r of
                   _                     -> MatchRule (NonTerminal rs')
 
 
+-- | Get possible resulting terminals
+getRuleTerminals :: Rule p a e -> [a]
+getRuleTerminals (Fail _)         = []
+getRuleTerminals (Terminal a)     = [a]
+getRuleTerminals (NonTerminal xs) = concatMap (getRuleTerminals . snd) xs
+
+-- | Get predicates used in a rule
+getRulePredicates :: Rule p a e -> [p]
+getRulePredicates (Fail _)         = []
+getRulePredicates (Terminal _)     = []
+getRulePredicates (NonTerminal xs) = concatMap (getConstraintPredicates . fst) xs
+
+-- | Get predicates used in a constraint
+getConstraintPredicates :: Constraint p a e -> [p]
+getConstraintPredicates = \case
+   Predicate p  -> [p]
+   Not c        -> getConstraintPredicates c
+   And cs       -> concatMap getConstraintPredicates cs
+   Or  cs       -> concatMap getConstraintPredicates cs
+   CBool _      -> []
+   RuleEval r _ -> getRulePredicates r

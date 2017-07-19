@@ -76,6 +76,7 @@ test-suite tests
          Haskus.Tests.Utils
       ,  Haskus.Tests.Utils.HArray
       ,  Haskus.Tests.Utils.Variant
+      ,  Haskus.Tests.Utils.Solver
 
    build-depends:    
          base
