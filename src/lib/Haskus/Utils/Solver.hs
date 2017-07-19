@@ -1,7 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 
@@ -172,6 +171,14 @@ data PredResult p e a b
    | PredCont a    -- ^ Some predicates remain
    deriving (Show,Eq,Ord)
 
+instance Functor (PredResult p e a) where
+   fmap f x = case x of
+      PredNoMatch   -> PredNoMatch
+      PredDivergent -> PredDivergent
+      PredFail es   -> PredFail es
+      PredMatch a b -> PredMatch a (f b)
+      PredCont a    -> PredCont a
+
 -- | A predicated data type reducer
 --
 -- Example:
@@ -195,7 +202,7 @@ data PredResult p e a b
 --          |> extractP
 -- @
 --
-class Predicated p e a b | a -> b where
+class Predicated p e a b where
    reducePredicates :: (p -> Maybe Bool) -> a -> PredResult p e a b
 
 instance (Eq p, Eq a, Eq e) => Predicated p e (Rule p e a) a where
