@@ -94,14 +94,23 @@ testsSolver = testGroup "Solver" $
                                                        ,(Predicate PredB, Terminal 1)
                                                        ]) of
             Match 0 -> True
-            r       -> error (show r)
+            r       -> False
          )
    , testProperty "Ordered non terminal 1"
          (case ruleReduce oracleAB (orderedNonTerminal [(Predicate PredB, Terminal 1 :: R Int)
                                                        ,(Predicate PredA, Terminal 0)
                                                        ]) of
             Match 1 -> True
-            r       -> error (show r)
+            r       -> False
+         )
+   , testProperty "Create predicate table"
+         (case createPredicateTable d1 of
+            Left _   -> False
+            Right xs -> sort (fmap fst xs) == sort
+                           [ [Right PredA, Left  PredC, Left  PredD, Left  PredE]
+                           , [Right PredA, Left  PredC, Left  PredD, Right PredE]
+                           , [Left  PredA, Left  PredC, Left  PredD, Right PredE]
+                           ]
          )
    ]
 
@@ -142,7 +151,7 @@ testsSolver = testGroup "Solver" $
              (Terminal "Test")
 
 data D = D
-   { pInt :: R Int
+   { pInt  :: R Int
    , _pStr :: R String
    }
    deriving (Eq,Show,Ord)
@@ -153,10 +162,10 @@ instance Predicated D where
 
    reducePredicates fp (D a b) =
       D <$> reducePredicates fp a
-         <*> reducePredicates fp b
+        <*> reducePredicates fp b
 
    getTerminals (D as bs) = [ D a b | a <- getTerminals as
-                                      , b <- getTerminals bs
+                                    , b <- getTerminals bs
                              ]
 
    getPredicates (D a b) = concat
