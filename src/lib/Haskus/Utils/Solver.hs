@@ -19,6 +19,7 @@ module Haskus.Utils.Solver
    , mergeMatchResults
    , Predicated (..)
    , evalsTo
+   , createPredicateTable
    )
 where
 
@@ -284,13 +285,14 @@ instance (Eq e, Eq p, Eq a) => Predicated (Rule e p a) where
 
 -- | Constraint checking that a predicated value evaluates to some terminal
 evalsTo :: (Eq a, Eq (Pred a), Predicated a) => a -> a -> Constraint e (Pred a)
-evalsTo s a =
-   -- we first check if the predicated value reduces to a terminal without any
-   -- additional oracle
-   case reducePredicates (const Nothing) s of
-      Match x -> CBool (x == a)
-      _       -> orConstraints (fmap andPredicates matchingPredSets)
+evalsTo s a = case createPredicateTable s of
+   Left x   -> CBool (x == a)
+   Right xs -> orConstraints <| fmap andPredicates
+                             <| fmap fst
+                             <| filter ((== a) . snd)
+                             <| xs
    where
+
       andPredicates []  = CBool True
       andPredicates [x] = makePred x
       andPredicates xs  = And (fmap makePred xs)
@@ -299,19 +301,31 @@ evalsTo s a =
       orConstraints [x] = x
       orConstraints xs  = Or xs
 
-      matchingPredSets = filter isMatching predSets
+      makePred (Left p)  = Not (Predicate p)
+      makePred (Right p) = Predicate p
 
-      isMatching ps = case reducePredicates (makeOracle ps) s of
-         Match x -> x == a
-         _       -> False
+
+
+-- | Create a table of predicates that return a terminal
+--
+-- Left p: Not p
+-- Right p: p
+createPredicateTable :: (Eq (Pred a), Eq a, Predicated a) => a -> Either a [([Either (Pred a) (Pred a)],a)]
+createPredicateTable s =
+   -- we first check if the predicated value reduces to a terminal without any
+   -- additional oracle
+   case reducePredicates (const Nothing) s of
+      Match x -> Left x
+      _       -> Right (mapMaybe matching predSets)
+   where
+      matching ps = case reducePredicates (makeOracle ps) s of
+         Match x -> Just (ps,x)
+         _       -> Nothing
 
       -- create an oracle function from a set of predicates
       makeOracle []           = \_ -> Nothing
       makeOracle (Left  x:xs) = \p -> if p == x then Just False else makeOracle xs p
       makeOracle (Right x:xs) = \p -> if p == x then Just True  else makeOracle xs p
-
-      makePred (Left p)  = Not (Predicate p)
-      makePred (Right p) = Predicate p
 
       -- sets of predicates either False (Right p) or True (Left p)
       preds        = getPredicates s
