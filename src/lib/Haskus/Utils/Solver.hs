@@ -1,24 +1,21 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TupleSections #-}
 
 -- | Simple Constraint solver
 module Haskus.Utils.Solver
    ( Constraint (..)
    , Rule (..)
+   , mergeRules
    , constraintReduce
    , ruleReduce
    , MatchResult (..)
    , getRuleTerminals
    , getRulePredicates
    , getConstraintPredicates
+   , mergeMatchResults
    , Predicated (..)
-   , PredResult (..)
-   , initP
-   , composeP
-   , extractP
    )
 where
 
@@ -26,27 +23,52 @@ import Haskus.Utils.Maybe
 import Haskus.Utils.Flow
 import Haskus.Utils.List
 
-import Control.Arrow (first)
+import Control.Arrow (first,second)
 
 import Prelude hiding (pred)
 
-data Constraint p e a
+data Constraint e p
    = Predicate p
-   | Not (Constraint p e a)
-   | And [Constraint p e a]
-   | Or [Constraint p e a]
+   | Not (Constraint e p)
+   | And [Constraint e p]
+   | Or [Constraint e p]
    | CBool Bool
-   | RuleEval (Rule p e a) a
    deriving (Show,Eq,Ord)
 
-data Rule p e a
+instance Functor (Constraint e) where
+   fmap f (Predicate p)  = Predicate (f p)
+   fmap _ (CBool b)      = CBool b
+   fmap f (Not c)        = Not (fmap f c)
+   fmap f (And cs)       = And (fmap (fmap f) cs)
+   fmap f (Or cs)        = Or (fmap (fmap f) cs)
+
+data Rule e p a
    = Terminal a
-   | NonTerminal [(Constraint p e a, Rule p e a)]
+   | NonTerminal [(Constraint e p, Rule e p a)]
    | Fail e
    deriving (Show,Eq,Ord)
 
+instance Functor (Rule e p) where
+   fmap f (Terminal a)     = Terminal (f a)
+   fmap f (NonTerminal xs) = NonTerminal (fmap (second (fmap f)) xs)
+   fmap _ (Fail e)         = Fail e
+
+-- | Merge two rules together
+mergeRules :: Rule e p a -> Rule e p b -> Rule e p (a,b)
+mergeRules = go
+   where
+      go (Fail e)           _                = Fail e
+      go _                  (Fail e)         = Fail e
+      go (Terminal a)       (Terminal b)     = Terminal (a,b)
+      go (Terminal a)       (NonTerminal bs) = NonTerminal (fl (Terminal a) bs)
+      go (NonTerminal as)   (Terminal b)     = NonTerminal (fr (Terminal b) as)
+      go (NonTerminal as)   b                = NonTerminal (fr b            as)
+
+      fl x = fmap (second (x `mergeRules`))
+      fr x = fmap (second (`mergeRules` x))
+
 -- | Reduce a constraint
-constraintReduce :: (Eq p, Eq a, Eq e) => (p -> Maybe Bool) -> Constraint p e a -> Constraint p e a
+constraintReduce :: (Eq p, Eq e) => (p -> Maybe Bool) -> Constraint e p -> Constraint e p
 constraintReduce pred c = case c of
    Predicate p  -> case pred p of
                       Nothing -> c
@@ -65,35 +87,38 @@ constraintReduce pred c = case c of
                       [c']                                  -> c'
                       cs'                                   -> Or cs'
    CBool _      -> c
-
-   RuleEval r a -> case ruleReduce pred r of
-                     Match b          -> CBool (a == b)
-                     MatchRule r'     -> RuleEval r' a
-                     NoMatch          -> CBool False
-                     DivergentMatch _ -> CBool False
-                     MatchFail _      -> CBool False
-
    where
       reduceFilter v = filter (not . constraintIsBool v) . fmap (constraintReduce pred)
 
 -- | Check that a constraint is evaluated to a given boolean value
-constraintIsBool :: Bool -> Constraint p e a -> Bool
+constraintIsBool :: Bool -> Constraint e p -> Bool
 constraintIsBool v (CBool v') = v == v'
 constraintIsBool _ _          = False
 
 
 -- | Result of a rule reduction
-data MatchResult p e a
+data MatchResult e p a
    = NoMatch                -- ^ No rule leads to a terminal
    | DivergentMatch [a]     -- ^ Several rules match but they return different terminals
    | MatchFail [e]          -- ^ Some matching rules fail
    | Match a                -- ^ A single terminal value is returned
-   | MatchRule (Rule p e a) -- ^ The rule may have been reduced but didn't produce a result
+   | MatchRule (Rule e p a) -- ^ The rule may have been reduced but didn't produce a result
    deriving (Show,Eq,Ord)
 
+instance Functor (MatchResult p e) where
+   fmap f x = case x of
+      NoMatch           -> NoMatch
+      DivergentMatch xs -> DivergentMatch (fmap f xs)
+      MatchFail es      -> MatchFail es
+      Match a           -> Match (f a)
+      MatchRule r       -> MatchRule (fmap f r)
+
+instance Applicative (MatchResult e p) where
+   pure a  = Match a
+   a <*> b = fmap (\(f,x) -> f x) (mergeMatchResults a b)
 
 -- | Reduce a rule
-ruleReduce :: (Eq e, Eq p, Eq a) => (p -> Maybe Bool) -> Rule p e a -> MatchResult p e a
+ruleReduce :: (Eq e, Eq p, Eq a) => (p -> Maybe Bool) -> Rule e p a -> MatchResult e p a
 ruleReduce pred r = case r of
    Terminal a     -> Match a
    Fail e         -> MatchFail [e]
@@ -141,103 +166,87 @@ ruleReduce pred r = case r of
 
 
 -- | Get possible resulting terminals
-getRuleTerminals :: Rule p e a -> [a]
+getRuleTerminals :: Rule e p a -> [a]
 getRuleTerminals (Fail _)         = []
 getRuleTerminals (Terminal a)     = [a]
 getRuleTerminals (NonTerminal xs) = concatMap (getRuleTerminals . snd) xs
 
 -- | Get predicates used in a rule
-getRulePredicates :: Rule p e a -> [p]
+getRulePredicates :: Rule e p a -> [p]
 getRulePredicates (Fail _)         = []
 getRulePredicates (Terminal _)     = []
 getRulePredicates (NonTerminal xs) = concatMap (getConstraintPredicates . fst) xs
 
 -- | Get predicates used in a constraint
-getConstraintPredicates :: Constraint p e a -> [p]
+getConstraintPredicates :: Constraint e p -> [p]
 getConstraintPredicates = \case
    Predicate p  -> [p]
    Not c        -> getConstraintPredicates c
    And cs       -> concatMap getConstraintPredicates cs
    Or  cs       -> concatMap getConstraintPredicates cs
    CBool _      -> []
-   RuleEval r _ -> getRulePredicates r
 
--- | Result of a predicate reduction
-data PredResult p e a b
-   = PredNoMatch   -- ^ No rule leads to a terminal
-   | PredDivergent -- ^ Several rules match but they diverge
-   | PredFail [e]  -- ^ Some matching rules fail
-   | PredMatch a b -- ^ A single terminal value is returned
-   | PredCont a    -- ^ Some predicates remain
-   deriving (Show,Eq,Ord)
+-- | Merge match results
+mergeMatchResults :: MatchResult e p a -> MatchResult e p b -> MatchResult e p (a,b)
+mergeMatchResults = go
+   where
+      go NoMatch  _                    = NoMatch
+      go _        NoMatch              = NoMatch
+      go (MatchFail xs) (MatchFail ys) = MatchFail (xs++ys)
+      go (MatchFail xs) _              = MatchFail xs
+      go _              (MatchFail ys) = MatchFail ys
+      go (DivergentMatch xs) (DivergentMatch ys) = DivergentMatch [(x,y) | x <- xs, y <- ys]
+      go (DivergentMatch xs) (Match b)           = DivergentMatch [(x,b) | x <- xs]
+      go (Match a)           (DivergentMatch ys) = DivergentMatch [(a,y) | y <- ys]
+                                                   -- we can't return a
+                                                   -- divergent match here. We
+                                                   -- transform the
+                                                   -- DivergentMatch into a
+                                                   -- NonTerminal with True
+                                                   -- constraints
+      go (DivergentMatch xs) (MatchRule b)       = MatchRule $ mergeRules (makeNT xs) b
+      go (MatchRule a)       (DivergentMatch ys) = MatchRule $ mergeRules a (makeNT ys)
+      go (MatchRule a)       (MatchRule b)       = MatchRule $ mergeRules a b
+      go (MatchRule a)       (Match b)           = MatchRule $ mergeRules a (Terminal b)
+      go (Match a)           (MatchRule b)       = MatchRule $ mergeRules (Terminal a) b
+      go (Match a)           (Match b)           = Match (a,b)
 
-instance Functor (PredResult p e a) where
-   fmap f x = case x of
-      PredNoMatch   -> PredNoMatch
-      PredDivergent -> PredDivergent
-      PredFail es   -> PredFail es
-      PredMatch a b -> PredMatch a (f b)
-      PredCont a    -> PredCont a
+      -- create a NonTerminal from a DivergentMatch
+      makeNT xs = NonTerminal (fmap (\x -> (CBool True,Terminal x)) xs)
 
 -- | A predicated data type reducer
 --
 -- Example:
 --
 -- @
--- data PD p e = PD
---    { pA :: Rule p e Int
---    , pB :: Rule p e String
+-- data PD e p = PD
+--    { pA :: Rule e p Int
+--    , pB :: Rule e p String
 --    }
 -- 
--- data UD = UD
---    { uA :: Int
---    , uB :: String
---    }
--- 
--- instance Predicated p e (PD p e) UD where
+-- instance (Eq e, Eq p) => Predicated (PD e p) where
+--    type Pred    (PD e p) = p
+--    type PredErr (PD e p) = e
 --    reducePredicates fp (PD a b) = 
---       initP PD UD
---          |> composeP fp a
---          |> composeP fp b
---          |> extractP
+--       PD <$> reducePredicates fp a
+--          <*> reducePredicates fp b
 -- @
 --
-class Predicated p e a b where
-   reducePredicates :: (p -> Maybe Bool) -> a -> PredResult p e a b
+class Predicated a where
+   type Pred a    :: *
+   type PredErr a :: *
 
-instance (Eq p, Eq a, Eq e) => Predicated p e (Rule p e a) a where
-   reducePredicates fp r = case ruleReduce fp r of
-      NoMatch           -> PredNoMatch
-      DivergentMatch _  -> PredDivergent
-      MatchFail es      -> PredFail es
-      Match b           -> PredMatch (Terminal b) b
-      MatchRule a       -> PredCont a
+   -- | Reduce predicates
+   reducePredicates :: (Pred a -> Maybe Bool) -> a -> MatchResult (PredErr a) (Pred a) a
 
+   -- | Is it terminal?
+   isTerminal :: a -> Bool
+   isTerminal a = case reducePredicates (const Nothing) a of
+      Match _ -> True
+      _       -> False
 
-type P p e a b t1 t2 = Either (PredResult p e a b) (Maybe t1,t2)
+instance (Eq e, Eq p, Eq a) => Predicated (Rule e p a) where
+   type Pred     (Rule e p a) = p
+   type PredErr  (Rule e p a) = e
+   reducePredicates fp r = fmap Terminal (ruleReduce fp r)
 
--- | Initialize a P
---
--- Typically pass your unpredicated data (UD) and your predicated data (PD) such
--- as: initP PD UD
-initP :: t1 -> t2 -> P p e a b t2 t1
-initP t1 t2 = Right (Just t2,t1)
-
--- | Compose some P's
-composeP ::
-   ( Predicated p e x y 
-   ) => (p -> Maybe Bool) -> x -> P p e a b (y -> t1) (x -> t2) -> P p e a b t1 t2
-composeP _ _  (Left r)                             = Left r
-composeP fp x (Right (retTerminal,retNonTerminal)) = 
-   case reducePredicates fp x of
-      PredNoMatch    -> Left PredNoMatch
-      PredDivergent  -> Left PredDivergent
-      PredFail es    -> Left $ PredFail es
-      PredCont a'    -> Right $ (Nothing, retNonTerminal a')
-      PredMatch nt t -> Right $ (fmap ($ t) retTerminal, retNonTerminal nt)
-
--- | Extract the resulting P result
-extractP :: P p e a b b a -> PredResult p e a b
-extractP (Left r)              = r
-extractP (Right (Nothing,rnt)) = PredCont rnt
-extractP (Right (Just rt,rnt)) = PredMatch rnt rt
