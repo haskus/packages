@@ -66,6 +66,7 @@ orderedNonTerminal :: [(Constraint e p, Rule e p a)] -> Rule e p a
 orderedNonTerminal = NonTerminal . go []
    where
       go _  []          = []
+      go [] ((c,r):xs)  = (simplifyConstraint c,r) : go [c] xs
       go cs ((c,r):xs)  = (simplifyConstraint (And [Not (Or cs),c]),r) : go (c:cs) xs
 
 -- | Simplify a constraint
@@ -78,6 +79,8 @@ simplifyConstraint x = case x of
    Not (Not c)       -> simplifyConstraint c
    Not (Or cs)       -> simplifyConstraint (And (fmap Not cs))
    Not (And cs)      -> simplifyConstraint (Or (fmap Not cs))
+   And [c]           -> simplifyConstraint c
+   Or [c]            -> simplifyConstraint c
    And cs            -> let cs' = fmap simplifyConstraint cs
                         in if any (constraintIsBool False) cs'
                              then CBool False
@@ -103,26 +106,28 @@ mergeRules = go
 
 -- | Reduce a constraint
 constraintReduce :: (Eq p, Eq e) => (p -> Maybe Bool) -> Constraint e p -> Constraint e p
-constraintReduce pred c = case c of
+constraintReduce pred c = case simplifyConstraint c of
    Predicate p  -> case pred p of
                       Nothing -> c
                       Just v  -> CBool v
    Not c'       -> case constraintReduce pred c' of
                       CBool v -> CBool (not v)
                       c''     -> Not c''
-   And cs       -> case reduceFilter True cs of
-                      []                                     -> CBool True
+   And cs       -> case fmap (constraintReduce pred) cs of
+                      []                                     -> error "Empty And constraint"
+                      cs' | all (constraintIsBool True)  cs' -> CBool True
                       cs' | any (constraintIsBool False) cs' -> CBool False
-                      [c']                                   -> c'
-                      cs'                                    -> And cs'
-   Or cs        -> case reduceFilter False cs of
-                      []                                    -> CBool False
-                      cs' | any (constraintIsBool True) cs' -> CBool True
-                      [c']                                  -> c'
-                      cs'                                   -> Or cs'
-   CBool _      -> c
-   where
-      reduceFilter v = filter (not . constraintIsBool v) . fmap (constraintReduce pred)
+                      cs' -> case filter (not . constraintIsBool True) cs' of
+                        [c'] -> c'
+                        cs'' -> And cs''
+   Or cs        -> case fmap (constraintReduce pred) cs of
+                      []                                      -> error "Empty Or constraint"
+                      cs' | all (constraintIsBool False)  cs' -> CBool False
+                      cs' | any (constraintIsBool True)   cs' -> CBool True
+                      cs' -> case filter (not . constraintIsBool False) cs' of
+                        [c'] -> c'
+                        cs'' -> Or cs''
+   c'@(CBool _) -> c'
 
 -- | Check that a constraint is evaluated to a given boolean value
 constraintIsBool :: Bool -> Constraint e p -> Bool
