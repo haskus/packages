@@ -94,22 +94,41 @@ testsSolver = testGroup "Solver" $
                                                        ,(Predicate PredB, Terminal 1)
                                                        ]) of
             Match 0 -> True
-            r       -> False
+            _       -> False
          )
    , testProperty "Ordered non terminal 1"
          (case ruleReduce oracleAB (orderedNonTerminal [(Predicate PredB, Terminal 1 :: R Int)
                                                        ,(Predicate PredA, Terminal 0)
                                                        ]) of
             Match 1 -> True
-            r       -> False
+            _       -> False
          )
-   , testProperty "Create predicate table"
+   , testProperty "Get predicates: flat"
+         (sort (getPredicates d1) == sort [PredA,PredC,PredD,PredE])
+
+   , testProperty "Get predicates: nested"
+         (sort (getPredicates d2) == sort [PredA,PredB,PredC,PredD])
+
+   , testProperty "Create predicate table: flat non terminal"
          (case createPredicateTable d1 of
             Left _   -> False
             Right xs -> sort (fmap fst xs) == sort
                            [ [Right PredA, Left  PredC, Left  PredD, Left  PredE]
                            , [Right PredA, Left  PredC, Left  PredD, Right PredE]
                            , [Left  PredA, Left  PredC, Left  PredD, Right PredE]
+                           ]
+         )
+   , testProperty "Create predicate table: nested non terminal"
+         (case createPredicateTable d2 of
+            Left _   -> False
+            Right xs -> sort (fmap fst xs) == sort
+                           [ [Right PredA, Left  PredB, Left  PredC, Left  PredD]
+                           , [Right PredA, Right PredB, Left  PredC, Left  PredD]
+                           , [Right PredA, Left  PredB, Right PredC, Left  PredD]
+                           , [Right PredA, Left  PredB, Left  PredC, Right PredD]
+                           , [Right PredA, Left  PredB, Right PredC, Right PredD]
+                           , [Left  PredA, Right PredB, Right PredC, Left  PredD]
+                           , [Left  PredA, Right PredB, Left  PredC, Right PredD]
                            ]
          )
    ]
@@ -147,6 +166,13 @@ testsSolver = testGroup "Solver" $
                           , (Predicate PredD, Terminal 0)
                           , (Predicate PredD, Terminal 1)
                           , (Predicate PredE, Terminal 0)
+                          ])
+             (Terminal "Test")
+      d2 = D (NonTerminal [ (Predicate PredA, Terminal 0)
+                          , (Predicate PredB, NonTerminal
+                              [ (Predicate PredC, Terminal 1)
+                              , (Predicate PredD, Terminal 2)
+                              ])
                           ])
              (Terminal "Test")
 

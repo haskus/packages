@@ -86,9 +86,9 @@ simplifyConstraint x = case x of
                              then CBool False
                              else And cs'
    Or cs             -> let cs' = fmap simplifyConstraint cs
-                         in if any (constraintIsBool True) cs'
-                              then CBool True
-                              else Or cs'
+                        in if any (constraintIsBool True) cs'
+                             then CBool True
+                             else Or cs'
 
 -- | Merge two rules together
 mergeRules :: Rule e p a -> Rule e p b -> Rule e p (a,b)
@@ -214,7 +214,7 @@ getRuleTerminals (NonTerminal xs) = concatMap (getRuleTerminals . snd) xs
 getRulePredicates :: Eq p => Rule e p a -> [p]
 getRulePredicates (Fail _)         = []
 getRulePredicates (Terminal _)     = []
-getRulePredicates (NonTerminal xs) = nub $ concatMap (getConstraintPredicates . fst) xs
+getRulePredicates (NonTerminal xs) = nub $ concatMap (\(x,y) -> getConstraintPredicates x ++ getRulePredicates y) xs
 
 -- | Get predicates used in a constraint
 getConstraintPredicates :: Constraint e p -> [p]
