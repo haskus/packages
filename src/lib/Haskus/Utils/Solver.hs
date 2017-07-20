@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | Simple Constraint solver
 module Haskus.Utils.Solver
@@ -16,6 +17,7 @@ module Haskus.Utils.Solver
    , getConstraintPredicates
    , mergeMatchResults
    , Predicated (..)
+   , evalsTo
    )
 where
 
@@ -23,6 +25,7 @@ import Haskus.Utils.Maybe
 import Haskus.Utils.Flow
 import Haskus.Utils.List
 
+import Data.Bits
 import Control.Arrow (first,second)
 
 import Prelude hiding (pred)
@@ -172,10 +175,10 @@ getRuleTerminals (Terminal a)     = [a]
 getRuleTerminals (NonTerminal xs) = concatMap (getRuleTerminals . snd) xs
 
 -- | Get predicates used in a rule
-getRulePredicates :: Rule e p a -> [p]
+getRulePredicates :: Eq p => Rule e p a -> [p]
 getRulePredicates (Fail _)         = []
 getRulePredicates (Terminal _)     = []
-getRulePredicates (NonTerminal xs) = concatMap (getConstraintPredicates . fst) xs
+getRulePredicates (NonTerminal xs) = nub $ concatMap (getConstraintPredicates . fst) xs
 
 -- | Get predicates used in a constraint
 getConstraintPredicates :: Constraint e p -> [p]
@@ -260,7 +263,6 @@ class Predicated a where
    -- | Get used predicates
    getPredicates :: a -> [Pred a]
 
-
 instance (Eq e, Eq p, Eq a) => Predicated (Rule e p a) where
    type Pred     (Rule e p a) = p
    type PredErr  (Rule e p a) = e
@@ -268,3 +270,44 @@ instance (Eq e, Eq p, Eq a) => Predicated (Rule e p a) where
 
    getTerminals  = fmap Terminal . getRuleTerminals
    getPredicates = getRulePredicates
+
+
+-- | Constraint checking that a predicated value evaluates to some terminal
+evalsTo :: (Eq a, Eq (Pred a), Predicated a) => a -> a -> Constraint e (Pred a)
+evalsTo s a =
+   -- we first check if the predicated value reduces to a terminal without any
+   -- additional oracle
+   case reducePredicates (const Nothing) s of
+      Match x -> CBool (x == a)
+      _       -> orConstraints (fmap andPredicates matchingPredSets)
+   where
+      andPredicates []  = CBool True
+      andPredicates [x] = makePred x
+      andPredicates xs  = And (fmap makePred xs)
+
+      orConstraints []  = CBool True
+      orConstraints [x] = x
+      orConstraints xs  = Or xs
+
+      matchingPredSets = filter isMatching predSets
+
+      isMatching ps = case reducePredicates (makeOracle ps) s of
+         Match x -> x == a
+         _       -> False
+
+      -- create an oracle function from a set of predicates
+      makeOracle []           = \_ -> Nothing
+      makeOracle (Left  x:xs) = \p -> if p == x then Just False else makeOracle xs p
+      makeOracle (Right x:xs) = \p -> if p == x then Just True  else makeOracle xs p
+
+      makePred (Left p)  = Not (Predicate p)
+      makePred (Right p) = Predicate p
+
+      -- sets of predicates either False (Right p) or True (Left p)
+      preds        = getPredicates s
+      predSets     = fmap go ([0..2^(length preds)-1] :: [Word])
+      go n         = fmap (setB n) (preds `zip` [0..])
+      setB n (p,i) = if testBit n i
+         then (Right p)
+         else (Left  p)
+
