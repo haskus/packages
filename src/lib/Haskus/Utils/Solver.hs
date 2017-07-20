@@ -230,6 +230,15 @@ mergeMatchResults = go
 --    reducePredicates fp (PD a b) = 
 --       PD <$> reducePredicates fp a
 --          <*> reducePredicates fp b
+-- 
+--    getTerminals (PD as bs) = [ PD a b | a <- getTerminals as
+--                                       , b <- getTerminals bs
+--                              ]
+-- 
+--    getPredicates (PD a b) = concat
+--                               [ getPredicates a
+--                               , getPredicates b
+--                               ]
 -- @
 --
 class Predicated a where
@@ -245,8 +254,17 @@ class Predicated a where
       Match _ -> True
       _       -> False
 
+   -- | Get possible resulting terminals
+   getTerminals :: a -> [a]
+
+   -- | Get used predicates
+   getPredicates :: a -> [Pred a]
+
+
 instance (Eq e, Eq p, Eq a) => Predicated (Rule e p a) where
    type Pred     (Rule e p a) = p
    type PredErr  (Rule e p a) = e
    reducePredicates fp r = fmap Terminal (ruleReduce fp r)
 
+   getTerminals  = fmap Terminal . getRuleTerminals
+   getPredicates = getRulePredicates
