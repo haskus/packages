@@ -88,6 +88,21 @@ testsSolver = testGroup "Solver" $
             MatchRule _ -> True
             _           -> False
          )
+
+   , testProperty "Ordered non terminal 0"
+         (case ruleReduce oracleAB (orderedNonTerminal [(Predicate PredA, Terminal 0 :: R Int)
+                                                       ,(Predicate PredB, Terminal 1)
+                                                       ]) of
+            Match 0 -> True
+            r       -> error (show r)
+         )
+   , testProperty "Ordered non terminal 1"
+         (case ruleReduce oracleAB (orderedNonTerminal [(Predicate PredB, Terminal 1 :: R Int)
+                                                       ,(Predicate PredA, Terminal 0)
+                                                       ]) of
+            Match 1 -> True
+            r       -> error (show r)
+         )
    ]
 
    where
@@ -107,6 +122,10 @@ testsSolver = testGroup "Solver" $
       oracleAE   = \case
          PredA -> Nothing
          PredD -> Nothing
+         _     -> Just False
+      oracleAB   = \case
+         PredA -> Just True
+         PredB -> Just True
          _     -> Just False
 
       simpleRule :: R Int

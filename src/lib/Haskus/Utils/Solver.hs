@@ -8,6 +8,7 @@
 module Haskus.Utils.Solver
    ( Constraint (..)
    , Rule (..)
+   , orderedNonTerminal
    , mergeRules
    , constraintReduce
    , ruleReduce
@@ -55,6 +56,15 @@ instance Functor (Rule e p) where
    fmap f (Terminal a)     = Terminal (f a)
    fmap f (NonTerminal xs) = NonTerminal (fmap (second (fmap f)) xs)
    fmap _ (Fail e)         = Fail e
+
+-- | NonTerminal whose constraints are evaluated in order
+--
+-- Earlier constraints must be proven false for the next ones to be considered
+orderedNonTerminal :: [(Constraint e p, Rule e p a)] -> Rule e p a
+orderedNonTerminal = NonTerminal . go []
+   where
+      go _  []          = []
+      go cs ((c,r):xs)  = (And [Not (Or cs),c],r) : go (c:cs) xs
 
 -- | Merge two rules together
 mergeRules :: Rule e p a -> Rule e p b -> Rule e p (a,b)
