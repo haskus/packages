@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiWayIf #-}
 
 -- | Simple Constraint solver
 module Haskus.Utils.Solver
@@ -37,7 +38,8 @@ data Constraint e p
    = Predicate p
    | Not (Constraint e p)
    | And [Constraint e p]
-   | Or [Constraint e p]
+   | Or  [Constraint e p]
+   | Xor [Constraint e p]
    | CBool Bool
    deriving (Show,Eq,Ord)
 
@@ -47,6 +49,7 @@ instance Functor (Constraint e) where
    fmap f (Not c)        = Not (fmap f c)
    fmap f (And cs)       = And (fmap (fmap f) cs)
    fmap f (Or cs)        = Or (fmap (fmap f) cs)
+   fmap f (Xor cs)       = Xor (fmap (fmap f) cs)
 
 data Rule e p a
    = Terminal a
@@ -79,8 +82,15 @@ simplifyConstraint x = case x of
    Not (Not c)       -> simplifyConstraint c
    Not (Or cs)       -> simplifyConstraint (And (fmap Not cs))
    Not (And cs)      -> simplifyConstraint (Or (fmap Not cs))
+   Not (Xor cs)      -> case simplifyConstraint (Xor cs) of
+                           Xor cs' -> Not (Xor cs')
+                           r       -> simplifyConstraint (Not r)
    And [c]           -> simplifyConstraint c
-   Or [c]            -> simplifyConstraint c
+   Or  [c]           -> simplifyConstraint c
+   Xor [c]           -> let c' = simplifyConstraint c
+                        in if | constraintIsBool True c'  -> CBool True
+                              | constraintIsBool False c' -> CBool False
+                              | otherwise                 -> c'
    And cs            -> let cs' = fmap simplifyConstraint cs
                         in if any (constraintIsBool False) cs'
                              then CBool False
@@ -89,6 +99,13 @@ simplifyConstraint x = case x of
                         in if any (constraintIsBool True) cs'
                              then CBool True
                              else Or cs'
+   Xor cs            -> let cs'        = fmap simplifyConstraint cs
+                            countTrue  = length (filter (constraintIsBool True) cs')
+                            countFalse = length (filter (constraintIsBool False) cs')
+                            countAll   = length cs'
+                        in if | countTrue > 1                                        -> CBool False
+                              | countTrue == 1 && countTrue + countFalse == countAll -> CBool True
+                              | otherwise                                            -> Xor cs'
 
 -- | Merge two rules together
 mergeRules :: Rule e p a -> Rule e p b -> Rule e p (a,b)
@@ -127,6 +144,9 @@ constraintReduce pred c = case simplifyConstraint c of
                       cs' -> case filter (not . constraintIsBool False) cs' of
                         [c'] -> c'
                         cs'' -> Or cs''
+   Xor cs       -> case fmap (constraintReduce pred) cs of
+                      []  -> error "Empty Xor constraint"
+                      cs' -> simplifyConstraint (Xor cs')
    c'@(CBool _) -> c'
 
 -- | Check that a constraint is evaluated to a given boolean value
@@ -223,6 +243,7 @@ getConstraintPredicates = \case
    Not c        -> getConstraintPredicates c
    And cs       -> concatMap getConstraintPredicates cs
    Or  cs       -> concatMap getConstraintPredicates cs
+   Xor cs       -> concatMap getConstraintPredicates cs
    CBool _      -> []
 
 -- | Merge match results

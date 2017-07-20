@@ -49,6 +49,12 @@ testsSolver = testGroup "Solver" $
          (constraintReduce oracleAll (Or [CBool True,CBool False]) == (CBool True :: C))
    , testProperty "Constraint reduce: Or [False,False]"
          (constraintReduce oracleAll (Or [CBool False,CBool False]) == (CBool False :: C))
+
+   , testProperty "Constraint reduce: Xor [True,False,True]"
+         (constraintReduce oracleAll (Xor [CBool True,CBool False,CBool True]) == (CBool False :: C))
+   , testProperty "Constraint reduce: Xor [True,False,False]"
+         (constraintReduce oracleAll (Xor [CBool True,CBool False,CBool False]) == (CBool True :: C))
+
    , testProperty "Constraint reduce: matching oracle"
          (constraintReduce oracleA (Predicate PredA) == (CBool True :: C))
    , testProperty "Constraint reduce: non matching oracle"
