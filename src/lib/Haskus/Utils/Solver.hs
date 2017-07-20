@@ -67,7 +67,7 @@ orderedNonTerminal = NonTerminal . go []
    where
       go _  []          = []
       go [] ((c,r):xs)  = (simplifyConstraint c,r) : go [c] xs
-      go cs ((c,r):xs)  = (simplifyConstraint (And [Not (Or cs),c]),r) : go (c:cs) xs
+      go cs ((c,r):xs)  = (simplifyConstraint (And (c:fmap Not cs)),r) : go (c:cs) xs
 
 -- | Simplify a constraint
 simplifyConstraint :: Constraint e p -> Constraint e p
@@ -108,7 +108,7 @@ mergeRules = go
 constraintReduce :: (Eq p, Eq e) => (p -> Maybe Bool) -> Constraint e p -> Constraint e p
 constraintReduce pred c = case simplifyConstraint c of
    Predicate p  -> case pred p of
-                      Nothing -> c
+                      Nothing -> Predicate p
                       Just v  -> CBool v
    Not c'       -> case constraintReduce pred c' of
                       CBool v -> CBool (not v)
