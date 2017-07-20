@@ -7,6 +7,7 @@
 -- | Simple Constraint solver
 module Haskus.Utils.Solver
    ( Constraint (..)
+   , simplifyConstraint
    , Rule (..)
    , orderedNonTerminal
    , mergeRules
@@ -65,7 +66,26 @@ orderedNonTerminal :: [(Constraint e p, Rule e p a)] -> Rule e p a
 orderedNonTerminal = NonTerminal . go []
    where
       go _  []          = []
-      go cs ((c,r):xs)  = (And [Not (Or cs),c],r) : go (c:cs) xs
+      go cs ((c,r):xs)  = (simplifyConstraint (And [Not (Or cs),c]),r) : go (c:cs) xs
+
+-- | Simplify a constraint
+simplifyConstraint :: Constraint e p -> Constraint e p
+simplifyConstraint x = case x of
+   Predicate _       -> x
+   CBool _           -> x
+   Not (Predicate _) -> x
+   Not (CBool v)     -> CBool (not v)
+   Not (Not c)       -> simplifyConstraint c
+   Not (Or cs)       -> simplifyConstraint (And (fmap Not cs))
+   Not (And cs)      -> simplifyConstraint (Or (fmap Not cs))
+   And cs            -> let cs' = fmap simplifyConstraint cs
+                        in if any (constraintIsBool False) cs'
+                             then CBool False
+                             else And cs'
+   Or cs             -> let cs' = fmap simplifyConstraint cs
+                         in if any (constraintIsBool True) cs'
+                              then CBool True
+                              else Or cs'
 
 -- | Merge two rules together
 mergeRules :: Rule e p a -> Rule e p b -> Rule e p (a,b)
