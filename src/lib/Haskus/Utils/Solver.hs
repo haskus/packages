@@ -92,7 +92,7 @@ makeOracle = Map.fromList
 
 -- | Get a list of predicates from an oracle
 oraclePredicates :: Ord p => PredOracle p -> [(p,PredState)]
-oraclePredicates = Map.toList
+oraclePredicates = filter (\(_,s) -> s /= UndefPred) . Map.toList
 
 -- | Oracle that always answer Undef
 emptyOracle :: PredOracle p
