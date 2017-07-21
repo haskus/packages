@@ -313,11 +313,19 @@ evalsTo s a = case createPredicateTable s of
 --    { p1 :: RuleT () Bool Int t
 --    , p2 :: RuleT () Bool String t
 --    }
+--
+-- deriving instance Eq (PD T)
+-- deriving instance Show (PD T)
+-- deriving instance Ord (PD T)
+-- deriving instance Eq (PD NT)
+-- deriving instance Show (PD NT)
+-- deriving instance Ord (PD NT)
+--
 -- 
 -- instance Predicated (PD NT) where
---    type PredErr (PD NT) = ()
---    type Pred (PD NT)    = Bool
---    type PredTerm (PD NT)    = PD T
+--    type PredErr (PD NT)  = ()
+--    type Pred (PD NT)     = Bool
+--    type PredTerm (PD NT) = PD T
 -- 
 --    liftTerminal (PD a b) = PD (liftTerminal a) (liftTerminal b)
 -- 
@@ -326,6 +334,15 @@ evalsTo s a = case createPredicateTable s of
 --          |> (`applyP` reducePredicates oracle a)
 --          |> (`applyP` reducePredicates oracle b)
 --          |> resultP
+--
+--    getTerminals (PD as bs) = [ PD a b | a <- getTerminals as
+--                                       , b <- getTerminals bs
+--                              ]
+--   
+--    getPredicates (PD a b) = concat
+--                               [ getPredicates a
+--                               , getPredicates b
+--                               ]
 -- @
 class Predicated a where
    -- | Error type
