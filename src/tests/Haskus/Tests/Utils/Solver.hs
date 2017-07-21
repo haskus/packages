@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 
 module Haskus.Tests.Utils.Solver
    ( testsSolver
@@ -167,49 +168,35 @@ testsSolver = testGroup "Solver" $
    , testProperty "Create predicate table: flat non terminal"
          (case createPredicateTable d1 of
             Left _   -> False
-            Right xs -> sort (fmap fst xs) == sort
-                           [ [Right PredA, Left  PredC, Left  PredD, Left  PredE]
-                           , [Right PredA, Left  PredC, Left  PredD, Right PredE]
-                           , [Left  PredA, Left  PredC, Left  PredD, Right PredE]
+            Right xs -> sort (fmap (oraclePredicates . fst) xs) == sort
+                           [ [(PredA, SetPred)  , (PredC, UnsetPred), (PredD, UnsetPred), (PredE, UnsetPred)]
+                           , [(PredA, SetPred)  , (PredC, UnsetPred), (PredD, UnsetPred), (PredE, SetPred)]
+                           , [(PredA, UnsetPred), (PredC, UnsetPred), (PredD, UnsetPred), (PredE, SetPred)]
                            ]
          )
    , testProperty "Create predicate table: nested non terminal"
          (case createPredicateTable d2 of
             Left _   -> False
-            Right xs -> sort (fmap fst xs) == sort
-                           [ [Right PredA, Left  PredB, Left  PredC, Left  PredD]
-                           , [Right PredA, Right PredB, Left  PredC, Left  PredD]
-                           , [Right PredA, Left  PredB, Right PredC, Left  PredD]
-                           , [Right PredA, Left  PredB, Left  PredC, Right PredD]
-                           , [Right PredA, Left  PredB, Right PredC, Right PredD]
-                           , [Left  PredA, Right PredB, Right PredC, Left  PredD]
-                           , [Left  PredA, Right PredB, Left  PredC, Right PredD]
+            Right xs -> sort (fmap (oraclePredicates . fst) xs) == sort
+                           [ [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, UnsetPred), (PredD, UnsetPred)]
+                           , [(PredA, SetPred)  , (PredB, SetPred)  , (PredC, UnsetPred), (PredD, UnsetPred)]
+                           , [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, SetPred)  , (PredD, UnsetPred)]
+                           , [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, UnsetPred), (PredD, SetPred)]
+                           , [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, SetPred)  , (PredD, SetPred)]
+                           , [(PredA, UnsetPred), (PredB, SetPred)  , (PredC, SetPred)  , (PredD, UnsetPred)]
+                           , [(PredA, UnsetPred), (PredB, SetPred)  , (PredC, UnsetPred), (PredD, SetPred)]
                            ]
          )
    ]
 
    where
-      oracleAll = const (Just True)
-      oracleA   = \case
-         PredA -> Just True
-         _     -> Just False
-      oracleB   = \case
-         PredB -> Just True
-         _     -> Just False
-      oracleC   = \case
-         PredC -> Just True
-         _     -> Just False
-      oracleD   = \case
-         PredD -> Just True
-         _     -> Just False
-      oracleAE   = \case
-         PredA -> Nothing
-         PredD -> Nothing
-         _     -> Just False
-      oracleAB   = \case
-         PredA -> Just True
-         PredB -> Just True
-         _     -> Just False
+      oracleAll = makeOracle (fmap (,SetPred) [PredA,PredB,PredC,PredD,PredE])
+      oracleA   = makeOracle ((PredA,SetPred) : fmap (,UnsetPred) [PredB,PredC,PredD,PredE])
+      oracleB   = makeOracle ((PredB,SetPred) : fmap (,UnsetPred) [PredA,PredC,PredD,PredE])
+      oracleC   = makeOracle ((PredC,SetPred) : fmap (,UnsetPred) [PredA,PredB,PredD,PredE])
+      oracleD   = makeOracle ((PredD,SetPred) : fmap (,UnsetPred) [PredA,PredB,PredC,PredE])
+      oracleAE  = makeOracle ((PredA,UndefPred) : (PredD,UndefPred) : fmap (,UnsetPred) [PredB,PredC,PredE])
+      oracleAB  = makeOracle ((PredA,SetPred) : (PredB,SetPred) : fmap (,UnsetPred) [PredC,PredD,PredE])
 
       simpleRule :: R Int NT
       simpleRule = NonTerminal

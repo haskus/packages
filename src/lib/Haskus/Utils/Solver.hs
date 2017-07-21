@@ -9,8 +9,19 @@
 -- | Simple Constraint solver
 module Haskus.Utils.Solver
    (
+   -- * Oracle
+     PredState (..)
+   , PredOracle
+   , makeOracle
+   , oraclePredicates
+   , emptyOracle
+   , predIsSet
+   , predIsUnset
+   , predIsUndef
+   , predIs
+   , predState
    -- * Constraint
-     Constraint (..)
+   , Constraint (..)
    , simplifyConstraint
    , constraintReduce
    -- * Rule
@@ -31,11 +42,61 @@ where
 import Haskus.Utils.Maybe
 import Haskus.Utils.Flow
 import Haskus.Utils.List
+import Haskus.Utils.Map (Map)
+import qualified Haskus.Utils.Map as Map
 
 import Data.Bits
 import Control.Arrow (first,second)
 
 import Prelude hiding (pred)
+
+-------------------------------------------------------
+-- Constraint
+-------------------------------------------------------
+
+-- | Predicate state
+data PredState
+   = SetPred       -- ^ Set predicate
+   | UnsetPred     -- ^ Unset predicate
+   | UndefPred     -- ^ Undefined predicate
+   deriving (Show,Eq,Ord)
+
+-- | Predicate oracle
+type PredOracle p = Map p PredState
+
+-- | Ask an oracle if a predicate is set
+predIsSet :: Ord p => PredOracle p -> p -> Bool
+predIsSet oracle p = predIs oracle p SetPred
+
+-- | Ask an oracle if a predicate is unset
+predIsUnset :: Ord p => PredOracle p -> p -> Bool
+predIsUnset oracle p = predIs oracle p UnsetPred
+
+-- | Ask an oracle if a predicate is undefined
+predIsUndef :: Ord p => PredOracle p -> p -> Bool
+predIsUndef oracle p = predIs oracle p UndefPred
+
+-- | Check the state of a predicate
+predIs :: Ord p => PredOracle p -> p -> PredState -> Bool
+predIs oracle p s = predState oracle p == s
+
+-- | Get predicate state
+predState :: Ord p => PredOracle p -> p -> PredState
+predState oracle p = case p `Map.lookup` oracle of
+   Just s  -> s
+   Nothing -> UndefPred
+
+-- | Create an oracle from a list
+makeOracle :: Ord p => [(p,PredState)] -> PredOracle p
+makeOracle = Map.fromList
+
+-- | Get a list of predicates from an oracle
+oraclePredicates :: Ord p => PredOracle p -> [(p,PredState)]
+oraclePredicates = Map.toList
+
+-- | Oracle that always answer Undef
+emptyOracle :: PredOracle p
+emptyOracle = Map.empty
 
 -------------------------------------------------------
 -- Constraint
@@ -59,29 +120,30 @@ instance Functor (Constraint e) where
    fmap f (Xor cs)       = Xor (fmap (fmap f) cs)
 
 -- | Reduce a constraint
-constraintReduce :: (Eq p, Eq e) => (p -> Maybe Bool) -> Constraint e p -> Constraint e p
-constraintReduce pred c = case simplifyConstraint c of
-   Predicate p  -> case pred p of
-                      Nothing -> Predicate p
-                      Just v  -> CBool v
-   Not c'       -> case constraintReduce pred c' of
+constraintReduce :: (Ord p, Eq p, Eq e) => PredOracle p -> Constraint e p -> Constraint e p
+constraintReduce oracle c = case simplifyConstraint c of
+   Predicate p  -> case predState oracle p of
+                      UndefPred -> Predicate p
+                      SetPred   -> CBool True
+                      UnsetPred -> CBool False
+   Not c'       -> case constraintReduce oracle c' of
                       CBool v -> CBool (not v)
                       c''     -> Not c''
-   And cs       -> case fmap (constraintReduce pred) cs of
+   And cs       -> case fmap (constraintReduce oracle) cs of
                       []                                     -> error "Empty And constraint"
                       cs' | all (constraintIsBool True)  cs' -> CBool True
                       cs' | any (constraintIsBool False) cs' -> CBool False
                       cs' -> case filter (not . constraintIsBool True) cs' of
                         [c'] -> c'
                         cs'' -> And cs''
-   Or cs        -> case fmap (constraintReduce pred) cs of
+   Or cs        -> case fmap (constraintReduce oracle) cs of
                       []                                      -> error "Empty Or constraint"
                       cs' | all (constraintIsBool False)  cs' -> CBool False
                       cs' | any (constraintIsBool True)   cs' -> CBool True
                       cs' -> case filter (not . constraintIsBool False) cs' of
                         [c'] -> c'
                         cs'' -> Or cs''
-   Xor cs       -> case fmap (constraintReduce pred) cs of
+   Xor cs       -> case fmap (constraintReduce oracle) cs of
                       []  -> error "Empty Xor constraint"
                       cs' -> simplifyConstraint (Xor cs')
    c'@(CBool _) -> c'
@@ -211,8 +273,9 @@ mergeRules = go
 
 
 -- | Reduce a rule
-ruleReduce :: forall e p a. (Eq e, Eq p, Eq a) => (p -> Maybe Bool) -> Rule e p a -> MatchResult e (Rule e p a) a
-ruleReduce pred r = case r of
+ruleReduce :: forall e p a.
+   ( Ord p, Eq e, Eq p, Eq a) => PredOracle p -> Rule e p a -> MatchResult e (Rule e p a) a
+ruleReduce oracle r = case r of
    Terminal a     -> Match a
    Fail e         -> MatchFail [e]
    NonTerminal rs -> 
@@ -220,7 +283,7 @@ ruleReduce pred r = case r of
          rs' :: [(Constraint e p, Rule e p a)]
          rs' = rs
                -- reduce constraints
-               |> fmap (first (constraintReduce pred))
+               |> fmap (first (constraintReduce oracle))
                -- filter non matching rules
                |> filter (not . constraintIsBool False . fst)
 
@@ -247,7 +310,7 @@ ruleReduce pred r = case r of
             | divergence                    -> MatchDiverge (fmap Terminal terminalResults)
             | not (null nonTerminalResults) ->
                -- fold matching nested NonTerminals
-               ruleReduce pred
+               ruleReduce oracle
                   <| NonTerminal 
                   <| (fmap (\x -> (CBool True, Terminal x)) terminalResults
                       ++ mayMatchRules
@@ -276,6 +339,7 @@ evalsTo :: (Ord (Pred a), Eq a, Eq (PredTerm a), Eq (Pred a), Predicated a) => a
 evalsTo s a = case createPredicateTable s of
    Left x   -> CBool (x == a)
    Right xs -> orConstraints <| fmap andPredicates
+                             <| fmap oraclePredicates
                              <| fmap fst
                              <| filter ((== a) . snd)
                              <| xs
@@ -289,8 +353,10 @@ evalsTo s a = case createPredicateTable s of
       orConstraints [x] = x
       orConstraints xs  = Or xs
 
-      makePred (Left p)  = Not (Predicate p)
-      makePred (Right p) = Predicate p
+      makePred (p, UnsetPred) = Not (Predicate p)
+      makePred (p, SetPred)   = Predicate p
+      makePred (_, UndefPred) = undefined -- shouldn't be possible given we use
+                                          -- get the predicates from the oracle itself
 
 
 -------------------------------------------------------
@@ -358,7 +424,7 @@ class Predicated a where
    liftTerminal :: PredTerm a -> a
 
    -- | Reduce predicates
-   reducePredicates :: (Pred a -> Maybe Bool) -> a -> MatchResult (PredErr a) a (PredTerm a)
+   reducePredicates :: PredOracle (Pred a) -> a -> MatchResult (PredErr a) a (PredTerm a)
 
    -- | Get possible resulting terminals
    getTerminals :: a -> [PredTerm a]
@@ -367,7 +433,7 @@ class Predicated a where
    getPredicates :: a -> [Pred a]
 
 
-instance (Eq e, Eq a, Eq p) => Predicated (Rule e p a) where
+instance (Ord p, Eq e, Eq a, Eq p) => Predicated (Rule e p a) where
    type PredErr  (Rule e p a) = e
    type Pred     (Rule e p a) = p
    type PredTerm (Rule e p a) = a
@@ -377,7 +443,7 @@ instance (Eq e, Eq a, Eq p) => Predicated (Rule e p a) where
    getTerminals     = getRuleTerminals
    getPredicates    = getRulePredicates
 
-instance (Eq e, Eq p) => Predicated (Constraint e p) where
+instance (Ord p, Eq e, Eq p) => Predicated (Constraint e p) where
    type PredErr  (Constraint e p) = e
    type Pred     (Constraint e p) = p
    type PredTerm (Constraint e p) = Bool
@@ -444,9 +510,6 @@ resultP :: MatchResult e nt (nt,t) -> MatchResult e nt t
 resultP = fmap snd
 
 -- | Create a table of predicates that return a terminal
---
--- Left p: Not p
--- Right p: p
 createPredicateTable ::
    ( Ord (Pred a)
    , Eq (Pred a)
@@ -454,30 +517,25 @@ createPredicateTable ::
    , Predicated a
    , Predicated a
    , Pred a ~ Pred a
-   ) => a -> Either (PredTerm a) [([Either (Pred a) (Pred a)],PredTerm a)]
+   ) => a -> Either (PredTerm a) [(PredOracle (Pred a),PredTerm a)]
 createPredicateTable s =
    -- we first check if the predicated value reduces to a terminal without any
    -- additional oracle
-   case reducePredicates (const Nothing) s of
+   case reducePredicates emptyOracle s of
       Match x -> Left x
-      _         -> Right (mapMaybe matching predSets)
+      _       -> Right (mapMaybe (matching . makeOracle) predSets)
    where
-      matching ps = case reducePredicates (makeOracle ps) s of
-         Match x -> Just (ps,x)
-         _         -> Nothing
-
-      -- create an oracle function from a set of predicates
-      makeOracle []           = \_ -> Nothing
-      makeOracle (Left  x:xs) = \p -> if p == x then Just False else makeOracle xs p
-      makeOracle (Right x:xs) = \p -> if p == x then Just True  else makeOracle xs p
+      matching oracle = case reducePredicates oracle s of
+         Match x -> Just (oracle,x)
+         _       -> Nothing
 
       -- sets of predicates either False (Right p) or True (Left p)
       preds        = sort (getPredicates s)
       predSets     = fmap go ([0..2^(length preds)-1] :: [Word])
       go n         = fmap (setB n) (preds `zip` [0..])
       setB n (p,i) = if testBit n i
-         then (Right p)
-         else (Left  p)
+         then (p,SetPred)
+         else (p,UnsetPred)
 
 
 
