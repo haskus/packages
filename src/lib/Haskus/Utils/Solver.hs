@@ -335,7 +335,7 @@ getRulePredicates (NonTerminal xs) = nub $ concatMap (\(x,y) -> getConstraintPre
 
 -- | Constraint checking that a predicated value evaluates to some terminal
 evalsTo :: (Ord (Pred a), Eq a, Eq (PredTerm a), Eq (Pred a), Predicated a) => a -> PredTerm a -> Constraint e (Pred a)
-evalsTo s a = case createPredicateTable s (const True) True of
+evalsTo s a = case createPredicateTable s (const True) False of
    Left x   -> CBool (x == a)
    Right xs -> orConstraints <| fmap andPredicates
                              <| fmap oraclePredicates
@@ -534,7 +534,7 @@ createPredicateTable s oracleChecker fullTable =
 
       predSets
          | fullTable = makeFullSets preds []
-         | otherwise = makeSets preds [] 
+         | otherwise = makeSets     preds [] 
 
       makeFullSets []     os = os
       makeFullSets (p:ps) [] = makeFullSets ps [[(p,SetPred)],[(p,UnsetPred)]]
