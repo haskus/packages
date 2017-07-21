@@ -55,6 +55,11 @@ testsSolver = testGroup "Solver" $
    , testProperty "Constraint reduce: Xor [True,False,False]"
          (constraintReduce oracleAll (Xor [CBool True,CBool False,CBool False]) == (CBool True :: C))
 
+   , testProperty "Constraint reduce: Not (Xor [True,False,False])"
+         (constraintReduce oracleAll (Not (Xor [CBool True,CBool False,CBool False])) == (CBool False :: C))
+   , testProperty "Constraint reduce: Not (Xor [False,False,False])"
+         (constraintReduce oracleAll (Not (Xor [CBool False,CBool False,CBool False])) == (CBool True :: C))
+
    , testProperty "Constraint reduce: matching oracle"
          (constraintReduce oracleA (Predicate PredA) == (CBool True :: C))
    , testProperty "Constraint reduce: non matching oracle"
@@ -71,7 +76,7 @@ testsSolver = testGroup "Solver" $
          ((Terminal 0 `evalsTo` (Terminal 0 :: R Int)) == (CBool True :: C))
    , testProperty "Evals to: Terminal 1"
          ((Terminal 1 `evalsTo` (Terminal 0 :: R Int)) == (CBool False :: C))
-
+   
    , testProperty "Predicated data: matching"
          (reducePredicates oracleA d1 == Match (d1 {pInt = Terminal 0}))
    , testProperty "Predicated data: not matching"

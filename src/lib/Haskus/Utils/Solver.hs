@@ -92,19 +92,20 @@ simplifyConstraint x = case x of
                               | constraintIsBool False c' -> CBool False
                               | otherwise                 -> c'
    And cs            -> let cs' = fmap simplifyConstraint cs
-                        in if any (constraintIsBool False) cs'
-                             then CBool False
-                             else And cs'
+                        in if | any (constraintIsBool False) cs' -> CBool False
+                              | all (constraintIsBool True)  cs' -> CBool True
+                              | otherwise                        -> And cs'
    Or cs             -> let cs' = fmap simplifyConstraint cs
-                        in if any (constraintIsBool True) cs'
-                             then CBool True
-                             else Or cs'
+                        in if | any (constraintIsBool True) cs'  -> CBool True
+                              | all (constraintIsBool False) cs' -> CBool False
+                              | otherwise                        -> Or cs'
    Xor cs            -> let cs'        = fmap simplifyConstraint cs
                             countTrue  = length (filter (constraintIsBool True) cs')
                             countFalse = length (filter (constraintIsBool False) cs')
                             countAll   = length cs'
                         in if | countTrue > 1                                        -> CBool False
                               | countTrue == 1 && countTrue + countFalse == countAll -> CBool True
+                              | countAll == countFalse                               -> CBool False
                               | otherwise                                            -> Xor cs'
 
 -- | Merge two rules together
