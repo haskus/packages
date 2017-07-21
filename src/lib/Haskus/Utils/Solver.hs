@@ -335,7 +335,7 @@ getRulePredicates (NonTerminal xs) = nub $ concatMap (\(x,y) -> getConstraintPre
 
 -- | Constraint checking that a predicated value evaluates to some terminal
 evalsTo :: (Ord (Pred a), Eq a, Eq (PredTerm a), Eq (Pred a), Predicated a) => a -> PredTerm a -> Constraint e (Pred a)
-evalsTo s a = case createPredicateTable s (const True) of
+evalsTo s a = case createPredicateTable s (const True) True of
    Left x   -> CBool (x == a)
    Right xs -> orConstraints <| fmap andPredicates
                              <| fmap oraclePredicates
@@ -516,8 +516,8 @@ createPredicateTable ::
    , Predicated a
    , Predicated a
    , Pred a ~ Pred a
-   ) => a -> (PredOracle (Pred a) -> Bool) -> Either (PredTerm a) [(PredOracle (Pred a),PredTerm a)]
-createPredicateTable s oracleChecker =
+   ) => a -> (PredOracle (Pred a) -> Bool) -> Bool -> Either (PredTerm a) [(PredOracle (Pred a),PredTerm a)]
+createPredicateTable s oracleChecker fullTable =
    -- we first check if the predicated value reduces to a terminal without any
    -- additional oracle
    case reducePredicates emptyOracle s of
@@ -531,7 +531,17 @@ createPredicateTable s oracleChecker =
       oracles = filter oracleChecker (fmap makeOracle predSets)
 
       preds        = sort (getPredicates s)
-      predSets     = makeSets preds []
+
+      predSets
+         | fullTable = makeFullSets preds []
+         | otherwise = makeSets preds [] 
+
+      makeFullSets []     os = os
+      makeFullSets (p:ps) [] = makeFullSets ps [[(p,SetPred)],[(p,UnsetPred)]]
+      makeFullSets (p:ps) os = makeFullSets ps
+                                 (  [ (p,SetPred):o   | o <- os]
+                                 ++ [ (p,UnsetPred):o | o <- os]
+                                 )
 
       makeSets []     os  = os
       makeSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred)]
