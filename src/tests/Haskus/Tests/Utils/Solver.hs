@@ -166,7 +166,7 @@ testsSolver = testGroup "Solver" $
          (sort (getPredicates d2) == sort [PredA,PredB,PredC,PredD])
 
    , testProperty "Create predicate table: flat non terminal"
-         (case createPredicateTable d1 of
+         (case createPredicateTable d1 (const True) of
             Left _   -> False
             Right xs -> sort (fmap (oraclePredicates . fst) xs) == sort
                            [ [(PredA, SetPred)  , (PredC, UnsetPred), (PredD, UnsetPred), (PredE, UnsetPred)]
@@ -175,7 +175,7 @@ testsSolver = testGroup "Solver" $
                            ]
          )
    , testProperty "Create predicate table: nested non terminal"
-         (case createPredicateTable d2 of
+         (case createPredicateTable d2 (const True) of
             Left _   -> False
             Right xs -> sort (fmap (oraclePredicates . fst) xs) == sort
                            [ [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, UnsetPred), (PredD, UnsetPred)]
