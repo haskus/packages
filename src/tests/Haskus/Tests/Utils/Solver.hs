@@ -1,6 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Haskus.Tests.Utils.Solver
    ( testsSolver
@@ -12,6 +14,7 @@ import Test.Tasty.QuickCheck as QC
 import Data.List
 
 import Haskus.Utils.Solver
+import Haskus.Utils.Flow
 
 
 data Predi
@@ -26,8 +29,49 @@ newtype Err
    = Err String
    deriving (Show,Eq,Ord)
 
-type C   = Constraint Err Predi
-type R a = Rule Err Predi a
+type C     = Constraint Err Predi
+type R a t = RuleT Err Predi a t
+
+data T
+data NT
+
+type family RuleT e p a s :: * where
+   RuleT e p a T   = a
+   RuleT e p a NT  = Rule e p a
+
+data PD t = PD
+   { pInt  :: R Int t
+   , _pStr :: R String t
+   }
+
+deriving instance Eq (PD T)
+deriving instance Show (PD T)
+deriving instance Ord (PD T)
+deriving instance Eq (PD NT)
+deriving instance Show (PD NT)
+deriving instance Ord (PD NT)
+
+instance Predicated (PD NT) where
+   type PredErr (PD NT)  = Err
+   type Pred (PD NT)     = Predi
+   type PredTerm (PD NT) = PD T
+
+   liftTerminal (PD a b) = PD (liftTerminal a) (liftTerminal b)
+
+   reducePredicates oracle (PD a b) =
+      initP PD PD
+         |> (`applyP` reducePredicates oracle a)
+         |> (`applyP` reducePredicates oracle b)
+         |> resultP
+
+   getTerminals (PD as bs) = [ PD a b | a <- getTerminals as
+                                      , b <- getTerminals bs
+                             ]
+
+   getPredicates (PD a b) = concat
+                              [ getPredicates a
+                              , getPredicates b
+                              ]
 
 testsSolver :: TestTree
 testsSolver = testGroup "Solver" $
@@ -66,19 +110,19 @@ testsSolver = testGroup "Solver" $
          (constraintReduce oracleB (Predicate PredA) == (CBool False :: C))
 
    , testProperty "Constraint reduce: evalsTo 0"
-         (constraintReduce oracleAll (simpleRule `evalsTo` Terminal 0) == (CBool False :: C))
+         (constraintReduce oracleAll (simpleRule `evalsTo` 0) == (CBool False :: C))
    , testProperty "Constraint reduce: evalsTo 1"
-         (constraintReduce oracleAll (simpleRule `evalsTo` Terminal 1) == (CBool True :: C))
+         (constraintReduce oracleAll (simpleRule `evalsTo` 1) == (CBool True :: C))
    , testProperty "Constraint reduce: evals to D"
-         (constraintReduce oracleA (d1 `evalsTo` d1 {pInt = Terminal 0}) == (CBool True :: C))
+         (constraintReduce oracleA (d1 `evalsTo` PD 0 "Test") == (CBool True :: C))
 
    , testProperty "Evals to: Terminal 0"
-         ((Terminal 0 `evalsTo` (Terminal 0 :: R Int)) == (CBool True :: C))
+         (((Terminal 0 :: R Int NT) `evalsTo` 0) == (CBool True :: C))
    , testProperty "Evals to: Terminal 1"
-         ((Terminal 1 `evalsTo` (Terminal 0 :: R Int)) == (CBool False :: C))
+         (((Terminal 1 :: R Int NT) `evalsTo` 0) == (CBool False :: C))
    
    , testProperty "Predicated data: matching"
-         (reducePredicates oracleA d1 == Match (d1 {pInt = Terminal 0}))
+         (reducePredicates oracleA d1 == Match (PD 0 "Test"))
    , testProperty "Predicated data: not matching"
          (case reducePredicates oracleB d1 of
             NoMatch -> True
@@ -91,28 +135,28 @@ testsSolver = testGroup "Solver" $
          )
    , testProperty "Predicated data: divergent"
          (case reducePredicates oracleD d1 of
-            DivergentMatch xs -> sort xs == sort [d1 { pInt = Terminal 1}, d1 { pInt = Terminal 0}]
-            _                 -> False
+            MatchDiverge xs -> sort xs == sort [d1 { pInt = Terminal 1}, d1 { pInt = Terminal 0}]
+            _               -> False
          )
    , testProperty "Predicated data: not terminal"
          (case reducePredicates oracleAE d1 of
-            MatchNT _ -> True
-            _         -> False
+            DontMatch _ -> True
+            _           -> False
          )
 
    , testProperty "Ordered non terminal 0"
-         (case ruleReduce oracleAB (orderedNonTerminal [(Predicate PredA, Terminal 0 :: R Int)
-                                                       ,(Predicate PredB, Terminal 1)
-                                                       ]) of
-            Match (Terminal 0) -> True
-            _                  -> False
+         (case reducePredicates oracleAB (orderedNonTerminal [(Predicate PredA, Terminal 0 :: R Int NT)
+                                                             ,(Predicate PredB, Terminal 1)
+                                                             ]) of
+            Match 0 -> True
+            _       -> False
          )
    , testProperty "Ordered non terminal 1"
-         (case ruleReduce oracleAB (orderedNonTerminal [(Predicate PredB, Terminal 1 :: R Int)
-                                                       ,(Predicate PredA, Terminal 0)
-                                                       ]) of
-            Match (Terminal 1) -> True
-            _                  -> False
+         (case reducePredicates oracleAB (orderedNonTerminal [(Predicate PredB, Terminal 1 :: R Int NT)
+                                                             ,(Predicate PredA, Terminal 0)
+                                                             ]) of
+            Match 1 -> True
+            _       -> False
          )
    , testProperty "Get predicates: flat"
          (sort (getPredicates d1) == sort [PredA,PredC,PredD,PredE])
@@ -167,45 +211,24 @@ testsSolver = testGroup "Solver" $
          PredB -> Just True
          _     -> Just False
 
-      simpleRule :: R Int
+      simpleRule :: R Int NT
       simpleRule = NonTerminal
                      [ (CBool False, Terminal 0)
                      , (CBool True,  Terminal 1)
                      ]
-      d1 = D (NonTerminal [ (Predicate PredA, Terminal 0)
+      d1 :: PD NT
+      d1 = PD (NonTerminal [ (Predicate PredA, Terminal 0)
                           , (Predicate PredC, Fail (Err "D doesn't support predicate C"))
                           , (Predicate PredD, Terminal 0)
                           , (Predicate PredD, Terminal 1)
                           , (Predicate PredE, Terminal 0)
                           ])
              (Terminal "Test")
-      d2 = D (NonTerminal [ (Predicate PredA, Terminal 0)
+      d2 :: PD NT
+      d2 = PD (NonTerminal [ (Predicate PredA, Terminal 0)
                           , (Predicate PredB, NonTerminal
                               [ (Predicate PredC, Terminal 1)
                               , (Predicate PredD, Terminal 2)
                               ])
                           ])
              (Terminal "Test")
-
-data D = D
-   { pInt  :: R Int
-   , _pStr :: R String
-   }
-   deriving (Eq,Show,Ord)
-
-instance Predicated D where
-   type Pred    D = Predi
-   type PredErr D = Err
-
-   reducePredicates fp (D a b) =
-      D <$> reducePredicates fp a
-        <*> reducePredicates fp b
-
-   getTerminals (D as bs) = [ D a b | a <- getTerminals as
-                                    , b <- getTerminals bs
-                             ]
-
-   getPredicates (D a b) = concat
-                              [ getPredicates a
-                              , getPredicates b
-                              ]

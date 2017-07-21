@@ -8,23 +8,20 @@
 
 -- | Simple Constraint solver
 module Haskus.Utils.Solver
-   ( Constraint (..)
+   (
+   -- * Constraint
+     Constraint (..)
    , simplifyConstraint
+   , constraintReduce
+   -- * Rule
    , Rule (..)
    , orderedNonTerminal
    , mergeRules
-   , constraintReduce
-   , ruleReduce
-   , MatchResult (..)
-   , getRuleTerminals
-   , getRulePredicates
-   , getConstraintPredicates
-   , mergeMatchResults
-   , Predicated (..)
    , evalsTo
+   , MatchResult (..)
+   -- * Predicated data
+   , Predicated (..)
    , createPredicateTable
-   , RedResult (..)
-   , Reducible (..)
    , initP
    , applyP
    , resultP
@@ -39,6 +36,10 @@ import Data.Bits
 import Control.Arrow (first,second)
 
 import Prelude hiding (pred)
+
+-------------------------------------------------------
+-- Constraint
+-------------------------------------------------------
 
 data Constraint e p
    = Predicate p
@@ -57,6 +58,85 @@ instance Functor (Constraint e) where
    fmap f (Or cs)        = Or (fmap (fmap f) cs)
    fmap f (Xor cs)       = Xor (fmap (fmap f) cs)
 
+-- | Reduce a constraint
+constraintReduce :: (Eq p, Eq e) => (p -> Maybe Bool) -> Constraint e p -> Constraint e p
+constraintReduce pred c = case simplifyConstraint c of
+   Predicate p  -> case pred p of
+                      Nothing -> Predicate p
+                      Just v  -> CBool v
+   Not c'       -> case constraintReduce pred c' of
+                      CBool v -> CBool (not v)
+                      c''     -> Not c''
+   And cs       -> case fmap (constraintReduce pred) cs of
+                      []                                     -> error "Empty And constraint"
+                      cs' | all (constraintIsBool True)  cs' -> CBool True
+                      cs' | any (constraintIsBool False) cs' -> CBool False
+                      cs' -> case filter (not . constraintIsBool True) cs' of
+                        [c'] -> c'
+                        cs'' -> And cs''
+   Or cs        -> case fmap (constraintReduce pred) cs of
+                      []                                      -> error "Empty Or constraint"
+                      cs' | all (constraintIsBool False)  cs' -> CBool False
+                      cs' | any (constraintIsBool True)   cs' -> CBool True
+                      cs' -> case filter (not . constraintIsBool False) cs' of
+                        [c'] -> c'
+                        cs'' -> Or cs''
+   Xor cs       -> case fmap (constraintReduce pred) cs of
+                      []  -> error "Empty Xor constraint"
+                      cs' -> simplifyConstraint (Xor cs')
+   c'@(CBool _) -> c'
+
+-- | Check that a constraint is evaluated to a given boolean value
+constraintIsBool :: Bool -> Constraint e p -> Bool
+constraintIsBool v (CBool v') = v == v'
+constraintIsBool _ _          = False
+
+-- | Get predicates used in a constraint
+getConstraintPredicates :: Constraint e p -> [p]
+getConstraintPredicates = \case
+   Predicate p  -> [p]
+   Not c        -> getConstraintPredicates c
+   And cs       -> concatMap getConstraintPredicates cs
+   Or  cs       -> concatMap getConstraintPredicates cs
+   Xor cs       -> concatMap getConstraintPredicates cs
+   CBool _      -> []
+
+-- | Get constraint terminals
+getConstraintTerminals :: Constraint e p -> [Bool]
+getConstraintTerminals = \case
+   Predicate _  -> [True,False]
+   CBool v      -> [v]
+   Not c        -> fmap not (getConstraintTerminals c)
+   And cs       -> let cs' = fmap getConstraintTerminals cs
+                   in if | null cs                -> []
+                         | any (False `elem`) cs' -> [False]
+                         | all (sing True)    cs' -> [True]
+                         | otherwise              -> [True,False]
+   Or  cs       -> let cs' = fmap getConstraintTerminals cs
+                   in if | null cs                -> []
+                         | any (True `elem`) cs'  -> [True]
+                         | all (sing False)   cs' -> [False]
+                         | otherwise              -> [True,False]
+   Xor cs       -> let cs' = fmap getConstraintTerminals cs
+                   in if | null cs                -> []
+                         | otherwise              -> xo False cs'
+   where
+      xo t     []           = [t]
+      xo False ([True]:xs)  = xo True xs
+      xo True  ([True]:_)   = [False]
+      xo False ([False]:xs) = xo False xs
+      xo True  ([False]:xs) = xo True xs
+      xo _     ([]:_)       = []
+      xo _     _            = [True,False]
+
+      sing v [v'] = v == v'
+      sing _ _    = False
+
+
+-------------------------------------------------------
+-- Rule
+-------------------------------------------------------
+
 data Rule e p a
    = Terminal a
    | NonTerminal [(Constraint e p, Rule e p a)]
@@ -67,27 +147,6 @@ instance Functor (Rule e p) where
    fmap f (Terminal a)     = Terminal (f a)
    fmap f (NonTerminal xs) = NonTerminal (fmap (second (fmap f)) xs)
    fmap _ (Fail e)         = Fail e
-
--- | Result of predicate reduction
-data MatchResult e a
-   = NoMatch                -- ^ No rule leads to a terminal
-   | DivergentMatch [a]     -- ^ Several rules match but they return different terminals
-   | MatchFail [e]          -- ^ Some matching rules fail
-   | Match a                -- ^ A single terminal value is returned
-   | MatchNT a              -- ^ The rule may have been reduced but didn't produce a terminal result
-   deriving (Show,Eq,Ord)
-
-instance Functor (MatchResult e) where
-   fmap f x = case x of
-      NoMatch           -> NoMatch
-      DivergentMatch xs -> DivergentMatch (fmap f xs)
-      MatchFail es      -> MatchFail es
-      Match a           -> Match (f a)
-      MatchNT a         -> MatchNT (f a)
-
-instance Applicative (MatchResult e) where
-   pure a  = Match a
-   a <*> b = fmap (\(f,x) -> f x) (mergeMatchResults a b)
 
 
 -- | NonTerminal whose constraints are evaluated in order
@@ -150,44 +209,11 @@ mergeRules = go
       fl x = fmap (second (x `mergeRules`))
       fr x = fmap (second (`mergeRules` x))
 
--- | Reduce a constraint
-constraintReduce :: (Eq p, Eq e) => (p -> Maybe Bool) -> Constraint e p -> Constraint e p
-constraintReduce pred c = case simplifyConstraint c of
-   Predicate p  -> case pred p of
-                      Nothing -> Predicate p
-                      Just v  -> CBool v
-   Not c'       -> case constraintReduce pred c' of
-                      CBool v -> CBool (not v)
-                      c''     -> Not c''
-   And cs       -> case fmap (constraintReduce pred) cs of
-                      []                                     -> error "Empty And constraint"
-                      cs' | all (constraintIsBool True)  cs' -> CBool True
-                      cs' | any (constraintIsBool False) cs' -> CBool False
-                      cs' -> case filter (not . constraintIsBool True) cs' of
-                        [c'] -> c'
-                        cs'' -> And cs''
-   Or cs        -> case fmap (constraintReduce pred) cs of
-                      []                                      -> error "Empty Or constraint"
-                      cs' | all (constraintIsBool False)  cs' -> CBool False
-                      cs' | any (constraintIsBool True)   cs' -> CBool True
-                      cs' -> case filter (not . constraintIsBool False) cs' of
-                        [c'] -> c'
-                        cs'' -> Or cs''
-   Xor cs       -> case fmap (constraintReduce pred) cs of
-                      []  -> error "Empty Xor constraint"
-                      cs' -> simplifyConstraint (Xor cs')
-   c'@(CBool _) -> c'
-
--- | Check that a constraint is evaluated to a given boolean value
-constraintIsBool :: Bool -> Constraint e p -> Bool
-constraintIsBool v (CBool v') = v == v'
-constraintIsBool _ _          = False
-
 
 -- | Reduce a rule
-ruleReduce :: forall e p a. (Eq e, Eq p, Eq a) => (p -> Maybe Bool) -> Rule e p a -> MatchResult e (Rule e p a)
+ruleReduce :: forall e p a. (Eq e, Eq p, Eq a) => (p -> Maybe Bool) -> Rule e p a -> MatchResult e (Rule e p a) a
 ruleReduce pred r = case r of
-   Terminal a     -> Match (Terminal a)
+   Terminal a     -> Match a
    Fail e         -> MatchFail [e]
    NonTerminal rs -> 
       let
@@ -218,7 +244,7 @@ ruleReduce pred r = case r of
       case rs' of
          []                                 -> NoMatch
          _  | not (null failingResults)     -> MatchFail failingResults
-            | divergence                    -> DivergentMatch (fmap Terminal terminalResults)
+            | divergence                    -> MatchDiverge (fmap Terminal terminalResults)
             | not (null nonTerminalResults) ->
                -- fold matching nested NonTerminals
                ruleReduce pred
@@ -229,8 +255,8 @@ ruleReduce pred r = case r of
 
             | otherwise                     ->
                case (matchingResults,mayMatchRules) of
-                  ([Terminal a], [])    -> Match (Terminal a)
-                  _                     -> MatchNT (NonTerminal rs')
+                  ([Terminal a], [])    -> Match a
+                  _                     -> DontMatch (NonTerminal rs')
 
 
 -- | Get possible resulting terminals
@@ -245,86 +271,8 @@ getRulePredicates (Fail _)         = []
 getRulePredicates (Terminal _)     = []
 getRulePredicates (NonTerminal xs) = nub $ concatMap (\(x,y) -> getConstraintPredicates x ++ getRulePredicates y) xs
 
--- | Get predicates used in a constraint
-getConstraintPredicates :: Constraint e p -> [p]
-getConstraintPredicates = \case
-   Predicate p  -> [p]
-   Not c        -> getConstraintPredicates c
-   And cs       -> concatMap getConstraintPredicates cs
-   Or  cs       -> concatMap getConstraintPredicates cs
-   Xor cs       -> concatMap getConstraintPredicates cs
-   CBool _      -> []
-
--- | Merge match results
-mergeMatchResults :: MatchResult e a -> MatchResult e b -> MatchResult e (a,b)
-mergeMatchResults = go
-   where
-      go NoMatch             _                   = NoMatch
-      go _                   NoMatch             = NoMatch
-      go (MatchFail xs)      (MatchFail ys)      = MatchFail (xs++ys)
-      go (MatchFail xs)      _                   = MatchFail xs
-      go _                   (MatchFail ys)      = MatchFail ys
-      go (DivergentMatch xs) (DivergentMatch ys) = DivergentMatch [(x,y) | x <- xs, y <- ys]
-      go (DivergentMatch xs) (Match b)           = DivergentMatch [(x,b) | x <- xs]
-      go (Match a)           (DivergentMatch ys) = DivergentMatch [(a,y) | y <- ys]
-      go (DivergentMatch xs) (MatchNT b)         = DivergentMatch [(x,b) | x <- xs]
-      go (MatchNT a)         (DivergentMatch ys) = DivergentMatch [(a,y) | y <- ys]
-      go (MatchNT a)         (MatchNT b)         = MatchNT (a,b)
-      go (MatchNT a)         (Match b)           = MatchNT (a,b)
-      go (Match a)           (MatchNT b)         = MatchNT (a,b)
-      go (Match a)           (Match b)           = Match (a,b)
-
--- | A predicated data type reducer
---
--- Example:
---
--- @
--- data PD e p = PD
---    { pA :: Rule e p Int
---    , pB :: Rule e p String
---    }
--- 
--- instance (Eq e, Eq p) => Predicated (PD e p) where
---    type Pred    (PD e p) = p
---    type PredErr (PD e p) = e
---    reducePredicates fp (PD a b) = 
---       PD <$> reducePredicates fp a
---          <*> reducePredicates fp b
--- 
---    getTerminals (PD as bs) = [ PD a b | a <- getTerminals as
---                                       , b <- getTerminals bs
---                              ]
--- 
---    getPredicates (PD a b) = concat
---                               [ getPredicates a
---                               , getPredicates b
---                               ]
--- @
---
-class Predicated a where
-   type Pred a    :: *
-   type PredErr a :: *
-
-   -- | Reduce predicates
-   reducePredicates :: (Pred a -> Maybe Bool) -> a -> MatchResult (PredErr a) a
-
-   -- | Get possible resulting terminals
-   getTerminals :: a -> [a]
-
-   -- | Get used predicates
-   getPredicates :: a -> [Pred a]
-
-instance (Eq e, Eq p, Eq a) => Predicated (Rule e p a) where
-   type Pred     (Rule e p a) = p
-   type PredErr  (Rule e p a) = e
-   reducePredicates fp r = ruleReduce fp r
-
-   getTerminals  = fmap Terminal . getRuleTerminals
-   getPredicates = getRulePredicates
-
-
 -- | Constraint checking that a predicated value evaluates to some terminal
-evalsTo :: (Ord (Pred a), Eq a, Eq (Pred a), Predicated a) => a -> a -> Constraint e (Pred a)
+evalsTo :: (Ord (Pred a), Eq a, Eq (PredTerm a), Eq (Pred a), Predicated a) => a -> PredTerm a -> Constraint e (Pred a)
 evalsTo s a = case createPredicateTable s of
    Left x   -> CBool (x == a)
    Right xs -> orConstraints <| fmap andPredicates
@@ -345,22 +293,161 @@ evalsTo s a = case createPredicateTable s of
       makePred (Right p) = Predicate p
 
 
+-------------------------------------------------------
+-- Predicated data
+-------------------------------------------------------
+
+
+
+-- | Predicated data
+--
+-- @
+-- data T
+-- data NT
+-- 
+-- type family RuleT e p a s :: * where
+--    RuleT e p a T   = a
+--    RuleT e p a NT  = Rule e p a
+--
+-- data PD t = PD
+--    { p1 :: RuleT () Bool Int t
+--    , p2 :: RuleT () Bool String t
+--    }
+-- 
+-- instance Predicated (PD NT) where
+--    type PredErr (PD NT) = ()
+--    type Pred (PD NT)    = Bool
+--    type PredTerm (PD NT)    = PD T
+-- 
+--    liftTerminal (PD a b) = PD (liftTerminal a) (liftTerminal b)
+-- 
+--    reducePredicates oracle (PD a b) =
+--       initP PD PD
+--          |> (`applyP` reducePredicates oracle a)
+--          |> (`applyP` reducePredicates oracle b)
+--          |> resultP
+-- @
+class Predicated a where
+   -- | Error type
+   type PredErr a :: *
+
+   -- | Predicate type
+   type Pred a    :: *
+
+   -- | Terminal type
+   type PredTerm a    :: *
+
+   -- | Build a non terminal from a terminal
+   liftTerminal :: PredTerm a -> a
+
+   -- | Reduce predicates
+   reducePredicates :: (Pred a -> Maybe Bool) -> a -> MatchResult (PredErr a) a (PredTerm a)
+
+   -- | Get possible resulting terminals
+   getTerminals :: a -> [PredTerm a]
+
+   -- | Get used predicates
+   getPredicates :: a -> [Pred a]
+
+
+instance (Eq e, Eq a, Eq p) => Predicated (Rule e p a) where
+   type PredErr  (Rule e p a) = e
+   type Pred     (Rule e p a) = p
+   type PredTerm (Rule e p a) = a
+
+   reducePredicates = ruleReduce
+   liftTerminal     = Terminal
+   getTerminals     = getRuleTerminals
+   getPredicates    = getRulePredicates
+
+instance (Eq e, Eq p) => Predicated (Constraint e p) where
+   type PredErr  (Constraint e p) = e
+   type Pred     (Constraint e p) = p
+   type PredTerm (Constraint e p) = Bool
+
+   reducePredicates oracle c = case constraintReduce oracle c of
+      CBool v -> Match v
+      c'      -> DontMatch c'
+
+   liftTerminal     = CBool
+   getTerminals     = getConstraintTerminals
+   getPredicates    = getConstraintPredicates
+
+
+-- | Reduction result
+data MatchResult e nt t
+   = NoMatch
+   | Match t
+   | DontMatch nt
+   | MatchFail [e]
+   | MatchDiverge [nt]
+   deriving (Show,Eq,Ord)
+
+instance Functor (MatchResult e nt) where
+   fmap f x = case x of
+      NoMatch    -> NoMatch
+      MatchDiverge xs -> MatchDiverge xs
+      MatchFail es    -> MatchFail es
+      Match a     -> Match (f a)
+      DontMatch a       -> DontMatch a
+
+-- | Compose reduction results
+--
+-- We reuse the MatchResult data type:
+--    * a "terminal" on the left can be used to build either a terminal or a non terminal
+--    * a "non terminal" on the left can only be used to build a non terminal
+applyP ::
+   ( Predicated ntb
+   ) => MatchResult e (ntb -> nt) (ntb -> nt, PredTerm ntb -> t) -> MatchResult e ntb (PredTerm ntb) -> MatchResult e nt (nt,t)
+applyP NoMatch            _                 = NoMatch
+applyP _                  NoMatch           = NoMatch
+
+applyP (MatchFail xs)     (MatchFail ys)    = MatchFail (xs++ys)
+applyP (MatchFail xs)     _                 = MatchFail xs
+applyP _                  (MatchFail ys)    = MatchFail ys
+
+applyP (MatchDiverge fs)  (MatchDiverge ys) = MatchDiverge [f y | f <- fs, y <- ys]
+applyP (MatchDiverge fs)  (Match b)         = MatchDiverge [f (liftTerminal b) | f <- fs]
+applyP (MatchDiverge fs)  (DontMatch b)     = MatchDiverge [f b | f <- fs]
+
+applyP (DontMatch f)      (MatchDiverge ys) = MatchDiverge [f y | y <- ys]
+applyP (DontMatch f)      (DontMatch b)     = DontMatch    (f b)
+applyP (DontMatch f)      (Match b)         = DontMatch    (f (liftTerminal b))
+
+applyP (Match (fnt,_))    (MatchDiverge ys) = MatchDiverge [fnt y | y <- ys]
+applyP (Match (fnt,_))    (DontMatch b)     = DontMatch    (fnt b)
+applyP (Match (fnt,ft))   (Match b)         = Match        (fnt (liftTerminal b), ft b)
+
+-- | Initialise a reduction result (typically with two functions/constructors)
+initP :: nt -> t -> MatchResult e nt (nt,t)
+initP nt t = Match (nt,t)
+
+-- | Fixup result (see initP and applyP)
+resultP :: MatchResult e nt (nt,t) -> MatchResult e nt t
+resultP = fmap snd
 
 -- | Create a table of predicates that return a terminal
 --
 -- Left p: Not p
 -- Right p: p
-createPredicateTable :: (Ord (Pred a), Eq (Pred a), Eq a, Predicated a) => a -> Either a [([Either (Pred a) (Pred a)],a)]
+createPredicateTable ::
+   ( Ord (Pred a)
+   , Eq (Pred a)
+   , Eq a
+   , Predicated a
+   , Predicated a
+   , Pred a ~ Pred a
+   ) => a -> Either (PredTerm a) [([Either (Pred a) (Pred a)],PredTerm a)]
 createPredicateTable s =
    -- we first check if the predicated value reduces to a terminal without any
    -- additional oracle
    case reducePredicates (const Nothing) s of
       Match x -> Left x
-      _       -> Right (mapMaybe matching predSets)
+      _         -> Right (mapMaybe matching predSets)
    where
       matching ps = case reducePredicates (makeOracle ps) s of
          Match x -> Just (ps,x)
-         _       -> Nothing
+         _         -> Nothing
 
       -- create an oracle function from a set of predicates
       makeOracle []           = \_ -> Nothing
@@ -377,107 +464,3 @@ createPredicateTable s =
 
 
 
--- | Reducible data
---
--- @
--- data T
--- data NT
--- 
--- type family RuleT e p a s :: * where
---    RuleT e p a T   = a
---    RuleT e p a NT  = Rule e p a
---
--- data PD t = PD
---    { p1 :: RuleT () Bool Int t
---    , p2 :: RuleT () Bool String t
---    }
--- 
--- instance Reducible (PD NT) where
---    type RedErr (PD NT)  = ()
---    type RedPred (PD NT) = Bool
---    type RedT (PD NT)    = PD T
--- 
---    liftTerminal (PD a b) = PD (liftTerminal a) (liftTerminal b)
--- 
---    reduceStuff oracle (PD a b) =
---       initP PD PD
---          |> (`applyP` reduceStuff oracle a)
---          |> (`applyP` reduceStuff oracle b)
---          |> resultP
--- @
-class Reducible a where
-   type RedErr  a :: *
-   type RedPred a :: *
-   type RedT a    :: *
-
-   liftTerminal :: RedT a -> a
-
-   reduceStuff :: (RedPred a -> Maybe Bool) -> a -> RedResult (RedErr a) a (RedT a)
-
-instance (Eq e, Eq a, Eq p) => Reducible (Rule e p a) where
-   type RedErr (Rule e p a)  = e
-   type RedPred (Rule e p a) = p
-   type RedT (Rule e p a)    = a
-
-   reduceStuff oracle r = case ruleReduce oracle r of
-      NoMatch            -> RedNoMatch
-      DivergentMatch as  -> RedDiverge as
-      MatchFail es       -> RedFail es
-      MatchNT a          -> RedNT a
-      Match (Terminal a) -> RedTerm a
-      Match _            -> error "Rule reduction result is not a terminal"
-
-   liftTerminal r = Terminal r
-
-
--- | Reduction result
-data RedResult e nt t
-   = RedTerm t
-   | RedNT nt
-   | RedFail [e]
-   | RedDiverge [nt]
-   | RedNoMatch
-   deriving (Show,Eq,Ord)
-
-instance Functor (RedResult e nt) where
-   fmap f x = case x of
-      RedNoMatch    -> RedNoMatch
-      RedDiverge xs -> RedDiverge xs
-      RedFail es    -> RedFail es
-      RedTerm a     -> RedTerm (f a)
-      RedNT a       -> RedNT a
-
--- | Compose reduction results
---
--- We reuse the RedResult data type:
---    * a "terminal" on the left can be used to build either a terminal or a non terminal
---    * a "non terminal" on the left can only be used to build a non terminal
-applyP ::
-   ( Reducible ntb
-   ) => RedResult e (ntb -> nt) (ntb -> nt, RedT ntb -> t) -> RedResult e ntb (RedT ntb) -> RedResult e nt (nt,t)
-applyP RedNoMatch           _               = RedNoMatch
-applyP _                    RedNoMatch      = RedNoMatch
-
-applyP (RedFail xs)         (RedFail ys)    = RedFail (xs++ys)
-applyP (RedFail xs)         _               = RedFail xs
-applyP _                    (RedFail ys)    = RedFail ys
-
-applyP (RedDiverge fs)      (RedDiverge ys) = RedDiverge [f y | f <- fs, y <- ys]
-applyP (RedDiverge fs)      (RedTerm b)     = RedDiverge [f (liftTerminal b) | f <- fs]
-applyP (RedDiverge fs)      (RedNT b)       = RedDiverge [f b | f <- fs]
-
-applyP (RedNT f)            (RedDiverge ys) = RedDiverge [f y | y <- ys]
-applyP (RedNT f)            (RedNT b)       = RedNT      (f b)
-applyP (RedNT f)            (RedTerm b)     = RedNT      (f (liftTerminal b))
-
-applyP (RedTerm (fnt,_))    (RedDiverge ys) = RedDiverge [fnt y | y <- ys]
-applyP (RedTerm (fnt,_))    (RedNT b)       = RedNT      (fnt b)
-applyP (RedTerm (fnt,ft))   (RedTerm b)     = RedTerm    (fnt (liftTerminal b), ft b)
-
--- | Initialise a reduction result (typically with two functions/constructors)
-initP :: nt -> t -> RedResult e nt (nt,t)
-initP nt t = RedTerm (nt,t)
-
--- | Fixup result (see initP and applyP)
-resultP :: RedResult e nt (nt,t) -> RedResult e nt t
-resultP = fmap snd
