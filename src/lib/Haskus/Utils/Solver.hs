@@ -45,6 +45,7 @@ import Haskus.Utils.List
 import Haskus.Utils.Map (Map)
 import qualified Haskus.Utils.Map as Map
 
+import Data.Bits
 import Control.Arrow (first,second)
 
 import Prelude hiding (pred)
@@ -533,15 +534,14 @@ createPredicateTable s oracleChecker fullTable =
       preds        = sort (getPredicates s)
 
       predSets
-         | fullTable = makeFullSets preds []
+         | fullTable = makeFullSets
          | otherwise = makeSets     preds [] 
 
-      makeFullSets []     os = os
-      makeFullSets (p:ps) [] = makeFullSets ps [[(p,SetPred)],[(p,UnsetPred)]]
-      makeFullSets (p:ps) os = makeFullSets ps
-                                 (  fmap ((p,SetPred):)   os
-                                 ++ fmap ((p,UnsetPred):) os
-                                 )
+      makeFullSets  = fmap makeFullSet ([0..2^(length preds)-1] :: [Word])
+      makeFullSet n = fmap (setB n) (preds `zip` [0..])
+      setB n (p,i)  = if testBit n i
+         then (p,SetPred)
+         else (p,UnsetPred)
 
       makeSets []     os  = os
       makeSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred)]
