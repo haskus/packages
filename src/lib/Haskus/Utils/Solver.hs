@@ -62,6 +62,28 @@ instance Functor (Rule e p) where
    fmap f (NonTerminal xs) = NonTerminal (fmap (second (fmap f)) xs)
    fmap _ (Fail e)         = Fail e
 
+-- | Result of predicate reduction
+data MatchResult e a
+   = NoMatch                -- ^ No rule leads to a terminal
+   | DivergentMatch [a]     -- ^ Several rules match but they return different terminals
+   | MatchFail [e]          -- ^ Some matching rules fail
+   | Match a                -- ^ A single terminal value is returned
+   | MatchNT a              -- ^ The rule may have been reduced but didn't produce a terminal result
+   deriving (Show,Eq,Ord)
+
+instance Functor (MatchResult e) where
+   fmap f x = case x of
+      NoMatch           -> NoMatch
+      DivergentMatch xs -> DivergentMatch (fmap f xs)
+      MatchFail es      -> MatchFail es
+      Match a           -> Match (f a)
+      MatchNT a         -> MatchNT (f a)
+
+instance Applicative (MatchResult e) where
+   pure a  = Match a
+   a <*> b = fmap (\(f,x) -> f x) (mergeMatchResults a b)
+
+
 -- | NonTerminal whose constraints are evaluated in order
 --
 -- Earlier constraints must be proven false for the next ones to be considered
@@ -156,34 +178,14 @@ constraintIsBool v (CBool v') = v == v'
 constraintIsBool _ _          = False
 
 
--- | Result of a rule reduction
-data MatchResult e p a
-   = NoMatch                -- ^ No rule leads to a terminal
-   | DivergentMatch [a]     -- ^ Several rules match but they return different terminals
-   | MatchFail [e]          -- ^ Some matching rules fail
-   | Match a                -- ^ A single terminal value is returned
-   | MatchRule (Rule e p a) -- ^ The rule may have been reduced but didn't produce a result
-   deriving (Show,Eq,Ord)
-
-instance Functor (MatchResult p e) where
-   fmap f x = case x of
-      NoMatch           -> NoMatch
-      DivergentMatch xs -> DivergentMatch (fmap f xs)
-      MatchFail es      -> MatchFail es
-      Match a           -> Match (f a)
-      MatchRule r       -> MatchRule (fmap f r)
-
-instance Applicative (MatchResult e p) where
-   pure a  = Match a
-   a <*> b = fmap (\(f,x) -> f x) (mergeMatchResults a b)
-
 -- | Reduce a rule
-ruleReduce :: (Eq e, Eq p, Eq a) => (p -> Maybe Bool) -> Rule e p a -> MatchResult e p a
+ruleReduce :: forall e p a. (Eq e, Eq p, Eq a) => (p -> Maybe Bool) -> Rule e p a -> MatchResult e (Rule e p a)
 ruleReduce pred r = case r of
-   Terminal a     -> Match a
+   Terminal a     -> Match (Terminal a)
    Fail e         -> MatchFail [e]
    NonTerminal rs -> 
       let
+         rs' :: [(Constraint e p, Rule e p a)]
          rs' = rs
                -- reduce constraints
                |> fmap (first (constraintReduce pred))
@@ -210,7 +212,7 @@ ruleReduce pred r = case r of
       case rs' of
          []                                 -> NoMatch
          _  | not (null failingResults)     -> MatchFail failingResults
-            | divergence                    -> DivergentMatch terminalResults
+            | divergence                    -> DivergentMatch (fmap Terminal terminalResults)
             | not (null nonTerminalResults) ->
                -- fold matching nested NonTerminals
                ruleReduce pred
@@ -221,8 +223,8 @@ ruleReduce pred r = case r of
 
             | otherwise                     ->
                case (matchingResults,mayMatchRules) of
-                  ([Terminal a], [])    -> Match a
-                  _                     -> MatchRule (NonTerminal rs')
+                  ([Terminal a], [])    -> Match (Terminal a)
+                  _                     -> MatchNT (NonTerminal rs')
 
 
 -- | Get possible resulting terminals
@@ -248,32 +250,23 @@ getConstraintPredicates = \case
    CBool _      -> []
 
 -- | Merge match results
-mergeMatchResults :: MatchResult e p a -> MatchResult e p b -> MatchResult e p (a,b)
+mergeMatchResults :: MatchResult e a -> MatchResult e b -> MatchResult e (a,b)
 mergeMatchResults = go
    where
-      go NoMatch  _                    = NoMatch
-      go _        NoMatch              = NoMatch
-      go (MatchFail xs) (MatchFail ys) = MatchFail (xs++ys)
-      go (MatchFail xs) _              = MatchFail xs
-      go _              (MatchFail ys) = MatchFail ys
+      go NoMatch             _                   = NoMatch
+      go _                   NoMatch             = NoMatch
+      go (MatchFail xs)      (MatchFail ys)      = MatchFail (xs++ys)
+      go (MatchFail xs)      _                   = MatchFail xs
+      go _                   (MatchFail ys)      = MatchFail ys
       go (DivergentMatch xs) (DivergentMatch ys) = DivergentMatch [(x,y) | x <- xs, y <- ys]
       go (DivergentMatch xs) (Match b)           = DivergentMatch [(x,b) | x <- xs]
       go (Match a)           (DivergentMatch ys) = DivergentMatch [(a,y) | y <- ys]
-                                                   -- we can't return a
-                                                   -- divergent match here. We
-                                                   -- transform the
-                                                   -- DivergentMatch into a
-                                                   -- NonTerminal with True
-                                                   -- constraints
-      go (DivergentMatch xs) (MatchRule b)       = MatchRule $ mergeRules (makeNT xs) b
-      go (MatchRule a)       (DivergentMatch ys) = MatchRule $ mergeRules a (makeNT ys)
-      go (MatchRule a)       (MatchRule b)       = MatchRule $ mergeRules a b
-      go (MatchRule a)       (Match b)           = MatchRule $ mergeRules a (Terminal b)
-      go (Match a)           (MatchRule b)       = MatchRule $ mergeRules (Terminal a) b
+      go (DivergentMatch xs) (MatchNT b)         = DivergentMatch [(x,b) | x <- xs]
+      go (MatchNT a)         (DivergentMatch ys) = DivergentMatch [(a,y) | y <- ys]
+      go (MatchNT a)         (MatchNT b)         = MatchNT (a,b)
+      go (MatchNT a)         (Match b)           = MatchNT (a,b)
+      go (Match a)           (MatchNT b)         = MatchNT (a,b)
       go (Match a)           (Match b)           = Match (a,b)
-
-      -- create a NonTerminal from a DivergentMatch
-      makeNT xs = NonTerminal (fmap (\x -> (CBool True,Terminal x)) xs)
 
 -- | A predicated data type reducer
 --
@@ -307,7 +300,7 @@ class Predicated a where
    type PredErr a :: *
 
    -- | Reduce predicates
-   reducePredicates :: (Pred a -> Maybe Bool) -> a -> MatchResult (PredErr a) (Pred a) a
+   reducePredicates :: (Pred a -> Maybe Bool) -> a -> MatchResult (PredErr a) a
 
    -- | Is it terminal?
    isTerminal :: a -> Bool
@@ -324,7 +317,7 @@ class Predicated a where
 instance (Eq e, Eq p, Eq a) => Predicated (Rule e p a) where
    type Pred     (Rule e p a) = p
    type PredErr  (Rule e p a) = e
-   reducePredicates fp r = fmap Terminal (ruleReduce fp r)
+   reducePredicates fp r = ruleReduce fp r
 
    getTerminals  = fmap Terminal . getRuleTerminals
    getPredicates = getRulePredicates

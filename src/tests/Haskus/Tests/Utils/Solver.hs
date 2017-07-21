@@ -96,23 +96,23 @@ testsSolver = testGroup "Solver" $
          )
    , testProperty "Predicated data: not terminal"
          (case reducePredicates oracleAE d1 of
-            MatchRule _ -> True
-            _           -> False
+            MatchNT _ -> True
+            _         -> False
          )
 
    , testProperty "Ordered non terminal 0"
          (case ruleReduce oracleAB (orderedNonTerminal [(Predicate PredA, Terminal 0 :: R Int)
                                                        ,(Predicate PredB, Terminal 1)
                                                        ]) of
-            Match 0 -> True
-            _       -> False
+            Match (Terminal 0) -> True
+            _                  -> False
          )
    , testProperty "Ordered non terminal 1"
          (case ruleReduce oracleAB (orderedNonTerminal [(Predicate PredB, Terminal 1 :: R Int)
                                                        ,(Predicate PredA, Terminal 0)
                                                        ]) of
-            Match 1 -> True
-            _       -> False
+            Match (Terminal 1) -> True
+            _                  -> False
          )
    , testProperty "Get predicates: flat"
          (sort (getPredicates d1) == sort [PredA,PredC,PredD,PredE])
