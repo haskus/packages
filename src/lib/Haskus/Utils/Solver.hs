@@ -42,8 +42,8 @@ where
 import Haskus.Utils.Maybe
 import Haskus.Utils.Flow
 import Haskus.Utils.List
-import Haskus.Utils.Map (Map)
-import qualified Haskus.Utils.Map as Map
+import Haskus.Utils.Map.Strict (Map)
+import qualified Haskus.Utils.Map.Strict as Map
 
 import Data.Bits
 import Control.Arrow (first,second)

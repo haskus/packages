@@ -32,6 +32,7 @@ library
     Haskus.Utils.Embed
     Haskus.Utils.List
     Haskus.Utils.Map
+    Haskus.Utils.Map.Strict
     Haskus.Utils.Maybe
     Haskus.Utils.Types
     Haskus.Utils.Types.List
