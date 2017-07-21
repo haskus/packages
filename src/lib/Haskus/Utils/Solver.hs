@@ -336,7 +336,7 @@ getRulePredicates (NonTerminal xs) = nub $ concatMap (\(x,y) -> getConstraintPre
 
 -- | Constraint checking that a predicated value evaluates to some terminal
 evalsTo :: (Ord (Pred a), Eq a, Eq (PredTerm a), Eq (Pred a), Predicated a) => a -> PredTerm a -> Constraint e (Pred a)
-evalsTo s a = case createPredicateTable s (const True) False of
+evalsTo s a = case createPredicateTable s (const True) True of
    Left x   -> CBool (x == a)
    Right xs -> orConstraints <| fmap andPredicates
                              <| fmap oraclePredicates
@@ -534,12 +534,12 @@ createPredicateTable s oracleChecker fullTable =
       preds        = sort (getPredicates s)
 
       predSets
-         | fullTable = makeFullSets
+         | fullTable = makeFullSets preds
          | otherwise = makeSets     preds [] 
 
-      makeFullSets  = fmap makeFullSet ([0..2^(length preds)-1] :: [Word])
-      makeFullSet n = fmap (setB n) (preds `zip` [0..])
-      setB n (p,i)  = if testBit n i
+      makeFullSets ps  = fmap (makeFullSet ps) ([0..2^(length ps)-1] :: [Word])
+      makeFullSet ps n = fmap (setB n) (ps `zip` [0..])
+      setB n (p,i)     = if testBit n i
          then (p,SetPred)
          else (p,UnsetPred)
 
