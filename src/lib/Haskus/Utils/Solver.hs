@@ -45,7 +45,6 @@ import Haskus.Utils.List
 import Haskus.Utils.Map (Map)
 import qualified Haskus.Utils.Map as Map
 
-import Data.Bits
 import Control.Arrow (first,second)
 
 import Prelude hiding (pred)
@@ -531,13 +530,16 @@ createPredicateTable s oracleChecker =
 
       oracles = filter oracleChecker (fmap makeOracle predSets)
 
-      -- sets of predicates either False (Right p) or True (Left p)
       preds        = sort (getPredicates s)
-      predSets     = fmap go ([0..2^(length preds)-1] :: [Word])
-      go n         = fmap (setB n) (preds `zip` [0..])
-      setB n (p,i) = if testBit n i
-         then (p,SetPred)
-         else (p,UnsetPred)
+      predSets     = makeSets preds []
+
+      makeSets []     os  = os
+      makeSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred)]
+                           in makeSets ps $ concat
+                                 [ [ [n] | n <- ns ]
+                                 , [(n:o) | o <- os, n <- ns]
+                                 , os
+                                 ]
 
 
 

@@ -178,14 +178,19 @@ testsSolver = testGroup "Solver" $
          (case createPredicateTable d2 (const True) of
             Left _   -> False
             Right xs -> sort (fmap (oraclePredicates . fst) xs) == sort
-                           [ [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, UnsetPred), (PredD, UnsetPred)]
-                           , [(PredA, SetPred)  , (PredB, SetPred)  , (PredC, UnsetPred), (PredD, UnsetPred)]
-                           , [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, SetPred)  , (PredD, UnsetPred)]
-                           , [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, UnsetPred), (PredD, SetPred)]
-                           , [(PredA, SetPred)  , (PredB, UnsetPred), (PredC, SetPred)  , (PredD, SetPred)]
-                           , [(PredA, UnsetPred), (PredB, SetPred)  , (PredC, SetPred)  , (PredD, UnsetPred)]
-                           , [(PredA, UnsetPred), (PredB, SetPred)  , (PredC, UnsetPred), (PredD, SetPred)]
-                           ]
+                  [ [(PredA,SetPred),(PredB,SetPred),(PredC,UnsetPred),(PredD,UnsetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred),(PredD,SetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred),(PredD,UnsetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred),(PredD,SetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred),(PredD,UnsetPred)]
+                  , [(PredA,UnsetPred),(PredB,SetPred),(PredC,SetPred),(PredD,UnsetPred)]
+                  , [(PredA,UnsetPred),(PredB,SetPred),(PredC,UnsetPred),(PredD,SetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred),(PredD,SetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred),(PredD,UnsetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred)]
+                  , [(PredA,SetPred),(PredB,UnsetPred)]
+                  ]
          )
    ]
 
