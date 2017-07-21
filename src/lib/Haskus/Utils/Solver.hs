@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiWayIf #-}
 
 -- | Simple Constraint solver
@@ -22,6 +23,11 @@ module Haskus.Utils.Solver
    , Predicated (..)
    , evalsTo
    , createPredicateTable
+   , RedResult (..)
+   , Reducible (..)
+   , initP
+   , applyP
+   , resultP
    )
 where
 
@@ -302,12 +308,6 @@ class Predicated a where
    -- | Reduce predicates
    reducePredicates :: (Pred a -> Maybe Bool) -> a -> MatchResult (PredErr a) a
 
-   -- | Is it terminal?
-   isTerminal :: a -> Bool
-   isTerminal a = case reducePredicates (const Nothing) a of
-      Match _ -> True
-      _       -> False
-
    -- | Get possible resulting terminals
    getTerminals :: a -> [a]
 
@@ -375,3 +375,109 @@ createPredicateTable s =
          then (Right p)
          else (Left  p)
 
+
+
+-- | Reducible data
+--
+-- @
+-- data T
+-- data NT
+-- 
+-- type family RuleT e p a s :: * where
+--    RuleT e p a T   = a
+--    RuleT e p a NT  = Rule e p a
+--
+-- data PD t = PD
+--    { p1 :: RuleT () Bool Int t
+--    , p2 :: RuleT () Bool String t
+--    }
+-- 
+-- instance Reducible (PD NT) where
+--    type RedErr (PD NT)  = ()
+--    type RedPred (PD NT) = Bool
+--    type RedT (PD NT)    = PD T
+-- 
+--    liftTerminal (PD a b) = PD (liftTerminal a) (liftTerminal b)
+-- 
+--    reduceStuff oracle (PD a b) =
+--       initP PD PD
+--          |> (`applyP` reduceStuff oracle a)
+--          |> (`applyP` reduceStuff oracle b)
+--          |> resultP
+-- @
+class Reducible a where
+   type RedErr  a :: *
+   type RedPred a :: *
+   type RedT a    :: *
+
+   liftTerminal :: RedT a -> a
+
+   reduceStuff :: (RedPred a -> Maybe Bool) -> a -> RedResult (RedErr a) a (RedT a)
+
+instance (Eq e, Eq a, Eq p) => Reducible (Rule e p a) where
+   type RedErr (Rule e p a)  = e
+   type RedPred (Rule e p a) = p
+   type RedT (Rule e p a)    = a
+
+   reduceStuff oracle r = case ruleReduce oracle r of
+      NoMatch            -> RedNoMatch
+      DivergentMatch as  -> RedDiverge as
+      MatchFail es       -> RedFail es
+      MatchNT a          -> RedNT a
+      Match (Terminal a) -> RedTerm a
+      Match _            -> error "Rule reduction result is not a terminal"
+
+   liftTerminal r = Terminal r
+
+
+-- | Reduction result
+data RedResult e nt t
+   = RedTerm t
+   | RedNT nt
+   | RedFail [e]
+   | RedDiverge [nt]
+   | RedNoMatch
+   deriving (Show,Eq,Ord)
+
+instance Functor (RedResult e nt) where
+   fmap f x = case x of
+      RedNoMatch    -> RedNoMatch
+      RedDiverge xs -> RedDiverge xs
+      RedFail es    -> RedFail es
+      RedTerm a     -> RedTerm (f a)
+      RedNT a       -> RedNT a
+
+-- | Compose reduction results
+--
+-- We reuse the RedResult data type:
+--    * a "terminal" on the left can be used to build either a terminal or a non terminal
+--    * a "non terminal" on the left can only be used to build a non terminal
+applyP ::
+   ( Reducible ntb
+   ) => RedResult e (ntb -> nt) (ntb -> nt, RedT ntb -> t) -> RedResult e ntb (RedT ntb) -> RedResult e nt (nt,t)
+applyP RedNoMatch           _               = RedNoMatch
+applyP _                    RedNoMatch      = RedNoMatch
+
+applyP (RedFail xs)         (RedFail ys)    = RedFail (xs++ys)
+applyP (RedFail xs)         _               = RedFail xs
+applyP _                    (RedFail ys)    = RedFail ys
+
+applyP (RedDiverge fs)      (RedDiverge ys) = RedDiverge [f y | f <- fs, y <- ys]
+applyP (RedDiverge fs)      (RedTerm b)     = RedDiverge [f (liftTerminal b) | f <- fs]
+applyP (RedDiverge fs)      (RedNT b)       = RedDiverge [f b | f <- fs]
+
+applyP (RedNT f)            (RedDiverge ys) = RedDiverge [f y | y <- ys]
+applyP (RedNT f)            (RedNT b)       = RedNT      (f b)
+applyP (RedNT f)            (RedTerm b)     = RedNT      (f (liftTerminal b))
+
+applyP (RedTerm (fnt,_))    (RedDiverge ys) = RedDiverge [fnt y | y <- ys]
+applyP (RedTerm (fnt,_))    (RedNT b)       = RedNT      (fnt b)
+applyP (RedTerm (fnt,ft))   (RedTerm b)     = RedTerm    (fnt (liftTerminal b), ft b)
+
+-- | Initialise a reduction result (typically with two functions/constructors)
+initP :: nt -> t -> RedResult e nt (nt,t)
+initP nt t = RedTerm (nt,t)
+
+-- | Fixup result (see initP and applyP)
+resultP :: RedResult e nt (nt,t) -> RedResult e nt t
+resultP = fmap snd
