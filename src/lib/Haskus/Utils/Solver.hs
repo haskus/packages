@@ -539,8 +539,8 @@ createPredicateTable s oracleChecker fullTable =
       makeFullSets []     os = os
       makeFullSets (p:ps) [] = makeFullSets ps [[(p,SetPred)],[(p,UnsetPred)]]
       makeFullSets (p:ps) os = makeFullSets ps
-                                 (  [ (p,SetPred):o   | o <- os]
-                                 ++ [ (p,UnsetPred):o | o <- os]
+                                 (  fmap ((p,SetPred):)   os
+                                 ++ fmap ((p,UnsetPred):) os
                                  )
 
       makeSets []     os  = os
