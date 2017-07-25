@@ -130,6 +130,8 @@ getHostEndianness = do
       return $ if rs == [1,2,3,4] then BigEndian else LittleEndian
 
 -- | Detected host endianness
+--
+-- TODO: use targetByteOrder in GHC.ByteOrder (should be introduced in GHC 8.4)
 hostEndianness :: Endianness
 {-# NOINLINE hostEndianness #-}
 hostEndianness = unsafePerformIO getHostEndianness
