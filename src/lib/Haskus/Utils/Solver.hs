@@ -468,11 +468,11 @@ data MatchResult e nt t
 
 instance Functor (MatchResult e nt) where
    fmap f x = case x of
-      NoMatch    -> NoMatch
+      NoMatch         -> NoMatch
       MatchDiverge xs -> MatchDiverge xs
       MatchFail es    -> MatchFail es
-      Match a     -> Match (f a)
-      DontMatch a       -> DontMatch a
+      Match a         -> Match (f a)
+      DontMatch a     -> DontMatch a
 
 -- | Compose reduction results
 --
