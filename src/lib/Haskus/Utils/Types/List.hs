@@ -97,13 +97,19 @@ type family Concat (xs :: [*]) (ys :: [*]) where
 
 -- | Get list length
 type family Length xs where
-   Length '[]       = 0
-   Length (x ': xs) = 1 + Length xs
+   Length xs = Length' 0 xs
+
+type family Length' n xs where
+   Length' n '[]       = n
+   Length' n (x ': xs) = Length' (n+1) xs
 
 -- | Replicate
 type family Replicate n s where
-   Replicate 0 s = '[]
-   Replicate n s = s ': Replicate (n-1) s
+   Replicate n s = Replicate' s n '[]
+
+type family Replicate' x n xs where
+   Replicate' x 0 xs = xs
+   Replicate' x n xs = Replicate' x (n-1) (x ': xs)
 
 -- | replace l[n] with l2 (folded)
 type family ReplaceAt (n :: Nat) l l2 where
@@ -123,11 +129,11 @@ type family ReplaceN n t l where
 
 -- | Reverse a list
 type family Reverse (l :: [*]) where
-   Reverse l = ReverseEx l '[]
+   Reverse l = Reverse' l '[]
 
-type family ReverseEx (l :: [*]) (l2 :: [*]) where
-   ReverseEx '[] l       = l
-   ReverseEx (x ': xs) l = ReverseEx xs (x ': l)
+type family Reverse' (l :: [*]) (l2 :: [*]) where
+   Reverse' '[] l       = l
+   Reverse' (x ': xs) l = Reverse' xs (x ': l)
 
 
 -- | Remove a type at index
@@ -153,13 +159,13 @@ type family Generate (n :: Nat) (m :: Nat) :: [Nat] where
 
 -- | Check that a type is member of a type list
 type family IsMember a (l :: [*]) :: Bool where
-   IsMember a l = IsMemberEx l a l
+   IsMember a l = IsMember' l a l
 
 -- | Check that a type is member of a type list
-type family IsMemberEx (i :: [*]) a (l :: [*]) :: Bool where
-   IsMemberEx i a (a ': l) = 'True
-   IsMemberEx i a (b ': l) = IsMemberEx i a l
-   IsMemberEx i a '[]      = TypeError ( 'Text "`"
+type family IsMember' (i :: [*]) a (l :: [*]) :: Bool where
+   IsMember' i a (a ': l) = 'True
+   IsMember' i a (b ': l) = IsMember' i a l
+   IsMember' i a '[]      = TypeError ( 'Text "`"
                                    ':<>: 'ShowType a
                                    ':<>: 'Text "'"
                                    ':<>: 'Text " is not a member of "
@@ -169,16 +175,16 @@ type family IsMemberEx (i :: [*]) a (l :: [*]) :: Bool where
 -- | Check that a list is a subset of another
 type family IsSubset l1 l2 :: Bool where
    IsSubset l1 l1 = 'True
-   IsSubset l1 l2 = IsSubsetEx l2 l1 l2
+   IsSubset l1 l2 = IsSubset' l2 l1 l2
 
 -- | Helper for IsSubset
-type family IsSubsetEx i l1 l2 :: Bool where
-   IsSubsetEx i '[] l2 = 'True
-   IsSubsetEx i l1 '[] = TypeError (     'ShowType l1
+type family IsSubset' i l1 l2 :: Bool where
+   IsSubset' i '[] l2 = 'True
+   IsSubset' i l1 '[] = TypeError (     'ShowType l1
                                    ':$$: 'Text "is not a subset of"
                                    ':$$: 'ShowType i)
-   IsSubsetEx i (x ': xs) (x ': ys) = IsSubsetEx i xs i
-   IsSubsetEx i (x ': xs) (y ': ys) = IsSubsetEx i (x ': xs) ys
+   IsSubset' i (x ': xs) (x ': ys) = IsSubset' i xs i
+   IsSubset' i (x ': xs) (y ': ys) = IsSubset' i (x ': xs) ys
 
 -- | Get list indexes
 type family Indexes (l :: [*]) where
@@ -202,14 +208,20 @@ type family Zip (l :: [*]) (l2 :: [*]) where
 
 -- | Remove `a` in `l`
 type family Filter a (l :: [*]) where
-   Filter a '[]       = '[]
-   Filter a (a ': xs) = Filter a xs
-   Filter a (x ': xs) = x ': Filter a xs
+   Filter a as = Reverse (Filter' a as '[])
+
+type family Filter' a as xs where
+   Filter' a '[]       xs = xs
+   Filter' a (a ': as) xs = Filter' a as xs
+   Filter' a (x ': as) xs = Filter' a as (x ': xs)
 
 -- | Keep only a single value of each type
 type family Nub (l :: [*]) where
-   Nub '[]       = '[]
-   Nub (x ': xs) = x ': Nub (Filter x xs)
+   Nub xs = Reverse (Nub' xs '[])
+
+type family Nub' as xs where
+   Nub' '[]       xs = xs
+   Nub' (x ': as) xs = Nub' (Filter x as) (x ': xs) 
 
 -- | Keep only a single value of the head type
 type family NubHead (l :: [*]) where
@@ -218,13 +230,13 @@ type family NubHead (l :: [*]) where
 
 -- | Get the first index of a type
 type family IndexOf a (l :: [*]) :: Nat where
-   IndexOf x xs = IndexOfEx x xs xs
+   IndexOf x xs = IndexOf' x xs xs
 
 -- | Get the first index of a type
-type family IndexOfEx a (l :: [*]) (l2 :: [*]) :: Nat where
-   IndexOfEx x (x ': xs) l2 = 0
-   IndexOfEx y (x ': xs) l2 = 1 + IndexOfEx y xs l2
-   IndexOfEx y '[]       l2 = TypeError ( 'Text "`"
+type family IndexOf' a (l :: [*]) (l2 :: [*]) :: Nat where
+   IndexOf' x (x ': xs) l2 = 0
+   IndexOf' y (x ': xs) l2 = 1 + IndexOf' y xs l2
+   IndexOf' y '[]       l2 = TypeError ( 'Text "`"
                                     ':<>: 'ShowType y
                                     ':<>: 'Text "'"
                                     ':<>: 'Text " is not a member of "
