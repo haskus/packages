@@ -35,6 +35,7 @@ library
     Haskus.Format.Binary.Buffer
     Haskus.Format.Binary.BufferList
     Haskus.Format.Binary.BufferBuilder
+    Haskus.Format.Binary.Char
     Haskus.Format.Binary.Enum
     Haskus.Format.Binary.Endianness
     Haskus.Format.Binary.FixedPoint
