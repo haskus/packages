@@ -16,6 +16,7 @@ import Haskus.Utils.Maybe
 import Haskus.Utils.HList
 import Haskus.Format.Binary.Vector
 import Haskus.Format.Binary.Word
+import Haskus.Format.Binary.Bits
 
 v1234 :: Vector 4 Word32
 v1234 = fromJust $ fromList [1,2,3,4]
@@ -72,4 +73,10 @@ testsVector = testGroup "Vector" $
 
    , testProperty "concat 4 vectors" $
          toList (concat (v1234 `HCons` v567 `HCons` v567 `HCons` v1234 `HCons` HNil)) == [1,2,3,4,5,6,7,5,6,7,1,2,3,4]
+
+   , testProperty "rotateR/rotateL" $
+         (\n -> (v1234 `rotateR` n) `rotateL` n == v1234)
+
+   , testProperty "bit/testBit" $
+         (\n -> n < 0 || testBit (bit n :: Vector 10 Word32) n)
    ]

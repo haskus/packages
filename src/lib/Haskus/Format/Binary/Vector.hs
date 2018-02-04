@@ -9,6 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MultiWayIf #-}
 
 
 -- | Vector with size in the type
@@ -24,19 +25,24 @@ module Haskus.Format.Binary.Vector
    , toList
    , replicate
    , concat
+   , zipWith
    )
 where
 
-import Prelude hiding (replicate, head, last,
-                       tail, init, map, length, drop, take, concat)
+import Prelude hiding ( replicate, head, last
+                      , tail, init, map, length, drop, take, concat
+                      , zipWith )
 import System.IO.Unsafe (unsafePerformIO)
 
 import qualified Haskus.Utils.List as List
 import Haskus.Utils.Types
 import Haskus.Utils.HList
+import Haskus.Utils.Maybe
+import Haskus.Utils.Flow
 import Haskus.Format.Binary.Storable
 import Haskus.Format.Binary.Ptr
 import Haskus.Format.Binary.Buffer
+import Haskus.Format.Binary.Bits
 
 -- | Vector with type-checked size
 data Vector (n :: Nat) a = Vector Buffer
@@ -192,3 +198,114 @@ concat vs = unsafePerformIO $ do
    p <- mallocBytes (fromIntegral sz) :: IO (Ptr ())
    _ <- hFoldr StoreVector (return (castPtr p `indexPtr'` sz) :: IO (Ptr a)) vs :: IO (Ptr a)
    Vector <$> bufferUnsafePackPtr (fromIntegral sz) p
+
+
+-- | Zip two vectors
+zipWith ::
+   ( KnownNat n
+   , Storable a
+   , Storable b
+   , Storable c
+   ) => (a -> b -> c) -> Vector n a -> Vector n b -> Vector n c
+zipWith f u v = fromJust . fromList <| List.zipWith f (toList u) (toList v)
+
+-- | map
+map ::
+   ( KnownNat n
+   , Storable a
+   , Storable b
+   ) => (a -> b) -> Vector n a -> Vector n b
+map f = fromJust . fromList . fmap f . toList
+
+instance
+   ( KnownNat n
+   , Storable a
+   , Eq a
+   )
+   => Eq (Vector n a)
+   where
+      u == v = toList u == toList v
+
+instance
+   ( Bits a
+   , FiniteBits a
+   , Eq (Vector n a)
+   , KnownNat n
+   , Storable a
+   )
+   => Bits (Vector n a)
+   where
+      u .&. v        = zipWith (.&.) u v
+      u .|. v        = zipWith (.|.) u v
+      u `xor` v      = zipWith xor u v
+      bitSizeMaybe _ = Just (natValue @n * finiteBitSize @a undefined)
+      bitSize a      = fromJust (bitSizeMaybe a)
+      isSigned _     = False
+      complement u   = map complement u
+      zeroBits       = fromJust (fromList (List.replicate (natValue @n) zeroBits))
+      shiftL u c     = let n  = natValue @n
+                           sa = finiteBitSize @a undefined
+                           go _ 0 _       = []
+                           go 0 k xs      = List.take k xs
+                           go s k xs
+                              | s >= sa   = go (s-sa) k (List.tail xs)
+                              | otherwise =
+                                 let (x:y:zs) = xs
+                                 in ((x `shiftL` s) .|. (y `shiftR` (sa-s))) : go s (k-1) (y:zs)
+                       in fromJust (fromList (go c n (toList u ++ List.repeat zeroBits)))
+
+      shiftR u c     = let n  = natValue @n
+                           sa = finiteBitSize @a undefined
+                           go _ 0 _       = []
+                           go 0 k xs      = List.take k (List.tail xs)
+                           go s k xs
+                              | s >= sa   = zeroBits : go (s-sa) (k-1) xs
+                              | otherwise =
+                                 let (x:y:zs) = xs
+                                 in ((x `shiftL` (sa-s)) .|. (y `shiftR` s)) : go s (k-1) (y:zs)
+                       in fromJust (fromList (go c n (zeroBits : toList u)))
+
+      rotateL u c    = let n  = natValue @n
+                           sa = finiteBitSize @a undefined
+                           go _ 0 _       = []
+                           go 0 k xs      = List.take k xs
+                           go s k xs
+                              | s >= sa   = go (s-sa) k (List.tail xs)
+                              | otherwise =
+                                 let (x:y:zs) = xs
+                                 in ((x `shiftL` s) .|. (y `shiftR` (sa-s))) : go s (k-1) (y:zs)
+                       in if | c == 0    -> u
+                             | c <  0    -> rotateR u (abs c)
+                             | otherwise -> fromJust (fromList (go c n (cycle (toList u))))
+
+      rotateR u c    = let n  = natValue @n
+                           sa = finiteBitSize @a undefined
+                       in if | c == 0    -> u
+                             | c <  0    -> rotateL u (abs c)
+                             | otherwise -> rotateL u (n * sa - c)
+
+      popCount = sum . fmap popCount . toList
+
+      bit i    = let n     = natValue @n
+                     sa    = finiteBitSize @a undefined
+                     (f,r) = i `divMod` sa
+                     xs    = List.replicate (n - f - 1) zeroBits
+                              ++ [bit r]
+                              ++ List.replicate f zeroBits
+                 in fromJust (fromList xs)
+
+      testBit u i = let n     = natValue @n
+                        sa    = finiteBitSize @a undefined
+                        (f,r) = i `divMod` sa
+                    in testBit (List.head (List.drop (n - f - 1) (toList u))) r
+
+
+instance
+   ( FiniteBits a
+   , KnownNat n
+   , Eq (Vector n a)
+   , Storable a
+   )
+   => FiniteBits (Vector n a)
+   where
+      finiteBitSize _ = natValue @n * finiteBitSize @a undefined
