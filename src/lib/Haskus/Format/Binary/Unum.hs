@@ -231,10 +231,10 @@ instance forall u v.
    show (U w) = unumLabels @u !! fromIntegral w
 
 unumBits :: forall u.
-   ( FiniteBits (BackingWord u)
+   ( Bits (BackingWord u)
    , KnownNat (UnumSize u)
    ) => U u -> String
-unumBits (U w) = drop (finiteBitSize w - fromIntegral (unumSize @u)) (bitsToString w)
+unumBits (U w) = drop (fromIntegral (bitSize w - unumSize @u)) (bitsToString w)
 
 type Encodable x u =
    ( KnownNat (IndexOf (Simplify x) (UnumIndexables u)))
@@ -263,7 +263,7 @@ unumEncode b = case b of
 
 -- | Negate a number
 unumNegate :: forall u.
-   ( FiniteBits (BackingWord u)
+   ( Bits (BackingWord u)
    , Num (BackingWord u)
    , KnownNat (UnumSize u)
    ) => U u -> U u
@@ -275,7 +275,7 @@ unumNegate (U w) = U (maskLeastBits s (complement w + 1))
 
 -- | Reciprocate a number
 unumReciprocate :: forall u.
-   ( FiniteBits (BackingWord u)
+   ( Bits (BackingWord u)
    , Num (BackingWord u)
    , KnownNat (UnumSize u)
    ) => U u -> U u
@@ -344,12 +344,12 @@ instance forall u v.
 
 -- | Show SORN bits
 sornBits :: forall u s.
-   ( FiniteBits (SORNBackingWord u)
+   ( Bits (SORNBackingWord u)
    , KnownNat (UnumSize u)
    , s ~ SORNSize u
    , KnownNat s
    ) => SORN u -> String
-sornBits (SORN w) = drop (finiteBitSize w - natValue @s) (bitsToString w)
+sornBits (SORN w) = drop (bitSize w - natValue @s) (bitsToString w)
 
 
 
@@ -366,7 +366,7 @@ sornEmpty = SORN zeroBits
 
 -- | Full SORN
 sornFull :: forall u.
-   ( FiniteBits (SORNBackingWord u)
+   ( Bits (SORNBackingWord u)
    , KnownNat (SORNSize u)
    ) => SORN u
 sornFull = SORN (maskLeastBits s (complement zeroBits))
@@ -441,8 +441,8 @@ sornComplement (SORN x) = SORN (complement x)
 
 -- | Negate a SORN
 sornNegate :: forall u.
-   ( FiniteBits (SORNBackingWord u)
-   , FiniteBits (BackingWord u)
+   ( Bits (SORNBackingWord u)
+   , Bits (BackingWord u)
    , Integral (BackingWord u)
    , KnownNat (SORNSize u)
    , KnownNat (UnumSize u)
@@ -475,7 +475,7 @@ sornFromElems = foldl sornInsert sornEmpty
 sornFromTo :: forall u.
    ( Integral (BackingWord u)
    , Bits (SORNBackingWord u)
-   , FiniteBits (BackingWord u)
+   , Bits (BackingWord u)
    , KnownNat (UnumSize u)
    ) => U u -> U u -> SORN u
 sornFromTo (U a) (U b) = go sornEmpty a
@@ -516,7 +516,7 @@ class SornAdd u where
 
    -- | Subtract two Unums
    sornSubU :: 
-      ( FiniteBits (BackingWord u)
+      ( Bits (BackingWord u)
       , Num (BackingWord u)
       , KnownNat (UnumSize u)
       ) => U u -> U u -> SORN u
@@ -526,7 +526,7 @@ class SornAdd u where
    sornSub ::
       ( KnownNat (SORNSize u)
       , Bits (SORNBackingWord u)
-      , FiniteBits (BackingWord u)
+      , Bits (BackingWord u)
       , Num (BackingWord u)
       , KnownNat (UnumSize u)
       ) => SORN u -> SORN u -> SORN u
@@ -540,7 +540,7 @@ class SornAdd u where
    sornSubDep ::
       ( KnownNat (SORNSize u)
       , Bits (SORNBackingWord u)
-      , FiniteBits (BackingWord u)
+      , Bits (BackingWord u)
       , Num (BackingWord u)
       , KnownNat (UnumSize u)
       ) => SORN u -> SORN u
@@ -613,7 +613,7 @@ csornCount (CSORN c) = extractField' @"count" c
 instance forall u v.
    ( KnownNat (SORNSize u)
    , KnownNat (UnumSize u)
-   , FiniteBits (BackingWord u)
+   , Bits (BackingWord u)
    , Bits (CSORNBackingWord u)
    , Integral (CSORNBackingWord u)
    , Num (BackingWord u)
@@ -621,7 +621,7 @@ instance forall u v.
    , HFoldr' GetLabel [String] v [String]
    , Field (BackingWord u)
    , Bits (SORNBackingWord u)
-   , FiniteBits (SORNBackingWord u)
+   , Bits (SORNBackingWord u)
    , v ~ UnumMembers u
    ) => Show (CSORN u) where
    show = show . csornToSorn 
@@ -633,11 +633,11 @@ csornToSorn :: forall u.
    , Integral (BackingWord u)
    , Integral (CSORNBackingWord u)
    , Bits (CSORNBackingWord u)
-   , FiniteBits (BackingWord u)
+   , Bits (BackingWord u)
    , Bits (SORNBackingWord u)
    , Field (BackingWord u)
    , KnownNat (SORNSize u)
-   , FiniteBits (SORNBackingWord u)
+   , Bits (SORNBackingWord u)
    ) => CSORN u -> SORN u
 csornToSorn c =
    if csornCount c == 0
@@ -659,12 +659,12 @@ csornSize = natValue @s
 
 -- | Show contiguous SORN bits
 csornBits :: forall u s.
-   ( FiniteBits (CSORNBackingWord u)
+   ( Bits (CSORNBackingWord u)
    , KnownNat (UnumSize u)
    , s ~ CSORNSize u
    , KnownNat s
    ) => CSORN u -> String
-csornBits (CSORN (BitFields w)) = drop (finiteBitSize w - natValue @s) (bitsToString w)
+csornBits (CSORN (BitFields w)) = drop (bitSize w - natValue @s) (bitsToString w)
 
 
 -- | Empty contigiuous SORN
@@ -686,7 +686,7 @@ csornFromTo :: forall u.
    , Bits (BackingWord u)
    , KnownNat (UnumSize u)
    , KnownNat (SORNSize u)
-   , FiniteBits (BackingWord u)
+   , Bits (BackingWord u)
    , Integral (CSORNBackingWord u)
    , Bits (CSORNBackingWord u)
    , Field (BackingWord u)

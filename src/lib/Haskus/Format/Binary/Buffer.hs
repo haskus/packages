@@ -70,9 +70,11 @@ import qualified Data.ByteString.Unsafe as BS
 import Haskus.Format.Binary.Ptr
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
-import Haskus.Format.Binary.Bits.Basic
+import Haskus.Format.Binary.Bits.Bitwise
+import Haskus.Format.Binary.Bits.Index
+import Haskus.Format.Binary.Bits.Shift
 import Haskus.Utils.Memory (memCopy,memSet)
-import Haskus.Utils.List (foldl')
+import Haskus.Utils.List as List
 import Haskus.Utils.Flow
 
 -- | A buffer
@@ -90,34 +92,28 @@ instance Show Buffer where
          toHex 0xF = "F"
          toHex x   = show x
 
-instance Bits Buffer where
+instance Bitwise Buffer where
    (.&.)      = bufferZipWith (.&.)
    (.|.)      = bufferZipWith (.|.)
    xor        = bufferZipWith xor
    complement = bufferMap complement
-   shift b n
-      | n == 0     = b
-      | abs n <= 8 = bufferMap (`shift` n) b
-      | otherwise  = if q > 0
-            then bufferAppend zs b'
-            else bufferAppend b' zs
-         where
-            (q,r) = n `quotRem` 8
-            zs = bufferZero (fromIntegral (abs q))
-            b' = bufferMap (`shift` r) b
 
-   rotate     = shift
-   zeroBits   = emptyBuffer
-   isSigned _ = False
-   bitSize _  = undefined
-   bitSizeMaybe _ = Nothing
-   testBit b n = testBit p r
+instance IndexableBits Buffer where
+   bit i = bufferPackByteList 
+         (bit r : List.replicate (fromIntegral n) 0)
       where
-         p     = bufferIndex b (bufferSize b - fromIntegral q)
-         (q,r) = n `quotRem` 8
+         n = i `uncheckedShiftR` 3
+         r = i .&. 0x07
+   
+   testBit b i = testBit p r
+      where
+         p = bufferIndex b (bufferSize b - n)
+         n = i `uncheckedShiftR` 3
+         r = i .&. 0x07
 
-   bit _       = undefined
-   popCount b  = foldl' (+) 0 (fmap popCount (bufferUnpackByteList b))
+   popCount b  = sum (fmap popCount (bufferUnpackByteList b))
+
+
 
 -- | Duplicate a buffer
 bufferDup :: Buffer -> IO Buffer

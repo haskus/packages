@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | A bit set based on Enum to name the bits. Use bitwise operations and
 -- minimal storage in a safer way.
@@ -78,11 +79,21 @@ import Haskus.Format.Binary.Storable
 -- from the least-significant bit.
 newtype BitSet b a = BitSet b deriving (Eq,Ord,Storable)
 
-instance (Show a, CBitSet a, FiniteBits b) => Show (BitSet b a) where
-   show b = "fromList " ++ show (toList b)
+instance
+   ( Show a
+   , CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   , Eq b
+   ) => Show (BitSet b a)
+   where
+      show b = "fromList " ++ show (toList b)
 
 -- | Indicate if the set is empty
-null :: (FiniteBits b) => BitSet b a -> Bool
+null ::
+   ( FiniteBits b
+   , Eq b
+   ) => BitSet b a -> Bool
 {-# INLINE null #-}
 null (BitSet b) = b == zeroBits
 
@@ -94,19 +105,19 @@ empty = BitSet zeroBits
 
 
 -- | Create a BitSet from a single element
-singleton :: (Bits b, CBitSet a) => a -> BitSet b a
+singleton :: (IndexableBits b, CBitSet a) => a -> BitSet b a
 {-# INLINE singleton #-}
-singleton e = BitSet $ setBit zeroBits (toBitOffset e)
+singleton e = BitSet $ bit (toBitOffset e)
 
 
 -- | Insert an element in the set
-insert :: (Bits b, CBitSet a) => BitSet b a -> a -> BitSet b a
+insert :: (IndexableBits b, CBitSet a) => BitSet b a -> a -> BitSet b a
 {-# INLINE insert #-}
 insert (BitSet b) e = BitSet $ setBit b (toBitOffset e)
 
 
 -- | Remove an element from the set
-delete :: (Bits b, CBitSet a) => BitSet b a -> a -> BitSet b a
+delete :: (IndexableBits b, CBitSet a) => BitSet b a -> a -> BitSet b a
 {-# INLINE delete #-}
 delete (BitSet b) e = BitSet $ clearBit b (toBitOffset e)
 
@@ -120,25 +131,42 @@ fromBits :: (CBitSet a, FiniteBits b) => b -> BitSet b a
 fromBits = BitSet
 
 -- | Test if an element is in the set
-member :: (CBitSet a, FiniteBits b) => BitSet b a -> a -> Bool
+member ::
+   ( CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   ) => BitSet b a -> a -> Bool
 {-# INLINE member #-}
 member (BitSet b) e = testBit b (toBitOffset e)
 
 
 -- | Test if an element is in the set
-elem :: (CBitSet a, FiniteBits b) => a -> BitSet b a -> Bool
+elem ::
+   ( CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   ) => a -> BitSet b a -> Bool
 {-# INLINE elem #-}
 elem e (BitSet b) = testBit b (toBitOffset e)
 
 
 -- | Test if an element is not in the set
-notMember :: (CBitSet a, FiniteBits b) => BitSet b a -> a -> Bool
+notMember ::
+   ( CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   ) => BitSet b a -> a -> Bool
 {-# INLINE notMember #-}
 notMember b e = not (member b e)
 
 
 -- | Retrieve elements in the set
-elems :: (CBitSet a, FiniteBits b) => BitSet b a -> [a]
+elems ::
+   ( CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   , Eq b
+   ) => BitSet b a -> [a]
 elems (BitSet b) = go b
    where
       go !c
@@ -146,19 +174,28 @@ elems (BitSet b) = go b
          | otherwise     = let e = countTrailingZeros c in fromBitOffset e : go (clearBit c e)
 
 -- | Intersection of two sets
-intersection :: FiniteBits b => BitSet b a -> BitSet b a -> BitSet b a
+intersection ::
+   ( FiniteBits b
+   , Bitwise b
+   ) => BitSet b a -> BitSet b a -> BitSet b a
 {-# INLINE intersection #-}
 intersection (BitSet b1) (BitSet b2) = BitSet (b1 .&. b2)
 
 
 -- | Intersection of two sets
-union :: FiniteBits b => BitSet b a -> BitSet b a -> BitSet b a
+union ::
+   ( FiniteBits b
+   , Bitwise b
+   ) => BitSet b a -> BitSet b a -> BitSet b a
 {-# INLINE union #-}
 union (BitSet b1) (BitSet b2) = BitSet (b1 .|. b2)
 
 
 -- | Intersection of several sets
-unions :: FiniteBits b => [BitSet b a] -> BitSet b a
+unions ::
+   ( FiniteBits b
+   , Bitwise b
+   ) => [BitSet b a] -> BitSet b a
 {-# INLINE unions #-}
 unions = foldl' union empty
 
@@ -166,17 +203,22 @@ unions = foldl' union empty
 -- | Bit set indexed with a
 class CBitSet a where
    -- | Return the bit offset of an element
-   toBitOffset         :: a -> Int
-   default toBitOffset :: Enum a => a -> Int
-   toBitOffset         = fromEnum
+   toBitOffset         :: a -> Word
+   default toBitOffset :: Enum a => a -> Word
+   toBitOffset         = fromIntegral . fromEnum
 
    -- | Return the value associated with a bit offset
-   fromBitOffset         :: Int -> a
-   default fromBitOffset :: Enum a => Int -> a
-   fromBitOffset         = toEnum
+   fromBitOffset         :: Word -> a
+   default fromBitOffset :: Enum a => Word -> a
+   fromBitOffset         = toEnum . fromIntegral
 
 -- | It can be useful to get the indexes of the set bits
 instance CBitSet Int where
+   toBitOffset   = fromIntegral
+   fromBitOffset = fromIntegral
+
+-- | It can be useful to get the indexes of the set bits
+instance CBitSet Word where
    toBitOffset   = id
    fromBitOffset = id
    
@@ -185,23 +227,49 @@ instance CBitSet Int where
 -- | Convert a list of enum elements into a bitset Warning: b
 -- must have enough bits to store the given elements! (we don't
 -- perform any check, for performance reason)
-fromListToBits :: (CBitSet a, FiniteBits b, Foldable m) => m a -> b
+fromListToBits ::
+   ( CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   , Foldable m
+   ) => m a -> b
 fromListToBits = toBits . fromList
 
 -- | Convert a bitset into a list of Enum elements
-toListFromBits :: (CBitSet a, FiniteBits b) => b -> [a]
+toListFromBits ::
+   ( CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   , Eq b
+   ) => b -> [a]
 toListFromBits = toList . BitSet
 
 -- | Convert a set into a list
-toList :: (CBitSet a, FiniteBits b) => BitSet b a -> [a]
+toList ::
+   ( CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   , Eq b
+   ) => BitSet b a -> [a]
 toList = elems
 
 -- | Convert a Foldable into a set
-fromList :: (CBitSet a, FiniteBits b, Foldable m) => m a -> BitSet b a
+fromList ::
+   ( CBitSet a
+   , IndexableBits b
+   , FiniteBits b
+   , Foldable m
+   ) => m a -> BitSet b a
 fromList = foldl' insert (BitSet zeroBits)
 
 
-instance (FiniteBits b, CBitSet a) => Ext.IsList (BitSet b a) where
-   type Item (BitSet b a) = a
-   fromList = fromList
-   toList   = toList
+instance
+   ( FiniteBits b
+   , IndexableBits b
+   , CBitSet a
+   , Eq b
+   ) => Ext.IsList (BitSet b a)
+   where
+      type Item (BitSet b a) = a
+      fromList = fromList
+      toList   = toList

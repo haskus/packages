@@ -7,12 +7,7 @@
 
 -- | Unsigned and signed words
 module Haskus.Format.Binary.Word
-   ( Int8
-   , Int16
-   , Int32
-   , Int64
-   , BitSize
-   , WordAtLeast
+   ( WordAtLeast
    , IntAtLeast
    -- * Some C types
    , CSize(..)
@@ -24,6 +19,7 @@ module Haskus.Format.Binary.Word
    , CLong
    -- * Unlifted
    , module GHC.Word
+   , module GHC.Int
    , Word#
    , Int#
    , plusWord#
@@ -48,6 +44,7 @@ import Data.Word
 import Data.Int
 import Foreign.C.Types
 import GHC.Word
+import GHC.Int
 import GHC.Exts
 
 import Haskus.Utils.Types
@@ -71,10 +68,3 @@ type family IntAtLeast (n :: Nat) where
       (If (n <=? 64) Int64
       (TypeError ('Text "Cannot find Int with size " ':<>: 'ShowType n))
       )))
-
--- | Bit size
-type family BitSize a :: Nat
-type instance BitSize Word8  = 8
-type instance BitSize Word16 = 16
-type instance BitSize Word32 = 32
-type instance BitSize Word64 = 64

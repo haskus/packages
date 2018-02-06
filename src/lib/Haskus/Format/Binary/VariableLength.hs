@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 -- | Variable length encodings
 module Haskus.Format.Binary.VariableLength
    ( getULEB128

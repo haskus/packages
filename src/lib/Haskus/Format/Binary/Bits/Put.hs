@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 -- | Bit putter
 module Haskus.Format.Binary.Bits.Put
    ( BitPutState(..)
@@ -43,7 +45,11 @@ newBitPutState :: BitOrder -> BitPutState
 newBitPutState = BitPutState mempty 0 0
 
 -- | Put bits
-putBits :: (Integral a, FiniteBits a, BitReversable a) => Word -> a -> BitPutState -> BitPutState
+putBits ::
+   ( Integral a
+   , Bits a
+   , ReversableBits a
+   ) => Word -> a -> BitPutState -> BitPutState
 putBits n w s@(BitPutState builder b o bo) = s'
    where
       -- number of bits that will be stored in the current byte
@@ -67,7 +73,7 @@ putBits n w s@(BitPutState builder b o bo) = s'
       -- Select bits to store in the current byte.
       -- Put them in the correct order and return them in the least-significant
       -- bits of the returned value
-      selectBits :: (FiniteBits a, BitReversable a, Integral a) => a -> Word8
+      selectBits :: (Bits a, ReversableBits a, Integral a) => a -> Word8
       selectBits x = fromIntegral $ case bo of
          BB ->                       maskLeastBits cn $ x `shiftR` fromIntegral (n-cn)
          LB -> reverseLeastBits cn $ maskLeastBits cn $ x `shiftR` fromIntegral (n-cn)
@@ -139,7 +145,7 @@ runBitPut :: BitOrder -> BitPut a -> Buffer
 runBitPut bo m = runIdentity (runBitPutT bo m)
 
 -- | Put bits (monadic)
-putBitsM :: (Monad m, Integral a, FiniteBits a, BitReversable a) => Word -> a -> BitPutT m ()
+putBitsM :: (Monad m, Integral a, Bits a, ReversableBits a) => Word -> a -> BitPutT m ()
 putBitsM n w = modify (putBits n w)
 
 -- | Put a single bit (monadic)

@@ -1,10 +1,14 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Haskus.Tests.Format.Binary.Bits 
    ( testsBits
    )
 where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck as QC
+import Test.Tasty.QuickCheck (Arbitrary(..),testProperty)
 import Test.QuickCheck.Gen (elements,choose,vectorOf)
 
 import Haskus.Tests.Common
@@ -23,7 +27,137 @@ import Haskus.Format.Binary.Word
 
 testsBits :: TestTree
 testsBits = testGroup "Binary bits" $
-   [ testGroup "Bits to/from string"
+   [ testGroup "Finite"
+      [ testGroup "Finite bitSize"
+         [ testProperty "bitSize Word8"  (bitSize (5 :: Word8)  == (8 :: Word))
+         , testProperty "bitSize Word16" (bitSize (5 :: Word16) == (16 :: Word))
+         , testProperty "bitSize Word32" (bitSize (5 :: Word32) == (32 :: Word))
+         , testProperty "bitSize Word64" (bitSize (5 :: Word64) == (64 :: Word))
+         , testProperty "bitSize Int8"   (bitSize (5 :: Int8)   == (8 :: Word))
+         , testProperty "bitSize Int16"  (bitSize (5 :: Int16)  == (16 :: Word))
+         , testProperty "bitSize Int32"  (bitSize (5 :: Int32)  == (32 :: Word))
+         , testProperty "bitSize Int64"  (bitSize (5 :: Int64)  == (64 :: Word))
+         ]
+      , testGroup "Finite zeroBits"
+         [ testProperty "zeroBits Word8"  ((zeroBits :: Word8)  == 0)
+         , testProperty "zeroBits Word16" ((zeroBits :: Word16) == 0)
+         , testProperty "zeroBits Word32" ((zeroBits :: Word32) == 0)
+         , testProperty "zeroBits Word64" ((zeroBits :: Word64) == 0)
+         , testProperty "zeroBits Int8"   ((zeroBits :: Int8)   == 0)
+         , testProperty "zeroBits Int16"  ((zeroBits :: Int16)  == 0)
+         , testProperty "zeroBits Int32"  ((zeroBits :: Int32)  == 0)
+         , testProperty "zeroBits Int64"  ((zeroBits :: Int64)  == 0)
+         ]
+      , testGroup "Finite oneBits"
+         [ testProperty "oneBits Word8"  ((oneBits :: Word8)  == 0xff)
+         , testProperty "oneBits Word16" ((oneBits :: Word16) == 0xffff)
+         , testProperty "oneBits Word32" ((oneBits :: Word32) == 0xffffffff)
+         , testProperty "oneBits Word64" ((oneBits :: Word64) == 0xffffffffffffffff)
+         , testProperty "oneBits Int8"   ((oneBits :: Int8)   == -1)
+         , testProperty "oneBits Int16"  ((oneBits :: Int16)  == -1)
+         , testProperty "oneBits Int32"  ((oneBits :: Int32)  == -1)
+         , testProperty "oneBits Int64"  ((oneBits :: Int64)  == -1)
+         ]
+      , testGroup "Finite countLeadingZeros"
+         [ testProperty "countLeadingZeros Word8"  (countLeadingZeros (0b00010000 :: Word8)  == 3)
+         , testProperty "countLeadingZeros Word16" (countLeadingZeros (0b00010000 :: Word16) == 11)
+         , testProperty "countLeadingZeros Word32" (countLeadingZeros (0b00010000 :: Word32) == 27)
+         , testProperty "countLeadingZeros Word64" (countLeadingZeros (0b00010000 :: Word64) == 59)
+         , testProperty "countLeadingZeros Int8"   (countLeadingZeros (0b00010000 :: Int8)  == 3)
+         , testProperty "countLeadingZeros Int16"  (countLeadingZeros (0b00010000 :: Int16) == 11)
+         , testProperty "countLeadingZeros Int32"  (countLeadingZeros (0b00010000 :: Int32) == 27)
+         , testProperty "countLeadingZeros Int64"  (countLeadingZeros (0b00010000 :: Int64) == 59)
+         ]
+      ]
+   , testGroup "Bitwise"
+      [ testGroup "AND"
+         [ testProperty "and Word8"  (0x04 .&. (5 :: Word8)  == 0x04)
+         , testProperty "and Word16" (0x04 .&. (5 :: Word16) == 0x04)
+         , testProperty "and Word32" (0x04 .&. (5 :: Word32) == 0x04)
+         , testProperty "and Word64" (0x04 .&. (5 :: Word64) == 0x04)
+         , testProperty "and Int8"   (0x04 .&. (5 :: Int8)   == 0x04)
+         , testProperty "and Int16"  (0x04 .&. (5 :: Int16)  == 0x04)
+         , testProperty "and Int32"  (0x04 .&. (5 :: Int32)  == 0x04)
+         , testProperty "and Int64"  (0x04 .&. (5 :: Int64)  == 0x04)
+         ]
+      , testGroup "OR"
+         [ testProperty "or Word8"  (0x02 .|. (5 :: Word8)  == 0x07)
+         , testProperty "or Word16" (0x02 .|. (5 :: Word16) == 0x07)
+         , testProperty "or Word32" (0x02 .|. (5 :: Word32) == 0x07)
+         , testProperty "or Word64" (0x02 .|. (5 :: Word64) == 0x07)
+         , testProperty "or Int8"   (0x02 .|. (5 :: Int8)   == 0x07)
+         , testProperty "or Int16"  (0x02 .|. (5 :: Int16)  == 0x07)
+         , testProperty "or Int32"  (0x02 .|. (5 :: Int32)  == 0x07)
+         , testProperty "or Int64"  (0x02 .|. (5 :: Int64)  == 0x07)
+         ]
+      , testGroup "XOR"
+         [ testProperty "xor Word8"  (0x03 `xor` (5 :: Word8)  == 0x06)
+         , testProperty "xor Word16" (0x03 `xor` (5 :: Word16) == 0x06)
+         , testProperty "xor Word32" (0x03 `xor` (5 :: Word32) == 0x06)
+         , testProperty "xor Word64" (0x03 `xor` (5 :: Word64) == 0x06)
+         , testProperty "xor Int8"   (0x03 `xor` (5 :: Int8)   == 0x06)
+         , testProperty "xor Int16"  (0x03 `xor` (5 :: Int16)  == 0x06)
+         , testProperty "xor Int32"  (0x03 `xor` (5 :: Int32)  == 0x06)
+         , testProperty "xor Int64"  (0x03 `xor` (5 :: Int64)  == 0x06)
+         ]
+      , testGroup "complement"
+         [ testProperty "complement Word8"  (complement (2 :: Word8)  == maxBound - 2)
+         , testProperty "complement Word16" (complement (2 :: Word16) == maxBound - 2)
+         , testProperty "complement Word32" (complement (2 :: Word32) == maxBound - 2)
+         , testProperty "complement Word64" (complement (2 :: Word64) == maxBound - 2)
+         , testProperty "complement Int8"   (complement (2 :: Int8)   == -3)
+         , testProperty "complement Int16"  (complement (2 :: Int16)  == -3)
+         , testProperty "complement Int32"  (complement (2 :: Int32)  == -3)
+         , testProperty "complement Int64"  (complement (2 :: Int64)  == -3)
+         ]
+      ]
+   , testGroup "Shift"
+      [ testGroup "shiftR"
+         [ testProperty "shiftR Word8"  ((0b00101000 :: Word8)  `shiftR` 2 == 0b00001010)
+         , testProperty "shiftR Word16" ((0b00101000 :: Word16) `shiftR` 2 == 0b00001010)
+         , testProperty "shiftR Word32" ((0b00101000 :: Word32) `shiftR` 2 == 0b00001010)
+         , testProperty "shiftR Word64" ((0b00101000 :: Word64) `shiftR` 2 == 0b00001010)
+         , testProperty "shiftR Int8"   ((0b00101000 :: Int8)   `shiftR` 2 == 0b00001010)
+         , testProperty "shiftR Int16"  ((0b00101000 :: Int16)  `shiftR` 2 == 0b00001010)
+         , testProperty "shiftR Int32"  ((0b00101000 :: Int32)  `shiftR` 2 == 0b00001010)
+         , testProperty "shiftR Int64"  ((0b00101000 :: Int64)  `shiftR` 2 == 0b00001010)
+         , testProperty "shiftR Int"    (((-1) :: Int)    `shiftR` 1 == fromIntegral (maxBound `div` 2 :: Word))
+         , testProperty "shiftR Int8"   (((-1) :: Int8)   `shiftR` 1 == fromIntegral (maxBound `div` 2 :: Word8))
+         , testProperty "shiftR Int16"  (((-1) :: Int16)  `shiftR` 1 == fromIntegral (maxBound `div` 2 :: Word16))
+         , testProperty "shiftR Int32"  (((-1) :: Int32)  `shiftR` 1 == fromIntegral (maxBound `div` 2 :: Word32))
+         , testProperty "shiftR Int64"  (((-1) :: Int64)  `shiftR` 1 == fromIntegral (maxBound `div` 2 :: Word64))
+         ]
+      , testGroup "shiftL"
+         [ testProperty "shiftL Word8"  ((0b00101000 :: Word8)  `shiftL` 2 == 0b10100000)
+         , testProperty "shiftL Word16" ((0b00101000 :: Word16) `shiftL` 2 == 0b10100000)
+         , testProperty "shiftL Word32" ((0b00101000 :: Word32) `shiftL` 2 == 0b10100000)
+         , testProperty "shiftL Word64" ((0b00101000 :: Word64) `shiftL` 2 == 0b10100000)
+         , testProperty "shiftL Int8"   ((0b00011000 :: Int8)   `shiftL` 2 == 0b01100000)
+         , testProperty "shiftL Int16"  ((0b00101000 :: Int16)  `shiftL` 2 == 0b10100000)
+         , testProperty "shiftL Int32"  ((0b00101000 :: Int32)  `shiftL` 2 == 0b10100000)
+         , testProperty "shiftL Int64"  ((0b00101000 :: Int64)  `shiftL` 2 == 0b10100000)
+         , testProperty "shiftL Int8"   ((0b00101000 :: Int8)   `shiftL` 3 == 0b01000000)
+         , testProperty "shiftL -1 Int"    (((-1) :: Int)    `shiftL` 1 == -2)
+         , testProperty "shiftL -1 Int8"   (((-1) :: Int8)   `shiftL` 1 == -2)
+         , testProperty "shiftL -1 Int16"  (((-1) :: Int16)  `shiftL` 1 == -2)
+         , testProperty "shiftL -1 Int32"  (((-1) :: Int32)  `shiftL` 1 == -2)
+         , testProperty "shiftL -1 Int64"  (((-1) :: Int64)  `shiftL` 1 == -2)
+         , testProperty "signedShiftL Int8"   ((0b00101000 :: Int8)   `signedShiftL` 3 == 0b01000000)
+         ]
+      ]
+   , testGroup "Rotate"
+      [ testGroup "rotate i . rotate (n-i) == id"
+         [ testProperty "rotate Word8"  (\(x :: Word8)  i -> (x `rotate` i) `rotate` (bitSize x - i) == x)
+         , testProperty "rotate Word16" (\(x :: Word16) i -> (x `rotate` i) `rotate` (bitSize x - i) == x)
+         , testProperty "rotate Word32" (\(x :: Word32) i -> (x `rotate` i) `rotate` (bitSize x - i) == x)
+         , testProperty "rotate Word64" (\(x :: Word64) i -> (x `rotate` i) `rotate` (bitSize x - i) == x)
+         , testProperty "rotate Int8"   (\(x :: Int8)   i -> (x `rotate` i) `rotate` (bitSize x - i) == x)
+         , testProperty "rotate Int16"  (\(x :: Int16)  i -> (x `rotate` i) `rotate` (bitSize x - i) == x)
+         , testProperty "rotate Int32"  (\(x :: Int32)  i -> (x `rotate` i) `rotate` (bitSize x - i) == x)
+         , testProperty "rotate Int64"  (\(x :: Int64)  i -> (x `rotate` i) `rotate` (bitSize x - i) == x)
+         ]
+      ]
+   , testGroup "Bits to/from string"
       [ testProperty "Bits from string \"01010011\" (Word8)" (bitsFromString "01010011" == (83 :: Word8))
       , testProperty "Bits from string reverse (Word64)" prop_bits_from_string
       , testProperty "Bits to string (Word8)"            (prop_bits_to_string :: Word8  -> Bool)
@@ -152,12 +286,12 @@ prop_bits_from_string :: BitString -> Bool
 prop_bits_from_string (BitString s) = bitsToString (bitsFromString s :: Word64) == s
 
 -- | Test that a word can be converted into a BitString and back
-prop_bits_to_string :: FiniteBits a => a -> Bool
+prop_bits_to_string :: Bits a => a -> Bool
 prop_bits_to_string x = bitsFromString (bitsToString x) == x
 
 -- | Test that words of the given length can be written and read back with
 -- BitGet/BitPut. Test every bit ordering.
-prop_reverse_word :: (Integral a, FiniteBits a, BitReversable a) => Word -> a -> ArbitraryBitOrder -> Bool
+prop_reverse_word :: (Integral a, Bits a, ReversableBits a) => Word -> a -> ArbitraryBitOrder -> Bool
 prop_reverse_word n w (ArbitraryBitOrder bo) = maskLeastBits n w == dec
    where
       enc = getBitPutBuffer  $ putBits n w $ newBitPutState bo
@@ -179,12 +313,12 @@ prop_reverse_bs w s (ArbitraryBuffer bs) (ArbitraryBitOrder bo) = runBitGet bo d
 
 -- | Test that words with arbitrary (but still valid) lengths can be written and
 -- read back with BitGet/BitPut. Test every bit ordering.
-prop_reverse_word_size :: (Integral a, FiniteBits a, BitReversable a, Size s) => s -> a -> ArbitraryBitOrder -> Bool
+prop_reverse_word_size :: (Integral a, Bits a, ReversableBits a, Size s) => s -> a -> ArbitraryBitOrder -> Bool
 prop_reverse_word_size n w bo = prop_reverse_word (fromSize n) w bo
 
 -- | Write two parts of two words and read them back
-prop_split_word :: (Num a, Integral a, FiniteBits a, BitReversable a,
-                    Num b, Integral b, FiniteBits b, BitReversable b,
+prop_split_word :: (Num a, Integral a, Bits a, ReversableBits a,
+                    Num b, Integral b, Bits b, ReversableBits b,
                     Size s1, Size s2) => s1 -> s2 -> a -> b -> ArbitraryBitOrder -> Bool
 prop_split_word s1 s2 w1 w2 (ArbitraryBitOrder bo) = runBitGet bo dec (runBitPut bo enc)
    where

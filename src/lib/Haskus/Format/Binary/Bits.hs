@@ -1,10 +1,19 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+
 -- | Operations on bits
 module Haskus.Format.Binary.Bits
-   (
-   -- * Basic
-     module Haskus.Format.Binary.Bits.Basic
+   ( Bits
+   , FiniteBits (..)
+   , IndexableBits (..)
+   , ShiftableBits (..)
+   , SignedShiftableBits (..)
+   , RotatableBits (..)
+   , Bitwise (..)
    -- * Bit reversal
-   , BitReversable (..)
+   , ReversableBits (..)
    , reverseBitsGeneric
    , reverseLeastBits
    -- * Mask
@@ -22,20 +31,42 @@ module Haskus.Format.Binary.Bits
 where
 
 import Haskus.Utils.List (foldl')
-import Haskus.Format.Binary.Bits.Basic
+import Haskus.Utils.Types (KnownNat)
+import Haskus.Format.Binary.Bits.Finite
+import Haskus.Format.Binary.Bits.Index
 import Haskus.Format.Binary.Bits.Reverse
+import Haskus.Format.Binary.Bits.Rotate
+import Haskus.Format.Binary.Bits.Shift
+import Haskus.Format.Binary.Bits.Bitwise
 import Haskus.Format.Binary.Bits.Order
 import Haskus.Format.Binary.Word
 
+type Bits a =
+   ( Eq a
+   , FiniteBits a
+   , IndexableBits a
+   , ShiftableBits a
+   , Bitwise a
+   , RotatableBits a
+   , KnownNat (BitSize a)
+   )
+
 -- | makeMask 3 = 00000111
-makeMask :: (FiniteBits a) => Word -> a
-makeMask n = x' `shiftR` (finiteBitSize x - fromIntegral n)
+makeMask :: forall a.
+   ( ShiftableBits a
+   , FiniteBits a
+   , KnownNat (BitSize a)
+   , Bitwise a
+   ) => Word -> a
+makeMask n = complement zeroBits `shiftR` off
    where
-      x = complement zeroBits
-      x' = if isSigned x 
-               then error "Cannot use makeMask with a signed type"
-               else x
+      off = (bitSize @a undefined) - n
+
 {-# SPECIALIZE makeMask :: Word -> Int #-}
+{-# SPECIALIZE makeMask :: Word -> Int8 #-}
+{-# SPECIALIZE makeMask :: Word -> Int16 #-}
+{-# SPECIALIZE makeMask :: Word -> Int32 #-}
+{-# SPECIALIZE makeMask :: Word -> Int64 #-}
 {-# SPECIALIZE makeMask :: Word -> Word #-}
 {-# SPECIALIZE makeMask :: Word -> Word8 #-}
 {-# SPECIALIZE makeMask :: Word -> Word16 #-}
@@ -43,7 +74,12 @@ makeMask n = x' `shiftR` (finiteBitSize x - fromIntegral n)
 {-# SPECIALIZE makeMask :: Word -> Word64 #-}
 
 -- | Keep only the n least-significant bits of the given value
-maskLeastBits :: (FiniteBits a) => Word -> a -> a
+maskLeastBits :: forall a.
+   ( ShiftableBits a
+   , FiniteBits a
+   , Bitwise a
+   , KnownNat (BitSize a)
+   ) => Word -> a -> a
 {-# INLINE maskLeastBits #-}
 maskLeastBits n v = v .&. makeMask n
 
@@ -55,18 +91,27 @@ bitOffset n = makeMask 3 .&. n
 -- | Compute byte offset (equivalent to x `div` 8 but faster)
 byteOffset :: Word -> Word
 {-# INLINE byteOffset #-}
-byteOffset n = n `shiftR` 3
+byteOffset n = n `uncheckedShiftR` 3
 
 -- | Reverse the @n@ least important bits of the given value. The higher bits
 -- are set to 0.
-reverseLeastBits :: (FiniteBits a, BitReversable a) => Word -> a -> a
-reverseLeastBits n value = reverseBits value `shiftR` (finiteBitSize value - fromIntegral n)
+reverseLeastBits ::
+   ( ShiftableBits a
+   , FiniteBits a
+   , ReversableBits a
+   , KnownNat (BitSize a)
+   ) => Word -> a -> a
+reverseLeastBits n value = reverseBits value `uncheckedShiftR` ((bitSize value) - n)
 
 -- | Convert bits into a string composed of '0' and '1' chars
-bitsToString :: FiniteBits a => a -> String
+bitsToString :: forall a.
+   ( FiniteBits a
+   , IndexableBits a
+   , KnownNat (BitSize a)
+   ) => a -> String
 bitsToString x = fmap b [s, s-1 .. 0]
    where
-      s   = finiteBitSize x - 1
+      s   = bitSize x - 1
       b v = if testBit x v then '1' else '0'
 
 -- | Convert a string of '0' and '1' chars into a word
@@ -80,14 +125,19 @@ bitsFromString xs = foldl' b zeroBits (reverse xs `zip` [0..])
 
 -- | `getBitRange bo offset n c` takes n bits at offset in c and put them in the
 -- least-significant bits of the result
-getBitRange :: (BitReversable b, FiniteBits b) => BitOrder -> Word -> Word -> b -> b
+getBitRange :: forall b.
+   ( ShiftableBits b
+   , ReversableBits b
+   , FiniteBits b
+   , KnownNat (BitSize b)
+   , Bitwise b
+   ) => BitOrder -> Word -> Word -> b -> b
 {-# INLINE getBitRange #-}
 getBitRange bo o n c = case bo of
-      BB -> maskLeastBits n $ c             `unsafeShiftR` d
-      BL -> maskLeastBits n $ reverseBits c `unsafeShiftR` o'
-      LB -> maskLeastBits n $ reverseBits c `unsafeShiftR` d
-      LL -> maskLeastBits n $ c             `unsafeShiftR` o'
+      BB -> maskLeastBits n $ c             `uncheckedShiftR` d
+      BL -> maskLeastBits n $ reverseBits c `uncheckedShiftR` o
+      LB -> maskLeastBits n $ reverseBits c `uncheckedShiftR` d
+      LL -> maskLeastBits n $ c             `uncheckedShiftR` o
    where 
-      o' = fromIntegral o
-      d  = finiteBitSize c - fromIntegral n - fromIntegral o
+      d  = bitSize c - n - o
 

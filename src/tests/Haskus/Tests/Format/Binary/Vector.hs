@@ -78,5 +78,5 @@ testsVector = testGroup "Vector" $
          (\n -> (v1234 `rotateR` n) `rotateL` n == v1234)
 
    , testProperty "bit/testBit" $
-         (\n -> n < 0 || testBit (bit n :: Vector 10 Word32) n)
+         (\n -> n >= 320 || testBit (bit n :: Vector 10 Word32) n)
    ]

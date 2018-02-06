@@ -19,7 +19,6 @@ where
 
 import Haskus.Format.Binary.BitField
 import Haskus.Format.Binary.Bits
-import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
 import Haskus.Utils.Types
 

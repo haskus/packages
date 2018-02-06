@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Reverse bits
 --
@@ -11,7 +13,7 @@
 module Haskus.Format.Binary.Bits.Reverse
    ( 
    -- * Generic
-     BitReversable (..)
+     ReversableBits (..)
    , reverseBitsGeneric
    -- * Algorithms
    , reverseBitsObvious
@@ -26,7 +28,11 @@ where
 
 import Haskus.Format.Binary.Buffer
 import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Bits.Basic
+import Haskus.Format.Binary.Bits.Finite
+import Haskus.Format.Binary.Bits.Shift
+import Haskus.Format.Binary.Bits.Bitwise
+import Haskus.Format.Binary.Bits.Index
+import Haskus.Utils.Types (KnownNat)
 
 ---------------------------------------------------
 -- Generic and specialized reverseBits
@@ -34,26 +40,32 @@ import Haskus.Format.Binary.Bits.Basic
 
 
 -- | Reverse bits in a Word
-reverseBitsGeneric :: (FiniteBits a, Integral a) => a -> a
+reverseBitsGeneric ::
+   ( FiniteBits a
+   , Integral a
+   , ShiftableBits a
+   , Bitwise a
+   , KnownNat (BitSize a)
+   ) => a -> a
 reverseBitsGeneric = liftReverseBits reverseBits4Ops
 
 -- | Data whose bits can be reversed
-class BitReversable w where
+class ReversableBits w where
    reverseBits :: w -> w
 
-instance BitReversable Word8 where
+instance ReversableBits Word8 where
    reverseBits = reverseBits4Ops
 
-instance BitReversable Word16 where
+instance ReversableBits Word16 where
    reverseBits = reverseBits5LgN
 
-instance BitReversable Word32 where
+instance ReversableBits Word32 where
    reverseBits = reverseBits5LgN
 
-instance BitReversable Word64 where
+instance ReversableBits Word64 where
    reverseBits = reverseBits5LgN
 
-instance BitReversable Word where
+instance ReversableBits Word where
    reverseBits = reverseBits5LgN
 
 
@@ -88,10 +100,17 @@ instance BitReversable Word where
 -- iterating over all bits it stops early. 
 
 -- | Obvious recursive version
-reverseBitsObvious :: FiniteBits a => a -> a
-reverseBitsObvious x = rec x (x `shiftR` 1) (finiteBitSize x - 1)
+reverseBitsObvious :: forall a.
+   ( FiniteBits a
+   , ShiftableBits a
+   , IndexableBits a
+   , Bitwise a
+   , KnownNat (BitSize a)
+   , Eq a
+   ) => a -> a
+reverseBitsObvious x = rec x (x `shiftR` 1) (bitSize x - 1)
    where
-      rec :: FiniteBits a => a -> a -> Int -> a
+      rec :: FiniteBits a => a -> a -> Word -> a
       rec !r !v !s 
          | v == zeroBits = r `shiftL` s
          | otherwise     = rec ((r `shiftL` 1) .|. (v .&. bit 0)) (v `shiftR` 1) (s - 1)
@@ -253,10 +272,15 @@ reverseBits7Ops b' = fromIntegral x'
 -- without ANDS in the last line on March 19, 2006. 
 
 -- | "Parallel" recursive version
-reverseBits5LgN :: FiniteBits a => a -> a
-reverseBits5LgN x = rec (finiteBitSize x `shiftR` 1) (complement zeroBits) x
+reverseBits5LgN :: forall a.
+   ( FiniteBits a
+   , ShiftableBits a
+   , Bitwise a
+   , KnownNat (BitSize a)
+   ) => a -> a
+reverseBits5LgN x = rec (bitSize x `shiftR` 1) (complement zeroBits) x
    where
-      rec :: FiniteBits a => Int -> a -> a -> a
+      rec :: FiniteBits a => Word -> a -> a -> a
       rec !s !mask !v
          | s <= 0        = v
          | otherwise     = rec (s `shiftR` 1) mask' v'
@@ -275,10 +299,16 @@ reverseBits5LgN x = rec (finiteBitSize x `shiftR` 1) (complement zeroBits) x
 -- | Convert a function working on Word8 to one working on any Word
 --
 -- The number of bits in the Word must be a multiple of 8
-liftReverseBits :: (FiniteBits a, Integral a) => (Word8 -> Word8) -> a -> a
+liftReverseBits ::
+   ( ShiftableBits a
+   , Bitwise a
+   , FiniteBits a
+   , Integral a
+   , KnownNat (BitSize a)
+   ) => (Word8 -> Word8) -> a -> a
 liftReverseBits f w = rec zeroBits 0
    where
-      nb = finiteBitSize w `shiftR` 3 -- div 8
+      nb = bitSize w `shiftR` 3 -- div 8
       f' = fromIntegral . f . fromIntegral
       rec !v !o
          | o == nb    = v

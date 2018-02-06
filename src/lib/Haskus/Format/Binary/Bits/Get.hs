@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | Bit getter
 module Haskus.Format.Binary.Bits.Get
@@ -71,7 +72,7 @@ skipBitsToAlignOnWord8 s = case bitGetStateBitOffset s of
    n -> skipBits (8-n) s
 
 -- | Read the given number of bits and put the result in a word
-getBits :: (Integral a, FiniteBits a) => Word -> BitGetState -> a
+getBits :: (Integral a, Bits a) => Word -> BitGetState -> a
 getBits nbits (BitGetState bs off bo) = rec zeroBits 0 bs off nbits
    where
       -- w   = current result
@@ -100,7 +101,7 @@ getBits nbits (BitGetState bs off bo) = rec zeroBits 0 bs off nbits
 -- | Perform some checks before calling getBits
 --
 -- Check that the number of bits to read is not greater than the first parameter
-getBitsChecked :: (Integral a, FiniteBits a, BitReversable a) => Word -> Word -> BitGetState -> a
+getBitsChecked :: (Integral a, Bits a, ReversableBits a) => Word -> Word -> BitGetState -> a
 {-# INLINE getBitsChecked #-}
 getBitsChecked m n s
    | n > m     = error $ "Tried to read more than " ++ show m ++ " bits (" ++ show n ++")"
@@ -189,14 +190,14 @@ skipBitsToAlignOnWord8M :: Monad m =>  BitGetT m ()
 skipBitsToAlignOnWord8M = modify skipBitsToAlignOnWord8
 
 -- | Read the given number of bits and put the result in a word
-getBitsM :: (Integral a, FiniteBits a, Monad m) => Word -> BitGetT m a
+getBitsM :: (Integral a, Bits a, Monad m) => Word -> BitGetT m a
 getBitsM n = do
    v <- gets (getBits n)
    skipBitsM n
    return v
 
 -- | Perform some checks before calling getBitsM
-getBitsCheckedM :: (Integral a, FiniteBits a, BitReversable a, Monad m) => Word -> Word -> BitGetT m a
+getBitsCheckedM :: (Integral a, Bits a, ReversableBits a, Monad m) => Word -> Word -> BitGetT m a
 getBitsCheckedM m n = do
    v <- gets (getBitsChecked m n)
    skipBitsM n

@@ -24,8 +24,12 @@ library
   exposed-modules:
 
     Haskus.Format.Binary.Bits
-    Haskus.Format.Binary.Bits.Basic
+    Haskus.Format.Binary.Bits.Finite
+    Haskus.Format.Binary.Bits.Index
+    Haskus.Format.Binary.Bits.Bitwise
     Haskus.Format.Binary.Bits.Reverse
+    Haskus.Format.Binary.Bits.Rotate
+    Haskus.Format.Binary.Bits.Shift
     Haskus.Format.Binary.Bits.Order
     Haskus.Format.Binary.Bits.Get
     Haskus.Format.Binary.Bits.Put
