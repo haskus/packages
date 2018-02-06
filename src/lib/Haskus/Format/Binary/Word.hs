@@ -13,6 +13,7 @@ module Haskus.Format.Binary.Word
    , Int64
    , BitSize
    , WordAtLeast
+   , IntAtLeast
    -- * Some C types
    , CSize(..)
    , CUShort
@@ -59,6 +60,16 @@ type family WordAtLeast (n :: Nat) where
       (If (n <=? 32) Word32
       (If (n <=? 64) Word64
       (TypeError ('Text "Cannot find Word with size " ':<>: 'ShowType n))
+      )))
+
+-- | Return a Int with at least 'n' bits
+type family IntAtLeast (n :: Nat) where
+   IntAtLeast n =
+       If (n <=? 8) Int8
+      (If (n <=? 16) Int16
+      (If (n <=? 32) Int32
+      (If (n <=? 64) Int64
+      (TypeError ('Text "Cannot find Int with size " ':<>: 'ShowType n))
       )))
 
 -- | Bit size
