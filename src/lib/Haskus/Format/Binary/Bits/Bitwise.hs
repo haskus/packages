@@ -9,6 +9,7 @@ where
 
 import Haskus.Format.Binary.Word
 import GHC.Exts
+import GHC.Num
 
 -- | Bitwise bit operations
 class Bitwise a where
@@ -89,3 +90,9 @@ instance Bitwise Int64 where
    (I64# x#) .|.   (I64# y#) = I64# (word2Int# (int2Word# x# `or#`  int2Word# y#))
    (I64# x#) `xor` (I64# y#) = I64# (word2Int# (int2Word# x# `xor#` int2Word# y#))
    complement (I64# x#)      = I64# (word2Int# (int2Word# x# `xor#` int2Word# (-1#)))
+
+instance Bitwise Integer where
+   (.&.)      = andInteger
+   (.|.)      = orInteger
+   xor        = xorInteger
+   complement = complementInteger

@@ -10,6 +10,7 @@ where
 
 import Haskus.Format.Binary.Word
 import GHC.Exts
+import GHC.Num
 
 #include "MachDeps.h"
 
@@ -294,3 +295,17 @@ instance SignedShiftableBits Int64 where
    (I64# x#) `signedShiftR`          (W# i#) = I64# (x# `iShiftRA#` word2Int# i#)
    (I64# x#) `uncheckedSignedShiftL` (W# i#) = I64# (x# `uncheckedIShiftL#` word2Int# i#)
    (I64# x#) `uncheckedSignedShiftR` (W# i#) = I64# (x# `uncheckedIShiftRA#` word2Int# i#)
+
+
+
+instance ShiftableBits Integer where
+   {-# INLINE shiftR #-}
+   {-# INLINE shiftL #-}
+   {-# INLINE uncheckedShiftL #-}
+   {-# INLINE uncheckedShiftR #-}
+
+   x `shiftL` (W# i#) = shiftLInteger x (word2Int# i#)
+   x `shiftR` (W# i#) = shiftRInteger x (word2Int# i#)
+
+   uncheckedShiftL = shiftL
+   uncheckedShiftR = shiftR
