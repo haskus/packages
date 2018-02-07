@@ -68,6 +68,21 @@ instance ReversableBits Word64 where
 instance ReversableBits Word where
    reverseBits = reverseBits5LgN
 
+instance ReversableBits Int8 where
+   reverseBits = fromIntegral . reverseBits4Ops . fromIntegral
+
+instance ReversableBits Int16 where
+   reverseBits = reverseBits5LgN
+
+instance ReversableBits Int32 where
+   reverseBits = reverseBits5LgN
+
+instance ReversableBits Int64 where
+   reverseBits = reverseBits5LgN
+
+instance ReversableBits Int where
+   reverseBits = reverseBits5LgN
+
 
 ---------------------------------------------------
 -- Bit reversal algorithms
