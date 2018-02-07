@@ -59,14 +59,22 @@ testsBits = testGroup "Binary bits" $
          , testProperty "oneBits Int64"  ((oneBits :: Int64)  == -1)
          ]
       , testGroup "Finite countLeadingZeros"
-         [ testProperty "countLeadingZeros Word8"  (countLeadingZeros (0b00010000 :: Word8)  == 3)
-         , testProperty "countLeadingZeros Word16" (countLeadingZeros (0b00010000 :: Word16) == 11)
-         , testProperty "countLeadingZeros Word32" (countLeadingZeros (0b00010000 :: Word32) == 27)
-         , testProperty "countLeadingZeros Word64" (countLeadingZeros (0b00010000 :: Word64) == 59)
-         , testProperty "countLeadingZeros Int8"   (countLeadingZeros (0b00010000 :: Int8)  == 3)
-         , testProperty "countLeadingZeros Int16"  (countLeadingZeros (0b00010000 :: Int16) == 11)
-         , testProperty "countLeadingZeros Int32"  (countLeadingZeros (0b00010000 :: Int32) == 27)
-         , testProperty "countLeadingZeros Int64"  (countLeadingZeros (0b00010000 :: Int64) == 59)
+         [ testProperty "countLeadingZeros Word8"  (countLeadingZeros (0x10 :: Word8)  == 3)
+         , testProperty "countLeadingZeros Word16" (countLeadingZeros (0x1000 :: Word16) == 3)
+         , testProperty "countLeadingZeros Word32" (countLeadingZeros (0x10000000 :: Word32) == 3)
+         , testProperty "countLeadingZeros Word64" (countLeadingZeros (0x1000000000000000 :: Word64) == 3)
+         , testProperty "countLeadingZeros Int8"   (countLeadingZeros (0x10 :: Int8)  == 3)
+         , testProperty "countLeadingZeros Int16"  (countLeadingZeros (0x1000 :: Int16) == 3)
+         , testProperty "countLeadingZeros Int32"  (countLeadingZeros (0x10000000 :: Int32) == 3)
+         , testProperty "countLeadingZeros Int64"  (countLeadingZeros (0x1000000000000000 :: Int64) == 3)
+         , testProperty "countLeadingZeros Word8"  (countLeadingZeros (0x0 :: Word8)  == 8)
+         , testProperty "countLeadingZeros Word16" (countLeadingZeros (0x0 :: Word16) == 16)
+         , testProperty "countLeadingZeros Word32" (countLeadingZeros (0x0 :: Word32) == 32)
+         , testProperty "countLeadingZeros Word64" (countLeadingZeros (0x0 :: Word64) == 64)
+         , testProperty "countLeadingZeros Int8"   (countLeadingZeros (0x0 :: Int8)  == 8)
+         , testProperty "countLeadingZeros Int16"  (countLeadingZeros (0x0 :: Int16) == 16)
+         , testProperty "countLeadingZeros Int32"  (countLeadingZeros (0x0 :: Int32) == 32)
+         , testProperty "countLeadingZeros Int64"  (countLeadingZeros (0x0 :: Int64) == 64)
          ]
       ]
    , testGroup "Bitwise"
