@@ -9,6 +9,8 @@
 module Haskus.Format.Binary.Word
    ( WordAtLeast
    , IntAtLeast
+   , WordN
+   , IntN
    -- * Some C types
    , CSize(..)
    , CUShort
@@ -68,3 +70,19 @@ type family IntAtLeast (n :: Nat) where
       (Assert (n <=? 64) Int64
       ('Text "Cannot find Int with size " ':<>: 'ShowType n)
       )))
+
+-- | Return a Word with exactly 'n' bits
+type family WordN (n :: Nat) where
+   WordN 8  = Word8
+   WordN 16 = Word16
+   WordN 32 = Word32
+   WordN 64 = Word64
+   WordN n  = TypeError ('Text "Cannot find Word with size " ':<>: 'ShowType n)
+
+-- | Return a Int with exactly 'n' bits
+type family IntN (n :: Nat) where
+   IntN 8  = Int8
+   IntN 16 = Int16
+   IntN 32 = Int32
+   IntN 64 = Int64
+   IntN n  = TypeError ('Text "Cannot find Int with size " ':<>: 'ShowType n)
