@@ -21,6 +21,7 @@ module Haskus.Format.Binary.Bits
    , maskLeastBits
    -- * String conversion
    , bitsToString
+   , bitsToStringN
    , bitsFromString
    -- * Shift
    , getBitRange
@@ -31,7 +32,7 @@ module Haskus.Format.Binary.Bits
 where
 
 import Haskus.Utils.List (foldl')
-import Haskus.Utils.Types (KnownNat)
+import Haskus.Utils.Types
 import Haskus.Format.Binary.Bits.Finite
 import Haskus.Format.Binary.Bits.Index
 import Haskus.Format.Binary.Bits.Reverse
@@ -109,9 +110,14 @@ bitsToString :: forall a.
    , IndexableBits a
    , KnownNat (BitSize a)
    ) => a -> String
-bitsToString x = fmap b [s, s-1 .. 0]
+bitsToString = bitsToStringN (natValue @(BitSize a))
+
+-- | Convert a specified amount of bits into a string composed of '0' and '1' chars
+bitsToStringN :: forall a.
+   ( IndexableBits a
+   ) => Word -> a -> String
+bitsToStringN n x = fmap b [n-1, n-2 .. 0]
    where
-      s   = bitSize x - 1
       b v = if testBit x v then '1' else '0'
 
 -- | Convert a string of '0' and '1' chars into a word

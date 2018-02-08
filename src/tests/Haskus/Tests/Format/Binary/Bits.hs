@@ -12,6 +12,7 @@ import Test.Tasty.QuickCheck (Arbitrary(..),testProperty)
 import Test.QuickCheck.Gen (elements,choose,vectorOf)
 
 import Haskus.Tests.Common
+import Haskus.Utils.Flow
 
 import Haskus.Format.Binary.Bits.Put
 import Haskus.Format.Binary.Bits.Get
@@ -167,11 +168,19 @@ testsBits = testGroup "Binary bits" $
       ]
    , testGroup "Bits to/from string"
       [ testProperty "Bits from string \"01010011\" (Word8)" (bitsFromString "01010011" == (83 :: Word8))
-      , testProperty "Bits from string reverse (Word64)" prop_bits_from_string
+
+
+      -- Test that a random BitString (i.e. a string with length 64 and only
+      -- composed of 0s and 1s) can be converted into a Word64 and back into a string
+      , testProperty "Bits from string reverse (Word64)" <|
+         \(BitString s) -> bitsToString (bitsFromString s :: Word64) == s
+
       , testProperty "Bits to string (Word8)"            (prop_bits_to_string :: Word8  -> Bool)
       , testProperty "Bits to string (Word16)"           (prop_bits_to_string :: Word16 -> Bool)
       , testProperty "Bits to string (Word32)"           (prop_bits_to_string :: Word32 -> Bool)
       , testProperty "Bits to string (Word64)"           (prop_bits_to_string :: Word64 -> Bool)
+
+      , testProperty "N bits to string"                  (bitsToStringN 4 (0x06 :: Word8) == "0110")
       ]
    , testGroup "Bit put/bit get"
       [ testProperty "Bit put/get Word8  - 8  bits"      (prop_reverse_word 8  :: Word8  -> ArbitraryBitOrder -> Bool)
@@ -287,11 +296,6 @@ newtype BitString = BitString String deriving (Show)
 
 instance Arbitrary BitString where
    arbitrary = fmap BitString $ vectorOf 64 (elements ['0','1'])
-
--- | Test that a random BitString (i.e. a string with length 64 and only
--- composed of 0s and 1s) can be converted into a Word64 and back into a string
-prop_bits_from_string :: BitString -> Bool
-prop_bits_from_string (BitString s) = bitsToString (bitsFromString s :: Word64) == s
 
 -- | Test that a word can be converted into a BitString and back
 prop_bits_to_string :: Bits a => a -> Bool
