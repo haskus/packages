@@ -8,7 +8,8 @@
 
 -- | Tuple helpers
 module Haskus.Utils.Tuple
-   ( uncurry4
+   ( uncurry3
+   , uncurry4
    , take4
    , fromTuple4
    , module Data.Tuple
@@ -25,6 +26,11 @@ where
 
 import Data.Tuple
 import Haskus.Utils.Types
+
+-- | Uncurry specialised for triple
+uncurry3 :: (a -> b -> c -> e) -> (a,b,c) -> e
+{-# INLINE uncurry3 #-}
+uncurry3 f (a,b,c) = f a b c
 
 -- | Uncurry specialised for quadruple
 uncurry4 :: (a -> b -> c -> d -> e) -> (a,b,c,d) -> e
