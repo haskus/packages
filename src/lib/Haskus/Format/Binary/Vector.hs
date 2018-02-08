@@ -57,10 +57,10 @@ vectorBuffer (Vector b) = b
 
 -- | Offset of the i-th element in a stored vector
 type family ElemOffset a i n where
-   ElemOffset a i n = IfNat (i+1 <=? n)
+   ElemOffset a i n = Assert (i+1 <=? n)
       (i * (SizeOf a))
-      (TypeError ('Text "Invalid vector index: " ':<>: 'ShowType i
-                 ':$$: 'Text "Vector size: "     ':<>: 'ShowType n))
+      (('Text "Invalid vector index: " ':<>: 'ShowType i
+       ':$$: 'Text "Vector size: "     ':<>: 'ShowType n))
 
 instance forall a n.
    ( KnownNat (SizeOf a * n)
