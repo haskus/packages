@@ -27,6 +27,11 @@ module Haskus.Format.Binary.Posit
    , positToRational
    , positFromRational
    , positApproxFactor
+   , positDecimalError
+   , positDecimalAccuracy
+   , positBinaryError
+   , positBinaryAccuracy
+   , floatBinaryAccuracy
    )
 where
 
@@ -331,4 +336,89 @@ positApproxFactor :: forall p n es.
    , KnownNat es
    , KnownNat n
    ) => Rational -> Double
-positApproxFactor r = fromRational (r / (positToRational (positFromRational r ::  p)))
+positApproxFactor r = fromRational ((positToRational (positFromRational r ::  p)) / r)
+
+-- | Compute the decimal error if the given Rational is encoded as a Posit.
+--
+-- Usage:
+--
+--    positDecimalError @(Posit 8 2) (52 % 137)
+--
+positDecimalError :: forall p n es.
+   ( Posit n es ~ p
+   , Num (IntN n)
+   , Bits (IntN n)
+   , Integral (IntN n)
+   , KnownNat es
+   , KnownNat n
+   ) => Rational -> Double
+positDecimalError r = abs (logBase 10 (positApproxFactor @p r))
+
+-- | Compute the number of decimals of accuracy if the given Rational is encoded
+-- as a Posit.
+--
+-- Usage:
+--
+--    positDecimalAccuracy @(Posit 8 2) (52 % 137)
+--
+positDecimalAccuracy :: forall p n es.
+   ( Posit n es ~ p
+   , Num (IntN n)
+   , Bits (IntN n)
+   , Integral (IntN n)
+   , KnownNat es
+   , KnownNat n
+   ) => Rational -> Double
+positDecimalAccuracy r = -1 * logBase 10 (positDecimalError @p r)
+
+
+-- | Compute the binary error if the given Rational is encoded as a Posit.
+--
+-- Usage:
+--
+--    positBinaryError @(Posit 8 2) (52 % 137)
+--
+positBinaryError :: forall p n es.
+   ( Posit n es ~ p
+   , Num (IntN n)
+   , Bits (IntN n)
+   , Integral (IntN n)
+   , KnownNat es
+   , KnownNat n
+   ) => Rational -> Double
+positBinaryError r = abs (logBase 2 (positApproxFactor @p r))
+
+-- | Compute the number of bits of accuracy if the given Rational is encoded
+-- as a Posit.
+--
+-- Usage:
+--
+--    positBinaryAccuracy @(Posit 8 2) (52 % 137)
+--
+positBinaryAccuracy :: forall p n es.
+   ( Posit n es ~ p
+   , Num (IntN n)
+   , Bits (IntN n)
+   , Integral (IntN n)
+   , KnownNat es
+   , KnownNat n
+   ) => Rational -> Double
+positBinaryAccuracy r = -1 * logBase 2 (positBinaryError @p r)
+
+
+-- | Compute the number of bits of accuracy if the given Rational is encoded
+-- as a Float/Double.
+--
+-- Usage:
+--
+--    floatBinaryAccuracy @Double (52 % 137)
+--
+floatBinaryAccuracy :: forall f.
+   ( Fractional f
+   , Real f
+   ) =>Rational -> Double
+floatBinaryAccuracy r = -1 * logBase 2 floatError
+   where
+      floatApprox = fromRational (toRational (fromRational r :: f) / r)
+      floatError  = abs (logBase 2 floatApprox)
+
