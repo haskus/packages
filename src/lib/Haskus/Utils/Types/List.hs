@@ -6,10 +6,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
 
 -- | Utils for type lists
 module Haskus.Utils.Types.List
-   ( MapNat
+   ( Map
    , Max
    , Tail
    , Drop
@@ -47,10 +48,10 @@ where
 
 import Haskus.Utils.Types
 
--- | Map a type function returning a Nat
-type family MapNat (f :: * -> Nat) (xs :: [*]) where
-   MapNat f '[]       = '[]
-   MapNat f (x ': xs) = f x ': MapNat f xs
+-- | Map a type function
+type family Map (f :: a -> k) (xs :: [a]) where
+   Map f '[]       = '[]
+   Map f (x ': xs) = f x ': Map f xs
 
 -- | Get the max of a list of Nats
 type family Max (xs :: [Nat]) where
@@ -59,7 +60,7 @@ type family Max (xs :: [Nat]) where
 -- | Helper for Max
 type family Max' (x :: Nat) (xs :: [Nat]) where
    Max' x '[]       = x
-   Max' x (a ': xs) = Max' (IfNat (x <=? a) a x) xs
+   Max' x (a ': xs) = Max' (If (x <=? a) a x) xs
 
 -- | Tail of a list
 type family Tail (xs :: [*]) where
