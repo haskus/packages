@@ -39,17 +39,17 @@ import Haskus.Utils.Flow
 import Data.Ratio
 import qualified GHC.Real as Ratio
 
-newtype Posit (nbits :: Nat) (es :: Nat) = Posit (IntAtLeast nbits)
+newtype Posit (nbits :: Nat) (es :: Nat) = Posit (IntN nbits)
 
 -- | Show posit
 instance
-   ( Bits (IntAtLeast n)
-   , FiniteBits (IntAtLeast n)
-   , Ord (IntAtLeast n)
-   , Num (IntAtLeast n)
+   ( Bits (IntN n)
+   , FiniteBits (IntN n)
+   , Ord (IntN n)
+   , Num (IntN n)
    , KnownNat n
    , KnownNat es
-   , Integral (IntAtLeast n)
+   , Integral (IntN n)
    ) => Show (Posit n es)
    where
    show p = case positKind p of
@@ -79,9 +79,9 @@ type PositValue n es = PositK 'NormalK n es
 
 -- | Get the kind of the posit at the type level
 positKind :: forall n es.
-   ( Bits (IntAtLeast n)
+   ( Bits (IntN n)
    , KnownNat n
-   , Eq (IntAtLeast n)
+   , Eq (IntN n)
    ) => Posit n es -> SomePosit n es
 positKind p
    | isZero p     = SomePosit Zero
@@ -90,8 +90,8 @@ positKind p
 
 -- | Check if a posit is zero
 isZero :: forall n es.
-   ( Bits (IntAtLeast n)
-   , Eq (IntAtLeast n)
+   ( Bits (IntN n)
+   , Eq (IntN n)
    , KnownNat n
    ) => Posit n es -> Bool
 {-# INLINE isZero #-}
@@ -99,8 +99,8 @@ isZero (Posit i) = i == zeroBits
 
 -- | Check if a posit is infinity
 isInfinity :: forall n es.
-   ( Bits (IntAtLeast n)
-   , Eq (IntAtLeast n)
+   ( Bits (IntN n)
+   , Eq (IntN n)
    , KnownNat n
    ) => Posit n es -> Bool
 {-# INLINE isInfinity #-}
@@ -108,8 +108,8 @@ isInfinity (Posit i) = i == bit (natValue @n - 1)
 
 -- | Check if a posit is positive
 isPositive :: forall n es.
-   ( Bits (IntAtLeast n)
-   , Ord (IntAtLeast n)
+   ( Bits (IntN n)
+   , Ord (IntN n)
    , KnownNat n
    ) => PositValue n es -> Bool
 {-# INLINE isPositive #-}
@@ -117,8 +117,8 @@ isPositive (Value (Posit i)) = i > zeroBits
 
 -- | Check if a posit is negative
 isNegative :: forall n es.
-   ( Bits (IntAtLeast n)
-   , Ord (IntAtLeast n)
+   ( Bits (IntN n)
+   , Ord (IntN n)
    , KnownNat n
    ) => PositValue n es -> Bool
 {-# INLINE isNegative #-}
@@ -126,7 +126,7 @@ isNegative (Value (Posit i)) = i < zeroBits
 
 -- | Posit absolute value
 positAbs :: forall n es.
-   ( Num (IntAtLeast n)
+   ( Num (IntN n)
    , KnownNat n
    ) => PositValue n es -> PositValue n es
 positAbs (Value (Posit i)) = Value (Posit (abs i))
@@ -150,12 +150,12 @@ data PositEncoding
    deriving (Show)
 
 positEncoding :: forall n es.
-   ( Bits (IntAtLeast n)
-   , Ord (IntAtLeast n)
-   , Num (IntAtLeast n)
+   ( Bits (IntN n)
+   , Ord (IntN n)
+   , Num (IntN n)
    , KnownNat n
    , KnownNat es
-   , Integral (IntAtLeast n)
+   , Integral (IntN n)
    ) => Posit n es -> PositEncoding
 positEncoding p = case positKind p of
    SomePosit Zero        -> PositZero
@@ -164,12 +164,12 @@ positEncoding p = case positKind p of
 
 -- | Decode posit fields
 positFields :: forall n es.
-   ( Bits (IntAtLeast n)
-   , Ord (IntAtLeast n)
-   , Num (IntAtLeast n)
+   ( Bits (IntN n)
+   , Ord (IntN n)
+   , Num (IntN n)
    , KnownNat n
    , KnownNat es
-   , Integral (IntAtLeast n)
+   , Integral (IntN n)
    ) => PositValue n es -> PositFields
 positFields p = PositFields
       { positNegative         = isNegative p
@@ -212,9 +212,9 @@ positFields p = PositFields
 positToRational :: forall n es.
    ( KnownNat n
    , KnownNat es
-   , Eq (IntAtLeast n)
-   , Bits (IntAtLeast n)
-   , Integral (IntAtLeast n)
+   , Eq (IntN n)
+   , Bits (IntN n)
+   , Integral (IntN n)
    ) => Posit n es -> Rational
 positToRational p
    | isZero p     = 0 Ratio.:% 1
@@ -231,8 +231,8 @@ positToRational p
 -- | Convert a rational into the approximate Posit
 positFromRational :: forall p n es.
    ( Posit n es ~ p
-   , Num (IntAtLeast n)
-   , Bits (IntAtLeast n)
+   , Num (IntN n)
+   , Bits (IntN n)
    , KnownNat es
    , KnownNat n
    ) => Rational -> Posit n es
@@ -325,9 +325,9 @@ positFromRational x = if
 --
 positApproxFactor :: forall p n es.
    ( Posit n es ~ p
-   , Num (IntAtLeast n)
-   , Bits (IntAtLeast n)
-   , Integral (IntAtLeast n)
+   , Num (IntN n)
+   , Bits (IntN n)
+   , Integral (IntN n)
    , KnownNat es
    , KnownNat n
    ) => Rational -> Double
