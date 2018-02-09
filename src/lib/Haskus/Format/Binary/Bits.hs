@@ -61,7 +61,7 @@ makeMask :: forall a.
    ) => Word -> a
 makeMask n = complement zeroBits `shiftR` off
    where
-      off = (bitSize @a undefined) - n
+      off = natValue' @(BitSize a) - n
 
 {-# SPECIALIZE makeMask :: Word -> Int #-}
 {-# SPECIALIZE makeMask :: Word -> Int8 #-}

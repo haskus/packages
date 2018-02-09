@@ -416,9 +416,8 @@ positBinaryAccuracy r = -1 * logBase 2 (positBinaryError @p r)
 floatBinaryAccuracy :: forall f.
    ( Fractional f
    , Real f
-   ) =>Rational -> Double
+   ) => Rational -> Double
 floatBinaryAccuracy r = -1 * logBase 2 floatError
    where
       floatApprox = fromRational (toRational (fromRational r :: f) / r)
       floatError  = abs (logBase 2 floatApprox)
-
