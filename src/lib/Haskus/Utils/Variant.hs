@@ -11,6 +11,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | Typed Variant type (union)
 module Haskus.Utils.Variant
@@ -45,12 +47,16 @@ module Haskus.Utils.Variant
    , liftVariant
    , liftVariantM
    , toEither
+   -- * Alter variant
+   , NoConstraint
+   , alterVariant
+   -- ** Continuations
    , ContVariant (..)
    )
 where
 
 import Unsafe.Coerce
-import GHC.Exts (Any)
+import GHC.Exts (Any,Constraint)
 
 import Haskus.Utils.Monad
 import Haskus.Utils.Types
@@ -387,6 +393,40 @@ liftVariantM ::
 {-# INLINE liftVariantM #-}
 liftVariantM = return . liftVariant
 
+
+class AlterVariant c b where
+   alterVariant' :: Alter c -> b -> b
+
+instance AlterVariant c (Variant '[]) where
+   alterVariant' = undefined
+
+instance
+   ( AlterVariant c (Variant xs)
+   , c x
+   ) => AlterVariant c (Variant (x ': xs))
+   where
+      alterVariant' m@(Alter f) v = case headVariant v of
+         Right x -> setVariant (f x)
+         Left xs -> prependVariant @'[x] (alterVariant' m xs)
+
+-- | Wrap a function and its constraints
+data Alter (c :: * -> Constraint) = Alter (forall a. c a => a -> a)
+
+-- | Useful to specify a "* -> Constraint" function returning no constraint
+class NoConstraint a
+instance NoConstraint a
+
+-- | Alter a variant. You need to specify the constraints required by the
+-- modifying function. Use alias constraints with ConstraintKind if required.
+--
+-- Usage:
+--    alterVariant @NoConstraint id         v
+--    alterVariant @Resizable    (resize 4) v
+--
+alterVariant :: forall c a.
+   ( AlterVariant c (Variant a)
+   ) => (forall x. c x => x -> x) -> Variant a  -> Variant a
+alterVariant f = alterVariant' (Alter @c f)
 
 -- | Convert a variant of two values in a Either
 toEither :: forall a b. Variant '[a,b] -> Either b a
