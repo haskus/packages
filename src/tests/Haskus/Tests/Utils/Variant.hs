@@ -106,6 +106,12 @@ testsVariant = testGroup "Variant" $
    , testProperty "appendVariant"
          (getVariantN @1 (appendVariant @'[D,E,F] b)  == Just B)
 
+   , testProperty "alterVariant"
+         (alterVariant @Num (+1) (setVariant (1.0 :: Float) :: Variant '[Int,Float]) == setVariant (2.0 :: Float))
+
+   , testProperty "alterVariant"
+         (alterVariant @Num (+1) (setVariant (1.0 :: Float) :: Variant '[Float,Int]) == setVariant (2.0 :: Float))
+
    , testProperty "liftVariant"
          (getVariant (liftVariant b :: Variant '[D,A,E,B,F,C])  == Just B)
    ]

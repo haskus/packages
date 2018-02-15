@@ -410,7 +410,8 @@ instance
       {-# INLINE alterVariant' #-}
       alterVariant' m@(Alter f) v = case headVariant v of
          Right x -> setVariant (f x)
-         Left xs -> prependVariant @'[x] (alterVariant' m xs)
+         Left xs -> case alterVariant' m xs of
+            Variant t a -> Variant (t+1) a
 
 -- | Wrap a function and its constraints
 data Alter (c :: * -> Constraint) = Alter (forall a. c a => a -> a)
