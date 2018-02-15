@@ -397,10 +397,13 @@ liftVariantM = return . liftVariant
 
 class AlterVariant c b where
    alterVariant' :: Alter c -> b -> b
+   alterVariantN' :: Word -> Alter c -> b -> b
 
 instance AlterVariant c (Variant '[]) where
    {-# INLINE alterVariant' #-}
    alterVariant' = undefined
+   {-# INLINE alterVariantN' #-}
+   alterVariantN' = undefined
 
 instance
    ( AlterVariant c (Variant xs)
@@ -408,10 +411,14 @@ instance
    ) => AlterVariant c (Variant (x ': xs))
    where
       {-# INLINE alterVariant' #-}
-      alterVariant' m@(Alter f) v = case headVariant v of
-         Right x -> setVariant (f x)
-         Left xs -> case alterVariant' m xs of
-            Variant t a -> Variant (t+1) a
+      alterVariant' = alterVariantN' 0
+
+      {-# INLINE alterVariantN' #-}
+      alterVariantN' n m@(Alter f) v =
+         case headVariant v of
+            Right x -> Variant n (unsafeCoerce (f x))
+            Left xs -> case alterVariantN' (n+1) m xs of
+               Variant t a -> Variant t a
 
 -- | Wrap a function and its constraints
 data Alter (c :: * -> Constraint) = Alter (forall a. c a => a -> a)
