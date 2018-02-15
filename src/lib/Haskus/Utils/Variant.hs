@@ -48,6 +48,7 @@ module Haskus.Utils.Variant
    , liftVariantM
    , toEither
    -- * Alter variant
+   , AlterVariant (..)
    , NoConstraint
    , alterVariant
    -- ** Continuations
@@ -124,7 +125,7 @@ setVariantN :: forall (n :: Nat) (l :: [*]).
    ( KnownNat n
    ) => Index n l -> Variant l
 {-# INLINE setVariantN #-}
-setVariantN a = Variant (natValue @n) (unsafeCoerce a)
+setVariantN a = Variant (natValue' @n) (unsafeCoerce a)
 
 -- | Get the value if it has the indexed type
 getVariantN :: forall (n :: Nat) (l :: [*]).
@@ -132,7 +133,7 @@ getVariantN :: forall (n :: Nat) (l :: [*]).
    ) => Variant l -> Maybe (Index n l)
 {-# INLINE getVariantN #-}
 getVariantN (Variant t a) = do
-   guard (t == natValue @n)
+   guard (t == natValue' @n)
    return (unsafeCoerce a) -- we know it is the effective type
 
 -- | Lift an Either into a Variant (reversed order by convention)
@@ -182,8 +183,8 @@ updateVariantFoldN f v@(Variant t a) =
       Just x  -> case f x of
          Variant t2 a2 -> Variant (t2+n) a2
    where
-      n   = natValue @n
-      nl2 = natValue @(Length l2)
+      n   = natValue' @n
+      nl2 = natValue' @(Length l2)
 
 -- | Update a variant value with a variant and fold the result
 updateVariantFold :: forall a (n :: Nat) l l2 .
@@ -213,8 +214,8 @@ updateVariantFoldM f v@(Variant t a) =
          case y of
             Variant t2 a2 -> return (Variant (t2+n) a2)
    where
-      n   = natValue @n
-      nl2 = natValue @(Length l2)
+      n   = natValue' @n
+      nl2 = natValue' @(Length l2)
 
 
 class VariantToHList xs where
@@ -291,7 +292,7 @@ pickVariant :: forall (n :: Nat) l.
 {-# INLINE pickVariant #-}
 pickVariant v@(Variant t a) = case getVariantN @n v of
    Just x  -> Right x
-   Nothing -> Left $ if t > natValue @n
+   Nothing -> Left $ if t > natValue' @n
       then Variant (t-1) a
       else Variant t a
 
@@ -328,7 +329,7 @@ prependVariant :: forall (ys :: [*]) (xs :: [*]).
 {-# INLINE prependVariant #-}
 prependVariant (Variant t a) = Variant (n+t) a
    where
-      n = natValue @(Length ys)
+      n = natValue' @(Length ys)
 
 -- | Set the first matching type of a Variant
 setVariant :: forall a l.
@@ -373,7 +374,7 @@ instance forall x xs ys.
    where
       {-# INLINE liftVariant' #-}
       liftVariant' v = case headVariant v of
-         Right a  -> Variant (natValue @(IndexOf x ys)) (unsafeCoerce a)
+         Right a  -> Variant (natValue' @(IndexOf x ys)) (unsafeCoerce a)
          Left  v' -> liftVariant' v'
 
 
@@ -398,6 +399,7 @@ class AlterVariant c b where
    alterVariant' :: Alter c -> b -> b
 
 instance AlterVariant c (Variant '[]) where
+   {-# INLINE alterVariant' #-}
    alterVariant' = undefined
 
 instance
@@ -405,6 +407,7 @@ instance
    , c x
    ) => AlterVariant c (Variant (x ': xs))
    where
+      {-# INLINE alterVariant' #-}
       alterVariant' m@(Alter f) v = case headVariant v of
          Right x -> setVariant (f x)
          Left xs -> prependVariant @'[x] (alterVariant' m xs)
@@ -424,8 +427,8 @@ instance NoConstraint a
 --    alterVariant @Resizable    (resize 4) v
 --
 alterVariant :: forall c a.
-   ( AlterVariant c (Variant a)
-   ) => (forall x. c x => x -> x) -> Variant a  -> Variant a
+   ( AlterVariant c a
+   ) => (forall x. c x => x -> x) -> a  -> a
 alterVariant f = alterVariant' (Alter @c f)
 
 -- | Convert a variant of two values in a Either
