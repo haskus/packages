@@ -427,6 +427,7 @@ instance NoConstraint a
 --    alterVariant @NoConstraint id         v
 --    alterVariant @Resizable    (resize 4) v
 --
+{-# INLINE alterVariant #-}
 alterVariant :: forall c (a :: [*]).
    ( AlterVariant c a
    ) => (forall x. c x => x -> x) -> Variant a  -> Variant a
