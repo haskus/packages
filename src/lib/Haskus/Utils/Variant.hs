@@ -395,30 +395,23 @@ liftVariantM ::
 liftVariantM = return . liftVariant
 
 
-class AlterVariant c b where
-   alterVariant' :: Alter c -> b -> b
-   alterVariantN' :: Word -> Alter c -> b -> b
+class AlterVariant c (b :: [*]) where
+   alterVariant' :: Alter c -> Word -> Any -> Any
 
-instance AlterVariant c (Variant '[]) where
+instance AlterVariant c '[] where
    {-# INLINE alterVariant' #-}
    alterVariant' = undefined
-   {-# INLINE alterVariantN' #-}
-   alterVariantN' = undefined
 
 instance
-   ( AlterVariant c (Variant xs)
+   ( AlterVariant c xs
    , c x
-   ) => AlterVariant c (Variant (x ': xs))
+   ) => AlterVariant c (x ': xs)
    where
       {-# INLINE alterVariant' #-}
-      alterVariant' = alterVariantN' 0
-
-      {-# INLINE alterVariantN' #-}
-      alterVariantN' n m@(Alter f) v =
-         case headVariant v of
-            Right x -> Variant n (unsafeCoerce (f x))
-            Left xs -> case alterVariantN' (n+1) m xs of
-               Variant t a -> Variant t a
+      alterVariant' m@(Alter f) t v =
+         case t of
+            0 -> unsafeCoerce (f (unsafeCoerce v :: x))
+            n -> alterVariant' @c @xs m (n-1) v
 
 -- | Wrap a function and its constraints
 data Alter (c :: * -> Constraint) = Alter (forall a. c a => a -> a)
@@ -434,10 +427,11 @@ instance NoConstraint a
 --    alterVariant @NoConstraint id         v
 --    alterVariant @Resizable    (resize 4) v
 --
-alterVariant :: forall c a.
+alterVariant :: forall c (a :: [*]).
    ( AlterVariant c a
-   ) => (forall x. c x => x -> x) -> a  -> a
-alterVariant f = alterVariant' (Alter @c f)
+   ) => (forall x. c x => x -> x) -> Variant a  -> Variant a
+alterVariant f (Variant t a) = 
+   Variant t (alterVariant' @c @a (Alter @c f) t a)
 
 -- | Convert a variant of two values in a Either
 toEither :: forall a b. Variant '[a,b] -> Either b a
