@@ -23,6 +23,7 @@ module Haskus.Utils.Variant
    , updateVariantN
    , setVariant
    , getVariant
+   , fromVariant
    , updateVariant
    , updateVariantM
    , updateVariantFold
@@ -273,6 +274,14 @@ type Catchable a xs =
 type MaybeCatchable a xs =
    ( VariantRemoveType a xs
    )
+
+-- | Try to a get a value of a given type from a Variant
+fromVariant :: forall a xs.
+   ( Catchable a xs
+   ) => Variant xs -> Maybe a
+fromVariant v = case catchVariant v of
+   Right a -> Just a
+   Left _  -> Nothing
 
 -- | Extract a type from a variant. Return either the value of this type or the
 -- remaining variant
