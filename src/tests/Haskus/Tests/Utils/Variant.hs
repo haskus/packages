@@ -2,6 +2,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Haskus.Tests.Utils.Variant
    ( testsVariant
@@ -108,10 +111,19 @@ testsVariant = testGroup "Variant" $
 
    , testProperty "alterVariant"
          (alterVariant @Num (+1) (setVariant (1.0 :: Float) :: Variant '[Int,Float]) == setVariant (2.0 :: Float))
-
    , testProperty "alterVariant"
          (alterVariant @Num (+1) (setVariant (1.0 :: Float) :: Variant '[Float,Int]) == setVariant (2.0 :: Float))
+
+   , testProperty "traverseVariant"
+         (traverseVariant @OrdNum (\x -> if x > 1 then Just x else Nothing)
+            (setVariant (2.0 :: Float) :: Variant '[Float,Int]) == Just (setVariant (2.0 :: Float)))
+   , testProperty "traverseVariant"
+         (traverseVariant @OrdNum (\x -> if x > 1 then Just x else Nothing)
+            (setVariant (0.5 :: Float) :: Variant '[Float,Int]) == Nothing)
 
    , testProperty "liftVariant"
          (getVariant (liftVariant b :: Variant '[D,A,E,B,F,C])  == Just B)
    ]
+
+class (Ord a, Num a) => OrdNum a
+instance (Ord a, Num a) => OrdNum a
