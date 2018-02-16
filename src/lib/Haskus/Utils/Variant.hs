@@ -24,6 +24,7 @@ module Haskus.Utils.Variant
    , setVariant
    , getVariant
    , fromVariant
+   , fromVariantMaybe
    , updateVariant
    , updateVariantM
    , updateVariantFold
@@ -280,6 +281,15 @@ fromVariant :: forall a xs.
    ( Catchable a xs
    ) => Variant xs -> Maybe a
 fromVariant v = case catchVariant v of
+   Right a -> Just a
+   Left _  -> Nothing
+
+-- | Try to a get a value of a given type from a Variant that may not even
+-- support the given type.
+fromVariantMaybe :: forall a xs.
+   ( MaybeCatchable a xs
+   ) => Variant xs -> Maybe a
+fromVariantMaybe v = case catchVariantMaybe v of
    Right a -> Just a
    Left _  -> Nothing
 
