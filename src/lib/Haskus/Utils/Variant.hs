@@ -23,6 +23,7 @@ module Haskus.Utils.Variant
    , updateVariantN
    , setVariant
    , getVariant
+   , toVariant
    , fromVariant
    , fromVariantMaybe
    , updateVariant
@@ -275,6 +276,13 @@ type Catchable a xs =
 type MaybeCatchable a xs =
    ( VariantRemoveType a xs
    )
+
+-- | Put a value into a Variant
+toVariant :: forall a l.
+   ( Member a l
+   ) => a -> Variant l
+{-# INLINE toVariant #-}
+toVariant = setVariant
 
 -- | Try to a get a value of a given type from a Variant
 fromVariant :: forall a xs.
