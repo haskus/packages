@@ -13,10 +13,14 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Typed Variant type (union)
 module Haskus.Utils.Variant
    ( Variant
+   , pattern V
+   , pattern VMaybe
    , variantIndex
    , getVariantN
    , setVariantN
@@ -79,6 +83,20 @@ data Variant (l :: [*]) = Variant {-# UNPACK #-} !Word Any
 -- | Make GHC consider `l` as a representational parameter to make coercions
 -- between Variant values unsafe
 type role Variant representational
+
+-- | Pattern synonym for Variant
+--
+-- Usage: case v of
+--          V (x :: Int)    -> ...
+--          V (x :: String) -> ...
+pattern V :: forall c cs. Catchable c cs => c -> Variant cs
+pattern V x <- (fromVariant -> Just x)
+   where
+      V x = toVariant x
+
+-- | Statically unchecked matching on a Variant
+pattern VMaybe :: forall c cs. (MaybeCatchable c cs) => c -> Variant cs
+pattern VMaybe x <- (fromVariantMaybe -> Just x)
 
 -- | Get Variant index
 variantIndex :: Variant a -> Word
@@ -268,7 +286,7 @@ instance forall a xs n xs' y ys.
 
 -- | a is catchable in xs
 type Catchable a xs =
-   ( IsMember a xs ~ 'True
+   ( Member a xs
    , VariantRemoveType a xs
    )
 
@@ -283,6 +301,14 @@ toVariant :: forall a l.
    ) => a -> Variant l
 {-# INLINE toVariant #-}
 toVariant = setVariant
+
+-- | Set the first matching type of a Variant
+setVariant :: forall a l.
+   ( Member a l
+   ) => a -> Variant l
+{-# INLINE setVariant #-}
+setVariant = setVariantN @(IndexOf a l)
+
 
 -- | Try to a get a value of a given type from a Variant
 fromVariant :: forall a xs.
@@ -360,13 +386,6 @@ prependVariant :: forall (ys :: [*]) (xs :: [*]).
 prependVariant (Variant t a) = Variant (n+t) a
    where
       n = natValue' @(Length ys)
-
--- | Set the first matching type of a Variant
-setVariant :: forall a l.
-   ( Member a l
-   ) => a -> Variant l
-{-# INLINE setVariant #-}
-setVariant = setVariantN @(IndexOf a l)
 
 -- | Set the first matching type of a Variant
 getVariant :: forall a l.
