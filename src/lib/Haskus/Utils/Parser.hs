@@ -54,7 +54,7 @@ instance forall x y z xs ys zs m a.
       ( x ~ Flow m xs
       , y ~ Flow m ys
       , z ~ Flow m zs
-      , Catchable a xs
+      , Popable a xs
       , Liftable ys zs
       , Liftable (Filter a xs) zs
       , zs ~ Union (Filter a xs) ys
@@ -86,7 +86,7 @@ choice' = hFoldl (Choice :: Choice a) (flowSingle undefined :: Flow m '[a])
 many ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , Catchable ParseError xs
+   , Popable ParseError xs
    ) => Flow m xs -> Flow m '[[Variant zs]]
 many f = manyBounded Nothing Nothing f
             >%~^> \(_ :: ParseError) -> flowSingle []
@@ -96,7 +96,7 @@ many f = manyBounded Nothing Nothing f
 manyAtMost ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , Catchable ParseError xs
+   , Popable ParseError xs
    ) => Word -> Flow m xs -> Flow m '[[Variant zs]]
 manyAtMost max f = manyBounded Nothing (Just max) f
                      >%~^> \(_ :: ParseError) -> flowSingle []
@@ -106,25 +106,25 @@ manyAtMost max f = manyBounded Nothing (Just max) f
 manyAtMost' ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , Catchable ParseError xs
+   , Popable ParseError xs
    ) => Word -> Flow m xs -> m [Variant zs]
-manyAtMost' max f = singleVariant <$> manyAtMost max f
+manyAtMost' max f = variantToValue <$> manyAtMost max f
 
 -- | Apply the action zero or more times (up to max) until a ParseError result
 -- is returned
 manyAtMost'' ::
    ( '[x] ~ Filter ParseError xs
    , Monad m
-   , Catchable ParseError xs
+   , Popable ParseError xs
    ) => Word -> Flow m xs -> m [x]
-manyAtMost'' max f = fmap singleVariant <$> manyAtMost' max f
+manyAtMost'' max f = fmap variantToValue <$> manyAtMost' max f
 
 -- | Apply the action at least n times or more times (until a ParseError
 -- result is returned)
 manyAtLeast ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , Catchable ParseError xs
+   , Popable ParseError xs
    ) => Word -> Flow m xs -> Flow m '[[Variant zs],ParseError]
 manyAtLeast min = manyBounded (Just min) Nothing
 
@@ -136,18 +136,18 @@ manyTill ::
    ( zs ~ Filter ParseError xs
    , zs' ~ Filter ParseError ys
    , Monad m
-   , MaybeCatchable ParseError xs
-   , Catchable ParseError ys
+   , MaybePopable ParseError xs
+   , Popable ParseError ys
    ) => Flow m xs -> Flow m ys -> Flow m '[([Variant zs],Variant zs'),ParseError]
 manyTill f g = go []
    where
       go xs = do
          v <- g
-         case catchVariant v of
+         case popVariant v of
             Right EndOfInput  -> flowSet EndOfInput
             Right SyntaxError -> do
                u <- f
-               case catchVariantMaybe u of
+               case popVariantMaybe u of
                   Right (e :: ParseError) -> flowSet e
                   Left x                  -> go (x:xs)
             Left x            -> flowSet (reverse xs,x)
@@ -159,8 +159,8 @@ manyTill f g = go []
 manyTill' ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , MaybeCatchable ParseError xs
-   , Catchable ParseError ys
+   , MaybePopable ParseError xs
+   , Popable ParseError ys
    ) => Flow m xs -> Flow m ys -> Flow m '[[Variant zs],ParseError]
 manyTill' f g = manyTill f g >.-.> fst
 
@@ -170,20 +170,20 @@ manyTill' f g = manyTill f g >.-.> fst
 manyBounded :: forall zs xs m.
    ( zs ~ Filter ParseError xs
    , Monad m
-   , MaybeCatchable ParseError xs
+   , MaybePopable ParseError xs
    ) => Maybe Word -> Maybe Word -> Flow m xs -> Flow m '[[Variant zs],ParseError]
 manyBounded _ (Just 0) _   = flowSet ([] :: [Variant zs])
 manyBounded (Just 0) max f = manyBounded Nothing max f
 manyBounded min max f      = do
    v <- f
-   case catchVariantMaybe v of
+   case popVariantMaybe v of
       Right (e :: ParseError) -> case min of
          Just n | n > 0 -> flowSet e
          _              -> flowSet ([] :: [Variant zs])
       Left x           -> do
          let minus1 = fmap (\k -> k - 1)
          xs <- manyBounded (minus1 min) (minus1 max) f
-         case toEither xs of
+         case variantToEither xs of
             Left (e :: ParseError) -> flowSet e
             Right xs'              -> flowSet (x : xs')
 

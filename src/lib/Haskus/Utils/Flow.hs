@@ -27,8 +27,8 @@ module Haskus.Utils.Flow
    , flowTraverseFilter
    , flowForFilter
    , Liftable
-   , Catchable
-   , MaybeCatchable
+   , Popable
+   , MaybePopable
    -- * Non-variant single operations
    , (|>)
    , (<|)
@@ -128,7 +128,7 @@ module Haskus.Utils.Flow
    , (>..~!>)
    , (..~!!>)
    , (>..~!!>)
-   -- * Tail catch operations
+   -- * Tail pop operations
    , (..%~^>)
    , (>..%~^>)
    , (..%~^^>)
@@ -230,12 +230,12 @@ flowSetN :: forall (n :: Nat) xs m.
    , KnownNat n
    ) => Index n xs -> Flow m xs
 {-# INLINE flowSetN #-}
-flowSetN = return . setVariantN @n
+flowSetN = return . toVariantAt @n
 
 -- | Return in the first well-typed element
 flowSet :: (Member x xs, Monad m) => x -> Flow m xs
 {-# INLINE flowSet #-}
-flowSet = return . setVariant
+flowSet = return . toVariant
 
 -- | Return a single element
 flowSingle :: Monad m => x -> Flow m '[x]
@@ -293,7 +293,7 @@ flowForFilter = flip flowTraverseFilter
 -- | Extract single flow result
 flowRes :: Functor m => Flow m '[x] -> m x
 {-# INLINE flowRes #-}
-flowRes = fmap singleVariant
+flowRes = fmap variantToValue
 
 
 -- | Lift an operation on a Variant into an operation on a flow
@@ -362,7 +362,7 @@ flowBind' = (>.~$>)
 -- | Match a value in a flow
 flowMatch :: forall x xs zs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , Liftable (Filter x xs) zs
    ) => Flow m xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINE flowMatch #-}
@@ -371,7 +371,7 @@ flowMatch = (>%~^>)
 -- | Match a value in a flow and use a non-returning failure in this case
 flowMatchFail :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Flow m xs -> (x -> m ()) -> Flow m (Filter x xs)
 {-# INLINE flowMatchFail #-}
 flowMatchFail = (>%~!!>)
@@ -510,7 +510,7 @@ infixl 0 >.~|>
    ( Monad m
    ) => Variant (a ': l) -> (a -> m ()) -> Flow m (a ': l)
 {-# INLINE (.~=>) #-}
-(.~=>) v f = case headVariant v of
+(.~=>) v f = case popVariantHead v of
    Right u -> f u >> return v
    Left  _ -> return v
 
@@ -530,7 +530,7 @@ infixl 0 >.~=>
    ( Monad m
    ) => Variant (a ': l) -> (a -> m ()) -> m ()
 {-# INLINE (.~!>) #-}
-(.~!>) v f = case headVariant v of
+(.~!>) v f = case popVariantHead v of
    Right u -> f u
    Left  _ -> return ()
 
@@ -550,7 +550,7 @@ infixl 0 >.~!>
    ( Monad m
    ) => Variant (a ': l) -> (a -> m ()) -> m (Variant l)
 {-# INLINE (.~!!>) #-}
-(.~!!>) v f = case headVariant v of
+(.~!!>) v f = case popVariantHead v of
    Right u -> f u >> error ".~!!> error"
    Left  l -> return l
 
@@ -836,7 +836,7 @@ infixl 0 >..~.>
    ( Monad m
    ) => Variant (a ': l) -> (Variant l -> a) -> m a
 {-# INLINE (..-.>) #-}
-(..-.>) v f = case headVariant v of
+(..-.>) v f = case popVariantHead v of
    Right u -> return u
    Left  l -> return (f l)
 
@@ -856,7 +856,7 @@ infixl 0 >..-.>
    ( Monad m
    ) => Variant (a ': l) -> (Variant l -> Variant xs) -> Flow m (a ': xs)
 {-# INLINE (..-..>) #-}
-(..-..>) v f = case headVariant v of
+(..-..>) v f = case popVariantHead v of
    Right u -> flowSetN @0 u
    Left  l -> return (prependVariant @'[a] (f l))
 
@@ -876,7 +876,7 @@ infixl 0 >..-..>
    ( Monad m
    ) => Variant (a ': l) -> (Variant l -> Flow m xs) -> Flow m (a ': xs)
 {-# INLINE (..~..>) #-}
-(..~..>) v f = case headVariant v of
+(..~..>) v f = case popVariantHead v of
    Right u -> flowSetN @0 u
    Left  l -> prependVariant @'[a] <$> f l
 
@@ -897,7 +897,7 @@ infixl 0 >..~..>
    , Liftable xs (a ': zs)
    ) => Variant (a ': l) -> (Variant l -> Flow m xs) -> Flow m (a ': zs)
 {-# INLINE (..~^^>) #-}
-(..~^^>) v f = case headVariant v of
+(..~^^>) v f = case popVariantHead v of
    Right u -> flowSetN @0 u
    Left  l -> liftVariant <$> f l
 
@@ -919,7 +919,7 @@ infixl 0 >..~^^>
    , Member a zs
    ) => Variant (a ': l) -> (Variant l -> Flow m zs) -> Flow m zs
 {-# INLINE (..~^>) #-}
-(..~^>) v f = case headVariant v of
+(..~^>) v f = case popVariantHead v of
    Right u -> flowSet u
    Left  l -> f l
 
@@ -938,7 +938,7 @@ infixl 0 >..~^>
 -- | Match in the tail, connect to the expected result
 (..?~^>) ::
    ( Monad m
-   , MaybeCatchable a xs
+   , MaybePopable a xs
    , Liftable (Filter a xs) ys
    ) => Variant (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': ys)
 {-# INLINE (..?~^>) #-}
@@ -949,7 +949,7 @@ infixl 0 ..?~^>
 -- | Match in the tail, connect to the expected result
 (>..?~^>) ::
    ( Monad m
-   , MaybeCatchable a xs
+   , MaybePopable a xs
    , Liftable (Filter a xs) ys
    ) => Flow m (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': ys)
 {-# INLINE (>..?~^>) #-}
@@ -960,7 +960,7 @@ infixl 0 >..?~^>
 -- | Match in the tail, connect to the expected result
 (..%~^>) ::
    ( Monad m
-   , Catchable a xs
+   , Popable a xs
    , Liftable (Filter a xs) ys
    ) => Variant (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': ys)
 {-# INLINE (..%~^>) #-}
@@ -971,7 +971,7 @@ infixl 0 ..%~^>
 -- | Match in the tail, connect to the expected result
 (>..%~^>) ::
    ( Monad m
-   , Catchable a xs
+   , Popable a xs
    , Liftable (Filter a xs) ys
    ) => Flow m (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': ys)
 {-# INLINE (>..%~^>) #-}
@@ -982,7 +982,7 @@ infixl 0 >..%~^>
 -- | Match in the tail, lift to the expected result
 (..?~^^>) ::
    ( Monad m
-   , MaybeCatchable a xs
+   , MaybePopable a xs
    , Liftable (Filter a xs) zs
    , Liftable ys zs
    ) => Variant (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': zs)
@@ -994,7 +994,7 @@ infixl 0 ..?~^^>
 -- | Match in the tail, lift to the expected result
 (>..?~^^>) ::
    ( Monad m
-   , MaybeCatchable a xs
+   , MaybePopable a xs
    , Liftable (Filter a xs) zs
    , Liftable ys zs
    ) => Flow m (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': zs)
@@ -1006,7 +1006,7 @@ infixl 0 >..?~^^>
 -- | Match in the tail, lift to the expected result
 (..%~^^>) ::
    ( Monad m
-   , Catchable a xs
+   , Popable a xs
    , Liftable (Filter a xs) zs
    , Liftable ys zs
    ) => Variant (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': zs)
@@ -1018,7 +1018,7 @@ infixl 0 ..%~^^>
 -- | Match in the tail, lift to the expected result
 (>..%~^^>) ::
    ( Monad m
-   , Catchable a xs
+   , Popable a xs
    , Liftable (Filter a xs) zs
    , Liftable ys zs
    ) => Flow m (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': zs)
@@ -1030,11 +1030,11 @@ infixl 0 >..%~^^>
 -- | Match in the tail, keep the same types
 (..?~$>) ::
    ( Monad m
-   , MaybeCatchable a xs
+   , MaybePopable a xs
    , Liftable (Filter a xs) (x ': xs)
    ) => Variant (x ': xs) -> (a -> Flow m (x ': xs)) -> Flow m (x ': xs)
 {-# INLINE (..?~$>) #-}
-(..?~$>) v f = case headVariant v of
+(..?~$>) v f = case popVariantHead v of
    Right _ -> return v
    Left xs -> xs ?~^> f
 
@@ -1043,7 +1043,7 @@ infixl 0 ..?~$>
 -- | Match in the tail, keep the same types
 (>..?~$>) ::
    ( Monad m
-   , MaybeCatchable a xs
+   , MaybePopable a xs
    , Liftable (Filter a xs) (x ': xs)
    ) => Flow m (x ': xs) -> (a -> Flow m (x ': xs)) -> Flow m (x ': xs)
 {-# INLINE (>..?~$>) #-}
@@ -1054,11 +1054,11 @@ infixl 0 >..?~$>
 -- | Match in the tail, keep the same types
 (..%~$>) ::
    ( Monad m
-   , Catchable a xs
+   , Popable a xs
    , Liftable (Filter a xs) (x ': xs)
    ) => Variant (x ': xs) -> (a -> Flow m (x ': xs)) -> Flow m (x ': xs)
 {-# INLINE (..%~$>) #-}
-(..%~$>) v f = case headVariant v of
+(..%~$>) v f = case popVariantHead v of
    Right _ -> return v
    Left xs -> xs %~^> f
 
@@ -1067,7 +1067,7 @@ infixl 0 ..%~$>
 -- | Match in the tail, keep the same types
 (>..%~$>) ::
    ( Monad m
-   , Catchable a xs
+   , Popable a xs
    , Liftable (Filter a xs) (x ': xs)
    ) => Flow m (x ': xs) -> (a -> Flow m (x ': xs)) -> Flow m (x ': xs)
 {-# INLINE (>..%~$>) #-}
@@ -1081,7 +1081,7 @@ infixl 0 >..%~$>
    ( Monad m
    ) => Variant (x ': xs) -> (Variant xs -> m ()) -> Flow m (x ': xs)
 {-# INLINE (..~=>) #-}
-(..~=>) v f = case headVariant v of
+(..~=>) v f = case popVariantHead v of
    Right _ -> return v
    Left  l -> f l >> return v
 
@@ -1101,7 +1101,7 @@ infixl 0 >..~=>
    ( Monad m
    ) => Variant (x ': xs) -> (Variant xs -> m ()) -> m ()
 {-# INLINE (..~!>) #-}
-(..~!>) v f = case headVariant v of
+(..~!>) v f = case popVariantHead v of
    Right _ -> return ()
    Left  l -> f l
 
@@ -1121,7 +1121,7 @@ infixl 0 >..~!>
    ( Monad m
    ) => Variant (x ': xs) -> (Variant xs -> m ()) -> m x
 {-# INLINE (..~!!>) #-}
-(..~!!>) v f = case headVariant v of
+(..~!!>) v f = case popVariantHead v of
    Right x -> return x
    Left xs -> f xs >> error "..~!!> error"
 
@@ -1139,7 +1139,7 @@ infixl 0 >..~!!>
 -- | Match in the tail and perform an effect
 (..?~!!>) ::
    ( Monad m
-   , MaybeCatchable y xs
+   , MaybePopable y xs
    ) => Variant (x ': xs) -> (y -> m ()) -> Flow m (x ': Filter y xs)
 {-# INLINE (..?~!!>) #-}
 (..?~!!>) v f = v ..~..> (\xs -> xs ?~!!> f)
@@ -1149,7 +1149,7 @@ infixl 0 ..?~!!>
 -- | Match in the tail and perform an effect
 (>..?~!!>) ::
    ( Monad m
-   , MaybeCatchable y xs
+   , MaybePopable y xs
    ) => Flow m (x ': xs) -> (y -> m ()) -> Flow m (x ': Filter y xs)
 {-# INLINE (>..?~!!>) #-}
 (>..?~!!>) = liftm (..?~!!>)
@@ -1159,7 +1159,7 @@ infixl 0 >..?~!!>
 -- | Match in the tail and perform an effect
 (..%~!!>) ::
    ( Monad m
-   , Catchable y xs
+   , Popable y xs
    ) => Variant (x ': xs) -> (y -> m ()) -> Flow m (x ': Filter y xs)
 {-# INLINE (..%~!!>) #-}
 (..%~!!>) v f = v ..~..> (\xs -> xs %~!!> f)
@@ -1169,7 +1169,7 @@ infixl 0 ..%~!!>
 -- | Match in the tail and perform an effect
 (>..%~!!>) ::
    ( Monad m
-   , Catchable y xs
+   , Popable y xs
    ) => Flow m (x ': xs) -> (y -> m ()) -> Flow m (x ': Filter y xs)
 {-# INLINE (>..%~!!>) #-}
 (>..%~!!>) = liftm (..%~!!>)
@@ -1179,10 +1179,10 @@ infixl 0 >..%~!!>
 -- | Match in the tail and perform an effect
 (..?~!>) ::
    ( Monad m
-   , MaybeCatchable y xs
+   , MaybePopable y xs
    ) => Variant (x ': xs) -> (y -> m ()) -> m ()
 {-# INLINE (..?~!>) #-}
-(..?~!>) v f = case headVariant v of
+(..?~!>) v f = case popVariantHead v of
    Right _ -> return ()
    Left xs -> xs ?~!> f
 
@@ -1191,7 +1191,7 @@ infixl 0 ..?~!>
 -- | Match in the tail and perform an effect
 (>..?~!>) ::
    ( Monad m
-   , MaybeCatchable y xs
+   , MaybePopable y xs
    ) => Flow m (x ': xs) -> (y -> m ()) -> m ()
 {-# INLINE (>..?~!>) #-}
 (>..?~!>) = liftm (..?~!>)
@@ -1201,10 +1201,10 @@ infixl 0 >..?~!>
 -- | Match in the tail and perform an effect
 (..%~!>) ::
    ( Monad m
-   , Catchable y xs
+   , Popable y xs
    ) => Variant (x ': xs) -> (y -> m ()) -> m ()
 {-# INLINE (..%~!>) #-}
-(..%~!>) v f = case headVariant v of
+(..%~!>) v f = case popVariantHead v of
    Right _ -> return ()
    Left xs -> xs %~!> f
 
@@ -1213,7 +1213,7 @@ infixl 0 ..%~!>
 -- | Match in the tail and perform an effect
 (>..%~!>) ::
    ( Monad m
-   , Catchable y xs
+   , Popable y xs
    ) => Flow m (x ': xs) -> (y -> m ()) -> m ()
 {-# INLINE (>..%~!>) #-}
 (>..%~!>) = liftm (..%~!>)
@@ -1224,69 +1224,69 @@ infixl 0 >..%~!>
 -- Caught element operations
 ----------------------------------------------------------
 
--- | Catch element, set the first value
+-- | Pop element, set the first value
 (?~.>) :: forall x xs y ys m.
    ( ys ~ Filter x xs
    , Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Variant xs -> (x -> m y) -> Flow m (y ': ys)
 {-# INLINE (?~.>) #-}
-(?~.>) v f = case catchVariantMaybe v of
+(?~.>) v f = case popVariantMaybe v of
    Right x -> flowSetN @0 =<< f x
    Left ys -> prependVariant @'[y] <$> return ys
 
 infixl 0 ?~.>
 
--- | Catch element, set the first value
+-- | Pop element, set the first value
 (>?~.>) ::
    ( ys ~ Filter x xs
    , Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Flow m xs -> (x -> m y) -> Flow m (y ': ys)
 {-# INLINE (>?~.>) #-}
 (>?~.>) = liftm (?~.>)
 
 infixl 0 >?~.>
 
--- | Catch element, set the first value
+-- | Pop element, set the first value
 (%~.>) :: forall x xs y ys m.
    ( ys ~ Filter x xs
    , Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Variant xs -> (x -> m y) -> Flow m (y ': ys)
 {-# INLINE (%~.>) #-}
 (%~.>) = (?~.>)
 
 infixl 0 %~.>
 
--- | Catch element, set the first value
+-- | Pop element, set the first value
 (>%~.>) ::
    ( ys ~ Filter x xs
    , Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Flow m xs -> (x -> m y) -> Flow m (y ': ys)
 {-# INLINE (>%~.>) #-}
 (>%~.>) = liftm (%~.>)
 
 infixl 0 >%~.>
 
--- | Catch element, concat the result
+-- | Pop element, concat the result
 (?~+>) :: forall x xs ys m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    , KnownNat (Length ys)
    ) => Variant xs -> (x -> Flow m ys) -> Flow m (Concat ys (Filter x xs))
 {-# INLINE (?~+>) #-}
-(?~+>) v f = case catchVariantMaybe v of
+(?~+>) v f = case popVariantMaybe v of
    Right x -> appendVariant  @(Filter x xs) <$> f x
    Left ys -> prependVariant @ys            <$> return ys
 
 infixl 0 ?~+>
 
--- | Catch element, concat the result
+-- | Pop element, concat the result
 (>?~+>) :: forall x xs ys m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    , KnownNat (Length ys)
    ) => Flow m xs -> (x -> Flow m ys) -> Flow m (Concat ys (Filter x xs))
 {-# INLINE (>?~+>) #-}
@@ -1294,10 +1294,10 @@ infixl 0 ?~+>
 
 infixl 0 >?~+>
 
--- | Catch element, concat the result
+-- | Pop element, concat the result
 (%~+>) :: forall x xs ys m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , KnownNat (Length ys)
    ) => Variant xs -> (x -> Flow m ys) -> Flow m (Concat ys (Filter x xs))
 {-# INLINE (%~+>) #-}
@@ -1305,10 +1305,10 @@ infixl 0 >?~+>
 
 infixl 0 %~+>
 
--- | Catch element, concat the result
+-- | Pop element, concat the result
 (>%~+>) :: forall x xs ys m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , KnownNat (Length ys)
    ) => Flow m xs -> (x -> Flow m ys) -> Flow m (Concat ys (Filter x xs))
 {-# INLINE (>%~+>) #-}
@@ -1316,24 +1316,24 @@ infixl 0 %~+>
 
 infixl 0 >%~+>
 
--- | Catch element, lift the result
+-- | Pop element, lift the result
 (?~^^>) :: forall x xs ys zs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    , Liftable (Filter x xs) zs
    , Liftable ys zs
    ) => Variant xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINE (?~^^>) #-}
-(?~^^>) v f = case catchVariantMaybe v of
+(?~^^>) v f = case popVariantMaybe v of
    Right x -> liftVariant <$> f x
    Left ys -> liftVariant <$> return ys
 
 infixl 0 ?~^^>
 
--- | Catch element, lift the result
+-- | Pop element, lift the result
 (>?~^^>) :: forall x xs ys zs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    , Liftable (Filter x xs) zs
    , Liftable ys zs
    ) => Flow m xs -> (x -> Flow m ys) -> Flow m zs
@@ -1342,10 +1342,10 @@ infixl 0 ?~^^>
 
 infixl 0 >?~^^>
 
--- | Catch element, lift the result
+-- | Pop element, lift the result
 (%~^^>) :: forall x xs ys zs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , Liftable (Filter x xs) zs
    , Liftable ys zs
    ) => Variant xs -> (x -> Flow m ys) -> Flow m zs
@@ -1354,10 +1354,10 @@ infixl 0 >?~^^>
 
 infixl 0 %~^^>
 
--- | Catch element, lift the result
+-- | Pop element, lift the result
 (>%~^^>) :: forall x xs ys zs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , Liftable (Filter x xs) zs
    , Liftable ys zs
    ) => Flow m xs -> (x -> Flow m ys) -> Flow m zs
@@ -1366,23 +1366,23 @@ infixl 0 %~^^>
 
 infixl 0 >%~^^>
 
--- | Catch element, connect to the expected output
+-- | Pop element, connect to the expected output
 (?~^>) :: forall x xs zs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    , Liftable (Filter x xs) zs
    ) => Variant xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINE (?~^>) #-}
-(?~^>) v f = case catchVariantMaybe v of
+(?~^>) v f = case popVariantMaybe v of
    Right x -> f x
    Left ys -> return (liftVariant ys)
 
 infixl 0 ?~^>
 
--- | Catch element, connect to the expected output
+-- | Pop element, connect to the expected output
 (>?~^>) :: forall x xs zs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    , Liftable (Filter x xs) zs
    ) => Flow m xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINE (>?~^>) #-}
@@ -1390,10 +1390,10 @@ infixl 0 ?~^>
 
 infixl 0 >?~^>
 
--- | Catch element, connect to the expected output
+-- | Pop element, connect to the expected output
 (%~^>) :: forall x xs zs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , Liftable (Filter x xs) zs
    ) => Variant xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINE (%~^>) #-}
@@ -1401,10 +1401,10 @@ infixl 0 >?~^>
 
 infixl 0 %~^>
 
--- | Catch element, connect to the expected output
+-- | Pop element, connect to the expected output
 (>%~^>) :: forall x xs zs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , Liftable (Filter x xs) zs
    ) => Flow m xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINE (>%~^>) #-}
@@ -1412,67 +1412,67 @@ infixl 0 %~^>
 
 infixl 0 >%~^>
 
--- | Catch element, use the same output type
+-- | Pop element, use the same output type
 (?~$>) :: forall x xs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Variant xs -> (x -> Flow m xs) -> Flow m xs
 {-# INLINE (?~$>) #-}
-(?~$>) v f = case catchVariantMaybe v of
+(?~$>) v f = case popVariantMaybe v of
    Right x -> f x
    Left _  -> return v
 
 infixl 0 ?~$>
 
--- | Catch element, use the same output type
+-- | Pop element, use the same output type
 (>?~$>) :: forall x xs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Flow m xs -> (x -> Flow m xs) -> Flow m xs
 {-# INLINE (>?~$>) #-}
 (>?~$>) = liftm (?~$>)
 
 infixl 0 >?~$>
 
--- | Catch element, use the same output type
+-- | Pop element, use the same output type
 (%~$>) :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Variant xs -> (x -> Flow m xs) -> Flow m xs
 {-# INLINE (%~$>) #-}
 (%~$>) = (?~$>)
 
 infixl 0 %~$>
 
--- | Catch element, use the same output type
+-- | Pop element, use the same output type
 (>%~$>) :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Flow m xs -> (x -> Flow m xs) -> Flow m xs
 {-# INLINE (>%~$>) #-}
 (>%~$>) = liftm (%~$>)
 
 infixl 0 >%~$>
 
--- | Catch element, fusion the result
+-- | Pop element, fusion the result
 (?~|>) :: forall x xs ys zs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    , Liftable (Filter x xs) zs
    , Liftable ys zs
    , zs ~ Union (Filter x xs) ys
    ) => Variant xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINE (?~|>) #-}
-(?~|>) v f = case catchVariantMaybe v of
+(?~|>) v f = case popVariantMaybe v of
    Right x -> liftVariant <$> f x
    Left ys -> return (liftVariant ys)
 
 infixl 0 ?~|>
 
--- | Catch element, fusion the result
+-- | Pop element, fusion the result
 (>?~|>) :: forall x xs ys zs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    , Liftable (Filter x xs) zs
    , Liftable ys zs
    , zs ~ Union (Filter x xs) ys
@@ -1482,10 +1482,10 @@ infixl 0 ?~|>
 
 infixl 0 >?~|>
 
--- | Catch element, fusion the result
+-- | Pop element, fusion the result
 (%~|>) :: forall x xs ys zs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , Liftable (Filter x xs) zs
    , Liftable ys zs
    , zs ~ Union (Filter x xs) ys
@@ -1495,10 +1495,10 @@ infixl 0 >?~|>
 
 infixl 0 %~|>
 
--- | Catch element, fusion the result
+-- | Pop element, fusion the result
 (>%~|>) :: forall x xs ys zs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    , Liftable (Filter x xs) zs
    , Liftable ys zs
    , zs ~ Union (Filter x xs) ys
@@ -1508,126 +1508,126 @@ infixl 0 %~|>
 
 infixl 0 >%~|>
 
--- | Catch element and perform effect. Passthrough the input value.
+-- | Pop element and perform effect. Passthrough the input value.
 (?~=>) :: forall x xs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Variant xs -> (x -> m ()) -> Flow m xs
 {-# INLINE (?~=>) #-}
-(?~=>) v f = case catchVariantMaybe v of
+(?~=>) v f = case popVariantMaybe v of
    Right x -> f x >> return v
    Left _  -> return v
 
 infixl 0 ?~=>
 
--- | Catch element and perform effect. Passthrough the input value.
+-- | Pop element and perform effect. Passthrough the input value.
 (>?~=>) :: forall x xs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Flow m xs -> (x -> m ()) -> Flow m xs
 {-# INLINE (>?~=>) #-}
 (>?~=>) = liftm (?~=>)
 
 infixl 0 >?~=>
 
--- | Catch element and perform effect. Passthrough the input value.
+-- | Pop element and perform effect. Passthrough the input value.
 (%~=>) :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Variant xs -> (x -> m ()) -> Flow m xs
 {-# INLINE (%~=>) #-}
 (%~=>) = (?~=>)
 
 infixl 0 %~=>
 
--- | Catch element and perform effect. Passthrough the input value.
+-- | Pop element and perform effect. Passthrough the input value.
 (>%~=>) :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Flow m xs -> (x -> m ()) -> Flow m xs
 {-# INLINE (>%~=>) #-}
 (>%~=>) = liftm (%~=>)
 
 infixl 0 >%~=>
 
--- | Catch element and perform effect.
+-- | Pop element and perform effect.
 (?~!>) :: forall x xs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Variant xs -> (x -> m ()) -> m ()
 {-# INLINE (?~!>) #-}
-(?~!>) v f = case catchVariantMaybe v of
+(?~!>) v f = case popVariantMaybe v of
    Right x -> f x
    Left _  -> return ()
 
 infixl 0 ?~!>
 
--- | Catch element and perform effect.
+-- | Pop element and perform effect.
 (>?~!>) :: forall x xs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Flow m xs -> (x -> m ()) -> m ()
 {-# INLINE (>?~!>) #-}
 (>?~!>) = liftm (?~!>)
 
 infixl 0 >?~!>
 
--- | Catch element and perform effect.
+-- | Pop element and perform effect.
 (%~!>) :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Variant xs -> (x -> m ()) -> m ()
 {-# INLINE (%~!>) #-}
 (%~!>) = (?~!>)
 
 infixl 0 %~!>
 
--- | Catch element and perform effect.
+-- | Pop element and perform effect.
 (>%~!>) :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Flow m xs -> (x -> m ()) -> m ()
 {-# INLINE (>%~!>) #-}
 (>%~!>) = liftm (%~!>)
 
 infixl 0 >%~!>
 
--- | Catch element and perform effect.
+-- | Pop element and perform effect.
 (?~!!>) :: forall x xs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Variant xs -> (x -> m ()) -> Flow m (Filter x xs)
 {-# INLINE (?~!!>) #-}
-(?~!!>) v f = case catchVariantMaybe v of
+(?~!!>) v f = case popVariantMaybe v of
    Right x -> f x >> error "?~!!> error"
    Left u  -> return u
 
 infixl 0 ?~!!>
 
--- | Catch element and perform effect.
+-- | Pop element and perform effect.
 (>?~!!>) :: forall x xs m.
    ( Monad m
-   , MaybeCatchable x xs
+   , MaybePopable x xs
    ) => Flow m xs -> (x -> m ()) -> Flow m (Filter x xs)
 {-# INLINE (>?~!!>) #-}
 (>?~!!>) = liftm (?~!!>)
 
 infixl 0 >?~!!>
 
--- | Catch element and perform effect.
+-- | Pop element and perform effect.
 (%~!!>) :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Variant xs -> (x -> m ()) -> Flow m (Filter x xs)
 {-# INLINE (%~!!>) #-}
 (%~!!>) = (?~!!>)
 
 infixl 0 %~!!>
 
--- | Catch element and perform effect.
+-- | Pop element and perform effect.
 (>%~!!>) :: forall x xs m.
    ( Monad m
-   , Catchable x xs
+   , Popable x xs
    ) => Flow m xs -> (x -> m ()) -> Flow m (Filter x xs)
 {-# INLINE (>%~!!>) #-}
 (>%~!!>) = liftm (%~!!>)
@@ -1661,7 +1661,7 @@ makeFlowOpM select apply combine v = v >>= makeFlowOp select apply combine
 -- | Select the first value
 selectFirst :: Variant (x ': xs) -> Either (Variant xs) (Variant '[x])
 {-# INLINE selectFirst #-}
-selectFirst = fmap (setVariantN @0) . headVariant
+selectFirst = fmap (toVariantAt @0) . popVariantHead
 
 -- | Select the tail
 selectTail :: Variant (x ': xs) -> Either (Variant '[x]) (Variant xs)
@@ -1673,10 +1673,10 @@ selectTail = flipEither . selectFirst
 
 -- | Select by type
 selectType ::
-   ( Catchable x xs
+   ( Popable x xs
    ) => Variant xs -> Either (Variant (Filter x xs)) (Variant '[x])
 {-# INLINE selectType #-}
-selectType = fmap (setVariantN @0) . catchVariant
+selectType = fmap (toVariantAt @0) . popVariant
 
 -- | Const application
 applyConst :: Flow m ys -> (Variant xs -> Flow m ys)
@@ -1696,12 +1696,12 @@ applyM = liftF
 -- | Lift a monadic function
 applyVM :: Monad m => (Variant a -> m b) -> Variant a -> Flow m '[b]
 {-# INLINE applyVM #-}
-applyVM f = fmap (setVariantN @0) . f
+applyVM f = fmap (toVariantAt @0) . f
 
 -- | Lift a monadic function
 applyF :: (a -> Flow m b) -> Variant '[a] -> Flow m b
 {-# INLINE applyF #-}
-applyF f = f . singleVariant
+applyF f = f . variantToValue
 
 -- | Set the first value (the "correct" one)
 combineFirst :: forall x xs. Either (Variant xs) (Variant '[x]) -> Variant (x ': xs)
@@ -1767,14 +1767,14 @@ combineLiftBoth = \case
 combineSingle :: Either (Variant '[x]) (Variant '[x]) -> x
 {-# INLINE combineSingle #-}
 combineSingle = \case
-   Right x -> singleVariant x
-   Left  x -> singleVariant x
+   Right x -> variantToValue x
+   Left  x -> variantToValue x
 
 
 -- | Lift a pure function into a Variant to Variant function
 liftV :: (a -> b) -> Variant '[a] -> Variant '[b]
-liftV = updateVariantN @0
+liftV = updateVariantAt @0
 
 -- | Lift a function into a Flow
 liftF :: Monad m => (a -> m b) -> Variant '[a] -> Flow m '[b]
-liftF = updateVariantM @0
+liftF = updateVariantFirstM @0

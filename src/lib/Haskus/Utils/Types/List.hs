@@ -21,6 +21,7 @@ module Haskus.Utils.Types.List
    , ReplaceAt
    , Replace
    , ReplaceN
+   , ReplaceNS
    , Reverse
    , RemoveAt
    , RemoveAt1
@@ -38,6 +39,7 @@ module Haskus.Utils.Types.List
    , Nub
    , NubHead
    , IndexOf
+   , IndexesOf
    , MaybeIndexOf
    , Index
    , Union
@@ -127,6 +129,11 @@ type family Replace t1 t2 l where
 type family ReplaceN n t l where
    ReplaceN 0 t (x ': xs)  = (t ': xs)
    ReplaceN n t (x ': xs)  = x ': ReplaceN (n-1) t xs
+
+-- | replace types at offsets ns in l
+type family ReplaceNS ns t l where
+   ReplaceNS '[] t l       = l
+   ReplaceNS (i ': is) t l = ReplaceNS is t (ReplaceN i t l)
 
 -- | Reverse a list
 type family Reverse (l :: [*]) where
@@ -243,6 +250,15 @@ type family IndexOf' a (l :: [*]) (l2 :: [*]) :: Nat where
                                     ':<>: 'Text " is not a member of "
                                     ':<>: 'ShowType l2)
 
+-- | Get all the indexes of a type
+type family IndexesOf a (l :: [*]) :: [Nat] where
+   IndexesOf x xs = IndexesOf' 0 x xs
+
+-- | Get the first index of a type
+type family IndexesOf' n a (l :: [*]) :: [Nat] where
+   IndexesOf' n x '[]       = '[]
+   IndexesOf' n x (x ': xs) = n ': IndexesOf' (n+1) x xs
+   IndexesOf' n x (y ': xs) = IndexesOf' (n+1) x xs
 
 -- | Get the first index (starting from 1) of a type or 0 if none
 type family MaybeIndexOf a (l :: [*]) where
