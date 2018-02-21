@@ -64,6 +64,7 @@ module Haskus.Utils.Variant
    , prependVariant
    , Liftable
    , liftVariant
+   , nubVariant
    -- * Conversions to/from other data types
    , variantToValue
    , variantToEither
@@ -552,15 +553,15 @@ class VariantLift xs ys where
 instance VariantLift '[] ys where
    liftVariant' = error "Lifting empty variant"
 
-instance forall x xs ys.
+instance forall xs ys x.
       ( VariantLift xs ys
       , KnownNat (IndexOf x ys)
       ) => VariantLift (x ': xs) ys
    where
       {-# INLINE liftVariant' #-}
-      liftVariant' v = case popVariantHead v of
-         Right a  -> Variant (natValue' @(IndexOf x ys)) (unsafeCoerce a)
-         Left  v' -> liftVariant' v'
+      liftVariant' (Variant t a)
+         | t == 0    = Variant (natValue' @(IndexOf x ys)) a
+         | otherwise = liftVariant' @xs (Variant (t-1) a)
 
 
 -- | Lift a variant into another
@@ -571,6 +572,10 @@ liftVariant :: forall xs ys.
    ) => Variant xs -> Variant ys
 {-# INLINE liftVariant #-}
 liftVariant = liftVariant'
+
+-- | Nub the type list
+nubVariant :: (Liftable xs (Nub xs)) => V xs -> V (Nub xs)
+nubVariant = liftVariant
 
 -----------------------------------------------------------
 -- Conversions to other data types
