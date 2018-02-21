@@ -32,6 +32,8 @@ module Haskus.Utils.Variant
    , popVariantAt
    , popVariantHead
    , updateVariantAt
+   , foldMapVariantAt
+   , foldMapVariantAtM
    -- * Operations by type
    , toVariant
    , Member
@@ -47,6 +49,9 @@ module Haskus.Utils.Variant
    , updateVariantFirstM
    , MappableVariant
    , mapVariant
+   , foldMapVariantFirst
+   , foldMapVariantFirstM
+   , foldMapVariant
    -- * Generic operations with type classes
    , AlterVariant (..)
    , TraverseVariant (..)
@@ -65,9 +70,6 @@ module Haskus.Utils.Variant
    , variantFromEither
    , variantToHList
    , variantToTuple
-   , updateVariantFold
-   , updateVariantFoldN
-   , updateVariantFoldM
    -- ** Continuations
    , ContVariant (..)
    )
@@ -350,6 +352,86 @@ mapVariant :: forall a b cs.
    ) => (a -> b) -> Variant cs -> Variant (ReplaceNS (IndexesOf a cs) b cs)
 mapVariant = mapVariant' @a @b @cs @(IndexesOf a cs)
 
+
+-- | Update a variant value with a variant and fold the result
+foldMapVariantAt :: forall (n :: Nat) l l2 .
+   ( KnownNat n
+   , KnownNat (Length l2)
+   ) => (Index n l -> Variant l2) -> Variant l -> Variant (ReplaceAt n l l2)
+foldMapVariantAt f v@(Variant t a) =
+   case fromVariantAt @n v of
+      Nothing ->
+         -- we need to adapt the tag if new valid tags (from l2) are added before
+         if t < n
+            then Variant t a
+            else Variant (t+nl2-1) a
+
+      Just x  -> case f x of
+         Variant t2 a2 -> Variant (t2+n) a2
+   where
+      n   = natValue' @n
+      nl2 = natValue' @(Length l2)
+
+-- | Update a variant value with a variant and fold the result
+foldMapVariantAtM :: forall (n :: Nat) m l l2.
+   ( KnownNat n
+   , KnownNat (Length l2)
+   , Monad m
+   ) => (Index n l -> m (Variant l2)) -> Variant l -> m (Variant (ReplaceAt n l l2))
+foldMapVariantAtM f v@(Variant t a) =
+   case fromVariantAt @n v of
+      Nothing ->
+         -- we need to adapt the tag if new valid tags (from l2) are added before
+         return $ if t < n
+            then Variant t a
+            else Variant (t+nl2-1) a
+
+      Just x  -> do
+         y <- f x
+         case y of
+            Variant t2 a2 -> return (Variant (t2+n) a2)
+   where
+      n   = natValue' @n
+      nl2 = natValue' @(Length l2)
+
+-- | Update a variant value with a variant and fold the result
+foldMapVariantFirst :: forall a (n :: Nat) l l2 .
+   ( KnownNat n
+   , KnownNat (Length l2)
+   , n ~ IndexOf a l
+   , a ~ Index n l
+   ) => (a -> Variant l2) -> Variant l -> Variant (ReplaceAt n l l2)
+foldMapVariantFirst f v = foldMapVariantAt @n f v
+
+-- | Update a variant value with a variant and fold the result
+foldMapVariantFirstM :: forall a (n :: Nat) l l2 m.
+   ( KnownNat n
+   , KnownNat (Length l2)
+   , n ~ IndexOf a l
+   , a ~ Index n l
+   , Monad m
+   ) => (a -> m (V l2)) -> V l -> m (V (ReplaceAt n l l2))
+foldMapVariantFirstM f v = foldMapVariantAtM @n f v
+
+
+
+-- | Update a variant value with a variant and fold the result
+foldMapVariant :: forall a cs ds i.
+   ( i ~ IndexOf a cs
+   , Popable a cs
+   ) => (a -> V ds) -> V cs -> V (InsertAt i (Filter a cs) ds)
+foldMapVariant f v = case popVariant v of
+   Right a -> case f a of
+      Variant t x -> Variant (i + t) x
+   Left (Variant t x)
+      | t < i     -> Variant t x
+      | otherwise -> Variant (i+t) x
+   where
+      i = natValue' @i
+
+
+
+
 -----------------------------------------------------------
 -- Generic operations with type classes
 -----------------------------------------------------------
@@ -535,62 +617,6 @@ variantFromEither :: Either a b -> Variant '[b,a]
 {-# INLINE variantFromEither #-}
 variantFromEither (Left a)  = toVariantAt @1 a
 variantFromEither (Right b) = toVariantAt @0 b
-
-
--- | Update a variant value with a variant and fold the result
-updateVariantFoldN :: forall (n :: Nat) l l2 .
-   ( KnownNat n
-   , KnownNat (Length l2)
-   ) => (Index n l -> Variant l2) -> Variant l -> Variant (ReplaceAt n l l2)
-updateVariantFoldN f v@(Variant t a) =
-   case fromVariantAt @n v of
-      Nothing ->
-         -- we need to adapt the tag if new valid tags (from l2) are added before
-         if t < n
-            then Variant t a
-            else Variant (t+nl2-1) a
-
-      Just x  -> case f x of
-         Variant t2 a2 -> Variant (t2+n) a2
-   where
-      n   = natValue' @n
-      nl2 = natValue' @(Length l2)
-
--- | Update a variant value with a variant and fold the result
-updateVariantFold :: forall a (n :: Nat) l l2 .
-   ( KnownNat n
-   , KnownNat (Length l2)
-   , n ~ IndexOf a l
-   , a ~ Index n l
-   ) => (a -> Variant l2) -> Variant l -> Variant (ReplaceAt n l l2)
-updateVariantFold f v = updateVariantFoldN @n f v
-
--- | Update a variant value with a variant and fold the result
-updateVariantFoldM :: forall (n :: Nat) m l l2.
-   ( KnownNat n
-   , KnownNat (Length l2)
-   , Monad m
-   ) => (Index n l -> m (Variant l2)) -> Variant l -> m (Variant (ReplaceAt n l l2))
-updateVariantFoldM f v@(Variant t a) =
-   case fromVariantAt @n v of
-      Nothing ->
-         -- we need to adapt the tag if new valid tags (from l2) are added before
-         return $ if t < n
-            then Variant t a
-            else Variant (t+nl2-1) a
-
-      Just x  -> do
-         y <- f x
-         case y of
-            Variant t2 a2 -> return (Variant (t2+n) a2)
-   where
-      n   = natValue' @n
-      nl2 = natValue' @(Length l2)
-
-
-
-
-
 
 
 class ContVariant xs where

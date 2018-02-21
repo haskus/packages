@@ -18,6 +18,7 @@ module Haskus.Utils.Types.List
    , Init
    , Head
    , Snoc
+   , InsertAt
    , ReplaceAt
    , Replace
    , ReplaceN
@@ -25,6 +26,7 @@ module Haskus.Utils.Types.List
    , Reverse
    , RemoveAt
    , RemoveAt1
+   , RemoveAtN
    , Concat
    , Length
    , Replicate
@@ -114,6 +116,11 @@ type family Replicate' x n xs where
    Replicate' x 0 xs = xs
    Replicate' x n xs = Replicate' x (n-1) (x ': xs)
 
+-- | Insert a list at n
+type family InsertAt (n :: Nat) l l2 where
+   InsertAt 0 xs ys        = Concat ys xs
+   InsertAt n (x ': xs) ys = x ': InsertAt (n-1) xs ys
+
 -- | replace l[n] with l2 (folded)
 type family ReplaceAt (n :: Nat) l l2 where
    ReplaceAt 0 (x ': xs) ys = Concat ys xs
@@ -154,6 +161,11 @@ type family RemoveAt1 (n :: Nat) l where
    RemoveAt1 0 xs        = xs
    RemoveAt1 1 (x ': xs) = xs
    RemoveAt1 n (x ': xs) = x ': RemoveAt1 (n-1) xs
+
+-- | Remove types at several indexes
+type family RemoveAtN (ns :: [Nat]) l where
+   RemoveAtN '[] xs       = xs
+   RemoveAtN (i ': is) xs = RemoveAtN is (RemoveAt i xs)
 
 -- | Apply Maybe to all the elements of the list
 type family MapMaybe l where
