@@ -68,9 +68,9 @@ testsVariant = testGroup "Variant" $
    , testProperty "update by type (don't match)"
          (updateVariantFirst c2d b == toVariant B)
    , testProperty "update/fold by index (match)"
-         (updateVariantFoldN @1 b2def b == toVariant E)
+         (foldMapVariantAt @1 b2def b == toVariant E)
    , testProperty "update/fold by index (don't match)"
-         (updateVariantFoldN @2 c2def b == toVariant B)
+         (foldMapVariantAt @2 c2def b == toVariant B)
 
    , testProperty "Convert into tuple"
          (variantToTuple b == (Nothing, Just B, Nothing))
