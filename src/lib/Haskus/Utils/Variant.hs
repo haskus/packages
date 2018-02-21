@@ -26,6 +26,8 @@ module Haskus.Utils.Variant
    , pattern VMaybe
    -- * Operations by index
    , toVariantAt
+   , toVariantHead
+   , toVariantTail
    , fromVariantAt
    , popVariantAt
    , popVariantHead
@@ -161,6 +163,16 @@ toVariantAt :: forall (n :: Nat) (l :: [*]).
    ) => Index n l -> Variant l
 {-# INLINE toVariantAt #-}
 toVariantAt a = Variant (natValue' @n) (unsafeCoerce a)
+
+-- | Set the first value
+toVariantHead :: forall x xs. x -> Variant (x ': xs)
+{-# INLINE toVariantHead #-}
+toVariantHead a = Variant 0 (unsafeCoerce a)
+
+-- | Set the tail
+toVariantTail :: forall x xs. Variant xs -> Variant (x ': xs)
+{-# INLINE toVariantTail #-}
+toVariantTail (Variant t a) = Variant (t+1) a
 
 -- | Get the value if it has the indexed type
 fromVariantAt :: forall (n :: Nat) (l :: [*]).
