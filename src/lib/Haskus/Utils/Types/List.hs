@@ -216,12 +216,9 @@ type family Zip (l :: [*]) (l2 :: [*]) where
 
 -- | Remove `a` in `l`
 type family Filter a (l :: [*]) where
-   Filter a as = Reverse (Filter' a as '[])
-
-type family Filter' a as xs where
-   Filter' a '[]       xs = xs
-   Filter' a (a ': as) xs = Filter' a as xs
-   Filter' a (x ': as) xs = Filter' a as (x ': xs)
+   Filter a '[]       = '[]
+   Filter a (a ': as) = Filter a as
+   Filter a (b ': as) = b ': Filter a as
 
 -- | Keep only a single value of each type
 type family Nub (l :: [*]) where

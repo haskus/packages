@@ -19,9 +19,11 @@
 -- | Open sum type
 module Haskus.Utils.Variant
    ( Variant
+   , V
+   , variantIndex
+   -- * Patterns
    , pattern V
    , pattern VMaybe
-   , variantIndex
    -- * Operations by index
    , toVariantAt
    , fromVariantAt
@@ -31,6 +33,7 @@ module Haskus.Utils.Variant
    -- * Operations by type
    , toVariant
    , Member
+   , Filter
    , Popable
    , MaybePopable
    , popVariant
@@ -81,6 +84,8 @@ import Haskus.Utils.Types.List
 -- | A variant contains a value whose type is at the given position in the type
 -- list
 data Variant (l :: [*]) = Variant {-# UNPACK #-} !Word Any
+
+type V = Variant
 
 -- | Make GHC consider `l` as a representational parameter to make coercions
 -- between Variant values unsafe
