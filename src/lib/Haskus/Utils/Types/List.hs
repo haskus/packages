@@ -95,7 +95,7 @@ type family Head (xs :: [*]) where
    Head (x ': xs) = x
 
 -- | Concat two type lists
-type family Concat (xs :: [*]) (ys :: [*]) where
+type family Concat (xs :: [k]) (ys :: [k]) :: [k] where
    Concat '[] '[]      = '[]
    Concat '[] ys       = ys
    Concat (x ': xs) ys = x ': Concat xs ys
