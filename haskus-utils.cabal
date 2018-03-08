@@ -26,6 +26,7 @@ library
     Haskus.Utils.Solver
     Haskus.Utils.ContFlow
     Haskus.Utils.Variant
+    Haskus.Utils.VariantF
     Haskus.Utils.Monad
     Haskus.Utils.Parser
     Haskus.Utils.HArray
@@ -33,6 +34,7 @@ library
     Haskus.Utils.MultiState
     Haskus.Utils.HList
     Haskus.Utils.Embed
+    Haskus.Utils.Fix
     Haskus.Utils.List
     Haskus.Utils.Map
     Haskus.Utils.Map.Strict
