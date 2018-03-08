@@ -594,7 +594,7 @@ variantToEither (Variant _ a) = Left (unsafeCoerce a)
 
 class VariantToHList xs where
    -- | Convert a variant into a HList of Maybes
-   variantToHList :: Variant xs -> HList (MapMaybe xs)
+   variantToHList :: Variant xs -> HList (Map Maybe xs)
 
 instance VariantToHList '[] where
    variantToHList _ = HNil
@@ -612,7 +612,7 @@ instance
 -- | Get variant possible values in a tuple of Maybe types
 variantToTuple :: forall l t.
    ( VariantToHList l
-   , HTuple' (MapMaybe l) t
+   , HTuple' (Map Maybe l) t
    ) => Variant l -> t
 variantToTuple = hToTuple' . variantToHList
 
