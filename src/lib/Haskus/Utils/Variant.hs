@@ -53,8 +53,8 @@ module Haskus.Utils.Variant
    , foldMapVariantFirstM
    , foldMapVariant
    -- * Generic operations with type classes
-   , AlterVariant (..)
-   , TraverseVariant (..)
+   , AlterVariant
+   , TraverseVariant
    , NoConstraint
    , alterVariant
    , traverseVariant
@@ -92,7 +92,7 @@ data Variant (l :: [*]) = Variant {-# UNPACK #-} !Word Any
 
 type V = Variant
 
--- | Make GHC consider `l` as a representational parameter to make coercions
+-- Make GHC consider `l` as a representational parameter to make coercions
 -- between Variant values unsafe
 type role Variant representational
 
@@ -544,19 +544,19 @@ prependVariant (Variant t a) = Variant (n+t) a
 -- | xs is liftable in ys
 type Liftable xs ys =
    ( IsSubset xs ys ~ 'True
-   , VariantLift xs ys
+   , LiftVariant xs ys
    )
 
-class VariantLift xs ys where
+class LiftVariant xs ys where
    liftVariant' :: Variant xs -> Variant ys
 
-instance VariantLift '[] ys where
+instance LiftVariant '[] ys where
    liftVariant' = error "Lifting empty variant"
 
 instance forall xs ys x.
-      ( VariantLift xs ys
+      ( LiftVariant xs ys
       , KnownNat (IndexOf x ys)
-      ) => VariantLift (x ': xs) ys
+      ) => LiftVariant (x ': xs) ys
    where
       {-# INLINE liftVariant' #-}
       liftVariant' (Variant t a)
