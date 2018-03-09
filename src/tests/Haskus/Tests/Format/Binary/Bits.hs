@@ -77,6 +77,26 @@ testsBits = testGroup "Binary bits" $
          , testProperty "countLeadingZeros Int32"  (countLeadingZeros (0x0 :: Int32) == 32)
          , testProperty "countLeadingZeros Int64"  (countLeadingZeros (0x0 :: Int64) == 64)
          ]
+      , testGroup "Finite countTrailingZeros"
+         [ testProperty "countTrailingZeros Word8"  (countTrailingZeros (0x10 :: Word8)  == 4)
+         , testProperty "countTrailingZeros Word16" (countTrailingZeros (0x1000 :: Word16) == 3*4)
+         , testProperty "countTrailingZeros Word32" (countTrailingZeros (0x10000000 :: Word32) == 7*4)
+         , testProperty "countTrailingZeros Word64" (countTrailingZeros (0x1000000000000000 :: Word64) == 15*4)
+         , testProperty "countTrailingZeros Word"   (countTrailingZeros (0x10000000 :: Word) == 7*4)
+         , testProperty "countTrailingZeros Int8"   (countTrailingZeros (0x10 :: Int8)  == 4)
+         , testProperty "countTrailingZeros Int16"  (countTrailingZeros (0x1000 :: Int16) == 3*4)
+         , testProperty "countTrailingZeros Int32"  (countTrailingZeros (0x10000000 :: Int32) == 7*4)
+         , testProperty "countTrailingZeros Int64"  (countTrailingZeros (0x1000000000000000 :: Int64) == 15*4)
+         , testProperty "countTrailingZeros Int"    (countTrailingZeros (0x10000000 :: Int) == 7*4)
+         , testProperty "countTrailingZeros Word8"  (countTrailingZeros (0x0 :: Word8)  == 8)
+         , testProperty "countTrailingZeros Word16" (countTrailingZeros (0x0 :: Word16) == 16)
+         , testProperty "countTrailingZeros Word32" (countTrailingZeros (0x0 :: Word32) == 32)
+         , testProperty "countTrailingZeros Word64" (countTrailingZeros (0x0 :: Word64) == 64)
+         , testProperty "countTrailingZeros Int8"   (countTrailingZeros (0x0 :: Int8)  == 8)
+         , testProperty "countTrailingZeros Int16"  (countTrailingZeros (0x0 :: Int16) == 16)
+         , testProperty "countTrailingZeros Int32"  (countTrailingZeros (0x0 :: Int32) == 32)
+         , testProperty "countTrailingZeros Int64"  (countTrailingZeros (0x0 :: Int64) == 64)
+         ]
       ]
    , testGroup "Bitwise"
       [ testGroup "AND"
