@@ -17,6 +17,7 @@
 module Haskus.Format.Binary.Vector
    ( Vector (..)
    , vectorBuffer
+   , vectorReverse
    , take
    , drop
    , index
@@ -54,6 +55,10 @@ instance (Storable a, Show a, KnownNat n) => Show (Vector n a) where
 -- | Return the buffer backing the vector
 vectorBuffer :: Vector n a -> Buffer
 vectorBuffer (Vector b) = b
+
+-- | Reverse a vector
+vectorReverse :: Vector n a -> Vector n a
+vectorReverse (Vector b) = Vector (bufferReverse b)
 
 -- | Offset of the i-th element in a stored vector
 type family ElemOffset a i n where
