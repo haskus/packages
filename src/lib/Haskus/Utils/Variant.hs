@@ -65,6 +65,7 @@ module Haskus.Utils.Variant
    , Liftable
    , liftVariant
    , nubVariant
+   , productVariant
    -- * Conversions to/from other data types
    , variantToValue
    , variantToEither
@@ -576,6 +577,36 @@ liftVariant = liftVariant'
 -- | Nub the type list
 nubVariant :: (Liftable xs (Nub xs)) => V xs -> V (Nub xs)
 nubVariant = liftVariant
+
+class Productable a b where
+   toVariantProduct :: a -> b -> Any
+
+instance Productable (Variant '[]) b where
+   {-# INLINE toVariantProduct #-}
+   toVariantProduct _ _ = undefined
+
+instance Productable a (Variant '[]) where
+   {-# INLINE toVariantProduct #-}
+   toVariantProduct _ _ = undefined
+
+instance forall x xs y ys.
+   ( Productable (Variant xs) (Variant (y ': ys))
+   , Productable (Variant (x ': xs)) (Variant ys)
+   ) => Productable (Variant (x ': xs)) (Variant (y ': ys))
+   where
+   {-# INLINE toVariantProduct #-}
+   toVariantProduct v1 v2 = case (popVariantHead v1, popVariantHead v2) of
+      (Right x, Right y) -> unsafeCoerce (x,y)
+      (_, Left ys)       -> toVariantProduct v1 ys
+      (Left xs, _)       -> toVariantProduct xs v2
+
+-- | Product of two variants
+productVariant :: forall xs ys.
+   ( Productable (Variant xs) (Variant ys)
+   , KnownNat (Length ys)
+   ) => Variant xs -> Variant ys -> Variant (Product xs ys)
+productVariant v1@(Variant n1 _) v2@(Variant n2 _)
+   = Variant (n1 * natValue @(Length ys) + n2) (toVariantProduct v1 v2)
 
 -----------------------------------------------------------
 -- Conversions to other data types

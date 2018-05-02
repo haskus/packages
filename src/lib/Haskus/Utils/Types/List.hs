@@ -44,6 +44,7 @@ module Haskus.Utils.Types.List
    , MaybeIndexOf
    , Index
    , Union
+   , Product
    , Member
    , CheckNub
    )
@@ -281,6 +282,16 @@ type family Index (n :: Nat) (l :: [k]) :: k where
 -- | Union two lists
 type family Union (xs :: [k]) (ys :: [k]) :: [k] where
    Union xs ys = Nub (Concat xs ys)
+
+-- | Product of two lists
+type family Product (xs :: [*]) (ys :: [*]) :: [*] where
+   Product '[] ys    = '[]
+   Product xy '[]    = '[]
+   Product (x:xs) ys = Concat (Product' x ys) (Product xs ys)
+
+type family Product' (x :: *) (ys :: [*]) :: [*] where
+   Product' x '[]       = '[]
+   Product' x (y ': ys) = (x,y) ': Product' x ys
 
 --------------------------------------
 -- Constraints
