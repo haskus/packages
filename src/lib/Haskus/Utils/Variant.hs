@@ -66,6 +66,7 @@ module Haskus.Utils.Variant
    , liftVariant
    , nubVariant
    , productVariant
+   , flattenVariant
    -- * Conversions to/from other data types
    , variantToValue
    , variantToEither
@@ -607,6 +608,34 @@ productVariant :: forall xs ys.
    ) => Variant xs -> Variant ys -> Variant (Product xs ys)
 productVariant v1@(Variant n1 _) v2@(Variant n2 _)
    = Variant (n1 * natValue @(Length ys) + n2) (toVariantProduct v1 v2)
+
+type family FlattenVariant (xs :: [*]) :: [*] where
+   FlattenVariant '[]             = '[]
+   FlattenVariant (Variant xs:ys) = Concat xs (FlattenVariant ys)
+   FlattenVariant (y:ys)          = y ': FlattenVariant ys
+
+class Flattenable a rs where
+   toFlattenVariant :: Word -> a -> rs
+
+instance Flattenable (Variant '[]) rs where
+   {-# INLINE toFlattenVariant #-}
+   toFlattenVariant _ _ = undefined
+
+instance forall xs ys rs.
+   ( Flattenable (Variant ys) (Variant rs)
+   , KnownNat (Length xs)
+   ) => Flattenable (Variant (Variant xs ': ys)) (Variant rs)
+   where
+   {-# INLINE toFlattenVariant #-}
+   toFlattenVariant i v = case popVariantHead v of
+      Right (Variant n a) -> Variant (i+n) a
+      Left vys            -> toFlattenVariant (i+natValue @(Length xs)) vys
+
+-- | Flatten variants in a variant
+flattenVariant :: forall xs.
+   ( Flattenable (Variant xs) (Variant (FlattenVariant xs))
+   ) => Variant xs -> Variant (FlattenVariant xs)
+flattenVariant v = toFlattenVariant 0 v
 
 -----------------------------------------------------------
 -- Conversions to other data types
