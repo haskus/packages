@@ -69,6 +69,7 @@ module Haskus.Utils.Variant
    , flattenVariant
    -- * Conversions to/from other data types
    , variantToValue
+   , variantFromValue
    , variantToEither
    , variantFromEither
    , variantToHList
@@ -645,6 +646,11 @@ flattenVariant v = toFlattenVariant 0 v
 variantToValue :: Variant '[a] -> a
 {-# INLINE variantToValue #-}
 variantToValue (Variant _ a) = unsafeCoerce a
+
+-- | Create a variant from a single value
+variantFromValue :: a -> Variant '[a]
+{-# INLINE variantFromValue #-}
+variantFromValue a = Variant 0 (unsafeCoerce a)
 
 
 -- | Convert a variant of two values in a Either
