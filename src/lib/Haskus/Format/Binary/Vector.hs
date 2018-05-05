@@ -57,8 +57,8 @@ vectorBuffer :: Vector n a -> Buffer
 vectorBuffer (Vector b) = b
 
 -- | Reverse a vector
-vectorReverse :: Vector n a -> Vector n a
-vectorReverse (Vector b) = Vector (bufferReverse b)
+vectorReverse :: (KnownNat n, Storable a) => Vector n a -> Vector n a
+vectorReverse = fromJust . fromList . reverse . toList
 
 -- | Offset of the i-th element in a stored vector
 type family ElemOffset a i n where
