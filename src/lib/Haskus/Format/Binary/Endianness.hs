@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | Byte order ("endianness")
 --
@@ -33,6 +34,7 @@ import Haskus.Format.Binary.Enum
 import Haskus.Format.Binary.Ptr
 import Haskus.Format.Binary.Storable
 import Haskus.Format.Binary.Word
+import Haskus.Format.Binary.Bits
 
 import System.IO.Unsafe
 
@@ -178,7 +180,7 @@ instance ByteReversable Word64 where
 -- | Force a data to be read/stored as big-endian
 newtype AsBigEndian a
    = AsBigEndian a
-   deriving (Eq,Ord,Enum,Num,Integral,Real)
+   deriving (Eq,Ord,Enum,Num,Integral,Real,Bitwise,FiniteBits,ReversableBits,RotatableBits,ShiftableBits)
 
 instance Show a => Show (AsBigEndian a) where
    show (AsBigEndian a) = show a
@@ -186,7 +188,7 @@ instance Show a => Show (AsBigEndian a) where
 -- | Force a data to be read/stored as little-endian
 newtype AsLittleEndian a
    = AsLittleEndian a
-   deriving (Eq,Ord,Enum,Num,Integral,Real)
+   deriving (Eq,Ord,Enum,Num,Integral,Real,Bitwise,FiniteBits,ReversableBits,RotatableBits,ShiftableBits)
 
 instance Show a => Show (AsLittleEndian a) where
    show (AsLittleEndian a) = show a
