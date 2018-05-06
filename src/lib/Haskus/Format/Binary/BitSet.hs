@@ -55,6 +55,7 @@ module Haskus.Format.Binary.BitSet
    , unions
    , fromListToBits
    , toListFromBits
+   , enumerateSetBits
    , fromList
    , toList
    )
@@ -243,6 +244,26 @@ toListFromBits ::
    , Eq b
    ) => b -> [a]
 toListFromBits = toList . BitSet
+
+-- | Convert a bitset into a list of Enum elements by testing the Enum values
+-- successively.
+--
+-- The difference with `toListFromBits` is that extra values in the BitSet will
+-- be ignored.
+enumerateSetBits ::
+   ( CBitSet a
+   , FiniteBits b
+   , IndexableBits b
+   , Eq b
+   , Bounded a
+   , Enum a
+   ) => b -> [a]
+enumerateSetBits b = go [] [minBound..]
+   where
+      go rs []     = rs
+      go rs (x:xs)
+         | member (BitSet b) x = go (x:rs) xs
+         | otherwise           = go rs xs
 
 -- | Convert a set into a list
 toList ::
