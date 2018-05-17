@@ -46,6 +46,7 @@ module Haskus.Utils.Types.List
    , Union
    , Product
    , Member
+   , Member'
    , CheckNub
    )
 where
@@ -248,11 +249,6 @@ type family IndexOf (a :: k) (l :: [k]) :: Nat where
 type family IndexOf' (a :: k) (l :: [k]) (l2 :: [k]) :: Nat where
    IndexOf' x (x ': xs) l2 = 0
    IndexOf' y (x ': xs) l2 = 1 + IndexOf' y xs l2
-   IndexOf' y '[]       l2 = TypeError ( 'Text "`"
-                                    ':<>: 'ShowType y
-                                    ':<>: 'Text "'"
-                                    ':<>: 'Text " is not a member of "
-                                    ':<>: 'ShowType l2)
 
 -- | Get all the indexes of a type
 type family IndexesOf (a :: k) (l :: [k]) :: [Nat] where
@@ -301,6 +297,12 @@ type family Product' (x :: *) (ys :: [*]) :: [*] where
 type Member x xs =
    ( IsMember x xs ~ 'True
    , x ~ Index (IndexOf x xs) xs
+   , KnownNat (IndexOf x xs)
+   )
+
+-- | Constraint: x member of xs (silent)
+type Member' x xs =
+   ( x ~ Index (IndexOf x xs) xs
    , KnownNat (IndexOf x xs)
    )
 

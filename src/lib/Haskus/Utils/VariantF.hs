@@ -8,33 +8,61 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 -- | Functor Variant
 module Haskus.Utils.VariantF
    ( VariantF (..)
    , FixV
+   , pattern FV
    , appendVariantF
    , toVariantFHead
    , toVariantFTail
    , popVariantFHead
    , mapVariantF
+   , LiftableF
+   , liftVariantF
    -- * Extensible recursive ADT
    , EADT
+   , EADTF
    , pattern VF
+   , pattern VV
    , appendEADT
+   , liftEADT
    )
 where
 
 import Haskus.Utils.Variant
-import Haskus.Utils.Fix
+import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
+import Haskus.Utils.Types
 
 -- | Recursive Functor-like Variant
-newtype VariantF (xs :: [* -> *]) e = VariantF (V (FixV e xs))
+newtype VariantF (xs :: [* -> *]) e
+   = VariantF (V (FixV e xs))
 
 type family FixV e (xs :: [* -> *]) :: [*] where
    FixV e '[]       = '[]
    FixV e (f ': fs) = f e ': FixV e fs
+
+instance (Show (V (FixV e xs))) => Show (VariantF xs e) where
+   show (VariantF x) = show x
+deriving instance (Eq (V (FixV e xs))) => Eq (VariantF xs e)
+deriving instance (Ord (V (FixV e xs))) => Ord (VariantF xs e)
+
+instance Functor (VariantF '[]) where
+   fmap _ = undefined
+
+instance (Functor (VariantF fs), Functor f) => Functor (VariantF (f ': fs)) where
+   fmap f (VariantF v) = case popVariantHead v of
+      Right x -> toVariantFHead (fmap f x)
+      Left xs -> toVariantFTail (fmap f (VariantF xs))
+
+-- | Pattern-match in a VariantF
+pattern FV :: forall c cs e. Popable c (FixV e cs) => c -> VariantF cs e
+pattern FV x = VariantF (V x)
 
 appendVariantF :: forall (ys :: [* -> *]) (xs :: [* -> *]) e.
    ( FixV e (Concat xs ys) ~ Concat (FixV e xs) (FixV e ys)
@@ -66,14 +94,17 @@ mapVariantF :: forall a b cs e ds as.
    ) => (a e -> b e) -> VariantF cs e -> VariantF ds e
 mapVariantF f (VariantF v) = VariantF (mapVariant @(a e) @(b e) @as f v)
 
-instance Functor (VariantF '[]) where
-   fmap _ = undefined
+-- | xs is liftable in ys
+type LiftableF e xs ys =
+   ( IsSubset xs ys ~ 'True
+   , LiftVariant (FixV e xs) (FixV e ys)
+   )
 
-instance (Functor (VariantF fs), Functor f) => Functor (VariantF (f ': fs)) where
-   fmap f (VariantF v) = case popVariantHead v of
-      Right x -> toVariantFHead (fmap f x)
-      Left xs -> toVariantFTail (fmap f (VariantF xs))
-
+-- | Lift a VariantF into another
+liftVariantF :: forall e as bs.
+   ( LiftableF e as bs
+   ) => VariantF as e -> VariantF bs e
+liftVariantF (VariantF v) = VariantF (liftVariant' v)
 
 --------------------------------------------
 -- Extensible ADT
@@ -82,9 +113,26 @@ instance (Functor (VariantF fs), Functor f) => Functor (VariantF (f ': fs)) wher
 -- | An extensible ADT
 type EADT xs = Fix (VariantF xs)
 
+type family EADTF f xs where
+   EADTF f xs = EADTF' f (EADT xs) xs
+
+type EADTF' f e cs =
+   ( Member' f cs
+   , Index (IndexOf (f e) (FixV e cs)) (FixV e cs) ~ f e
+   , PopVariant (f e) (FixV e cs)
+   , KnownNat (IndexOf (f e) (FixV e cs))
+   )
+
 -- | Pattern-match in an extensible ADT
-pattern VF :: forall c cs. Popable c (FixV (EADT cs) cs) => c -> EADT cs
-pattern VF x = Fix (VariantF (V x))
+pattern VF :: forall e f cs.
+   ( e ~ EADT cs
+   , EADTF f cs
+   ) => f (EADT cs) -> EADT cs
+pattern VF x = Fix (VariantF (V' x))
+
+-- | Pattern-match in an extensible ADT
+pattern VV :: Variant (FixV (EADT cs) cs) -> EADT cs
+pattern VV x = Fix (VariantF x)
 
 -- | Append new "constructors" to the EADT
 appendEADT :: forall ys xs zs.
@@ -93,3 +141,11 @@ appendEADT :: forall ys xs zs.
    , Functor (VariantF xs)
    ) => EADT xs -> EADT zs
 appendEADT (Fix v) = Fix (appendVariantF @ys (fmap (appendEADT @ys) v))
+
+-- | Lift an EADT into another
+liftEADT :: forall e as bs.
+   ( e ~ Fix (VariantF bs)
+   , LiftableF e as bs
+   , Functor (VariantF as)
+   ) => EADT as -> EADT bs
+liftEADT = cata (Fix . liftVariantF)

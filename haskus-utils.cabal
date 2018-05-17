@@ -34,7 +34,7 @@ library
     Haskus.Utils.MultiState
     Haskus.Utils.HList
     Haskus.Utils.Embed
-    Haskus.Utils.Fix
+    Haskus.Utils.Functor
     Haskus.Utils.List
     Haskus.Utils.Map
     Haskus.Utils.Map.Strict
@@ -66,6 +66,7 @@ library
       ,  template-haskell          >= 2.10
       ,  file-embed                >= 0.0.10
       ,  extra                     >= 1.4
+      ,  recursion-schemes         >= 5.0
 
   build-tools: 
   ghc-options:          -Wall

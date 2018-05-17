@@ -1,10 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Fix-point type.
---
--- > Fix f = f (Fix f)
---
-module Haskus.Utils.Fix
+-- | Functor helpers
+module Haskus.Utils.Functor
    ( Fix (..)
    -- * Simple recursion
    , cata

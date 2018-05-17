@@ -77,6 +77,14 @@ module Haskus.Utils.Variant
    , variantToTuple
    -- ** Continuations
    , ContVariant (..)
+   -- ** Internals
+   , pattern V'
+   , liftVariant'
+   , fromVariant'
+   , popVariant'
+   , toVariant'
+   , LiftVariant
+   , PopVariant
    )
 where
 
@@ -109,6 +117,19 @@ pattern V :: forall c cs. Popable c cs => c -> Variant cs
 pattern V x <- (fromVariant -> Just x)
    where
       V x = toVariant x
+
+-- | Silent pattern synonym for Variant
+--
+-- Usage: case v of
+--          V (x :: Int)    -> ...
+--          V (x :: String) -> ...
+pattern V' :: forall c cs.
+   ( Member' c cs
+   , PopVariant c cs
+   ) => c -> Variant cs
+pattern V' x <- (fromVariant' -> Just x)
+   where
+      V' x = toVariant' x
 
 -- | Statically unchecked matching on a Variant
 pattern VMaybe :: forall c cs. (MaybePopable c cs) => c -> Variant cs
@@ -233,6 +254,15 @@ toVariant :: forall a l.
 {-# INLINE toVariant #-}
 toVariant = toVariantAt @(IndexOf a l)
 
+-- | Put a value into a Variant (silent)
+--
+-- Use the first matching type index.
+toVariant' :: forall a l.
+   ( Member' a l
+   ) => a -> Variant l
+{-# INLINE toVariant' #-}
+toVariant' = toVariantAt @(IndexOf a l)
+
 class PopVariant a xs where
    -- | Remove a type from a variant
    popVariant' :: Variant xs -> Either (Variant (Filter a xs)) a
@@ -297,6 +327,15 @@ fromVariant :: forall a xs.
    ) => Variant xs -> Maybe a
 {-# INLINE fromVariant #-}
 fromVariant v = case popVariant v of
+   Right a -> Just a
+   Left _  -> Nothing
+
+-- | Try to a get a value of a given type from a Variant (silent)
+fromVariant' :: forall a xs.
+   ( PopVariant a xs
+   ) => Variant xs -> Maybe a
+{-# INLINE fromVariant' #-}
+fromVariant' v = case popVariant' v of
    Right a -> Just a
    Left _  -> Nothing
 
