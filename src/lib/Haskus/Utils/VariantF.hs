@@ -15,7 +15,7 @@
 -- | Functor Variant
 module Haskus.Utils.VariantF
    ( VariantF (..)
-   , FixV
+   , ApplyAll
    , pattern FV
    , appendVariantF
    , toVariantFHead
@@ -42,16 +42,17 @@ import Haskus.Utils.Types
 
 -- | Recursive Functor-like Variant
 newtype VariantF (xs :: [* -> *]) e
-   = VariantF (V (FixV e xs))
+   = VariantF (V (ApplyAll e xs))
 
-type family FixV e (xs :: [* -> *]) :: [*] where
-   FixV e '[]       = '[]
-   FixV e (f ': fs) = f e ': FixV e fs
+-- | `ApplyAll e '[f,g,h] ==> '[f e, g e, h e]`
+type family ApplyAll e (xs :: [* -> *]) :: [*] where
+   ApplyAll e '[]       = '[]
+   ApplyAll e (f ': fs) = f e ': ApplyAll e fs
 
-instance (Show (V (FixV e xs))) => Show (VariantF xs e) where
+instance (Show (V (ApplyAll e xs))) => Show (VariantF xs e) where
    show (VariantF x) = show x
-deriving instance (Eq (V (FixV e xs))) => Eq (VariantF xs e)
-deriving instance (Ord (V (FixV e xs))) => Ord (VariantF xs e)
+deriving instance (Eq (V (ApplyAll e xs))) => Eq (VariantF xs e)
+deriving instance (Ord (V (ApplyAll e xs))) => Ord (VariantF xs e)
 
 instance Functor (VariantF '[]) where
    fmap _ = undefined
@@ -62,23 +63,23 @@ instance (Functor (VariantF fs), Functor f) => Functor (VariantF (f ': fs)) wher
       Left xs -> toVariantFTail (fmap f (VariantF xs))
 
 -- | Pattern-match in a VariantF
-pattern FV :: forall c cs e. Popable c (FixV e cs) => c -> VariantF cs e
+pattern FV :: forall c cs e. Popable c (ApplyAll e cs) => c -> VariantF cs e
 pattern FV x = VariantF (V x)
 
 appendVariantF :: forall (ys :: [* -> *]) (xs :: [* -> *]) e.
-   ( FixV e (Concat xs ys) ~ Concat (FixV e xs) (FixV e ys)
+   ( ApplyAll e (Concat xs ys) ~ Concat (ApplyAll e xs) (ApplyAll e ys)
    ) => VariantF xs e -> VariantF (Concat xs ys) e
-appendVariantF (VariantF v) = VariantF (appendVariant @(FixV e ys) v)
+appendVariantF (VariantF v) = VariantF (appendVariant @(ApplyAll e ys) v)
 
 -- | Set the first value
 toVariantFHead :: forall x xs e. x e -> VariantF (x ': xs) e
 {-# INLINE toVariantFHead #-}
-toVariantFHead v = VariantF (toVariantHead @(x e) @(FixV e xs) v)
+toVariantFHead v = VariantF (toVariantHead @(x e) @(ApplyAll e xs) v)
 
 -- | Set the tail
 toVariantFTail :: forall x xs e. VariantF xs e -> VariantF (x ': xs) e
 {-# INLINE toVariantFTail #-}
-toVariantFTail (VariantF v) = VariantF (toVariantTail @(x e) @(FixV e xs) v)
+toVariantFTail (VariantF v) = VariantF (toVariantTail @(x e) @(ApplyAll e xs) v)
 
 popVariantFHead :: forall x xs e. VariantF (x ': xs) e -> Either (VariantF xs e) (x e)
 {-# INLINE popVariantFHead #-}
@@ -90,15 +91,15 @@ popVariantFHead (VariantF v) = case popVariantHead v of
 mapVariantF :: forall a b cs e ds as.
    ( MappableVariant (a e) (b e) as
    , ds ~ ReplaceNS (IndexesOf a cs) b cs
-   , as ~ FixV e cs
-   , FixV e ds ~ ReplaceNS (IndexesOf (a e) as) (b e) as
+   , as ~ ApplyAll e cs
+   , ApplyAll e ds ~ ReplaceNS (IndexesOf (a e) as) (b e) as
    ) => (a e -> b e) -> VariantF cs e -> VariantF ds e
 mapVariantF f (VariantF v) = VariantF (mapVariant @(a e) @(b e) @as f v)
 
 -- | xs is liftable in ys
 type LiftableF e xs ys =
    ( IsSubset xs ys ~ 'True
-   , LiftVariant (FixV e xs) (FixV e ys)
+   , LiftVariant (ApplyAll e xs) (ApplyAll e ys)
    )
 
 -- | Lift a VariantF into another
@@ -119,9 +120,9 @@ type family f :<: xs where
 
 type EADTF' f e cs =
    ( Member' f cs
-   , Index (IndexOf (f e) (FixV e cs)) (FixV e cs) ~ f e
-   , PopVariant (f e) (FixV e cs)
-   , KnownNat (IndexOf (f e) (FixV e cs))
+   , Index (IndexOf (f e) (ApplyAll e cs)) (ApplyAll e cs) ~ f e
+   , PopVariant (f e) (ApplyAll e cs)
+   , KnownNat (IndexOf (f e) (ApplyAll e cs))
    )
 
 -- | Pattern-match in an extensible ADT
@@ -136,7 +137,7 @@ pattern VF x = Fix (VariantF (V' x))   -- `V'` match a variant value (without
 -- | Append new "constructors" to the EADT
 appendEADT :: forall ys xs zs.
    ( zs ~ Concat xs ys
-   , FixV (EADT zs) zs ~ Concat (FixV (EADT zs) xs) (FixV (EADT zs) ys)
+   , ApplyAll (EADT zs) zs ~ Concat (ApplyAll (EADT zs) xs) (ApplyAll (EADT zs) ys)
    , Functor (VariantF xs)
    ) => EADT xs -> EADT zs
 appendEADT (Fix v) = Fix (appendVariantF @ys (fmap (appendEADT @ys) v))
