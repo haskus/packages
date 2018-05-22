@@ -24,13 +24,14 @@ module Haskus.Utils.VariantF
    , mapVariantF
    , LiftableF
    , liftVariantF
-   -- * Extensible recursive ADT
+   -- * Extensible ADT
    , EADT
-   , EADTF
+   , (:<:)
    , pattern VF
-   , pattern VV
    , appendEADT
    , liftEADT
+   -- * Reexport
+   , module Haskus.Utils.Functor
    )
 where
 
@@ -113,8 +114,8 @@ liftVariantF (VariantF v) = VariantF (liftVariant' v)
 -- | An extensible ADT
 type EADT xs = Fix (VariantF xs)
 
-type family EADTF f xs where
-   EADTF f xs = EADTF' f (EADT xs) xs
+type family f :<: xs where
+   f :<: xs = EADTF' f (EADT xs) xs
 
 type EADTF' f e cs =
    ( Member' f cs
@@ -125,14 +126,12 @@ type EADTF' f e cs =
 
 -- | Pattern-match in an extensible ADT
 pattern VF :: forall e f cs.
-   ( e ~ EADT cs
-   , EADTF f cs
+   ( e ~ EADT cs  -- allow easy use of TypeApplication to set the EADT type
+   , f :<: cs     -- constraint synonym ensuring `f` is in `cs`
    ) => f (EADT cs) -> EADT cs
-pattern VF x = Fix (VariantF (V' x))
-
--- | Pattern-match in an extensible ADT
-pattern VV :: Variant (FixV (EADT cs) cs) -> EADT cs
-pattern VV x = Fix (VariantF x)
+pattern VF x = Fix (VariantF (V' x))   -- `V'` match a variant value (without
+                                       -- checking the membership: we already
+                                       -- do it with :<:)
 
 -- | Append new "constructors" to the EADT
 appendEADT :: forall ys xs zs.
