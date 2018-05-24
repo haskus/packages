@@ -659,7 +659,7 @@ flattenVariant v = toFlattenVariant 0 v
 -- Conversions to other data types
 -----------------------------------------------------------
 
--- | Retreive a single value
+-- | Retrieve a single value
 variantToValue :: Variant '[a] -> a
 {-# INLINE variantToValue #-}
 variantToValue (Variant _ a) = unsafeCoerce a

@@ -21,7 +21,9 @@ module Haskus.Utils.VariantF
    , toVariantFHead
    , toVariantFTail
    , popVariantFHead
+   , popVariantF
    , mapVariantF
+   , variantFToValue
    , LiftableF
    , liftVariantF
    -- * Extensible ADT
@@ -30,6 +32,7 @@ module Haskus.Utils.VariantF
    , pattern VF
    , appendEADT
    , liftEADT
+   , popEADT
    -- * Reexport
    , module Haskus.Utils.Functor
    )
@@ -66,6 +69,10 @@ instance (Functor (VariantF fs), Functor f) => Functor (VariantF (f ': fs)) wher
 pattern FV :: forall c cs e. Popable c (ApplyAll e cs) => c -> VariantF cs e
 pattern FV x = VariantF (V x)
 
+-- | Retrieve a single value
+variantFToValue :: VariantF '[f] e -> f e
+variantFToValue (VariantF v) = variantToValue v
+
 appendVariantF :: forall (ys :: [* -> *]) (xs :: [* -> *]) e.
    ( ApplyAll e (Concat xs ys) ~ Concat (ApplyAll e xs) (ApplyAll e ys)
    ) => VariantF xs e -> VariantF (Concat xs ys) e
@@ -81,9 +88,20 @@ toVariantFTail :: forall x xs e. VariantF xs e -> VariantF (x ': xs) e
 {-# INLINE toVariantFTail #-}
 toVariantFTail (VariantF v) = VariantF (toVariantTail @(x e) @(ApplyAll e xs) v)
 
+-- | Pop VariantF head
 popVariantFHead :: forall x xs e. VariantF (x ': xs) e -> Either (VariantF xs e) (x e)
 {-# INLINE popVariantFHead #-}
 popVariantFHead (VariantF v) = case popVariantHead v of
+   Right x -> Right x
+   Left xs -> Left (VariantF xs)
+
+-- | Pop VariantF
+popVariantF :: forall x xs ys e.
+   ( Popable (x e) (ApplyAll e xs)
+   , Filter (x e) (ApplyAll e xs) ~ ApplyAll e ys
+   ) => VariantF xs e -> Either (VariantF ys e) (x e)
+{-# INLINE popVariantF #-}
+popVariantF (VariantF v) = case popVariant v of
    Right x -> Right x
    Left xs -> Left (VariantF xs)
 
@@ -149,3 +167,12 @@ liftEADT :: forall e as bs.
    , Functor (VariantF as)
    ) => EADT as -> EADT bs
 liftEADT = cata (Fix . liftVariantF)
+
+-- | Pop an EADT value
+popEADT :: forall xs f e.
+   ( f :<: xs
+   , e ~ EADT xs
+   , Popable (f e) (ApplyAll e xs)
+   , Filter (f e) (ApplyAll e xs) ~ ApplyAll e (Filter f xs)
+   ) => EADT xs -> Either (VariantF (Filter f xs) (EADT xs)) (f (EADT xs))
+popEADT (Fix v) = popVariantF v
