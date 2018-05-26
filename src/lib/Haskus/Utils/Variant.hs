@@ -79,6 +79,11 @@ module Haskus.Utils.Variant
    , variantToTuple
    -- ** Continuations
    , ContVariant (..)
+   , (>:>)
+   , LiftCont (..)
+   , ExtractRHS
+   , ReplaceRHS
+   , LiftContTuple
    -- ** Internals
    , pattern V'
    , liftVariant'
@@ -1249,3 +1254,117 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k,l] where
       , return . toVariantAt @10
       , return . toVariantAt @11
       )
+
+
+type family ReplaceRHS f v where
+   ReplaceRHS '[] _              = '[]
+   ReplaceRHS ((x -> _) ': xs) v = (x -> v) ': ReplaceRHS xs v
+
+type family ExtractRHS f where
+   ExtractRHS '[]              = '[]
+   ExtractRHS ((_ -> x) ': xs) = x ': ExtractRHS xs
+
+type LiftContTuple x = ListToTuple (ReplaceRHS (TupleToList x) (Variant (ExtractRHS (TupleToList x))))
+
+class LiftCont x where
+   liftCont :: x -> LiftContTuple x
+
+instance LiftCont (Single (a -> b)) where
+   liftCont (Single a) = Single (V . a)
+
+instance LiftCont (a->b,c->d) where
+   liftCont (a,b) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      )
+
+instance LiftCont (a->b,c->d,e->f) where
+   liftCont (a,b,c) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h) where
+   liftCont (a,b,c,d) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j) where
+   liftCont (a,b,c,d,e) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l) where
+   liftCont (a,b,c,d,e,f) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      , toVariantAt @5 . f
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n) where
+   liftCont (a,b,c,d,e,f,g) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      , toVariantAt @5 . f
+      , toVariantAt @6 . g
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p) where
+   liftCont (a,b,c,d,e,f,g,h) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      , toVariantAt @5 . f
+      , toVariantAt @6 . g
+      , toVariantAt @7 . h
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
+   liftCont (a,b,c,d,e,f,g,h,i) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      , toVariantAt @5 . f
+      , toVariantAt @6 . g
+      , toVariantAt @7 . h
+      , toVariantAt @8 . i
+      )
+
+-- | Map functions on a variant and produce a resulting variant
+--
+-- @
+--     > (V 'c' :: V '[Char,String]) >:> (ord,map toUpper)
+--     V 99 :: V '[Int,String]
+--
+--     > (V "test" :: V '[Char,String]) >:> (ord,map toUpper)
+--     V "TEST" :: V '[Int,String]
+--
+--     > (V "test" :: V '[Char,String]) >:> (ord,length)
+--     V 4 :: V '[Int,Int]
+-- @
+--
+(>:>) :: forall fs xs zs.
+   ( LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ContVariant xs
+   ) => Variant xs -> fs -> Variant zs
+(>:>) v fs = variantToCont v >::> liftCont fs
