@@ -24,6 +24,8 @@ module Haskus.Utils.Variant
    -- * Patterns
    , pattern V
    , pattern VMaybe
+   , (:<)
+   , (:<?)
    -- * Operations by index
    , toVariantAt
    , toVariantHead
@@ -297,6 +299,10 @@ type Popable a xs =
 type MaybePopable a xs =
    ( PopVariant a xs
    )
+
+type (:<) a xs  = Popable a xs
+type (:<?) a xs = MaybePopable a xs
+
 
 -- | Extract a type from a variant. Return either the value of this type or the
 -- remaining variant
