@@ -80,6 +80,7 @@ module Haskus.Utils.Variant
    -- ** Continuations
    , ContVariant (..)
    , (>:>)
+   , (>#>)
    , LiftCont (..)
    , ExtractRHS
    , ReplaceRHS
@@ -1368,3 +1369,34 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , ContVariant xs
    ) => Variant xs -> fs -> Variant zs
 (>:>) v fs = variantToCont v >::> liftCont fs
+
+-- | Map functions returning a variant on a variant and produce a resulting
+-- flattened and nub'ed variant
+--
+-- @
+--     mapInt64 :: Int64 -> V '[Int16,Int32,Int64]
+--     mapInt64 x
+--        | x <= 0xffff     = toVariantAt @0 (fromIntegral x)
+--        | x <= 0xffffffff = toVariantAt @1 (fromIntegral x)
+--        | otherwise       = toVariantAt @2 x
+--     
+--     mapInt32 :: Int32 -> V '[Int16,Int32]
+--     mapInt32 x
+--        | x <= 0xffff     = toVariantAt @0 (fromIntegral x)
+--        | otherwise       = toVariantAt @1 x
+--     
+--     > V @Int64 @'[Int64,Int32] 10 >#> (mapInt64,mapInt32)
+--     V 10 :: Variant '[Int16, Int32, Int64]
+-- @
+--
+(>#>) :: forall fs xs zs ys rs.
+   ( LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ContVariant xs
+   , ys ~ FlattenVariant zs
+   , Flattenable (Variant zs) (Variant ys)
+   , Liftable ys (Nub ys)
+   , rs ~ Nub ys
+   ) => Variant xs -> fs -> Variant rs
+(>#>) v fs = nubVariant (flattenVariant (v >:> fs))
