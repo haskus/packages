@@ -70,6 +70,8 @@ module Haskus.Utils.Variant
    , productVariant
    , FlattenVariant
    , flattenVariant
+   , ExtractMonad
+   , joinVariant
    -- * Conversions to/from other data types
    , variantToValue
    , variantFromValue
@@ -80,7 +82,9 @@ module Haskus.Utils.Variant
    -- ** Continuations
    , ContVariant (..)
    , (>:>)
+   , (>:^>)
    , (>#>)
+   , (>#^>)
    , LiftCont (..)
    , ExtractRHS
    , ReplaceRHS
@@ -666,6 +670,21 @@ flattenVariant :: forall xs.
    ( Flattenable (Variant xs) (Variant (FlattenVariant xs))
    ) => Variant xs -> Variant (FlattenVariant xs)
 flattenVariant v = toFlattenVariant 0 v
+
+type family ExtractMonad m f where
+   ExtractMonad m '[m x]      = '[x]
+   ExtractMonad m (m x ': xs) = x ': ExtractMonad m xs
+
+-- | Join on a variant
+--
+-- Transform a variant of applicatives as follow:
+--    V'[m a, m b, m c] ===> m (V'[a,b,c])
+--
+joinVariant :: forall m xs ys.
+   ( Applicative m
+   , ys ~ ExtractMonad m xs
+   ) => Variant xs -> m (Variant ys)
+joinVariant (Variant t act) = Variant t <$> (unsafeCoerce act :: m Any)
 
 -----------------------------------------------------------
 -- Conversions to other data types
@@ -1370,6 +1389,17 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    ) => Variant xs -> fs -> Variant zs
 (>:>) v fs = variantToCont v >::> liftCont fs
 
+-- | Applicative version of (>:>)
+(>:^>) :: forall m fs xs zs ks.
+   ( LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ContVariant xs
+   , ks ~ ExtractMonad m zs
+   , Applicative m
+   ) => Variant xs -> fs -> m (Variant ks)
+(>:^>) v fs = joinVariant (v >:> fs)
+
 -- | Map functions returning a variant on a variant and produce a resulting
 -- flattened and nub'ed variant
 --
@@ -1400,3 +1430,56 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , rs ~ Nub ys
    ) => Variant xs -> fs -> Variant rs
 (>#>) v fs = nubVariant (flattenVariant (v >:> fs))
+
+-- | Applicative version of (>#>)
+--
+-- @
+--    mapInt64 :: Int64 -> IO (V '[Int16,Int32,Int64])
+--    mapInt64 x
+--       | x <= 0xffff     = do
+--          putStrLn "Found Int16!"
+--          return (toVariantAt @0 (fromIntegral x))
+--       | x <= 0xffffffff = do
+--          putStrLn "Found Int32!"
+--          return (toVariantAt @1 (fromIntegral x))
+--       | otherwise       = do
+--          putStrLn "Found Int64!"
+--          return (toVariantAt @2 x)
+--
+--    mapInt32 :: Int32 -> IO (V '[Int16,Int32])
+--    mapInt32 x
+--       | x <= 0xffff     = do
+--          putStrLn "Found Int16!"
+--          return (toVariantAt @0 (fromIntegral x))
+--       | otherwise       = do
+--          putStrLn "Found Int32!"
+--          return (toVariantAt @1 x)
+--
+--    v = V @Int64 @'[Int64,Int32] 10
+--
+--    > x <- v >:^> (mapInt64,mapInt32)
+--    Found Int16!
+--
+--    > :t x
+--    x :: V '[V '[Int16, Int32, Int64], V '[Int16, Int32]]
+--
+--    > x <- v >#^> (mapInt64,mapInt32)
+--    Found Int16!
+--
+--    > :t x
+--    x :: V '[Int16, Int32, Int64]
+-- @
+--
+(>#^>) :: forall m fs xs zs ks ys rs.
+   ( ContVariant xs
+   , LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ks ~ ExtractMonad m zs
+   , ys ~ FlattenVariant ks
+   , Flattenable (Variant ks) (Variant ys)
+   , rs ~ Nub ys
+   , Liftable ys rs
+   , Applicative m
+   ) => Variant xs -> fs -> m (Variant rs)
+(>#^>) v fs = nubVariant <$> (flattenVariant <$> joinVariant (v >:> fs))
