@@ -68,6 +68,7 @@ module Haskus.Utils.Variant
    , liftVariant
    , nubVariant
    , productVariant
+   , Flattenable
    , FlattenVariant
    , flattenVariant
    , ExtractMonad
