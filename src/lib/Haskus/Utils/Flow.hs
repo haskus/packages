@@ -8,6 +8,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -- | First-class control-flow (based on Variant)
 module Haskus.Utils.Flow
@@ -58,13 +59,17 @@ module Haskus.Utils.Flow
    , (>=>)
    , loopM
    , whileM
+   -- * Functor, applicative equivalents
+   , (<$<)
+   , (<*<)
+   , (<|<)
    -- * Named operators
    , flowMap
    , flowBind
    , flowBind'
    , flowMatch
    , flowMatchFail
-   -- * First element operations
+   -- * Operation on first element
    , (.~.>)
    , (>.~.>)
    , (.~+>)
@@ -83,16 +88,12 @@ module Haskus.Utils.Flow
    , (>.~!>)
    , (.~!!>)
    , (>.~!!>)
-   -- * First element, pure variant
+   -- ** Pure
    , (.-.>)
    , (>.-.>)
    , (<.-.)
    , (<.-.<)
-   -- * Functor, applicative equivalents
-   , (<$<)
-   , (<*<)
-   , (<|<)
-   -- * First element, const variant
+   -- ** Const
    , (.~~.>)
    , (>.~~.>)
    , (.~~+>)
@@ -109,7 +110,7 @@ module Haskus.Utils.Flow
    , (>.~~=>)
    , (.~~!>)
    , (>.~~!>)
-   -- * Tail operations
+   -- * Operation on tail
    , (..~.>)
    , (>..~.>)
    , (..-.>)
@@ -128,7 +129,7 @@ module Haskus.Utils.Flow
    , (>..~!>)
    , (..~!!>)
    , (>..~!!>)
-   -- * Tail pop operations
+   -- * Operation on caught element in tail
    , (..%~^>)
    , (>..%~^>)
    , (..%~^^>)
@@ -149,7 +150,7 @@ module Haskus.Utils.Flow
    , (>..?~!!>)
    , (..?~!>)
    , (>..?~!>)
-   -- * Caught element operations
+   -- * Operation on caught element
    , (%~.>)
    , (>%~.>)
    , (%~+>)
@@ -186,6 +187,18 @@ module Haskus.Utils.Flow
    , (>?~!>)
    , (?~!!>)
    , (>?~!!>)
+   -- * Operation on every element
+   , (-||)
+   , (-||>)
+   , (>-||>)
+   , (~||)
+   , (~||>)
+   , (>~||>)
+   , LiftCont (..)
+   , ExtractRHS
+   , ReplaceRHS
+   , LiftContTuple
+   , ContVariant (..)
    -- * Helpers
    , makeFlowOp
    , makeFlowOpM
@@ -214,6 +227,7 @@ import Haskus.Utils.Types
 import Haskus.Utils.Types.List
 import Haskus.Utils.Monad
 import Haskus.Utils.ContFlow
+import Haskus.Utils.Tuple
 
 -- | Control-flow
 type Flow m (l :: [*]) = m (Variant l)
@@ -1778,3 +1792,254 @@ liftV = updateVariantAt @0
 -- | Lift a function into a Flow
 liftF :: Monad m => (a -> m b) -> Variant '[a] -> Flow m '[b]
 liftF = updateVariantFirstM @0
+
+
+-----------------------------------
+-- Operation on every element
+-----------------------------------
+
+-- | Replace the RHS of every function type in the list with `v`
+type family ReplaceRHS f v where
+   ReplaceRHS '[] _              = '[]
+   ReplaceRHS ((x -> _) ': xs) v = (x -> v) ': ReplaceRHS xs v
+
+-- | Extract the RHS of every function type in the list
+type family ExtractRHS f where
+   ExtractRHS '[]              = '[]
+   ExtractRHS ((_ -> x) ': xs) = x ': ExtractRHS xs
+
+type LiftContTuple x = ListToTuple (ReplaceRHS (TupleToList x) (Variant (ExtractRHS (TupleToList x))))
+
+class LiftCont x where
+   -- | Lift a tuple of functions (a -> r1, b -> r2, ...) into a tuple of
+   -- functions (a -> V '[r1,r2,...], b -> V '[r1,r2,...], ...)
+   liftCont :: x -> LiftContTuple x
+
+instance LiftCont (Single (a -> b)) where
+   liftCont (Single a) = Single (V . a)
+
+instance LiftCont (a->b,c->d) where
+   liftCont (a,b) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      )
+
+instance LiftCont (a->b,c->d,e->f) where
+   liftCont (a,b,c) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h) where
+   liftCont (a,b,c,d) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j) where
+   liftCont (a,b,c,d,e) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l) where
+   liftCont (a,b,c,d,e,f) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      , toVariantAt @5 . f
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n) where
+   liftCont (a,b,c,d,e,f,g) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      , toVariantAt @5 . f
+      , toVariantAt @6 . g
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p) where
+   liftCont (a,b,c,d,e,f,g,h) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      , toVariantAt @5 . f
+      , toVariantAt @6 . g
+      , toVariantAt @7 . h
+      )
+
+instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
+   liftCont (a,b,c,d,e,f,g,h,i) =
+      ( toVariantAt @0 . a
+      , toVariantAt @1 . b
+      , toVariantAt @2 . c
+      , toVariantAt @3 . d
+      , toVariantAt @4 . e
+      , toVariantAt @5 . f
+      , toVariantAt @6 . g
+      , toVariantAt @7 . h
+      , toVariantAt @8 . i
+      )
+
+-- | Pure multi-map
+--
+-- Map functions on a variant and produce a resulting variant
+--
+-- @
+--     > (V 'c' :: V '[Char,String]) -|| (ord,map toUpper)
+--     V 99 :: V '[Int,String]
+--
+--     > (V "test" :: V '[Char,String]) -|| (ord,map toUpper)
+--     V "TEST" :: V '[Int,String]
+--
+--     > (V "test" :: V '[Char,String]) -|| (ord,length)
+--     V 4 :: V '[Int,Int]
+-- @
+--
+(-||) :: forall fs xs zs.
+   ( LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ContVariant xs
+   ) => Variant xs -> fs -> Variant zs
+(-||) v fs = variantToCont v >::> liftCont fs
+
+-- | Applicative pure multi-map
+(-||>) :: forall m fs xs zs ks.
+   ( LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ContVariant xs
+   , ks ~ ExtractMonad m zs
+   , Applicative m
+   ) => Variant xs -> fs -> Flow m ks
+(-||>) v fs = joinVariant (v -|| fs)
+
+-- | Monadic pure multi-map
+(>-||>) :: forall m fs xs zs ks.
+   ( LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ContVariant xs
+   , ks ~ ExtractMonad m zs
+   , Monad m
+   ) => Flow m xs -> fs -> Flow m ks
+(>-||>) act fs = do
+   r <- act
+   r -||> fs
+
+-- | Variant multi-map
+--
+-- Map functions returning a variant on a variant and produce a resulting
+-- flattened and nub'ed variant
+--
+-- @
+--     mapInt64 :: Int64 -> V '[Int16,Int32,Int64]
+--     mapInt64 x
+--        | x <= 0xffff     = toVariantAt @0 (fromIntegral x)
+--        | x <= 0xffffffff = toVariantAt @1 (fromIntegral x)
+--        | otherwise       = toVariantAt @2 x
+--     
+--     mapInt32 :: Int32 -> V '[Int16,Int32]
+--     mapInt32 x
+--        | x <= 0xffff     = toVariantAt @0 (fromIntegral x)
+--        | otherwise       = toVariantAt @1 x
+--     
+--     > V @Int64 @'[Int64,Int32] 10 ~|| (mapInt64,mapInt32)
+--     V 10 :: Variant '[Int16, Int32, Int64]
+-- @
+--
+(~||) :: forall fs xs zs ys rs.
+   ( LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ContVariant xs
+   , ys ~ FlattenVariant zs
+   , Flattenable (Variant zs) (Variant ys)
+   , Liftable ys (Nub ys)
+   , rs ~ Nub ys
+   ) => Variant xs -> fs -> Variant rs
+(~||) v fs = nubVariant (flattenVariant (v -|| fs))
+
+-- | Applicative variant multi-map
+--
+-- @
+--    mapInt64 :: Int64 -> IO (V '[Int16,Int32,Int64])
+--    mapInt64 x
+--       | x <= 0xffff     = do
+--          putStrLn "Found Int16!"
+--          return (toVariantAt @0 (fromIntegral x))
+--       | x <= 0xffffffff = do
+--          putStrLn "Found Int32!"
+--          return (toVariantAt @1 (fromIntegral x))
+--       | otherwise       = do
+--          putStrLn "Found Int64!"
+--          return (toVariantAt @2 x)
+--
+--    mapInt32 :: Int32 -> IO (V '[Int16,Int32])
+--    mapInt32 x
+--       | x <= 0xffff     = do
+--          putStrLn "Found Int16!"
+--          return (toVariantAt @0 (fromIntegral x))
+--       | otherwise       = do
+--          putStrLn "Found Int32!"
+--          return (toVariantAt @1 x)
+--
+--    v = V @Int64 @'[Int64,Int32] 10
+--
+--    > x <- v -||> (mapInt64,mapInt32)
+--    Found Int16!
+--
+--    > :t x
+--    x :: V '[V '[Int16, Int32, Int64], V '[Int16, Int32]]
+--
+--    > x <- v ~||> (mapInt64,mapInt32)
+--    Found Int16!
+--
+--    > :t x
+--    x :: V '[Int16, Int32, Int64]
+-- @
+--
+(~||>) :: forall m fs xs zs ks ys rs.
+   ( ContVariant xs
+   , LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ks ~ ExtractMonad m zs
+   , ys ~ FlattenVariant ks
+   , Flattenable (Variant ks) (Variant ys)
+   , rs ~ Nub ys
+   , Liftable ys rs
+   , Applicative m
+   ) => Variant xs -> fs -> Flow m rs
+(~||>) v fs = nubVariant <$> (flattenVariant <$> joinVariant (v -|| fs))
+
+-- | Monadic variant multi-map
+(>~||>) :: forall m fs xs zs ks ys rs.
+   ( ContVariant xs
+   , LiftCont fs
+   , zs ~ ExtractRHS (TupleToList fs)
+   , LiftContTuple fs ~ ContListToTuple xs (Variant zs)
+   , ks ~ ExtractMonad m zs
+   , ys ~ FlattenVariant ks
+   , Flattenable (Variant ks) (Variant ys)
+   , rs ~ Nub ys
+   , Liftable ys rs
+   , Monad m
+   ) => Flow m xs -> fs -> Flow m rs
+(>~||>) act fs = do
+   r <- act
+   r ~||> fs
