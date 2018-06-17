@@ -23,7 +23,6 @@ where
 
 import Haskus.Utils.Tuple
 import Haskus.Utils.Types
-import Haskus.Utils.Types.List
 
 -- | A continuation based control-flow
 newtype ContFlow (xs :: [*]) r = ContFlow (ContListToTuple xs r -> r)

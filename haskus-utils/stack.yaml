@@ -2,6 +2,8 @@ resolver: https://raw.githubusercontent.com/haskus/haskus-snapshots/c4e1ccf13fc3
 
 packages:
 - '.'
+
+extra-deps:
 - '../haskus-utils-types'
 - '../haskus-utils-data'
 - '../haskus-utils-variant'
