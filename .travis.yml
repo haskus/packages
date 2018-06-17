@@ -33,11 +33,9 @@ before_install:
 
 install:
 # Build dependencies
-- cd haskus-utils
-- stack --no-terminal --install-ghc test --only-dependencies
+- (cd haskus-utils ; stack --no-terminal --install-ghc test --only-dependencies)
 
 script:
 # Build the package, its tests, and its docs and run the tests
-- cd haskus-utils
-- stack --no-terminal test --haddock --no-haddock-deps
+- (cd haskus-utils ; stack --no-terminal test --haddock --no-haddock-deps)
 
