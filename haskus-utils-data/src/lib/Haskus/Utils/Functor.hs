@@ -1,5 +1,3 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 -- | Functor helpers
 module Haskus.Utils.Functor
    ( module Data.Functor.Foldable

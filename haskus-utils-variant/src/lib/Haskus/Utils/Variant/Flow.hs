@@ -10,12 +10,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 
--- | First-class control-flow (based on Variant)
-module Haskus.Utils.Flow
+-- | Variant based control-flow
+module Haskus.Utils.Variant.Flow
    ( Flow
    , IOV
-   , MonadIO (..)
-   , MonadInIO (..)
    -- * Flow utils
    , flowRes
    , flowSingle
@@ -30,35 +28,6 @@ module Haskus.Utils.Flow
    , Liftable
    , Popable
    , MaybePopable
-   -- * Non-variant single operations
-   , (|>)
-   , (<|)
-   , (||>)
-   , (<||)
-   -- * Monadic/applicative operators
-   , when
-   , unless
-   , whenM
-   , unlessM
-   , ifM
-   , guard
-   , void
-   , forever
-   , foldM
-   , foldM_
-   , forM
-   , forM_
-   , mapM
-   , mapM_
-   , sequence
-   , replicateM
-   , replicateM_
-   , filterM
-   , join
-   , (<=<)
-   , (>=>)
-   , loopM
-   , whileM
    -- * Functor, applicative equivalents
    , (<$<)
    , (<*<)
@@ -225,7 +194,6 @@ where
 import Haskus.Utils.Variant
 import Haskus.Utils.Types
 import Haskus.Utils.Types.List
-import Haskus.Utils.Monad
 import Haskus.Utils.ContFlow
 import Haskus.Utils.Tuple
 
@@ -316,38 +284,6 @@ liftm :: Monad m => (Variant x -> a -> m b) -> Flow m x -> a -> m b
 liftm op x a = do
    x' <- x
    op x' a
-
-----------------------------------------------------------
--- Single element not wrapped into a variant
-----------------------------------------------------------
-
--- | Apply a function
-(|>) :: a -> (a -> b) -> b
-{-# INLINE (|>) #-}
-x |> f = f x
-
-infixl 0 |>
-
--- | Apply a function
-(<|) :: (a -> b) -> a -> b
-{-# INLINE (<|) #-}
-f <| x = f x
-
-infixr 0 <|
-
--- | Apply a function in a Functor
-(||>) :: Functor f => f a -> (a -> b) -> f b
-{-# INLINE (||>) #-}
-x ||> f = fmap f x
-
-infixl 0 ||>
-
--- | Apply a function in a Functor
-(<||) :: Functor f => (a -> b) -> f a -> f b
-{-# INLINE (<||) #-}
-f <|| x = fmap f x
-
-infixr 0 <||
 
 ----------------------------------------------------------
 -- Named operators

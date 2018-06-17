@@ -1,0 +1,9 @@
+resolver: lts-11.13
+
+packages:
+- '.'
+- '../haskus-utils-types'
+- '../haskus-utils-data'
+
+ghc-options:
+   "$locals": -fhide-source-paths

@@ -12,8 +12,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ConstraintKinds #-}
 
--- | Functor Variant
-module Haskus.Utils.VariantF
+-- | Extensible ADT
+module Haskus.Utils.EADT
    ( VariantF (..)
    , ApplyAll
    , pattern FV
