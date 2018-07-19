@@ -12,7 +12,7 @@ build-type:          Simple
 cabal-version:       >=1.20
 
 description:
-   Data utility modules
+   Haskus data utility modules
 
 source-repository head
   type: git

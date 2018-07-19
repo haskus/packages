@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/haskus/haskus-snapshots/c4e1ccf13fc397de50905c94c7b4eda249eba23c/haskus-0.yaml
+resolver: lts-12.1
 
 packages:
 - '.'

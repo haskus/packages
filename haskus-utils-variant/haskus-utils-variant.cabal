@@ -12,7 +12,8 @@ build-type:          Simple
 cabal-version:       >=1.20
 
 description:
-   Variant datatype
+   Variant (extensible sum type) and EADT (extensible recursive sum type)
+   datatypes.
 
 source-repository head
   type: git

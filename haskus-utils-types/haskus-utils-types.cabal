@@ -12,7 +12,7 @@ build-type:          Simple
 cabal-version:       >=1.20
 
 description:
-   Types utility modules
+   Haskus types utility modules
 
 extra-source-files:
    CHANGES
