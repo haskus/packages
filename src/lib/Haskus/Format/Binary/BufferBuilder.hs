@@ -19,9 +19,9 @@ import Haskus.Format.Binary.Buffer
 import qualified Haskus.Format.Binary.BufferList as BL
 
 -- | Buffer builder
-newtype BufferBuilder = BufferBuilder B.Builder
-
-deriving instance Monoid BufferBuilder
+newtype BufferBuilder
+   = BufferBuilder B.Builder
+   deriving (Semigroup,Monoid)
 
 -- | Empty buffer builder
 emptyBufferBuilder :: BufferBuilder

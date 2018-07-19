@@ -1,6 +1,13 @@
-resolver: https://raw.githubusercontent.com/haskus/haskus-snapshots/master/haskus-3.yaml
+resolver: lts-12.1
+
 packages:
 - '.'
+
+extra-deps:
+- haskus-utils-1.0
+- haskus-utils-data-1.0
+- haskus-utils-types-1.0
+- haskus-utils-variant-1.0
 
 ghc-options:
    "$locals": -fhide-source-paths
