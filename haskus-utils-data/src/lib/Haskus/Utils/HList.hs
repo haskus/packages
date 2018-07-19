@@ -139,7 +139,7 @@ instance (z ~ z') => HFoldl f z '[] z' where
 
 -- | Like HFoldl but only use types, not values!
 --
--- It allows us to foldr over a list of types, without any associated hlist of
+-- It allows us to foldl over a list of types, without any associated hlist of
 -- values.
 class HFoldl' f (z :: *) xs (r :: *) where
     hFoldl' :: f -> z -> HList xs -> r
