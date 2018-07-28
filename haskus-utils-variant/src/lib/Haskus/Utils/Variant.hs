@@ -61,6 +61,7 @@ module Haskus.Utils.Variant
    , alterVariant
    , traverseVariant
    , traverseVariant_
+   , gatherVariant
    -- * Conversions between variants
    , appendVariant
    , prependVariant
@@ -489,6 +490,13 @@ foldMapVariant f v = case popVariant v of
 -- Generic operations with type classes
 -----------------------------------------------------------
 
+-- | Useful to specify a "* -> Constraint" function returning no constraint
+class NoConstraint a
+instance NoConstraint a
+
+-- | Wrap a function and its constraints
+newtype Alter (c :: * -> Constraint) = Alter (forall a. c a => a -> a)
+
 class AlterVariant c (b :: [*]) where
    alterVariant' :: Alter c -> Word -> Any -> Any
 
@@ -507,15 +515,31 @@ instance
             0 -> unsafeCoerce (f (unsafeCoerce v :: x))
             n -> alterVariant' @c @xs m (n-1) v
 
--- | Wrap a function and its constraints
-data Alter (c :: * -> Constraint) = Alter (forall a. c a => a -> a)
+-- | Alter a variant. You need to specify the constraints required by the
+-- modifying function.
+--
+-- Usage:
+--    alterVariant @NoConstraint id         v
+--    alterVariant @Resizable    (resize 4) v
+--
+--
+--    -- Multiple constraints:
+--    class (Ord a, Num a) => OrdNum a
+--    instance (Ord a, Num a) => OrdNum a
+--    alterVariant @OrdNum foo v
+--
+{-# INLINABLE alterVariant #-}
+alterVariant :: forall c (a :: [*]).
+   ( AlterVariant c a
+   ) => (forall x. c x => x -> x) -> Variant a  -> Variant a
+alterVariant f (Variant t a) = 
+   Variant t (alterVariant' @c @a (Alter @c f) t a)
+
+
+
 
 -- | Wrap a function and its constraints
 data AlterM (c :: * -> Constraint) m = AlterM (forall a. (Monad m, c a) => a -> m a)
-
--- | Useful to specify a "* -> Constraint" function returning no constraint
-class NoConstraint a
-instance NoConstraint a
 
 class TraverseVariant c (b :: [*]) m where
    traverseVariant' :: AlterM c m -> Word -> Any -> m Any
@@ -537,26 +561,9 @@ instance
             n -> traverseVariant' @c @xs m (n-1) v
 
 
--- | Alter a variant. You need to specify the constraints required by the
--- modifying function.
---
--- Usage:
---    alterVariant @NoConstraint id         v
---    alterVariant @Resizable    (resize 4) v
---
---    class (Ord a, Num a) => OrdNum a
---    instance (Ord a, Num a) => OrdNum a
---
-{-# INLINE alterVariant #-}
-alterVariant :: forall c (a :: [*]).
-   ( AlterVariant c a
-   ) => (forall x. c x => x -> x) -> Variant a  -> Variant a
-alterVariant f (Variant t a) = 
-   Variant t (alterVariant' @c @a (Alter @c f) t a)
-
 -- | Traverse a variant. You need to specify the constraints required by the
 -- modifying function.
-{-# INLINE traverseVariant #-}
+{-# INLINABLE traverseVariant #-}
 traverseVariant :: forall c (a :: [*]) m.
    ( TraverseVariant c a m
    , Monad m
@@ -566,14 +573,48 @@ traverseVariant f (Variant t a) =
 
 -- | Traverse a variant. You need to specify the constraints required by the
 -- modifying function.
+{-# INLINABLE traverseVariant_ #-}
 traverseVariant_ :: forall c (a :: [*]) m.
    ( TraverseVariant c a m
    , Monad m
-   ) => (forall x. c x => x -> m ()) -> Variant a  -> m ()
+   ) => (forall x. c x => x -> m ()) -> Variant a -> m ()
 traverseVariant_ f v = void (traverseVariant @c @a f' v)
    where
       f' :: forall x. c x => x -> m x
       f' x = f x >> return x
+
+
+
+class GatherVariant c r (b :: [*]) where
+   gatherVariant' :: (forall a. c a => a -> r) -> Word -> Any -> r
+
+instance GatherVariant c r '[] where
+   {-# INLINE gatherVariant' #-}
+   gatherVariant' _ = undefined
+
+instance
+   ( GatherVariant c r xs
+   , c x
+   ) => GatherVariant c r (x ': xs)
+   where
+      {-# INLINE gatherVariant' #-}
+      gatherVariant' f t v =
+         case t of
+            0 -> f (unsafeCoerce v :: x)
+            n -> gatherVariant' @c @r @xs f (n-1) v
+
+-- | Reduce a variant to a single value by using a class function. You need to
+-- specify the constraints required by the modifying function.
+--
+-- Usage:
+--    gatherVariant @Show show v
+--
+{-# INLINE gatherVariant #-}
+gatherVariant :: forall c r (a :: [*]).
+   ( GatherVariant c r a
+   ) => (forall x. c x => x -> r) -> Variant a  -> r
+gatherVariant f (Variant t a) = gatherVariant' @c @r @a f t a
+
 
 -----------------------------------------------------------
 -- Conversions between variants
