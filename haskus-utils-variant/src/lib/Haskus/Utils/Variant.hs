@@ -55,12 +55,13 @@ module Haskus.Utils.Variant
    , foldMapVariantFirstM
    , foldMapVariant
    -- * Generic operations with type classes
-   , AlterVariant
-   , TraverseVariant
    , NoConstraint
+   , AlterVariant
    , alterVariant
+   , TraverseVariant
    , traverseVariant
    , traverseVariant_
+   , GatherVariant
    , gatherVariant
    -- * Conversions between variants
    , appendVariant
@@ -95,7 +96,7 @@ module Haskus.Utils.Variant
 where
 
 import Unsafe.Coerce
-import GHC.Exts (Any,Constraint)
+import GHC.Exts (Any)
 
 import Haskus.Utils.Monad
 import Haskus.Utils.Types
@@ -490,19 +491,16 @@ foldMapVariant f v = case popVariant v of
 -- Generic operations with type classes
 -----------------------------------------------------------
 
--- | Useful to specify a "* -> Constraint" function returning no constraint
+-- | Useful to specify a "* -> Constraint" function returning an empty constraint
 class NoConstraint a
 instance NoConstraint a
 
--- | Wrap a function and its constraints
-newtype Alter (c :: * -> Constraint) = Alter (forall a. c a => a -> a)
-
 class AlterVariant c (b :: [*]) where
-   alterVariant' :: Alter c -> Word -> Any -> Any
+   alterVariant' :: (forall a. c a => a -> a) -> Word -> Any -> Any
 
 instance AlterVariant c '[] where
    {-# INLINE alterVariant' #-}
-   alterVariant' = undefined
+   alterVariant' _ = undefined
 
 instance
    ( AlterVariant c xs
@@ -510,10 +508,10 @@ instance
    ) => AlterVariant c (x ': xs)
    where
       {-# INLINE alterVariant' #-}
-      alterVariant' m@(Alter f) t v =
+      alterVariant' f t v =
          case t of
             0 -> unsafeCoerce (f (unsafeCoerce v :: x))
-            n -> alterVariant' @c @xs m (n-1) v
+            n -> alterVariant' @c @xs f (n-1) v
 
 -- | Alter a variant. You need to specify the constraints required by the
 -- modifying function.
@@ -533,20 +531,17 @@ alterVariant :: forall c (a :: [*]).
    ( AlterVariant c a
    ) => (forall x. c x => x -> x) -> Variant a  -> Variant a
 alterVariant f (Variant t a) = 
-   Variant t (alterVariant' @c @a (Alter @c f) t a)
+   Variant t (alterVariant' @c @a f t a)
 
 
 
-
--- | Wrap a function and its constraints
-data AlterM (c :: * -> Constraint) m = AlterM (forall a. (Monad m, c a) => a -> m a)
 
 class TraverseVariant c (b :: [*]) m where
-   traverseVariant' :: AlterM c m -> Word -> Any -> m Any
+   traverseVariant' :: (forall a . (Monad m, c a) => a -> m a) -> Word -> Any -> m Any
 
 instance TraverseVariant c '[] m where
    {-# INLINE traverseVariant' #-}
-   traverseVariant' = undefined
+   traverseVariant' _ = undefined
 
 instance
    ( TraverseVariant c xs m
@@ -555,10 +550,10 @@ instance
    ) => TraverseVariant c (x ': xs) m
    where
       {-# INLINE traverseVariant' #-}
-      traverseVariant' m@(AlterM f) t v =
+      traverseVariant' f t v =
          case t of
             0 -> unsafeCoerce <$> f (unsafeCoerce v :: x)
-            n -> traverseVariant' @c @xs m (n-1) v
+            n -> traverseVariant' @c @xs f (n-1) v
 
 
 -- | Traverse a variant. You need to specify the constraints required by the
@@ -569,7 +564,7 @@ traverseVariant :: forall c (a :: [*]) m.
    , Monad m
    ) => (forall x. c x => x -> m x) -> Variant a  -> m (Variant a)
 traverseVariant f (Variant t a) = 
-   Variant t <$> traverseVariant' @c @a (AlterM @c @m f) t a
+   Variant t <$> traverseVariant' @c @a f t a
 
 -- | Traverse a variant. You need to specify the constraints required by the
 -- modifying function.
