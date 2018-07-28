@@ -61,8 +61,8 @@ module Haskus.Utils.Variant
    , TraverseVariant
    , traverseVariant
    , traverseVariant_
-   , GatherVariant
-   , gatherVariant
+   , ReduceVariant
+   , reduceVariant
    -- * Conversions between variants
    , appendVariant
    , prependVariant
@@ -580,35 +580,35 @@ traverseVariant_ f v = void (traverseVariant @c @a f' v)
 
 
 
-class GatherVariant c r (b :: [*]) where
-   gatherVariant' :: (forall a. c a => a -> r) -> Word -> Any -> r
+class ReduceVariant c r (b :: [*]) where
+   reduceVariant' :: (forall a. c a => a -> r) -> Word -> Any -> r
 
-instance GatherVariant c r '[] where
-   {-# INLINE gatherVariant' #-}
-   gatherVariant' _ = undefined
+instance ReduceVariant c r '[] where
+   {-# INLINE reduceVariant' #-}
+   reduceVariant' _ = undefined
 
 instance
-   ( GatherVariant c r xs
+   ( ReduceVariant c r xs
    , c x
-   ) => GatherVariant c r (x ': xs)
+   ) => ReduceVariant c r (x ': xs)
    where
-      {-# INLINE gatherVariant' #-}
-      gatherVariant' f t v =
+      {-# INLINE reduceVariant' #-}
+      reduceVariant' f t v =
          case t of
             0 -> f (unsafeCoerce v :: x)
-            n -> gatherVariant' @c @r @xs f (n-1) v
+            n -> reduceVariant' @c @r @xs f (n-1) v
 
 -- | Reduce a variant to a single value by using a class function. You need to
 -- specify the constraints required by the modifying function.
 --
 -- Usage:
---    gatherVariant @Show show v
+--    reduceVariant @Show show v
 --
-{-# INLINE gatherVariant #-}
-gatherVariant :: forall c r (a :: [*]).
-   ( GatherVariant c r a
+{-# INLINE reduceVariant #-}
+reduceVariant :: forall c r (a :: [*]).
+   ( ReduceVariant c r a
    ) => (forall x. c x => x -> r) -> Variant a  -> r
-gatherVariant f (Variant t a) = gatherVariant' @c @r @a f t a
+reduceVariant f (Variant t a) = reduceVariant' @c @r @a f t a
 
 
 -----------------------------------------------------------
