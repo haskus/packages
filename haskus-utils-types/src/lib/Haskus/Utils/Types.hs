@@ -6,6 +6,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE CPP #-}
+
+-- We need this otherwise GHC chokes on the export of
+-- "type (*)"
+#if MIN_VERSION_GLASGOW_HASKELL (8,6,0,0)
+{-# LANGUAGE NoStarIsType #-}
+#endif
 
 -- | Common type functions
 module Haskus.Utils.Types
