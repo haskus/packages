@@ -18,7 +18,7 @@
 
 -- | Open sum type
 module Haskus.Utils.Variant
-   ( Variant
+   ( Variant (..)
    , V
    , variantIndex
    -- * Patterns
