@@ -66,7 +66,7 @@ instance (Functor (VariantF fs), Functor f) => Functor (VariantF (f ': fs)) wher
       Left xs -> toVariantFTail (fmap f (VariantF xs))
 
 -- | Pattern-match in a VariantF
-pattern FV :: forall c cs e. Popable c (ApplyAll e cs) => c -> VariantF cs e
+pattern FV :: forall c cs e. c :< (ApplyAll e cs) => c -> VariantF cs e
 pattern FV x = VariantF (V x)
 
 -- | Retrieve a single value
@@ -97,7 +97,7 @@ popVariantFHead (VariantF v) = case popVariantHead v of
 
 -- | Pop VariantF
 popVariantF :: forall x xs ys e.
-   ( Popable (x e) (ApplyAll e xs)
+   ( x e :< ApplyAll e xs
    , Filter (x e) (ApplyAll e xs) ~ ApplyAll e ys
    ) => VariantF xs e -> Either (VariantF ys e) (x e)
 {-# INLINE popVariantF #-}
@@ -172,7 +172,7 @@ liftEADT = cata (Fix . liftVariantF)
 popEADT :: forall xs f e.
    ( f :<: xs
    , e ~ EADT xs
-   , Popable (f e) (ApplyAll e xs)
+   , f e :< ApplyAll e xs
    , Filter (f e) (ApplyAll e xs) ~ ApplyAll e (Filter f xs)
    ) => EADT xs -> Either (VariantF (Filter f xs) (EADT xs)) (f (EADT xs))
 popEADT (Fix v) = popVariantF v

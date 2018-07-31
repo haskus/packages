@@ -40,8 +40,6 @@ module Haskus.Utils.Variant
    , toVariant
    , Member
    , Filter
-   , Popable
-   , MaybePopable
    , popVariant
    , popVariantMaybe
    , fromVariant
@@ -120,7 +118,7 @@ type role Variant representational
 -- Usage: case v of
 --          V (x :: Int)    -> ...
 --          V (x :: String) -> ...
-pattern V :: forall c cs. Popable c cs => c -> Variant cs
+pattern V :: forall c cs. (c :< cs) => c -> Variant cs
 pattern V x <- (fromVariant -> Just x)
    where
       V x = toVariant x
@@ -128,8 +126,8 @@ pattern V x <- (fromVariant -> Just x)
 -- | Silent pattern synonym for Variant
 --
 -- Usage: case v of
---          V (x :: Int)    -> ...
---          V (x :: String) -> ...
+--          V' (x :: Int)    -> ...
+--          V' (x :: String) -> ...
 pattern V' :: forall c cs.
    ( Member' c cs
    , PopVariant c cs
@@ -139,7 +137,7 @@ pattern V' x <- (fromVariant' -> Just x)
       V' x = toVariant' x
 
 -- | Statically unchecked matching on a Variant
-pattern VMaybe :: forall c cs. (MaybePopable c cs) => c -> Variant cs
+pattern VMaybe :: forall c cs. (c :<? cs) => c -> Variant cs
 pattern VMaybe x <- (fromVariantMaybe -> Just x)
 
 instance Eq (Variant '[]) where
@@ -294,32 +292,30 @@ instance forall a xs n xs' y ys.
               | n-1 < t   -> popVariant' @a @xs' (Variant (t-1) a)
               | otherwise -> Left (Variant t a)
 
--- | a is popable in xs
-type Popable a xs =
-   ( Member a xs
-   , PopVariant a xs
+-- | A value of type "x" can be extracted from (V xs)
+type (:<) x xs =
+   ( Member x xs
+   , x :<? xs
    )
 
--- | a may be popable in xs
-type MaybePopable a xs =
-   ( PopVariant a xs
+-- | A value of type "x" **might** be extracted from (V xs).
+-- We don't check that "x" is in "xs".
+type (:<?) x xs =
+   ( PopVariant x xs
    )
-
-type (:<) a xs  = Popable a xs
-type (:<?) a xs = MaybePopable a xs
 
 
 -- | Extract a type from a variant. Return either the value of this type or the
 -- remaining variant
 popVariant :: forall a xs.
-   ( Popable a xs
+   ( a :< xs
    ) => Variant xs -> Either (Variant (Filter a xs)) a
 popVariant v = popVariant' @a v
 
 -- | Extract a type from a variant. Return either the value of this type or the
 -- remaining variant
 popVariantMaybe :: forall a xs.
-   ( MaybePopable a xs
+   ( a :<? xs
    ) => Variant xs -> Either (Variant (Filter a xs)) a
 popVariantMaybe v = popVariant' @a v
 
@@ -334,7 +330,7 @@ fromVariantFirst = fromVariantAt @(IndexOf a l)
 
 -- | Try to a get a value of a given type from a Variant
 fromVariant :: forall a xs.
-   ( Popable a xs
+   ( a :< xs
    ) => Variant xs -> Maybe a
 {-# INLINE fromVariant #-}
 fromVariant v = case popVariant v of
@@ -353,7 +349,7 @@ fromVariant' v = case popVariant' v of
 -- | Try to a get a value of a given type from a Variant that may not even
 -- support the given type.
 fromVariantMaybe :: forall a xs.
-   ( MaybePopable a xs
+   ( a :<? xs
    ) => Variant xs -> Maybe a
 {-# INLINE fromVariantMaybe #-}
 fromVariantMaybe v = case popVariantMaybe v of
@@ -473,7 +469,7 @@ foldMapVariantFirstM f v = foldMapVariantAtM @n f v
 -- | Update a variant value with a variant and fold the result
 foldMapVariant :: forall a cs ds i.
    ( i ~ IndexOf a cs
-   , Popable a cs
+   , a :< cs
    ) => (a -> V ds) -> V cs -> V (InsertAt i (Filter a cs) ds)
 foldMapVariant f v = case popVariant v of
    Right a -> case f a of
