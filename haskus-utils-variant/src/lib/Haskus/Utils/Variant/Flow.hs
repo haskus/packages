@@ -1859,8 +1859,9 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , zs ~ ExtractRHS (TupleToList fs)
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
    , ContVariant xs
-   , ks ~ ExtractMonad m zs
+   , ks ~ ExtractM m zs
    , Applicative m
+   , JoinVariant m zs
    ) => V xs -> fs -> Flow m ks
 (-||>) v fs = joinVariant (v -|| fs)
 
@@ -1870,8 +1871,9 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , zs ~ ExtractRHS (TupleToList fs)
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
    , ContVariant xs
-   , ks ~ ExtractMonad m zs
+   , ks ~ ExtractM m zs
    , Monad m
+   , JoinVariant m zs
    ) => Flow m xs -> fs -> Flow m ks
 (>-||>) act fs = do
    r <- act
@@ -1954,12 +1956,13 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , LiftCont fs
    , zs ~ ExtractRHS (TupleToList fs)
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
-   , ks ~ ExtractMonad m zs
+   , ks ~ ExtractM m zs
    , ys ~ FlattenVariant ks
    , Flattenable (V ks) (V ys)
    , rs ~ Nub ys
    , Liftable ys rs
    , Applicative m
+   , JoinVariant m zs
    ) => V xs -> fs -> Flow m rs
 (~||>) v fs = nubVariant <$> (flattenVariant <$> joinVariant (v -|| fs))
 
@@ -1969,12 +1972,13 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , LiftCont fs
    , zs ~ ExtractRHS (TupleToList fs)
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
-   , ks ~ ExtractMonad m zs
+   , ks ~ ExtractM m zs
    , ys ~ FlattenVariant ks
    , Flattenable (V ks) (V ys)
    , rs ~ Nub ys
    , Liftable ys rs
    , Monad m
+   , JoinVariant m zs
    ) => Flow m xs -> fs -> Flow m rs
 (>~||>) act fs = do
    r <- act

@@ -70,8 +70,10 @@ module Haskus.Utils.Variant
    , Flattenable
    , FlattenVariant
    , flattenVariant
-   , ExtractMonad
+   , ExtractM
    , joinVariant
+   , joinVariantUnsafe
+   , JoinVariant
    -- * Conversions to/from other data types
    , variantToValue
    , variantFromValue
@@ -698,20 +700,43 @@ flattenVariant :: forall xs.
    ) => V xs -> V (FlattenVariant xs)
 flattenVariant v = toFlattenVariant 0 v
 
-type family ExtractMonad m f where
-   ExtractMonad m '[m x]      = '[x]
-   ExtractMonad m (m x ': xs) = x ': ExtractMonad m xs
+type family ExtractM m f where
+   ExtractM m '[]         = '[]
+   ExtractM m (m x ': xs) = x ': ExtractM m xs
 
--- | Join on a variant
+class JoinVariant m xs where
+   -- | Join on a variant
+   --
+   -- Transform a variant of applicatives as follow:
+   --    f :: V '[m a, m b, m c] -> m (V '[a,b,c])
+   --    f = joinVariant @m
+   --
+   joinVariant :: V xs -> m (V (ExtractM m xs))
+
+instance JoinVariant m '[] where
+   {-# INLINE joinVariant #-}
+   joinVariant _ = undefined
+
+instance forall m xs a.
+   ( Functor m
+   , ExtractM m (m a ': xs) ~ (a ': ExtractM m xs)
+   , JoinVariant m xs
+   ) => JoinVariant m (m a ': xs) where
+   {-# INLINE joinVariant #-}
+   joinVariant (Variant 0 a) = (Variant 0 . unsafeCoerce) <$> (unsafeCoerce a :: m a)
+   joinVariant (Variant n a) = prependVariant @'[a] <$> joinVariant (Variant (n-1) a :: V xs)
+
+-- | Join on a variant in an unsafe way.
 --
--- Transform a variant of applicatives as follow:
---    V '[m a, m b, m c] ===> m (V '[a,b,c])
+-- Works with IO for example but not with Maybe.
 --
-joinVariant :: forall m xs ys.
-   ( Applicative m
-   , ys ~ ExtractMonad m xs
+joinVariantUnsafe :: forall m xs ys.
+   ( Functor m
+   , ys ~ ExtractM m xs
    ) => V xs -> m (V ys)
-joinVariant (Variant t act) = Variant t <$> (unsafeCoerce act :: m Any)
+joinVariantUnsafe (Variant t act) = Variant t <$> (unsafeCoerce act :: m Any)
+
+
 
 -----------------------------------------------------------
 -- Conversions to other data types
