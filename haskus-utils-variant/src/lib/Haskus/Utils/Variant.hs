@@ -178,7 +178,11 @@ instance
    ) => Show (V (x ': xs))
    where
       show v = case popVariantHead v of
-         Right x -> "V @" ++ show (typeOf x) ++ " " ++ show x
+         Right x -> let parens s
+                           | ' ' `elem` s = "(" ++ s ++ ")"
+                           | otherwise    = s
+                        -- naive parenthesing but it works
+                     in "V @" ++ parens (show (typeOf x)) ++ " " ++ parens (show x)
          Left xs -> show xs
 
 -----------------------------------------------------------
