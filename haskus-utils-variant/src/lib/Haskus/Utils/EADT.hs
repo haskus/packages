@@ -148,9 +148,9 @@ pattern VF :: forall e f cs.
    ( e ~ EADT cs  -- allow easy use of TypeApplication to set the EADT type
    , f :<: cs     -- constraint synonym ensuring `f` is in `cs`
    ) => f (EADT cs) -> EADT cs
-pattern VF x = Fix (VariantF (V' x))   -- `V'` match a variant value (without
-                                       -- checking the membership: we already
-                                       -- do it with :<:)
+pattern VF x = Fix (VariantF (VSilent x))
+   -- `VSilent` matches a variant value without checking the membership: we
+   -- already do it with :<:
 
 -- | Append new "constructors" to the EADT
 appendEADT :: forall ys xs zs.

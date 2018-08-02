@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Tools to write parsers using Flows
 module Haskus.Utils.Parser
@@ -54,7 +55,7 @@ instance forall x y z xs ys zs m a.
       ( x ~ Flow m xs
       , y ~ Flow m ys
       , z ~ Flow m zs
-      , Popable a xs
+      , a :< xs
       , Liftable ys zs
       , Liftable (Filter a xs) zs
       , zs ~ Union (Filter a xs) ys
@@ -86,8 +87,8 @@ choice' = hFoldl (Choice :: Choice a) (flowSingle undefined :: Flow m '[a])
 many ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , Popable ParseError xs
-   ) => Flow m xs -> Flow m '[[Variant zs]]
+   , ParseError :< xs
+   ) => Flow m xs -> Flow m '[[V zs]]
 many f = manyBounded Nothing Nothing f
             >%~^> \(_ :: ParseError) -> flowSingle []
 
@@ -96,8 +97,8 @@ many f = manyBounded Nothing Nothing f
 manyAtMost ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , Popable ParseError xs
-   ) => Word -> Flow m xs -> Flow m '[[Variant zs]]
+   , ParseError :< xs
+   ) => Word -> Flow m xs -> Flow m '[[V zs]]
 manyAtMost max f = manyBounded Nothing (Just max) f
                      >%~^> \(_ :: ParseError) -> flowSingle []
 
@@ -106,8 +107,8 @@ manyAtMost max f = manyBounded Nothing (Just max) f
 manyAtMost' ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , Popable ParseError xs
-   ) => Word -> Flow m xs -> m [Variant zs]
+   , ParseError :< xs
+   ) => Word -> Flow m xs -> m [V zs]
 manyAtMost' max f = variantToValue <$> manyAtMost max f
 
 -- | Apply the action zero or more times (up to max) until a ParseError result
@@ -115,7 +116,7 @@ manyAtMost' max f = variantToValue <$> manyAtMost max f
 manyAtMost'' ::
    ( '[x] ~ Filter ParseError xs
    , Monad m
-   , Popable ParseError xs
+   , ParseError :< xs
    ) => Word -> Flow m xs -> m [x]
 manyAtMost'' max f = fmap variantToValue <$> manyAtMost' max f
 
@@ -124,8 +125,8 @@ manyAtMost'' max f = fmap variantToValue <$> manyAtMost' max f
 manyAtLeast ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , Popable ParseError xs
-   ) => Word -> Flow m xs -> Flow m '[[Variant zs],ParseError]
+   , ParseError :< xs
+   ) => Word -> Flow m xs -> Flow m '[[V zs],ParseError]
 manyAtLeast min = manyBounded (Just min) Nothing
 
 -- | Apply the first action zero or more times until the second succeeds.
@@ -136,9 +137,9 @@ manyTill ::
    ( zs ~ Filter ParseError xs
    , zs' ~ Filter ParseError ys
    , Monad m
-   , MaybePopable ParseError xs
-   , Popable ParseError ys
-   ) => Flow m xs -> Flow m ys -> Flow m '[([Variant zs],Variant zs'),ParseError]
+   , ParseError :<? xs
+   , ParseError :< ys
+   ) => Flow m xs -> Flow m ys -> Flow m '[([V zs],V zs'),ParseError]
 manyTill f g = go []
    where
       go xs = do
@@ -159,9 +160,9 @@ manyTill f g = go []
 manyTill' ::
    ( zs ~ Filter ParseError xs
    , Monad m
-   , MaybePopable ParseError xs
-   , Popable ParseError ys
-   ) => Flow m xs -> Flow m ys -> Flow m '[[Variant zs],ParseError]
+   , ParseError :<? xs
+   , ParseError :< ys
+   ) => Flow m xs -> Flow m ys -> Flow m '[[V zs],ParseError]
 manyTill' f g = manyTill f g >.-.> fst
 
 -- | Apply the given action at least 'min' times and at most 'max' time
@@ -170,16 +171,16 @@ manyTill' f g = manyTill f g >.-.> fst
 manyBounded :: forall zs xs m.
    ( zs ~ Filter ParseError xs
    , Monad m
-   , MaybePopable ParseError xs
-   ) => Maybe Word -> Maybe Word -> Flow m xs -> Flow m '[[Variant zs],ParseError]
-manyBounded _ (Just 0) _   = flowSet ([] :: [Variant zs])
+   , ParseError :<? xs
+   ) => Maybe Word -> Maybe Word -> Flow m xs -> Flow m '[[V zs],ParseError]
+manyBounded _ (Just 0) _   = flowSet ([] :: [V zs])
 manyBounded (Just 0) max f = manyBounded Nothing max f
 manyBounded min max f      = do
    v <- f
    case popVariantMaybe v of
       Right (e :: ParseError) -> case min of
          Just n | n > 0 -> flowSet e
-         _              -> flowSet ([] :: [Variant zs])
+         _              -> flowSet ([] :: [V zs])
       Left x           -> do
          let minus1 = fmap (\k -> k - 1)
          xs <- manyBounded (minus1 min) (minus1 max) f

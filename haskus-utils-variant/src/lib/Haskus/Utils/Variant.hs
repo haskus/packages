@@ -82,7 +82,7 @@ module Haskus.Utils.Variant
    -- ** Continuations
    , ContVariant (..)
    -- ** Internals
-   , pattern V'
+   , pattern VSilent
    , liftVariant'
    , fromVariant'
    , popVariant'
@@ -123,15 +123,15 @@ pattern V x <- (fromVariant -> Just x)
 -- | Silent pattern synonym for Variant
 --
 -- Usage: case v of
---          V' (x :: Int)    -> ...
---          V' (x :: String) -> ...
-pattern V' :: forall c cs.
+--          VSilent (x :: Int)    -> ...
+--          VSilent (x :: String) -> ...
+pattern VSilent :: forall c cs.
    ( Member' c cs
    , PopVariant c cs
    ) => c -> V cs
-pattern V' x <- (fromVariant' -> Just x)
+pattern VSilent x <- (fromVariant' -> Just x)
    where
-      V' x = toVariant' x
+      VSilent x = toVariant' x
 
 -- | Statically unchecked matching on a Variant
 pattern VMaybe :: forall c cs. (c :<? cs) => c -> V cs
@@ -699,7 +699,7 @@ type family ExtractMonad m f where
 -- | Join on a variant
 --
 -- Transform a variant of applicatives as follow:
---    V'[m a, m b, m c] ===> m (V'[a,b,c])
+--    V '[m a, m b, m c] ===> m (V '[a,b,c])
 --
 joinVariant :: forall m xs ys.
    ( Applicative m
