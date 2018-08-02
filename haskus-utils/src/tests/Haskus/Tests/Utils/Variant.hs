@@ -24,8 +24,8 @@ data D = D deriving (Show,Eq)
 data E = E deriving (Show,Eq)
 data F = F deriving (Show,Eq)
 
-type ABC = Variant '[A,B,C]
-type DEF = Variant '[D,E,F]
+type ABC = V '[A,B,C]
+type DEF = V '[D,E,F]
 
 b :: ABC
 b = toVariantAt @1 B
@@ -75,7 +75,7 @@ testsVariant = testGroup "Variant" $
    , testProperty "Convert into tuple"
          (variantToTuple b == (Nothing, Just B, Nothing))
    , testProperty "Convert single variant"
-         (variantToValue (toVariant A :: Variant '[A]) == A)
+         (variantToValue (toVariant A :: V '[A]) == A)
 
    , testProperty "Lift Either: Left"
          (variantFromEither (Left A :: Either A B) == toVariant A)
@@ -83,9 +83,9 @@ testsVariant = testGroup "Variant" $
          (variantFromEither (Right B :: Either A B) == toVariant B)
 
    , testProperty "To Either: Left"
-         (variantToEither (toVariant B :: Variant '[A,B]) == Left B)
+         (variantToEither (toVariant B :: V '[A,B]) == Left B)
    , testProperty "To Either: Right"
-         (variantToEither (toVariant A :: Variant '[A,B]) == Right A)
+         (variantToEither (toVariant A :: V '[A,B]) == Right A)
 
    , testProperty "popVariantHead (match)"
          (popVariantHead (toVariant A :: ABC) == Right A)
@@ -98,11 +98,11 @@ testsVariant = testGroup "Variant" $
          (isLeft (popVariantAt @2 b))
 
    , testProperty "popVariant (match)"
-         (popVariant @D (toVariantAt @4 D :: Variant '[A,B,C,B,D,E,D]) == Right D)
+         (popVariant @D (toVariantAt @4 D :: V '[A,B,C,B,D,E,D]) == Right D)
    , testProperty "popVariant (match)"
-         (popVariant @D (toVariantAt @6 D :: Variant '[A,B,C,B,D,E,D]) == Right D)
+         (popVariant @D (toVariantAt @6 D :: V '[A,B,C,B,D,E,D]) == Right D)
    , testProperty "popVariant (don't match)"
-         (popVariant @B (toVariantAt @4 D :: Variant '[A,B,C,B,D,E,D]) == Left (toVariantAt @2 D))
+         (popVariant @B (toVariantAt @4 D :: V '[A,B,C,B,D,E,D]) == Left (toVariantAt @2 D))
 
    , testProperty "prependVariant"
          (fromVariantAt @4 (prependVariant @'[D,E,F] b) == Just B)
@@ -110,19 +110,19 @@ testsVariant = testGroup "Variant" $
          (fromVariantAt @1 (appendVariant @'[D,E,F] b)  == Just B)
 
    , testProperty "alterVariant"
-         (alterVariant @Num (+1) (toVariant (1.0 :: Float) :: Variant '[Int,Float]) == toVariant (2.0 :: Float))
+         (alterVariant @Num (+1) (toVariant (1.0 :: Float) :: V '[Int,Float]) == toVariant (2.0 :: Float))
    , testProperty "alterVariant"
-         (alterVariant @Num (+1) (toVariant (1.0 :: Float) :: Variant '[Float,Int]) == toVariant (2.0 :: Float))
+         (alterVariant @Num (+1) (toVariant (1.0 :: Float) :: V '[Float,Int]) == toVariant (2.0 :: Float))
 
    , testProperty "traverseVariant"
          (traverseVariant @OrdNum (\x -> if x > 1 then Just x else Nothing)
-            (toVariant (2.0 :: Float) :: Variant '[Float,Int]) == Just (toVariant (2.0 :: Float)))
+            (toVariant (2.0 :: Float) :: V '[Float,Int]) == Just (toVariant (2.0 :: Float)))
    , testProperty "traverseVariant"
          (traverseVariant @OrdNum (\x -> if x > 1 then Just x else Nothing)
-            (toVariant (0.5 :: Float) :: Variant '[Float,Int]) == Nothing)
+            (toVariant (0.5 :: Float) :: V '[Float,Int]) == Nothing)
 
    , testProperty "liftVariant"
-         (fromVariant (liftVariant b :: Variant '[D,A,E,B,F,C])  == Just B)
+         (fromVariant (liftVariant b :: V '[D,A,E,B,F,C])  == Just B)
    ]
 
 class (Ord a, Num a) => OrdNum a
