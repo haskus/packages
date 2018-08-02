@@ -94,6 +94,7 @@ where
 
 import Unsafe.Coerce
 import GHC.Exts (Any)
+import Data.Typeable
 
 import Haskus.Utils.Monad
 import Haskus.Utils.Types
@@ -173,10 +174,11 @@ instance Show (V '[]) where
 instance
    ( Show (V xs)
    , Show x
+   , Typeable x
    ) => Show (V (x ': xs))
    where
       show v = case popVariantHead v of
-         Right x -> show x
+         Right x -> "V @" ++ show (typeOf x) ++ " " ++ show x
          Left xs -> show xs
 
 -----------------------------------------------------------
