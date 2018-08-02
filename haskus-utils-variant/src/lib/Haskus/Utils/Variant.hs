@@ -18,8 +18,7 @@
 
 -- | Open sum type
 module Haskus.Utils.Variant
-   ( Variant (..)
-   , V
+   ( V (..)
    , variantIndex
    -- * Patterns
    , pattern V
@@ -105,20 +104,18 @@ import Haskus.Utils.Types.List
 
 -- | A variant contains a value whose type is at the given position in the type
 -- list
-data Variant (l :: [*]) = Variant {-# UNPACK #-} !Word Any
-
-type V = Variant
+data V (l :: [*]) = Variant {-# UNPACK #-} !Word Any
 
 -- Make GHC consider `l` as a representational parameter to make coercions
 -- between Variant values unsafe
-type role Variant representational
+type role V representational
 
 -- | Pattern synonym for Variant
 --
 -- Usage: case v of
 --          V (x :: Int)    -> ...
 --          V (x :: String) -> ...
-pattern V :: forall c cs. (c :< cs) => c -> Variant cs
+pattern V :: forall c cs. (c :< cs) => c -> V cs
 pattern V x <- (fromVariant -> Just x)
    where
       V x = toVariant x
@@ -131,22 +128,22 @@ pattern V x <- (fromVariant -> Just x)
 pattern V' :: forall c cs.
    ( Member' c cs
    , PopVariant c cs
-   ) => c -> Variant cs
+   ) => c -> V cs
 pattern V' x <- (fromVariant' -> Just x)
    where
       V' x = toVariant' x
 
 -- | Statically unchecked matching on a Variant
-pattern VMaybe :: forall c cs. (c :<? cs) => c -> Variant cs
+pattern VMaybe :: forall c cs. (c :<? cs) => c -> V cs
 pattern VMaybe x <- (fromVariantMaybe -> Just x)
 
-instance Eq (Variant '[]) where
-   (==) = error "Empty variant"
+instance Eq (V '[]) where
+   (==) _ _ = True
 
 instance
-   ( Eq (Variant xs)
+   ( Eq (V xs)
    , Eq x
-   ) => Eq (Variant (x ': xs))
+   ) => Eq (V (x ': xs))
    where
       {-# INLINE (==) #-}
       (==) v1@(Variant t1 _) v2@(Variant t2 _)
@@ -156,13 +153,13 @@ instance
             (Left as, Left bs) -> as == bs
             _                  -> False
 
-instance Ord (Variant '[]) where
+instance Ord (V '[]) where
    compare = error "Empty variant"
 
 instance
-   ( Ord (Variant xs)
+   ( Ord (V xs)
    , Ord x
-   ) => Ord (Variant (x ': xs))
+   ) => Ord (V (x ': xs))
    where
       compare v1 v2 = case (popVariantHead v1, popVariantHead v2) of
          (Right a, Right b) -> compare a b
@@ -170,13 +167,13 @@ instance
          (Right _, Left _)  -> LT
          (Left _, Right _)  -> GT
 
-instance Show (Variant '[]) where
-   show = error "Empty variant"
+instance Show (V '[]) where
+   show _ = "V '[]"
 
 instance
-   ( Show (Variant xs)
+   ( Show (V xs)
    , Show x
-   ) => Show (Variant (x ': xs))
+   ) => Show (V (x ': xs))
    where
       show v = case popVariantHead v of
          Right x -> show x
@@ -187,30 +184,30 @@ instance
 -----------------------------------------------------------
 
 -- | Get Variant index
-variantIndex :: Variant a -> Word
+variantIndex :: V a -> Word
 variantIndex (Variant n _) = n
 
 -- | Set the value with the given indexed type
 toVariantAt :: forall (n :: Nat) (l :: [*]).
    ( KnownNat n
-   ) => Index n l -> Variant l
+   ) => Index n l -> V l
 {-# INLINE toVariantAt #-}
 toVariantAt a = Variant (natValue' @n) (unsafeCoerce a)
 
 -- | Set the first value
-toVariantHead :: forall x xs. x -> Variant (x ': xs)
+toVariantHead :: forall x xs. x -> V (x ': xs)
 {-# INLINE toVariantHead #-}
 toVariantHead a = Variant 0 (unsafeCoerce a)
 
 -- | Set the tail
-toVariantTail :: forall x xs. Variant xs -> Variant (x ': xs)
+toVariantTail :: forall x xs. V xs -> V (x ': xs)
 {-# INLINE toVariantTail #-}
 toVariantTail (Variant t a) = Variant (t+1) a
 
 -- | Get the value if it has the indexed type
 fromVariantAt :: forall (n :: Nat) (l :: [*]).
    ( KnownNat n
-   ) => Variant l -> Maybe (Index n l)
+   ) => V l -> Maybe (Index n l)
 {-# INLINE fromVariantAt #-}
 fromVariantAt (Variant t a) = do
    guard (t == natValue' @n)
@@ -220,7 +217,7 @@ fromVariantAt (Variant t a) = do
 -- variant
 popVariantAt :: forall (n :: Nat) l. 
    ( KnownNat n
-   ) => Variant l -> Either (Variant (RemoveAt n l)) (Index n l)
+   ) => V l -> Either (V (RemoveAt n l)) (Index n l)
 {-# INLINE popVariantAt #-}
 popVariantAt v@(Variant t a) = case fromVariantAt @n v of
    Just x  -> Right x
@@ -229,7 +226,7 @@ popVariantAt v@(Variant t a) = case fromVariantAt @n v of
       else Variant t a
 
 -- | Pop the head of a variant value
-popVariantHead :: forall x xs. Variant (x ': xs) -> Either (Variant xs) x
+popVariantHead :: forall x xs. V (x ': xs) -> Either (V xs) x
 {-# INLINE popVariantHead #-}
 popVariantHead v@(Variant t a) = case fromVariantAt @0 v of
    Just x  -> Right x
@@ -239,7 +236,7 @@ popVariantHead v@(Variant t a) = case fromVariantAt @0 v of
 updateVariantAt :: forall (n :: Nat) a b l.
    ( KnownNat n
    , a ~ Index n l
-   ) => (a -> b) -> Variant l -> Variant (ReplaceN n b l)
+   ) => (a -> b) -> V l -> V (ReplaceN n b l)
 {-# INLINE updateVariantAt #-}
 updateVariantAt f v@(Variant t a) =
    case fromVariantAt @n v of
@@ -255,7 +252,7 @@ updateVariantAt f v@(Variant t a) =
 -- Use the first matching type index.
 toVariant :: forall a l.
    ( Member a l
-   ) => a -> Variant l
+   ) => a -> V l
 {-# INLINE toVariant #-}
 toVariant = toVariantAt @(IndexOf a l)
 
@@ -264,13 +261,13 @@ toVariant = toVariantAt @(IndexOf a l)
 -- Use the first matching type index.
 toVariant' :: forall a l.
    ( Member' a l
-   ) => a -> Variant l
+   ) => a -> V l
 {-# INLINE toVariant' #-}
 toVariant' = toVariantAt @(IndexOf a l)
 
 class PopVariant a xs where
    -- | Remove a type from a variant
-   popVariant' :: Variant xs -> Either (Variant (Filter a xs)) a
+   popVariant' :: V xs -> Either (V (Filter a xs)) a
 
 instance PopVariant a '[] where
    popVariant' _ = undefined
@@ -304,34 +301,33 @@ type (:<?) x xs =
    ( PopVariant x xs
    )
 
-
 -- | Extract a type from a variant. Return either the value of this type or the
 -- remaining variant
 popVariant :: forall a xs.
    ( a :< xs
-   ) => Variant xs -> Either (Variant (Filter a xs)) a
+   ) => V xs -> Either (V (Filter a xs)) a
 popVariant v = popVariant' @a v
 
 -- | Extract a type from a variant. Return either the value of this type or the
 -- remaining variant
 popVariantMaybe :: forall a xs.
    ( a :<? xs
-   ) => Variant xs -> Either (Variant (Filter a xs)) a
+   ) => V xs -> Either (V (Filter a xs)) a
 popVariantMaybe v = popVariant' @a v
 
 -- | Pick the first matching type of a Variant
 --
--- fromVariantFirst @A (Variant 2 undefined :: Variant '[A,B,A]) == Nothing
+-- fromVariantFirst @A (Variant 2 undefined :: V '[A,B,A]) == Nothing
 fromVariantFirst :: forall a l.
    ( Member a l
-   ) => Variant l -> Maybe a
+   ) => V l -> Maybe a
 {-# INLINE fromVariantFirst #-}
 fromVariantFirst = fromVariantAt @(IndexOf a l)
 
 -- | Try to a get a value of a given type from a Variant
 fromVariant :: forall a xs.
    ( a :< xs
-   ) => Variant xs -> Maybe a
+   ) => V xs -> Maybe a
 {-# INLINE fromVariant #-}
 fromVariant v = case popVariant v of
    Right a -> Just a
@@ -340,7 +336,7 @@ fromVariant v = case popVariant v of
 -- | Try to a get a value of a given type from a Variant (silent)
 fromVariant' :: forall a xs.
    ( PopVariant a xs
-   ) => Variant xs -> Maybe a
+   ) => V xs -> Maybe a
 {-# INLINE fromVariant' #-}
 fromVariant' v = case popVariant' v of
    Right a -> Just a
@@ -350,7 +346,7 @@ fromVariant' v = case popVariant' v of
 -- support the given type.
 fromVariantMaybe :: forall a xs.
    ( a :<? xs
-   ) => Variant xs -> Maybe a
+   ) => V xs -> Maybe a
 {-# INLINE fromVariantMaybe #-}
 fromVariantMaybe v = case popVariantMaybe v of
    Right a -> Just a
@@ -360,14 +356,14 @@ fromVariantMaybe v = case popVariantMaybe v of
 updateVariantFirst :: forall a b n l.
    ( Member a l
    , n ~ IndexOf a l
-   ) => (a -> b) -> Variant l -> Variant (ReplaceN n b l)
+   ) => (a -> b) -> V l -> V (ReplaceN n b l)
 {-# INLINE updateVariantFirst #-}
 updateVariantFirst f v = updateVariantAt @n f v
 
 -- | Monadic update of the first matching variant value
 updateVariantFirstM :: forall (n :: Nat) l l2 m .
    (KnownNat n, Monad m)
-   => (Index n l -> m (Index n l2)) -> Variant l -> m (Variant l2)
+   => (Index n l -> m (Index n l2)) -> V l -> m (V l2)
 {-# INLINE updateVariantFirstM #-}
 updateVariantFirstM f v@(Variant t a) =
    case fromVariantAt @n v of
@@ -375,7 +371,7 @@ updateVariantFirstM f v@(Variant t a) =
       Just x  -> Variant t <$> unsafeCoerce (f x)
 
 class MapVariant a b cs (is :: [Nat]) where
-   mapVariant' :: (a -> b) -> Variant cs -> Variant (ReplaceNS is b cs)
+   mapVariant' :: (a -> b) -> V cs -> V (ReplaceNS is b cs)
 
 instance MapVariant a b '[] is where
    {-# INLINE mapVariant' #-}
@@ -400,7 +396,7 @@ type MappableVariant a b cs =
 -- | Map the matching types of a variant
 mapVariant :: forall a b cs.
    ( MappableVariant a b cs
-   ) => (a -> b) -> Variant cs -> Variant (ReplaceNS (IndexesOf a cs) b cs)
+   ) => (a -> b) -> V cs -> V (ReplaceNS (IndexesOf a cs) b cs)
 mapVariant = mapVariant' @a @b @cs @(IndexesOf a cs)
 
 
@@ -408,7 +404,7 @@ mapVariant = mapVariant' @a @b @cs @(IndexesOf a cs)
 foldMapVariantAt :: forall (n :: Nat) l l2 .
    ( KnownNat n
    , KnownNat (Length l2)
-   ) => (Index n l -> Variant l2) -> Variant l -> Variant (ReplaceAt n l l2)
+   ) => (Index n l -> V l2) -> V l -> V (ReplaceAt n l l2)
 foldMapVariantAt f v@(Variant t a) =
    case fromVariantAt @n v of
       Nothing ->
@@ -428,7 +424,7 @@ foldMapVariantAtM :: forall (n :: Nat) m l l2.
    ( KnownNat n
    , KnownNat (Length l2)
    , Monad m
-   ) => (Index n l -> m (Variant l2)) -> Variant l -> m (Variant (ReplaceAt n l l2))
+   ) => (Index n l -> m (V l2)) -> V l -> m (V (ReplaceAt n l l2))
 foldMapVariantAtM f v@(Variant t a) =
    case fromVariantAt @n v of
       Nothing ->
@@ -451,7 +447,7 @@ foldMapVariantFirst :: forall a (n :: Nat) l l2 .
    , KnownNat (Length l2)
    , n ~ IndexOf a l
    , a ~ Index n l
-   ) => (a -> Variant l2) -> Variant l -> Variant (ReplaceAt n l l2)
+   ) => (a -> V l2) -> V l -> V (ReplaceAt n l l2)
 foldMapVariantFirst f v = foldMapVariantAt @n f v
 
 -- | Update a variant value with a variant and fold the result
@@ -525,7 +521,7 @@ instance
 {-# INLINABLE alterVariant #-}
 alterVariant :: forall c (a :: [*]).
    ( AlterVariant c a
-   ) => (forall x. c x => x -> x) -> Variant a  -> Variant a
+   ) => (forall x. c x => x -> x) -> V a  -> V a
 alterVariant f (Variant t a) = 
    Variant t (alterVariant' @c @a f t a)
 
@@ -558,7 +554,7 @@ instance
 traverseVariant :: forall c (a :: [*]) m.
    ( TraverseVariant c a m
    , Monad m
-   ) => (forall x. c x => x -> m x) -> Variant a  -> m (Variant a)
+   ) => (forall x. c x => x -> m x) -> V a  -> m (V a)
 traverseVariant f (Variant t a) = 
    Variant t <$> traverseVariant' @c @a f t a
 
@@ -568,7 +564,7 @@ traverseVariant f (Variant t a) =
 traverseVariant_ :: forall c (a :: [*]) m.
    ( TraverseVariant c a m
    , Monad m
-   ) => (forall x. c x => x -> m ()) -> Variant a -> m ()
+   ) => (forall x. c x => x -> m ()) -> V a -> m ()
 traverseVariant_ f v = void (traverseVariant @c @a f' v)
    where
       f' :: forall x. c x => x -> m x
@@ -603,7 +599,7 @@ instance
 {-# INLINE reduceVariant #-}
 reduceVariant :: forall c r (a :: [*]).
    ( ReduceVariant c r a
-   ) => (forall x. c x => x -> r) -> Variant a  -> r
+   ) => (forall x. c x => x -> r) -> V a  -> r
 reduceVariant f (Variant t a) = reduceVariant' @c @r @a f t a
 
 
@@ -612,14 +608,14 @@ reduceVariant f (Variant t a) = reduceVariant' @c @r @a f t a
 -----------------------------------------------------------
 
 -- | Extend a variant by appending other possible values
-appendVariant :: forall (ys :: [*]) (xs :: [*]). Variant xs -> Variant (Concat xs ys)
+appendVariant :: forall (ys :: [*]) (xs :: [*]). V xs -> V (Concat xs ys)
 {-# INLINE appendVariant #-}
 appendVariant (Variant t a) = Variant t a
 
 -- | Extend a variant by prepending other possible values
 prependVariant :: forall (ys :: [*]) (xs :: [*]).
    ( KnownNat (Length ys)
-   ) => Variant xs -> Variant (Concat ys xs)
+   ) => V xs -> V (Concat ys xs)
 {-# INLINE prependVariant #-}
 prependVariant (Variant t a) = Variant (n+t) a
    where
@@ -632,7 +628,7 @@ type Liftable xs ys =
    )
 
 class LiftVariant xs ys where
-   liftVariant' :: Variant xs -> Variant ys
+   liftVariant' :: V xs -> V ys
 
 instance LiftVariant '[] ys where
    liftVariant' = error "Lifting empty variant"
@@ -651,9 +647,9 @@ instance forall xs ys x.
 -- | Lift a variant into another
 --
 -- Set values to the first matching type
-liftVariant :: forall xs ys.
+liftVariant :: forall ys xs.
    ( Liftable xs ys
-   ) => Variant xs -> Variant ys
+   ) => V xs -> V ys
 {-# INLINE liftVariant #-}
 liftVariant = liftVariant'
 
@@ -664,26 +660,26 @@ nubVariant = liftVariant
 -- | Product of two variants
 productVariant :: forall xs ys.
    ( KnownNat (Length ys)
-   ) => Variant xs -> Variant ys -> Variant (Product xs ys)
+   ) => V xs -> V ys -> V (Product xs ys)
 productVariant (Variant n1 a1) (Variant n2 a2)
    = Variant (n1 * natValue @(Length ys) + n2) (unsafeCoerce (a1,a2))
 
 type family FlattenVariant (xs :: [*]) :: [*] where
-   FlattenVariant '[]             = '[]
-   FlattenVariant (Variant xs:ys) = Concat xs (FlattenVariant ys)
-   FlattenVariant (y:ys)          = y ': FlattenVariant ys
+   FlattenVariant '[]       = '[]
+   FlattenVariant (V xs:ys) = Concat xs (FlattenVariant ys)
+   FlattenVariant (y:ys)    = y ': FlattenVariant ys
 
 class Flattenable a rs where
    toFlattenVariant :: Word -> a -> rs
 
-instance Flattenable (Variant '[]) rs where
+instance Flattenable (V '[]) rs where
    {-# INLINE toFlattenVariant #-}
    toFlattenVariant _ _ = undefined
 
 instance forall xs ys rs.
-   ( Flattenable (Variant ys) (Variant rs)
+   ( Flattenable (V ys) (V rs)
    , KnownNat (Length xs)
-   ) => Flattenable (Variant (Variant xs ': ys)) (Variant rs)
+   ) => Flattenable (V (V xs ': ys)) (V rs)
    where
    {-# INLINE toFlattenVariant #-}
    toFlattenVariant i v = case popVariantHead v of
@@ -692,8 +688,8 @@ instance forall xs ys rs.
 
 -- | Flatten variants in a variant
 flattenVariant :: forall xs.
-   ( Flattenable (Variant xs) (Variant (FlattenVariant xs))
-   ) => Variant xs -> Variant (FlattenVariant xs)
+   ( Flattenable (V xs) (V (FlattenVariant xs))
+   ) => V xs -> V (FlattenVariant xs)
 flattenVariant v = toFlattenVariant 0 v
 
 type family ExtractMonad m f where
@@ -708,7 +704,7 @@ type family ExtractMonad m f where
 joinVariant :: forall m xs ys.
    ( Applicative m
    , ys ~ ExtractMonad m xs
-   ) => Variant xs -> m (Variant ys)
+   ) => V xs -> m (V ys)
 joinVariant (Variant t act) = Variant t <$> (unsafeCoerce act :: m Any)
 
 -----------------------------------------------------------
@@ -716,24 +712,32 @@ joinVariant (Variant t act) = Variant t <$> (unsafeCoerce act :: m Any)
 -----------------------------------------------------------
 
 -- | Retrieve a single value
-variantToValue :: Variant '[a] -> a
+variantToValue :: V '[a] -> a
 {-# INLINE variantToValue #-}
 variantToValue (Variant _ a) = unsafeCoerce a
 
 -- | Create a variant from a single value
-variantFromValue :: a -> Variant '[a]
+variantFromValue :: a -> V '[a]
 {-# INLINE variantFromValue #-}
 variantFromValue a = Variant 0 (unsafeCoerce a)
 
 
 -- | Convert a variant of two values in a Either
-variantToEither :: forall a b. Variant '[a,b] -> Either b a
+variantToEither :: forall a b. V '[a,b] -> Either b a
+{-# INLINE variantToEither #-}
 variantToEither (Variant 0 a) = Right (unsafeCoerce a)
 variantToEither (Variant _ a) = Left (unsafeCoerce a)
 
+-- | Lift an Either into a Variant (reversed order by convention)
+variantFromEither :: Either a b -> V '[b,a]
+{-# INLINE variantFromEither #-}
+variantFromEither (Left a)  = toVariantAt @1 a
+variantFromEither (Right b) = toVariantAt @0 b
+
+
 class VariantToHList xs where
    -- | Convert a variant into a HList of Maybes
-   variantToHList :: Variant xs -> HList (Map Maybe xs)
+   variantToHList :: V xs -> HList (Map Maybe xs)
 
 instance VariantToHList '[] where
    variantToHList _ = HNil
@@ -745,36 +749,30 @@ instance
       variantToHList v@(Variant t a) =
             fromVariantAt @0 v `HCons` variantToHList v'
          where
-            v' :: Variant xs
+            v' :: V xs
             v' = Variant (t-1) a
 
 -- | Get variant possible values in a tuple of Maybe types
 variantToTuple :: forall l t.
    ( VariantToHList l
    , HTuple' (Map Maybe l) t
-   ) => Variant l -> t
+   ) => V l -> t
 variantToTuple = hToTuple' . variantToHList
 
-
--- | Lift an Either into a Variant (reversed order by convention)
-variantFromEither :: Either a b -> Variant '[b,a]
-{-# INLINE variantFromEither #-}
-variantFromEither (Left a)  = toVariantAt @1 a
-variantFromEither (Right b) = toVariantAt @0 b
 
 
 class ContVariant xs where
    -- | Convert a variant into a multi-continuation
-   variantToCont :: Variant xs -> ContFlow xs r
+   variantToCont :: V xs -> ContFlow xs r
 
    -- | Convert a variant into a multi-continuation
-   variantToContM :: Monad m => m (Variant xs) -> ContFlow xs (m r)
+   variantToContM :: Monad m => m (V xs) -> ContFlow xs (m r)
 
    -- | Convert a multi-continuation into a Variant
-   contToVariant :: ContFlow xs (Variant xs) -> Variant xs
+   contToVariant :: ContFlow xs (V xs) -> V xs
 
    -- | Convert a multi-continuation into a Variant
-   contToVariantM :: Monad m => ContFlow xs (m (Variant xs)) -> m (Variant xs)
+   contToVariantM :: Monad m => ContFlow xs (m (V xs)) -> m (V xs)
 
 instance ContVariant '[a] where
    {-# INLINE variantToCont #-}
