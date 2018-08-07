@@ -60,13 +60,13 @@ testsVariant = testGroup "Variant" $
          (b /= toVariant C)
 
    , testProperty "update by index (match)"
-         (updateVariantAt @1 (const D) b == toVariantAt @1 D)
+         (mapVariantAt @1 (const D) b == toVariantAt @1 D)
    , testProperty "update by index (don't match)"
-         (updateVariantAt @0 (const F) b == toVariantAt @1 B)
+         (mapVariantAt @0 (const F) b == toVariantAt @1 B)
    , testProperty "update by type (match)"
-         (updateVariantFirst b2d b == toVariantAt @1 D)
+         (mapVariantFirst b2d b == toVariantAt @1 D)
    , testProperty "update by type (don't match)"
-         (updateVariantFirst c2d b == toVariant B)
+         (mapVariantFirst c2d b == toVariant B)
    , testProperty "update/fold by index (match)"
          (foldMapVariantAt @1 b2def b == toVariant E)
    , testProperty "update/fold by index (don't match)"

@@ -1723,11 +1723,11 @@ combineSingle = \case
 
 -- | Lift a pure function into a Variant to Variant function
 liftV :: (a -> b) -> V '[a] -> V '[b]
-liftV = updateVariantAt @0
+liftV = mapVariantAt @0
 
 -- | Lift a function into a Flow
 liftF :: Monad m => (a -> m b) -> V '[a] -> Flow m '[b]
-liftF = updateVariantFirstM @0
+liftF = mapVariantAtM @0
 
 
 -----------------------------------

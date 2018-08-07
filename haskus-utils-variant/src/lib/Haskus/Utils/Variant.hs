@@ -32,7 +32,8 @@ module Haskus.Utils.Variant
    , fromVariantAt
    , popVariantAt
    , popVariantHead
-   , updateVariantAt
+   , mapVariantAt
+   , mapVariantAtM
    , foldMapVariantAt
    , foldMapVariantAtM
    -- * Operations by type
@@ -44,10 +45,12 @@ module Haskus.Utils.Variant
    , fromVariant
    , fromVariantMaybe
    , fromVariantFirst
-   , updateVariantFirst
-   , updateVariantFirstM
-   , MappableVariant
+   , mapVariantFirst
+   , mapVariantFirstM
+   , ReplaceAll
+   , MapVariant
    , mapVariant
+   , mapNubVariant
    , foldMapVariantFirst
    , foldMapVariantFirstM
    , foldMapVariant
@@ -240,16 +243,29 @@ popVariantHead v@(Variant t a) = case fromVariantAt @0 v of
    Just x  -> Right x
    Nothing -> Left $ Variant (t-1) a
 
--- | Update a variant value
-updateVariantAt :: forall (n :: Nat) a b l.
+-- | Update a single variant value by index
+mapVariantAt :: forall (n :: Nat) a b l.
    ( KnownNat n
    , a ~ Index n l
    ) => (a -> b) -> V l -> V (ReplaceN n b l)
-{-# INLINE updateVariantAt #-}
-updateVariantAt f v@(Variant t a) =
+{-# INLINE mapVariantAt #-}
+mapVariantAt f v@(Variant t a) =
    case fromVariantAt @n v of
       Nothing -> Variant t a
       Just x  -> Variant t (unsafeCoerce (f x))
+
+-- | Applicative update of a single variant value by index
+mapVariantAtM :: forall (n :: Nat) a b l m .
+   ( KnownNat n
+   , Applicative m
+   , a ~ Index n l
+   )
+   => (a -> m b) -> V l -> m (V (ReplaceN n b l))
+{-# INLINE mapVariantAtM #-}
+mapVariantAtM f v@(Variant t a) =
+   case fromVariantAt @n v of
+      Nothing -> pure (Variant t a)
+      Just x  -> Variant t <$> unsafeCoerce (f x)
 
 -----------------------------------------------------------
 -- Operations by type
@@ -360,52 +376,63 @@ fromVariantMaybe v = case popVariantMaybe v of
    Right a -> Just a
    Left _  -> Nothing
 
--- | Update a variant value
-updateVariantFirst :: forall a b n l.
+-- | Update of the first matching variant value
+mapVariantFirst :: forall a b n l.
    ( Member a l
    , n ~ IndexOf a l
    ) => (a -> b) -> V l -> V (ReplaceN n b l)
-{-# INLINE updateVariantFirst #-}
-updateVariantFirst f v = updateVariantAt @n f v
+{-# INLINE mapVariantFirst #-}
+mapVariantFirst f v = mapVariantAt @n f v
 
--- | Monadic update of the first matching variant value
-updateVariantFirstM :: forall (n :: Nat) l l2 m .
-   (KnownNat n, Monad m)
-   => (Index n l -> m (Index n l2)) -> V l -> m (V l2)
-{-# INLINE updateVariantFirstM #-}
-updateVariantFirstM f v@(Variant t a) =
-   case fromVariantAt @n v of
-      Nothing -> return (Variant t a)
-      Just x  -> Variant t <$> unsafeCoerce (f x)
+-- | Applicative update of the first matching variant value
+mapVariantFirstM :: forall a b n l m.
+   ( Member a l
+   , n ~ IndexOf a l
+   , Applicative m
+   ) => (a -> m b) -> V l -> m (V (ReplaceN n b l))
+{-# INLINE mapVariantFirstM #-}
+mapVariantFirstM f v = mapVariantAtM @n f v
 
-class MapVariant a b cs (is :: [Nat]) where
+class MapVariantIndexes a b cs (is :: [Nat]) where
    mapVariant' :: (a -> b) -> V cs -> V (ReplaceNS is b cs)
 
-instance MapVariant a b '[] is where
+instance MapVariantIndexes a b '[] is where
    {-# INLINE mapVariant' #-}
    mapVariant' = undefined
 
-instance MapVariant a b cs '[] where
+instance MapVariantIndexes a b cs '[] where
    {-# INLINE mapVariant' #-}
    mapVariant' _ v = v
 
 instance forall a b cs is i.
-   ( MapVariant a b (ReplaceN i b cs) is
+   ( MapVariantIndexes a b (ReplaceN i b cs) is
    , a ~ Index i cs
    , KnownNat i
-   ) => MapVariant a b cs (i ': is) where
+   ) => MapVariantIndexes a b cs (i ': is) where
    {-# INLINE mapVariant' #-}
-   mapVariant' f v = mapVariant' @a @b @(ReplaceN i b cs) @is f (updateVariantAt @i f v)
+   mapVariant' f v = mapVariant' @a @b @(ReplaceN i b cs) @is f (mapVariantAt @i f v)
 
-type MappableVariant a b cs =
-   ( MapVariant a b cs (IndexesOf a cs)
+type MapVariant a b cs =
+   ( MapVariantIndexes a b cs (IndexesOf a cs)
    )
+
+type ReplaceAll a b cs = ReplaceNS (IndexesOf a cs) b cs
+
 
 -- | Map the matching types of a variant
 mapVariant :: forall a b cs.
-   ( MappableVariant a b cs
-   ) => (a -> b) -> V cs -> V (ReplaceNS (IndexesOf a cs) b cs)
+   ( MapVariant a b cs
+   ) => (a -> b) -> V cs -> V (ReplaceAll a b cs)
 mapVariant = mapVariant' @a @b @cs @(IndexesOf a cs)
+
+-- | Map the matching types of a variant and nub the result
+mapNubVariant :: forall a b cs ds rs.
+   ( MapVariant a b cs
+   , ds ~ ReplaceNS (IndexesOf a cs) b cs
+   , rs ~ Nub ds
+   , Liftable ds rs
+   ) => (a -> b) -> V cs -> V rs
+mapNubVariant f = nubVariant . mapVariant f
 
 
 -- | Update a variant value with a variant and fold the result

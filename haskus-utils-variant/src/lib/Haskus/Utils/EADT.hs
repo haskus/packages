@@ -107,7 +107,7 @@ popVariantF (VariantF v) = case popVariant v of
 
 -- | Map the matching types of a variant
 mapVariantF :: forall a b cs e ds as.
-   ( MappableVariant (a e) (b e) as
+   ( MapVariant (a e) (b e) as
    , ds ~ ReplaceNS (IndexesOf a cs) b cs
    , as ~ ApplyAll e cs
    , ApplyAll e ds ~ ReplaceNS (IndexesOf (a e) as) (b e) as
