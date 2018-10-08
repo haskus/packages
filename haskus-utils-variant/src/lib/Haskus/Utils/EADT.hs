@@ -11,6 +11,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- | Extensible ADT
 module Haskus.Utils.EADT
@@ -26,6 +28,10 @@ module Haskus.Utils.EADT
    , variantFToValue
    , LiftableF
    , liftVariantF
+   , AlterVariantF
+   , alterVariantF
+   , AlgVariantF
+   , algVariantF
    -- * Extensible ADT
    , EADT
    , (:<:)
@@ -33,7 +39,12 @@ module Haskus.Utils.EADT
    , appendEADT
    , liftEADT
    , popEADT
+   , AlterEADT
+   , alterEADT
+   , AlgEADT
+   , algEADT
    -- * Reexport
+   , NoConstraint
    , module Haskus.Utils.Functor
    )
 where
@@ -42,6 +53,9 @@ import Haskus.Utils.Variant
 import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
 import Haskus.Utils.Types
+
+import Unsafe.Coerce
+import GHC.Exts (Any,Constraint)
 
 -- | Recursive Functor-like Variant
 newtype VariantF (xs :: [* -> *]) e
@@ -126,6 +140,75 @@ liftVariantF :: forall e as bs.
    ) => VariantF as e -> VariantF bs e
 liftVariantF (VariantF v) = VariantF (liftVariant' v)
 
+class AlterVariantF (c :: (* -> *) -> Constraint) e (xs :: [* -> *]) where
+   alterVariantF' :: (forall (f :: * -> *). c f => f e -> f e) -> Word -> Any -> Any
+
+instance AlterVariantF c e '[] where
+   {-# INLINE alterVariantF' #-}
+   alterVariantF' _ = undefined
+
+instance
+   ( AlterVariantF c e xs
+   , c x
+   ) => AlterVariantF c e (x ': xs)
+   where
+      {-# INLINE alterVariantF' #-}
+      alterVariantF' f t v =
+         case t of
+            0 -> unsafeCoerce (f (unsafeCoerce v :: x e))
+            n -> alterVariantF' @c @e @xs f (n-1) v
+
+-- | Alter a variant. You need to specify the constraints required by the
+-- modifying function.
+--
+-- Usage:
+--    alterVariantF @NoConstraint id         v
+--    alterVariantF @Resizable    (resize 4) v
+--
+--
+--    -- Multiple constraints:
+--    class (Ord a, Num a) => OrdNum a
+--    instance (Ord a, Num a) => OrdNum a
+--    alterVariantF @OrdNum foo v
+--
+alterVariantF :: forall c e (xs :: [* -> *]).
+   ( AlterVariantF c e xs
+   ) => (forall (f :: * -> *). c f => f e -> f e) -> VariantF xs e -> VariantF xs e
+{-# INLINABLE alterVariantF #-}
+alterVariantF f (VariantF (Variant t a)) =
+   VariantF (Variant t (alterVariantF' @c @e @xs f t a))
+
+
+class AlgVariantF (c :: (* -> *) -> Constraint) e (xs :: [* -> *]) where
+   algVariantF' :: (forall (f :: * -> *). c f => f e -> e) -> Word -> Any -> e
+
+instance AlgVariantF c e '[] where
+   {-# INLINE algVariantF' #-}
+   algVariantF' _ = undefined
+
+instance
+   ( AlgVariantF c e xs
+   , c x
+   ) => AlgVariantF c e (x ': xs)
+   where
+      {-# INLINE algVariantF' #-}
+      algVariantF' f t v =
+         case t of
+            0 -> f (unsafeCoerce v :: x e)
+            n -> algVariantF' @c @e @xs f (n-1) v
+
+-- | Apply an algebra to a VariantF. You need to specify the constraints
+-- required by the modifying function.
+--
+-- Usage:
+--    algVariantF @NoConstraint id         v
+--    algVariantF @Resizable    (resize 4) v
+algVariantF :: forall c e (xs :: [* -> *]).
+   ( AlgVariantF c e xs
+   ) => (forall (f :: * -> *). c f => f e -> e) -> VariantF xs e -> e
+{-# INLINABLE algVariantF #-}
+algVariantF f (VariantF (Variant t a)) = algVariantF' @c @e @xs f t a
+
 --------------------------------------------
 -- Extensible ADT
 --------------------------------------------
@@ -176,3 +259,19 @@ popEADT :: forall xs f e.
    , Filter (f e) (ApplyAll e xs) ~ ApplyAll e (Filter f xs)
    ) => EADT xs -> Either (VariantF (Filter f xs) (EADT xs)) (f (EADT xs))
 popEADT (Fix v) = popVariantF v
+
+type AlterEADT c xs = AlterVariantF c (EADT xs) xs
+
+-- | Alter an EADT value
+alterEADT :: forall c xs.
+   ( AlterEADT c xs
+   ) => (forall f. c f => f (EADT xs) -> f (EADT xs)) -> EADT xs -> EADT xs
+alterEADT f (Fix v) = Fix (alterVariantF @c @(EADT xs) f v)
+
+type AlgEADT c xs = AlgVariantF c (EADT xs) xs
+
+-- | Apply an algebra to an EADT value
+algEADT :: forall c xs.
+   ( AlgEADT c xs
+   ) => (forall f. c f => f (EADT xs) -> EADT xs) -> EADT xs -> EADT xs
+algEADT f (Fix v) = algVariantF @c @(EADT xs) f v
