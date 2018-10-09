@@ -32,6 +32,10 @@ module Haskus.Utils.EADT
    , alterVariantF
    , AlgVariantF
    , algVariantF
+   , variantFToCont
+   , variantFToContM
+   , contToVariantF
+   , contToVariantFM
    -- * Extensible ADT
    , EADT
    , (:<:)
@@ -43,6 +47,10 @@ module Haskus.Utils.EADT
    , alterEADT
    , AlgEADT
    , algEADT
+   , eadtToCont
+   , eadtToContM
+   , contToEADT
+   , contToEADTM
    -- * Reexport
    , NoConstraint
    , module Haskus.Utils.Functor
@@ -53,6 +61,7 @@ import Haskus.Utils.Variant
 import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
 import Haskus.Utils.Types
+import Haskus.Utils.ContFlow
 
 import Unsafe.Coerce
 import GHC.Exts (Any,Constraint)
@@ -209,6 +218,34 @@ algVariantF :: forall c e (xs :: [* -> *]).
 {-# INLINABLE algVariantF #-}
 algVariantF f (VariantF (Variant t a)) = algVariantF' @c @e @xs f t a
 
+
+-- | Convert a VariantF into a multi-continuation
+variantFToCont :: ContVariant (ApplyAll e xs)
+   => VariantF xs e -> ContFlow (ApplyAll e xs) r
+variantFToCont (VariantF v) = variantToCont v
+
+-- | Convert a VariantF into a multi-continuation
+variantFToContM ::
+   ( ContVariant (ApplyAll e xs)
+   , Monad m
+   ) => m (VariantF xs e) -> ContFlow (ApplyAll e xs) (m r)
+variantFToContM f = variantToContM (unvariantF <$> f)
+   where
+      unvariantF (VariantF v) = v
+
+-- | Convert a multi-continuation into a VariantF
+contToVariantF :: forall xs e.
+   ( ContVariant (ApplyAll e xs)
+   ) => ContFlow (ApplyAll e xs) (V (ApplyAll e xs)) -> VariantF xs e
+contToVariantF c = VariantF (contToVariant c)
+
+-- | Convert a multi-continuation into a VariantF
+contToVariantFM :: forall xs e m.
+   ( ContVariant (ApplyAll e xs)
+   , Monad m
+   ) => ContFlow (ApplyAll e xs) (m (V (ApplyAll e xs))) -> m (VariantF xs e)
+contToVariantFM f = VariantF <$> contToVariantM f
+
 --------------------------------------------
 -- Extensible ADT
 --------------------------------------------
@@ -275,3 +312,35 @@ algEADT :: forall c xs.
    ( AlgEADT c xs
    ) => (forall f. c f => f (EADT xs) -> EADT xs) -> EADT xs -> EADT xs
 algEADT f (Fix v) = algVariantF @c @(EADT xs) f v
+
+
+-- | Convert an EADT into a multi-continuation
+eadtToCont ::
+   ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
+   ) => Fix (VariantF xs) -> ContFlow (ApplyAll (Fix (VariantF xs)) xs) r
+eadtToCont (Fix v) = variantFToCont v
+
+-- | Convert an EADT into a multi-continuation
+eadtToContM ::
+   ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
+   , Monad m
+   ) => m (Fix (VariantF xs))
+     -> ContFlow (ApplyAll (Fix (VariantF xs)) xs) (m r)
+eadtToContM f = variantFToContM (unfix <$> f)
+
+-- | Convert a multi-continuation into an EADT
+contToEADT ::
+   ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
+   ) => ContFlow (ApplyAll (Fix (VariantF xs)) xs)
+                 (V (ApplyAll (Fix (VariantF xs)) xs))
+     -> Fix (VariantF xs)
+contToEADT c = Fix (contToVariantF c)
+
+-- | Convert a multi-continuation into an EADT
+contToEADTM ::
+   ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
+   , Monad f
+   ) => ContFlow (ApplyAll (Fix (VariantF xs)) xs)
+                 (f (V (ApplyAll (Fix (VariantF xs)) xs)))
+     -> f (Fix (VariantF xs))
+contToEADTM f = Fix <$> contToVariantFM f
