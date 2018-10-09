@@ -32,6 +32,7 @@ module Haskus.Utils.EADT
    , alterVariantF
    , AlgVariantF
    , algVariantF
+   , splitVariantF
    , variantFToCont
    , variantFToContM
    , contToVariantF
@@ -64,6 +65,7 @@ import Haskus.Utils.Types
 import Haskus.Utils.ContFlow
 
 import Unsafe.Coerce
+import Data.Bifunctor
 import GHC.Exts (Any,Constraint)
 
 -- | Recursive Functor-like Variant
@@ -219,6 +221,14 @@ algVariantF :: forall c e (xs :: [* -> *]).
 algVariantF f (VariantF (Variant t a)) = algVariantF' @c @e @xs f t a
 
 
+-- | Split a VariantF in two
+splitVariantF :: forall as xs e.
+   ( Complement (ApplyAll e xs) (ApplyAll e as) ~ ApplyAll e (Complement xs as)
+   , SplitVariant (ApplyAll e as) (ApplyAll e xs) (ApplyAll e xs)
+   ) => VariantF xs e
+     -> Either (VariantF as e) (VariantF (Complement xs as) e)
+splitVariantF (VariantF v) = bimap VariantF VariantF (splitVariant v)
+
 -- | Convert a VariantF into a multi-continuation
 variantFToCont :: ContVariant (ApplyAll e xs)
    => VariantF xs e -> ContFlow (ApplyAll e xs) r
@@ -312,7 +322,6 @@ algEADT :: forall c xs.
    ( AlgEADT c xs
    ) => (forall f. c f => f (EADT xs) -> EADT xs) -> EADT xs -> EADT xs
 algEADT f (Fix v) = algVariantF @c @(EADT xs) f v
-
 
 -- | Convert an EADT into a multi-continuation
 eadtToCont ::

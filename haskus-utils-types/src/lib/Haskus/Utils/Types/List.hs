@@ -44,6 +44,7 @@ module Haskus.Utils.Types.List
    , MaybeIndexOf
    , Index
    , Union
+   , Complement
    , Product
    , Member
    , Member'
@@ -278,6 +279,11 @@ type family Index (n :: Nat) (l :: [k]) :: k where
 -- | Union two lists
 type family Union (xs :: [k]) (ys :: [k]) :: [k] where
    Union xs ys = Nub (Concat xs ys)
+
+-- | Complement xs \ ys
+type family Complement (xs :: [k]) (ys :: [k]) :: [k] where
+   Complement xs '[]    = xs
+   Complement xs (y:ys) = Complement (Filter y xs) ys
 
 -- | Product of two lists
 type family Product (xs :: [*]) (ys :: [*]) :: [*] where

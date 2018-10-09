@@ -77,6 +77,8 @@ module Haskus.Utils.Variant
    , joinVariant
    , joinVariantUnsafe
    , JoinVariant
+   , splitVariant
+   , SplitVariant
    -- * Conversions to/from other data types
    , variantToValue
    , variantFromValue
@@ -313,6 +315,35 @@ instance forall a xs n xs' y ys.
             n | n-1 == t  -> Right (unsafeCoerce a)
               | n-1 < t   -> popVariant' @a @xs' (Variant (t-1) a)
               | otherwise -> Left (Variant t a)
+
+class SplitVariant as rs xs where
+   splitVariant' :: V xs -> Either (V as) (V (Complement rs as))
+
+instance SplitVariant as rs '[] where
+   {-# INLINE splitVariant' #-}
+   splitVariant' _ = undefined
+
+instance forall as rs xs x n m.
+   ( n ~ MaybeIndexOf x as
+   , m ~ IndexOf x rs
+   , SplitVariant as rs xs
+   , KnownNat m
+   , KnownNat n
+   ) => SplitVariant as rs (x ': xs)
+   where
+      {-# INLINE splitVariant' #-}
+      splitVariant' (Variant 0 v)
+         = case natValue' @n of
+            0 -> Right (Variant (natValue' @m) v)
+            t -> Left (Variant (t-1) v)
+      splitVariant' (Variant t v)
+         = splitVariant' @as @rs (Variant (t-1) v :: V xs)
+
+-- | Split a variant in two
+splitVariant :: forall as xs.
+   ( SplitVariant as xs xs
+   ) => V xs -> Either (V as) (V (Complement xs as))
+splitVariant = splitVariant' @as @xs
 
 -- | A value of type "x" can be extracted from (V xs)
 type (:<) x xs =
