@@ -26,11 +26,13 @@ library
     Haskus.Utils.Variant.Flow
     Haskus.Utils.Variant.Cont
     Haskus.Utils.EADT
+    Haskus.Utils.EADT.TH
 
   other-modules:
 
   build-depends:       
       base                      >= 4.9
+   ,  template-haskell
    ,  haskus-utils-types
    ,  haskus-utils-data
 
