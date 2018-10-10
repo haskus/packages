@@ -3,8 +3,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
 
+-- | Template-Haskell helpers for EADTs
 module Haskus.Utils.EADT.TH
-   ( eadtConstructor
+   ( eadtPat
+   , eadtPatT
    )
 where
 
@@ -17,18 +19,60 @@ import Haskus.Utils.EADT
 -- E.g.
 --
 -- > data ConsF a e = ConsF a e deriving (Functor)
--- > $(eadtConstructor 'ConsF "Cons")
+-- > $(eadtPat 'ConsF "Cons")
 -- >
 -- > ====>
 -- >
 -- > pattern Cons :: ConsF a :<: xs => a -> EADT xs -> EADT xs
 -- > pattern Cons a l = VF (ConsF a l)
 --
-eadtConstructor
-   :: Name     -- ^ Actual constructor (e.g., ConsF)
-   -> String   -- ^ Name of the pattern (e.g., Cons)
+eadtPat
+   :: Name       -- ^ Actual constructor (e.g., ConsF)
+   -> String     -- ^ Name of the pattern (e.g., Cons)
    -> Q [Dec]
-eadtConstructor consName patStr = do
+eadtPat consName patStr = eadtPat' consName patStr Nothing
+
+-- | Create a pattern synonym for an EADT constructor that is part of a
+-- specified EADT.
+--
+-- This can be useful to help the type inference because instead of using a
+-- generic "EADT xs" type, the pattern uses the provided type.
+--
+-- E.g.
+--
+-- > data ConsF a e = ConsF a e deriving (Functor)
+-- > data NilF    e = NilF      deriving (Functor)
+-- >
+-- > type List a = EADT '[ConsF a, NilF]
+-- >
+-- > $(eadtPatT 'ConsF "ConsList" [t|forall a. List a|])
+-- >
+-- > ====>
+-- >
+-- > pattern ConsList ::
+--    ( List a ~ EADT xs
+--    , ConsF a :<: xs
+--    ) => a -> List a -> List a
+-- > pattern ConsList a l = VF (ConsF a l)
+--
+-- Note that you have to quantify free variables explicitly with 'forall'
+--
+eadtPatT
+   :: Name       -- ^ Actual constructor (e.g., ConsF)
+   -> String     -- ^ Name of the pattern (e.g., Cons)
+   -> Q Type     -- ^ Type of the EADT (e.g., [t|forall a. List a|])
+   -> Q [Dec]
+eadtPatT consName patStr qtype =
+   eadtPat' consName patStr (Just qtype)
+
+
+-- | Create a pattern synonym for an EADT constructor
+eadtPat'
+   :: Name       -- ^ Actual constructor (e.g., ConsF)
+   -> String     -- ^ Name of the pattern (e.g., Cons)
+   -> Maybe (Q Type) -- ^ EADT type
+   -> Q [Dec]
+eadtPat' consName patStr mEadtTy= do
    let patName = mkName patStr
 
    typ <- reify consName >>= \case
@@ -50,35 +94,52 @@ eadtConstructor consName patStr = do
          let pat    = PatSynD patName (PrefixPatSyn conArgs) ImplBidir
                          (ConP vf [ConP consName (fmap VarP conArgs)])
 
-         -- make pattern type
-         xsName <- newName "xs"
-         let xs = VarT xsName
-         eadtXs <- [t| EADT $(return xs) |]
-
          let
-            -- [* -> *]
-            tyToTyList = AppT ListT (AppT (AppT ArrowT StarT) StarT)
-            -- remove functor var; add "xs" var
-            tvs'       = init tvs ++ [KindedTV xsName tyToTyList]
-            -- retreive functor var in "e"
-            KindedTV e StarT = last tvs
-
-            -- replace functor variable with EADT type
-            go (VarT x :->: b)
-               | x == e      = eadtXs :->: go b
-            go (a :->: b)    = a :->: go b
-            go _             = eadtXs
-            t'               = go tys
-
+            -- retrieve constructor type without the functor var
+            -- e.g. ConsF a for ConsF a e
             getConTyp (_ :->: b) = getConTyp b
             getConTyp (AppT a _) = a -- remove last AppT (functor var)
             getConTyp _          = error "Invalid constructor type"
 
             conTyp = getConTyp tys
 
-         prd <-  [t| $(return conTyp) :<: $(return xs) |]
+            -- [* -> *]
+            tyToTyList = AppT ListT (AppT (AppT ArrowT StarT) StarT)
 
-         let sig = PatSynSigD patName (ForallT tvs' [prd] t')
+         -- make pattern type
+         (newTvs,eadtTy,ctx) <- do
+            xsName <- newName "xs"
+            let
+               xs = VarT xsName
+               xsTy = KindedTV xsName tyToTyList
+            eadtXs <- [t| EADT $(return xs) |]
+
+            prd <-  [t| $(return conTyp) :<: $(return xs) |]
+            case mEadtTy of
+               Nothing -> return ([xsTy],eadtXs,[prd])
+               Just ty -> do
+                  ty' <- ty
+                  let (tvs',ty'',ctx') = case ty' of
+                        ForallT tvs' ctx' t -> (tvs',t,ctx')
+                        _                   -> ([],ty',[])
+                  prd2 <- [t| $(return ty'') ~ EADT $(return xs) |]
+                  return (xsTy:tvs',ty'',prd:prd2:ctx')
+
+         let
+            -- remove functor var; add new type var
+            tvs'       = init tvs ++ newTvs
+            -- retreive functor var in "e"
+            KindedTV e StarT = last tvs
+
+            -- replace functor variable with EADT type
+            go (VarT x :->: b)
+               | x == e      = eadtTy :->: go b
+            go (a :->: b)    = a :->: go b
+            go _             = eadtTy
+            t'               = go tys
+
+
+         let sig = PatSynSigD patName (ForallT tvs' ctx t')
 
          return [sig,pat]
 
