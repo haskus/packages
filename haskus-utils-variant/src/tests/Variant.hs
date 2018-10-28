@@ -6,7 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Haskus.Tests.Utils.Variant
+module Variant
    ( testsVariant
    )
 where
