@@ -1,5 +1,5 @@
 name:                haskus-utils-data
-version:             1.0
+version:             1.1
 synopsis:            Haskus utility modules
 license:             BSD3
 license-file:        LICENSE
@@ -33,7 +33,7 @@ library
 
   build-depends:       
       base                      >= 4.9
-   ,  haskus-utils-types
+   ,  haskus-utils-types        >= 1.1
    ,  extra                     >= 1.4
    ,  recursion-schemes         >= 5.0
    ,  containers                >= 0.5

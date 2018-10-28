@@ -1,21 +1,18 @@
 name:                haskus-utils
-version:             1.0
+version:             1.1
 synopsis:            Haskus utility modules
 license:             BSD3
 license-file:        LICENSE
 author:              Sylvain Henry
 maintainer:          sylvain@haskus.fr
-homepage:            http://www.haskus.org/system
+homepage:            http://docs.haskus.org/
 copyright:           Sylvain Henry 2018
 category:            System
 build-type:          Simple
 cabal-version:       >=1.21
 
 description:
-   Haskus utility modules. Reexport all other utility modules
-
-extra-source-files:
-   CHANGES
+   Haskus utility modules.
 
 source-repository head
   type: git
@@ -37,28 +34,6 @@ library
     Haskus.Utils.STM.TTree
     Haskus.Utils.STM.Future
     Haskus.Utils.STM.TGraph
-
-  reexported-modules:
-    -- haskus-utils-types
-      Haskus.Utils.Types
-    , Haskus.Utils.Types.Generics
-    , Haskus.Utils.Types.List
-    -- haskus-utils-data
-    , Haskus.Utils.Monad
-    , Haskus.Utils.HList
-    , Haskus.Utils.Functor
-    , Haskus.Utils.List
-    , Haskus.Utils.Map
-    , Haskus.Utils.Map.Strict
-    , Haskus.Utils.Maybe
-    , Haskus.Utils.Tuple
-    -- haskus-utils-variant
-    , Haskus.Utils.ContFlow
-    , Haskus.Utils.Variant
-    , Haskus.Utils.Variant.Flow
-    , Haskus.Utils.Variant.Cont
-    , Haskus.Utils.EADT
-    , Haskus.Utils.EADT.TH
 
   other-modules:
 

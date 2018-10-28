@@ -1,5 +1,5 @@
 name:                haskus-utils-types
-version:             1.0
+version:             1.1
 synopsis:            Haskus utility modules
 license:             BSD3
 license-file:        LICENSE
@@ -13,9 +13,6 @@ cabal-version:       >=1.20
 
 description:
    Haskus types utility modules
-
-extra-source-files:
-   CHANGES
 
 source-repository head
   type: git

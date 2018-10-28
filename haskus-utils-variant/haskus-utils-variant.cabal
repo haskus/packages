@@ -33,7 +33,7 @@ library
   build-depends:       
       base                      >= 4.9
    ,  template-haskell
-   ,  haskus-utils-types
+   ,  haskus-utils-types        >= 1.1
    ,  haskus-utils-data
 
   build-tools: 
