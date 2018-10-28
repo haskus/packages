@@ -72,7 +72,10 @@ import GHC.Exts (Any,Constraint)
 newtype VariantF (xs :: [* -> *]) e
    = VariantF (V (ApplyAll e xs))
 
--- | `ApplyAll e '[f,g,h] ==> '[f e, g e, h e]`
+-- | Apply its first argument to every element of the 2nd arg list
+--
+-- > ApplyAll e '[f,g,h] ==> '[f e, g e, h e]
+--
 type family ApplyAll e (xs :: [* -> *]) :: [*] where
    ApplyAll e '[]       = '[]
    ApplyAll e (f ': fs) = f e ': ApplyAll e fs
@@ -173,14 +176,14 @@ instance
 -- modifying function.
 --
 -- Usage:
---    alterVariantF @NoConstraint id         v
---    alterVariantF @Resizable    (resize 4) v
 --
---
---    -- Multiple constraints:
---    class (Ord a, Num a) => OrdNum a
---    instance (Ord a, Num a) => OrdNum a
---    alterVariantF @OrdNum foo v
+-- >   alterVariantF @NoConstraint id         v
+-- >   alterVariantF @Resizable    (resize 4) v
+-- >
+-- >   -- Multiple constraints:
+-- >   class (Ord a, Num a) => OrdNum a
+-- >   instance (Ord a, Num a) => OrdNum a
+-- >   alterVariantF @OrdNum foo v
 --
 alterVariantF :: forall c e (xs :: [* -> *]).
    ( AlterVariantF c e xs
@@ -212,8 +215,10 @@ instance
 -- required by the modifying function.
 --
 -- Usage:
---    algVariantF @NoConstraint id         v
---    algVariantF @Resizable    (resize 4) v
+--
+-- >  algVariantF @NoConstraint id         v
+-- >  algVariantF @Resizable    (resize 4) v
+--
 algVariantF :: forall c e (xs :: [* -> *]).
    ( AlgVariantF c e xs
    ) => (forall (f :: * -> *). c f => f e -> e) -> VariantF xs e -> e

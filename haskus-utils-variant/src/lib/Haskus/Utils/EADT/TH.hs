@@ -50,9 +50,9 @@ eadtPattern consName patStr = eadtPattern' consName patStr Nothing
 -- > ====>
 -- >
 -- > pattern ConsList ::
---    ( List a ~ EADT xs
---    , ConsF a :<: xs
---    ) => a -> List a -> List a
+-- >  ( List a ~ EADT xs
+-- >  , ConsF a :<: xs
+-- >  ) => a -> List a -> List a
 -- > pattern ConsList a l = VF (ConsF a l)
 --
 -- Note that you have to quantify free variables explicitly with 'forall'
