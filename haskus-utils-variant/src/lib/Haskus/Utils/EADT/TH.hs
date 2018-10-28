@@ -5,8 +5,8 @@
 
 -- | Template-Haskell helpers for EADTs
 module Haskus.Utils.EADT.TH
-   ( eadtPat
-   , eadtPatT
+   ( eadtPattern
+   , eadtPatternT
    )
 where
 
@@ -19,18 +19,18 @@ import Haskus.Utils.EADT
 -- E.g.
 --
 -- > data ConsF a e = ConsF a e deriving (Functor)
--- > $(eadtPat 'ConsF "Cons")
+-- > $(eadtPattern 'ConsF "Cons")
 -- >
 -- > ====>
 -- >
 -- > pattern Cons :: ConsF a :<: xs => a -> EADT xs -> EADT xs
 -- > pattern Cons a l = VF (ConsF a l)
 --
-eadtPat
+eadtPattern
    :: Name       -- ^ Actual constructor (e.g., ConsF)
    -> String     -- ^ Name of the pattern (e.g., Cons)
    -> Q [Dec]
-eadtPat consName patStr = eadtPat' consName patStr Nothing
+eadtPattern consName patStr = eadtPattern' consName patStr Nothing
 
 -- | Create a pattern synonym for an EADT constructor that is part of a
 -- specified EADT.
@@ -45,7 +45,7 @@ eadtPat consName patStr = eadtPat' consName patStr Nothing
 -- >
 -- > type List a = EADT '[ConsF a, NilF]
 -- >
--- > $(eadtPatT 'ConsF "ConsList" [t|forall a. List a|])
+-- > $(eadtPatternT 'ConsF "ConsList" [t|forall a. List a|])
 -- >
 -- > ====>
 -- >
@@ -57,22 +57,22 @@ eadtPat consName patStr = eadtPat' consName patStr Nothing
 --
 -- Note that you have to quantify free variables explicitly with 'forall'
 --
-eadtPatT
+eadtPatternT
    :: Name       -- ^ Actual constructor (e.g., ConsF)
    -> String     -- ^ Name of the pattern (e.g., Cons)
    -> Q Type     -- ^ Type of the EADT (e.g., [t|forall a. List a|])
    -> Q [Dec]
-eadtPatT consName patStr qtype =
-   eadtPat' consName patStr (Just qtype)
+eadtPatternT consName patStr qtype =
+   eadtPattern' consName patStr (Just qtype)
 
 
 -- | Create a pattern synonym for an EADT constructor
-eadtPat'
+eadtPattern'
    :: Name       -- ^ Actual constructor (e.g., ConsF)
    -> String     -- ^ Name of the pattern (e.g., Cons)
    -> Maybe (Q Type) -- ^ EADT type
    -> Q [Dec]
-eadtPat' consName patStr mEadtTy= do
+eadtPattern' consName patStr mEadtTy= do
    let patName = mkName patStr
 
    typ <- reify consName >>= \case
@@ -120,8 +120,8 @@ eadtPat' consName patStr mEadtTy= do
                Just ty -> do
                   ty' <- ty
                   let (tvs',ty'',ctx') = case ty' of
-                        ForallT tvs' ctx' t -> (tvs',t,ctx')
-                        _                   -> ([],ty',[])
+                        ForallT tvs'' ctx'' t -> (tvs'',t,ctx'')
+                        _                     -> ([],ty',[])
                   prd2 <- [t| $(return ty'') ~ EADT $(return xs) |]
                   return (xsTy:tvs',ty'',prd:prd2:ctx')
 
