@@ -58,6 +58,7 @@ library
     , Haskus.Utils.Variant.Flow
     , Haskus.Utils.Variant.Cont
     , Haskus.Utils.EADT
+    , Haskus.Utils.EADT.TH
 
   other-modules:
 
@@ -92,7 +93,6 @@ test-suite tests
    other-modules:
          Haskus.Tests.Utils
       ,  Haskus.Tests.Utils.HArray
-      ,  Haskus.Tests.Utils.Variant
       ,  Haskus.Tests.Utils.Solver
 
    build-depends:    
