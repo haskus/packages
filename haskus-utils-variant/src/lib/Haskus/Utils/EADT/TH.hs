@@ -106,6 +106,10 @@ eadtPattern' consName patStr mEadtTy= do
             -- [* -> *]
             tyToTyList = AppT ListT (AppT (AppT ArrowT StarT) StarT)
 
+            -- retreive functor var in "e"
+            KindedTV e StarT = last tvs
+
+
          -- make pattern type
          (newTvs,eadtTy,ctx) <- do
             xsName <- newName "xs"
@@ -115,21 +119,22 @@ eadtPattern' consName patStr mEadtTy= do
             eadtXs <- [t| EADT $(return xs) |]
 
             prd <-  [t| $(return conTyp) :<: $(return xs) |]
+            prd2 <-  [t| $(return (VarT e)) ~ $(return eadtXs) |]
             case mEadtTy of
-               Nothing -> return ([xsTy],eadtXs,[prd])
+               Nothing -> return ([xsTy],eadtXs,[prd,prd2])
                Just ty -> do
                   ty' <- ty
                   let (tvs',ty'',ctx') = case ty' of
+                        -- put freevars of the user specified type with the
+                        -- other ones
                         ForallT tvs'' ctx'' t -> (tvs'',t,ctx'')
                         _                     -> ([],ty',[])
-                  prd2 <- [t| $(return ty'') ~ EADT $(return xs) |]
-                  return (xsTy:tvs',ty'',prd:prd2:ctx')
+                  prd3 <- [t| $(return ty'') ~ $(return eadtXs) |]
+                  return (xsTy:tvs',ty'',prd:prd2:prd3:ctx')
 
          let
             -- remove functor var; add new type var
-            tvs'       = init tvs ++ newTvs
-            -- retreive functor var in "e"
-            KindedTV e StarT = last tvs
+            tvs'       = tvs ++ newTvs
 
             -- replace functor variable with EADT type
             go (VarT x :->: b)
