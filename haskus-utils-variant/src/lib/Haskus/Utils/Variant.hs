@@ -24,6 +24,7 @@ module Haskus.Utils.Variant
    , pattern V
    , pattern VMaybe
    , (:<)
+   , (:<<)
    , (:<?)
    -- * Operations by index
    , toVariantAt
@@ -100,7 +101,7 @@ module Haskus.Utils.Variant
 where
 
 import Unsafe.Coerce
-import GHC.Exts (Any)
+import GHC.Exts (Any,Constraint)
 import Data.Typeable
 
 import Haskus.Utils.Monad
@@ -350,6 +351,11 @@ type (:<) x xs =
    ( Member x xs
    , x :<? xs
    )
+
+-- | Forall `x` in `xs`, `x :< ys`
+type family (:<<) xs ys :: Constraint where
+   '[] :<< ys       = ()
+   (x ': xs) :<< ys = (x :< ys, xs :<< ys)
 
 -- | A value of type "x" **might** be extracted from (V xs).
 -- We don't check that "x" is in "xs".

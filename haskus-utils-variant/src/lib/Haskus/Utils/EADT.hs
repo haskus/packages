@@ -40,6 +40,7 @@ module Haskus.Utils.EADT
    -- * Extensible ADT
    , EADT
    , (:<:)
+   , (:<<:)
    , pattern VF
    , appendEADT
    , liftEADT
@@ -268,8 +269,14 @@ contToVariantFM f = VariantF <$> contToVariantM f
 -- | An extensible ADT
 type EADT xs = Fix (VariantF xs)
 
+-- | Constructor `f` is in `xs`
 type family f :<: xs where
    f :<: xs = EADTF' f (EADT xs) xs
+
+-- | Forall `x` in `xs`, `x :<: ys`
+type family (:<<:) xs ys :: Constraint where
+   '[] :<<: ys       = ()
+   (x ': xs) :<<: ys = (x :<: ys, xs :<<: ys)
 
 type EADTF' f e cs =
    ( Member' f cs
