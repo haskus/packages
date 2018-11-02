@@ -1,5 +1,5 @@
 name:                haskus-utils-variant
-version:             2.0.1
+version:             2.0.2
 synopsis:            Variant and EADT
 license:             BSD3
 license-file:        LICENSE
@@ -9,7 +9,7 @@ homepage:            http://www.haskus.org
 copyright:           Sylvain Henry 2018
 category:            System
 build-type:          Simple
-cabal-version:       >=1.20
+cabal-version:       1.20
 
 description:
    Variant (extensible sum type) and EADT (extensible recursive sum type)
