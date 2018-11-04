@@ -311,7 +311,7 @@ liftEADT :: forall e as bs.
 liftEADT = cata (Fix . liftVariantF)
 
 -- | Pop an EADT value
-popEADT :: forall xs f e.
+popEADT :: forall f xs e.
    ( f :<: xs
    , e ~ EADT xs
    , f e :< ApplyAll e xs
