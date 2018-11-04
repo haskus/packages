@@ -25,6 +25,7 @@ library
     Haskus.Utils.Variant
     Haskus.Utils.Variant.Flow
     Haskus.Utils.Variant.Cont
+    Haskus.Utils.Variant.Syntax
     Haskus.Utils.EADT
     Haskus.Utils.EADT.TH
 

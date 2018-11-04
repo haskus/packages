@@ -37,6 +37,8 @@ module Haskus.Utils.Variant
    , mapVariantAtM
    , foldMapVariantAt
    , foldMapVariantAtM
+   , bindVariant
+   , constBindVariant
    -- * Operations by type
    , toVariant
    , Member
@@ -269,6 +271,21 @@ mapVariantAtM f v@(Variant t a) =
    case fromVariantAt @n v of
       Nothing -> pure (Variant t a)
       Just x  -> Variant t <$> unsafeCoerce (f x)
+
+-- | Bind (>>=) for a Variant
+bindVariant :: forall x xs ys.
+   ( KnownNat (Length ys)
+   ) => V (x ': xs) -> (x -> V ys) -> V (Concat ys xs)
+{-# INLINABLE bindVariant #-}
+v `bindVariant` f  = case popVariantHead v of
+   Right x  -> appendVariant @xs (f x)
+   Left  xs -> prependVariant @ys xs
+
+-- | Const bind (>>) for a Variant
+constBindVariant :: forall xs ys.
+   V xs -> V ys -> V (Concat ys xs)
+_ `constBindVariant` v2 = appendVariant @xs v2
+
 
 -----------------------------------------------------------
 -- Operations by type
