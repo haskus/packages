@@ -865,6 +865,10 @@ variantToTuple :: forall l t.
 variantToTuple = hToTuple' . variantToHList
 
 
+instance ContVariant xs => MultiCont (V xs) where
+   type MultiContTypes (V xs) = xs
+   toCont  = variantToCont
+   toContM = variantToContM
 
 class ContVariant xs where
    -- | Convert a variant into a multi-continuation

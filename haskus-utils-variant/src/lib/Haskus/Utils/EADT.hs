@@ -262,6 +262,11 @@ contToVariantFM :: forall xs e m.
    ) => ContFlow (ApplyAll e xs) (m (V (ApplyAll e xs))) -> m (VariantF xs e)
 contToVariantFM f = VariantF <$> contToVariantM f
 
+instance ContVariant (ApplyAll e xs) => MultiCont (VariantF xs e) where
+   type MultiContTypes (VariantF xs e) = ApplyAll e xs
+   toCont = variantFToCont
+   toContM = variantFToContM
+
 --------------------------------------------
 -- Extensible ADT
 --------------------------------------------

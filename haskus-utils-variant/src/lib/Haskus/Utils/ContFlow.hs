@@ -18,6 +18,7 @@ module Haskus.Utils.ContFlow
    , ContTupleToList
    , StripR
    , AddR
+   , MultiCont (..)
    )
 where
 
@@ -73,3 +74,11 @@ infixl 0 >:-:>
 infixl 0 >:%:>
 
 
+class MultiCont a where
+   type MultiContTypes a :: [*]
+
+   -- | Convert a data into a multi-continuation
+   toCont :: a -> ContFlow (MultiContTypes a) r
+
+   -- | Convert a data into a multi-continuation (monadic)
+   toContM :: Monad m => m a -> ContFlow (MultiContTypes a) (m r)
