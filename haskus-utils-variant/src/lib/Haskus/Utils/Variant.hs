@@ -284,6 +284,7 @@ v `bindVariant` f  = case popVariantHead v of
 -- | Const bind (>>) for a Variant
 constBindVariant :: forall xs ys.
    V xs -> V ys -> V (Concat ys xs)
+{-# INLINABLE constBindVariant #-}
 _ `constBindVariant` v2 = appendVariant @xs v2
 
 
