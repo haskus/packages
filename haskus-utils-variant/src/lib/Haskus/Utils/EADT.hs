@@ -125,10 +125,10 @@ popVariantFHead (VariantF v) = case popVariantHead v of
    Left xs -> Left (VariantF xs)
 
 -- | Pop VariantF
-popVariantF :: forall x xs ys e.
+popVariantF :: forall x xs e.
    ( x e :< ApplyAll e xs
-   , Filter (x e) (ApplyAll e xs) ~ ApplyAll e ys
-   ) => VariantF xs e -> Either (VariantF ys e) (x e)
+   , Filter (x e) (ApplyAll e xs) ~ ApplyAll e (Filter x xs)
+   ) => VariantF xs e -> Either (VariantF (Filter x xs) e) (x e)
 {-# INLINE popVariantF #-}
 popVariantF (VariantF v) = case popVariant v of
    Right x -> Right x
