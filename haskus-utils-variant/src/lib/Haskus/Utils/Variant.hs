@@ -42,7 +42,7 @@ module Haskus.Utils.Variant
    -- * Operations by type
    , toVariant
    , Member
-   , Filter
+   , Remove
    , popVariant
    , popVariantMaybe
    , fromVariant
@@ -69,7 +69,7 @@ module Haskus.Utils.Variant
    -- * Conversions between variants
    , appendVariant
    , prependVariant
-   , Liftable
+   , LiftVariant
    , liftVariant
    , nubVariant
    , productVariant
@@ -97,7 +97,7 @@ module Haskus.Utils.Variant
    , fromVariant'
    , popVariant'
    , toVariant'
-   , LiftVariant
+   , LiftVariant'
    , PopVariant
    )
 where
@@ -312,7 +312,7 @@ toVariant' = toVariantAt @(IndexOf a l)
 
 class PopVariant a xs where
    -- | Remove a type from a variant
-   popVariant' :: V xs -> Either (V (Filter a xs)) a
+   popVariant' :: V xs -> Either (V (Remove a xs)) a
 
 instance PopVariant a '[] where
    {-# INLINE popVariant' #-}
@@ -322,7 +322,7 @@ instance forall a xs n xs' y ys.
       ( PopVariant a xs'
       , n ~ MaybeIndexOf a xs
       , xs' ~ RemoveAt1 n xs
-      , Filter a xs' ~ Filter a xs
+      , Remove a xs' ~ Remove a xs
       , KnownNat n
       , xs ~ (y ': ys)
       ) => PopVariant a (y ': ys)
@@ -385,7 +385,7 @@ type (:<?) x xs =
 -- remaining variant
 popVariant :: forall a xs.
    ( a :< xs
-   ) => V xs -> Either (V (Filter a xs)) a
+   ) => V xs -> Either (V (Remove a xs)) a
 {-# INLINABLE popVariant #-}
 popVariant v = popVariant' @a v
 
@@ -393,7 +393,7 @@ popVariant v = popVariant' @a v
 -- remaining variant
 popVariantMaybe :: forall a xs.
    ( a :<? xs
-   ) => V xs -> Either (V (Filter a xs)) a
+   ) => V xs -> Either (V (Remove a xs)) a
 {-# INLINABLE popVariantMaybe #-}
 popVariantMaybe v = popVariant' @a v
 
@@ -489,7 +489,7 @@ mapNubVariant :: forall a b cs ds rs.
    ( MapVariant a b cs
    , ds ~ ReplaceNS (IndexesOf a cs) b cs
    , rs ~ Nub ds
-   , Liftable ds rs
+   , LiftVariant ds rs
    ) => (a -> b) -> V cs -> V rs
 {-# INLINABLE mapNubVariant #-}
 mapNubVariant f = nubVariant . mapVariant f
@@ -561,7 +561,7 @@ foldMapVariantFirstM f v = foldMapVariantAtM @n f v
 foldMapVariant :: forall a cs ds i.
    ( i ~ IndexOf a cs
    , a :< cs
-   ) => (a -> V ds) -> V cs -> V (InsertAt i (Filter a cs) ds)
+   ) => (a -> V ds) -> V cs -> V (InsertAt i (Remove a cs) ds)
 foldMapVariant f v = case popVariant v of
    Right a -> case f a of
       Variant t x -> Variant (i + t) x
@@ -717,22 +717,22 @@ prependVariant (Variant t a) = Variant (n+t) a
       n = natValue' @(Length ys)
 
 -- | xs is liftable in ys
-type Liftable xs ys =
+type LiftVariant xs ys =
    ( IsSubset xs ys ~ 'True
-   , LiftVariant xs ys
+   , LiftVariant' xs ys
    )
 
-class LiftVariant xs ys where
+class LiftVariant' xs ys where
    liftVariant' :: V xs -> V ys
 
-instance LiftVariant '[] ys where
+instance LiftVariant' '[] ys where
    {-# INLINE liftVariant' #-}
    liftVariant' _ = undefined
 
 instance forall xs ys x.
-      ( LiftVariant xs ys
+      ( LiftVariant' xs ys
       , KnownNat (IndexOf x ys)
-      ) => LiftVariant (x ': xs) ys
+      ) => LiftVariant' (x ': xs) ys
    where
       {-# INLINE liftVariant' #-}
       liftVariant' (Variant t a)
@@ -744,13 +744,13 @@ instance forall xs ys x.
 --
 -- Set values to the first matching type
 liftVariant :: forall ys xs.
-   ( Liftable xs ys
+   ( LiftVariant xs ys
    ) => V xs -> V ys
 {-# INLINABLE liftVariant #-}
 liftVariant = liftVariant'
 
 -- | Nub the type list
-nubVariant :: (Liftable xs (Nub xs)) => V xs -> V (Nub xs)
+nubVariant :: (LiftVariant xs (Nub xs)) => V xs -> V (Nub xs)
 {-# INLINABLE nubVariant #-}
 nubVariant = liftVariant
 

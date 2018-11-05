@@ -23,15 +23,18 @@ module Haskus.Utils.VariantF
    , toVariantFHead
    , toVariantFTail
    , popVariantFHead
-   , popVariantF
-   , mapVariantF
    , variantFToValue
-   , LiftableF
+   , MapVariantF
+   , mapVariantF
+   , PopVariantF
+   , popVariantF
+   , LiftVariantF
    , liftVariantF
    , AlterVariantF
    , alterVariantF
    , AlgVariantF
    , algVariantF
+   , SplitVariantF
    , splitVariantF
    , variantFToCont
    , variantFToContM
@@ -107,34 +110,41 @@ popVariantFHead (VariantF v) = case popVariantHead v of
    Right x -> Right x
    Left xs -> Left (VariantF xs)
 
+type PopVariantF x xs e =
+   ( x e :< ApplyAll e xs
+   , Remove (x e) (ApplyAll e xs) ~ ApplyAll e (Remove x xs)
+   )
+
 -- | Pop VariantF
 popVariantF :: forall x xs e.
-   ( x e :< ApplyAll e xs
-   , Filter (x e) (ApplyAll e xs) ~ ApplyAll e (Filter x xs)
-   ) => VariantF xs e -> Either (VariantF (Filter x xs) e) (x e)
+   ( PopVariantF x xs e
+   ) => VariantF xs e -> Either (VariantF (Remove x xs) e) (x e)
 {-# INLINE popVariantF #-}
 popVariantF (VariantF v) = case popVariant v of
    Right x -> Right x
    Left xs -> Left (VariantF xs)
 
--- | Map the matching types of a variant
-mapVariantF :: forall a b cs e ds as.
-   ( MapVariant (a e) (b e) as
+type MapVariantF a b cs ds e =
+   ( MapVariant (a e) (b e) (ApplyAll e cs)
    , ds ~ ReplaceNS (IndexesOf a cs) b cs
-   , as ~ ApplyAll e cs
-   , ApplyAll e ds ~ ReplaceNS (IndexesOf (a e) as) (b e) as
+   , ApplyAll e ds ~ ReplaceNS (IndexesOf (a e) (ApplyAll e cs)) (b e) (ApplyAll e cs)
+   )
+
+-- | Map the matching types of a variant
+mapVariantF :: forall a b cs ds e.
+   ( MapVariantF a b cs ds e
    ) => (a e -> b e) -> VariantF cs e -> VariantF ds e
-mapVariantF f (VariantF v) = VariantF (mapVariant @(a e) @(b e) @as f v)
+mapVariantF f (VariantF v) = VariantF (mapVariant @(a e) @(b e) @(ApplyAll e cs) f v)
 
 -- | xs is liftable in ys
-type LiftableF e xs ys =
+type LiftVariantF e xs ys =
    ( IsSubset xs ys ~ 'True
    , LiftVariant (ApplyAll e xs) (ApplyAll e ys)
    )
 
 -- | Lift a VariantF into another
 liftVariantF :: forall e as bs.
-   ( LiftableF e as bs
+   ( LiftVariantF e as bs
    ) => VariantF as e -> VariantF bs e
 liftVariantF (VariantF v) = VariantF (liftVariant' v)
 
@@ -209,11 +219,14 @@ algVariantF :: forall c e (xs :: [* -> *]).
 {-# INLINABLE algVariantF #-}
 algVariantF f (VariantF (Variant t a)) = algVariantF' @c @e @xs f t a
 
+type SplitVariantF as xs e =
+   ( Complement (ApplyAll e xs) (ApplyAll e as) ~ ApplyAll e (Complement xs as)
+   , SplitVariant (ApplyAll e as) (ApplyAll e xs) (ApplyAll e xs)
+   )
 
 -- | Split a VariantF in two
 splitVariantF :: forall as xs e.
-   ( Complement (ApplyAll e xs) (ApplyAll e as) ~ ApplyAll e (Complement xs as)
-   , SplitVariant (ApplyAll e as) (ApplyAll e xs) (ApplyAll e xs)
+   ( SplitVariantF as xs e
    ) => VariantF xs e
      -> Either (VariantF as e) (VariantF (Complement xs as) e)
 splitVariantF (VariantF v) = bimap VariantF VariantF (splitVariant v)

@@ -10,45 +10,54 @@
 
 -- | Utils for type lists
 module Haskus.Utils.Types.List
-   ( Map
-   , Max
-   , Tail
-   , Drop
-   , Take
-   , Init
+   (
+   -- * Construction
+     Snoc
+   , Concat
+   , Replicate
+   , Zip
+   -- * Removal
+   , RemoveAt
+   , RemoveAt1
+   , RemoveAtN
+   , Remove
+   , Nub
+   , NubHead
+   -- * Sublist
    , Head
-   , Snoc
+   , Tail
+   , Init
+   , Take
+   , Drop
+   -- * Insert/replace
    , InsertAt
    , ReplaceAt
    , Replace
    , ReplaceN
    , ReplaceNS
-   , Reverse
-   , RemoveAt
-   , RemoveAt1
-   , RemoveAtN
-   , Concat
-   , Length
-   , Replicate
-   , Generate
+   -- * Set operations
    , IsMember
    , IsSubset
-   , Indexes
-   , MapTest
-   , Zip
-   , Filter
-   , Nub
-   , NubHead
-   , IndexOf
-   , IndexesOf
-   , MaybeIndexOf
-   , Index
    , Union
    , Complement
    , Product
    , Member
    , Member'
    , CheckNub
+   -- * Index operations
+   , IndexOf
+   , IndexesOf
+   , MaybeIndexOf
+   , Index
+   , Reverse
+   -- * Nat list
+   , Generate
+   -- * Others
+   , Map
+   , Max
+   , Length
+   , Indexes
+   , MapTest
    )
 where
 
@@ -224,10 +233,10 @@ type family Zip (l :: [*]) (l2 :: [*]) where
    Zip (x ': xs) (y ': ys) = (x,y) ': Zip xs ys
 
 -- | Remove `a` in `l`
-type family Filter (a :: k) (l :: [k]) :: [k] where
-   Filter a '[]       = '[]
-   Filter a (a ': as) = Filter a as
-   Filter a (b ': as) = b ': Filter a as
+type family Remove (a :: k) (l :: [k]) :: [k] where
+   Remove a '[]       = '[]
+   Remove a (a ': as) = Remove a as
+   Remove a (b ': as) = b ': Remove a as
 
 -- | Keep only a single value of each type
 type family Nub (l :: [k]) :: [k] where
@@ -235,12 +244,12 @@ type family Nub (l :: [k]) :: [k] where
 
 type family Nub' (as :: [k]) (xs :: [k]) :: [k] where
    Nub' '[]       xs = xs
-   Nub' (x ': as) xs = Nub' (Filter x as) (x ': xs) 
+   Nub' (x ': as) xs = Nub' (Remove x as) (x ': xs) 
 
 -- | Keep only a single value of the head type
 type family NubHead (l :: [k]) :: [k] where
    NubHead '[]       = '[]
-   NubHead (x ': xs) = x ': Filter x xs
+   NubHead (x ': xs) = x ': Remove x xs
 
 -- | Get the first index of a type
 type family IndexOf (a :: k) (l :: [k]) :: Nat where
@@ -283,7 +292,7 @@ type family Union (xs :: [k]) (ys :: [k]) :: [k] where
 -- | Complement xs \ ys
 type family Complement (xs :: [k]) (ys :: [k]) :: [k] where
    Complement xs '[]    = xs
-   Complement xs (y:ys) = Complement (Filter y xs) ys
+   Complement xs (y:ys) = Complement (Remove y xs) ys
 
 -- | Product of two lists
 type family Product (xs :: [*]) (ys :: [*]) :: [*] where

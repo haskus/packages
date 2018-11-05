@@ -56,9 +56,9 @@ instance forall x y z xs ys zs m a.
       , y ~ Flow m ys
       , z ~ Flow m zs
       , a :< xs
-      , Liftable ys zs
-      , Liftable (Filter a xs) zs
-      , zs ~ Union (Filter a xs) ys
+      , LiftVariant ys zs
+      , LiftVariant (Remove a xs) zs
+      , zs ~ Union (Remove a xs) ys
       , Monad m
       ) => Apply (Choice a) (x,y) z
    where
@@ -85,7 +85,7 @@ choice' = hFoldl (Choice :: Choice a) (flowSingle undefined :: Flow m '[a])
 -- | Apply the action zero or more times (until a ParseError result is
 -- returned)
 many ::
-   ( zs ~ Filter ParseError xs
+   ( zs ~ Remove ParseError xs
    , Monad m
    , ParseError :< xs
    ) => Flow m xs -> Flow m '[[V zs]]
@@ -95,7 +95,7 @@ many f = manyBounded Nothing Nothing f
 -- | Apply the action zero or more times (up to max) until a ParseError result
 -- is returned
 manyAtMost ::
-   ( zs ~ Filter ParseError xs
+   ( zs ~ Remove ParseError xs
    , Monad m
    , ParseError :< xs
    ) => Word -> Flow m xs -> Flow m '[[V zs]]
@@ -105,7 +105,7 @@ manyAtMost max f = manyBounded Nothing (Just max) f
 -- | Apply the action zero or more times (up to max) until a ParseError result
 -- is returned
 manyAtMost' ::
-   ( zs ~ Filter ParseError xs
+   ( zs ~ Remove ParseError xs
    , Monad m
    , ParseError :< xs
    ) => Word -> Flow m xs -> m [V zs]
@@ -114,7 +114,7 @@ manyAtMost' max f = variantToValue <$> manyAtMost max f
 -- | Apply the action zero or more times (up to max) until a ParseError result
 -- is returned
 manyAtMost'' ::
-   ( '[x] ~ Filter ParseError xs
+   ( '[x] ~ Remove ParseError xs
    , Monad m
    , ParseError :< xs
    ) => Word -> Flow m xs -> m [x]
@@ -123,7 +123,7 @@ manyAtMost'' max f = fmap variantToValue <$> manyAtMost' max f
 -- | Apply the action at least n times or more times (until a ParseError
 -- result is returned)
 manyAtLeast ::
-   ( zs ~ Filter ParseError xs
+   ( zs ~ Remove ParseError xs
    , Monad m
    , ParseError :< xs
    ) => Word -> Flow m xs -> Flow m '[[V zs],ParseError]
@@ -134,8 +134,8 @@ manyAtLeast min = manyBounded (Just min) Nothing
 --
 -- Return both the list of first values and the ending value
 manyTill ::
-   ( zs ~ Filter ParseError xs
-   , zs' ~ Filter ParseError ys
+   ( zs ~ Remove ParseError xs
+   , zs' ~ Remove ParseError ys
    , Monad m
    , ParseError :<? xs
    , ParseError :< ys
@@ -158,7 +158,7 @@ manyTill f g = go []
 --
 -- Return only the list of first values
 manyTill' ::
-   ( zs ~ Filter ParseError xs
+   ( zs ~ Remove ParseError xs
    , Monad m
    , ParseError :<? xs
    , ParseError :< ys
@@ -169,7 +169,7 @@ manyTill' f g = manyTill f g >.-.> fst
 --
 -- On failure, fails.
 manyBounded :: forall zs xs m.
-   ( zs ~ Filter ParseError xs
+   ( zs ~ Remove ParseError xs
    , Monad m
    , ParseError :<? xs
    ) => Maybe Word -> Maybe Word -> Flow m xs -> Flow m '[[V zs],ParseError]

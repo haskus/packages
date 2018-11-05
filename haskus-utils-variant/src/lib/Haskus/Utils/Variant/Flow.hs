@@ -25,7 +25,7 @@ module Haskus.Utils.Variant.Flow
    , flowFor
    , flowTraverseFilter
    , flowForFilter
-   , Liftable
+   , LiftVariant
    , (:<)
    , (:<?)
    -- * Functor, applicative equivalents
@@ -225,7 +225,7 @@ flowSingle :: Monad m => x -> Flow m '[x]
 flowSingle = flowSetN @0
 
 -- | Lift a flow into another
-flowLift :: (Liftable xs ys , Monad m) => Flow m xs -> Flow m ys
+flowLift :: (LiftVariant xs ys , Monad m) => Flow m xs -> Flow m ys
 {-# INLINABLE flowLift #-}
 flowLift = fmap liftVariant
 
@@ -296,8 +296,8 @@ flowMap = (>.-.>)
 
 -- | Bind two flows in a monadish way (error types union)
 flowBind :: forall xs ys zs m x.
-   ( Liftable xs zs
-   , Liftable ys zs
+   ( LiftVariant xs zs
+   , LiftVariant ys zs
    , zs ~ Union xs ys
    , Monad m
    ) => Flow m (x ': ys) -> (x -> Flow m xs) -> Flow m zs
@@ -313,7 +313,7 @@ flowBind' = (>.~$>)
 flowMatch :: forall x xs zs m.
    ( Monad m
    , x :< xs
-   , Liftable (Filter x xs) zs
+   , LiftVariant (Remove x xs) zs
    ) => Flow m xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINABLE flowMatch #-}
 flowMatch = (>%~^>)
@@ -322,7 +322,7 @@ flowMatch = (>%~^>)
 flowMatchFail :: forall x xs m.
    ( Monad m
    , x :< xs
-   ) => Flow m xs -> (x -> m ()) -> Flow m (Filter x xs)
+   ) => Flow m xs -> (x -> m ()) -> Flow m (Remove x xs)
 {-# INLINABLE flowMatchFail #-}
 flowMatchFail = (>%~!!>)
 
@@ -373,8 +373,8 @@ infixl 0 >.~+>
 -- | Extract the first value, lift both
 (.~^^>) :: forall m a xs ys zs.
    ( Monad m
-   , Liftable xs zs
-   , Liftable ys zs
+   , LiftVariant xs zs
+   , LiftVariant ys zs
    ) => V (a ': ys) -> (a -> Flow m xs) -> Flow m zs
 {-# INLINABLE (.~^^>) #-}
 (.~^^>) v f = makeFlowOp selectFirst (applyF f) combineLiftBoth v
@@ -385,8 +385,8 @@ infixl 0 .~^^>
 -- | Extract the first value, lift both
 (>.~^^>) :: forall m a xs ys zs.
    ( Monad m
-   , Liftable xs zs
-   , Liftable ys zs
+   , LiftVariant xs zs
+   , LiftVariant ys zs
    ) => Flow m (a ': ys) -> (a -> Flow m xs) -> Flow m zs
 {-# INLINABLE (>.~^^>) #-}
 (>.~^^>) = liftm (.~^^>)
@@ -396,7 +396,7 @@ infixl 0 >.~^^>
 -- | Extract the first value, lift unselected
 (.~^>) :: forall m a ys zs.
    ( Monad m
-   , Liftable ys zs
+   , LiftVariant ys zs
    ) => V (a ': ys) -> (a -> Flow m zs) -> Flow m zs
 {-# INLINABLE (.~^>) #-}
 (.~^>) v f = makeFlowOp selectFirst (applyF f) combineLiftUnselected v
@@ -406,7 +406,7 @@ infixl 0 .~^>
 -- | Extract the first value, lift unselected
 (>.~^>) :: forall m a ys zs.
    ( Monad m
-   , Liftable ys zs
+   , LiftVariant ys zs
    ) => Flow m (a ': ys) -> (a -> Flow m zs) -> Flow m zs
 {-# INLINABLE (>.~^>) #-}
 (>.~^>) = liftm (.~^>)
@@ -433,8 +433,8 @@ infixl 0 >.~$>
 
 -- | Take the first output, union the result
 (.~|>) ::
-   ( Liftable xs zs
-   , Liftable ys zs
+   ( LiftVariant xs zs
+   , LiftVariant ys zs
    , zs ~ Union xs ys
    , Monad m
    ) => V (a ': ys) -> (a -> Flow m xs) -> Flow m zs
@@ -445,8 +445,8 @@ infixl 0 .~|>
 
 -- | Take the first output, fusion the result
 (>.~|>) ::
-   ( Liftable xs zs
-   , Liftable ys zs
+   ( LiftVariant xs zs
+   , LiftVariant ys zs
    , zs ~ Union xs ys
    , Monad m
    ) => Flow m (a ': ys) -> (a -> Flow m xs) -> Flow m zs
@@ -580,8 +580,8 @@ infixl 4 <*<
 -- | Applicative <*> equivalent, with error union
 (<|<) :: forall m xs ys zs y z.
    ( Monad m
-   , Liftable xs zs
-   , Liftable ys zs
+   , LiftVariant xs zs
+   , LiftVariant ys zs
    , zs ~ Union xs ys
    ) => Flow m ((y -> z) ': xs) -> Flow m (y ': ys) -> Flow m (z ': zs)
 {-# INLINABLE (<|<) #-}
@@ -640,8 +640,8 @@ infixl 0 >.~~+>
 -- | Extract the first value, lift the result
 (.~~^^>) :: forall m a xs ys zs.
    ( Monad m
-   , Liftable xs zs
-   , Liftable ys zs
+   , LiftVariant xs zs
+   , LiftVariant ys zs
    ) => V (a ': ys) -> Flow m xs -> Flow m zs
 {-# INLINABLE (.~~^^>) #-}
 (.~~^^>) v f = v .~^^> const f
@@ -652,8 +652,8 @@ infixl 0 .~~^^>
 -- | Extract the first value, lift the result
 (>.~~^^>) :: forall m a xs ys zs.
    ( Monad m
-   , Liftable xs zs
-   , Liftable ys zs
+   , LiftVariant xs zs
+   , LiftVariant ys zs
    ) => Flow m (a ': ys) -> Flow m xs -> Flow m zs
 {-# INLINABLE (>.~~^^>) #-}
 (>.~~^^>) = liftm (.~~^^>)
@@ -663,7 +663,7 @@ infixl 0 >.~~^^>
 -- | Extract the first value, connect to the expected output
 (.~~^>) :: forall m a ys zs.
    ( Monad m
-   , Liftable ys zs
+   , LiftVariant ys zs
    ) => V (a ': ys) -> Flow m zs -> Flow m zs
 {-# INLINABLE (.~~^>) #-}
 (.~~^>) v f = v .~^> const f
@@ -673,7 +673,7 @@ infixl 0 .~~^>
 -- | Extract the first value, connect to the expected output
 (>.~~^>) :: forall m a ys zs.
    ( Monad m
-   , Liftable ys zs
+   , LiftVariant ys zs
    ) => Flow m (a ': ys) -> Flow m zs -> Flow m zs
 {-# INLINABLE (>.~~^>) #-}
 (>.~~^>) = liftm (.~~^>)
@@ -700,8 +700,8 @@ infixl 0 >.~~$>
 
 -- | Take the first output, fusion the result
 (.~~|>) ::
-   ( Liftable xs zs
-   , Liftable ys zs
+   ( LiftVariant xs zs
+   , LiftVariant ys zs
    , zs ~ Union xs ys
    , Monad m
    ) => V (a ': ys) -> Flow m xs -> Flow m zs
@@ -712,8 +712,8 @@ infixl 0 .~~|>
 
 -- | Take the first output, fusion the result
 (>.~~|>) ::
-   ( Liftable xs zs
-   , Liftable ys zs
+   ( LiftVariant xs zs
+   , LiftVariant ys zs
    , zs ~ Union xs ys
    , Monad m
    ) => Flow m (a ': ys) -> Flow m xs -> Flow m zs
@@ -844,7 +844,7 @@ infixl 0 >..~..>
 -- | Extract the tail, lift the result
 (..~^^>) ::
    ( Monad m
-   , Liftable xs (a ': zs)
+   , LiftVariant xs (a ': zs)
    ) => V (a ': l) -> (V l -> Flow m xs) -> Flow m (a ': zs)
 {-# INLINABLE (..~^^>) #-}
 (..~^^>) v f = case popVariantHead v of
@@ -856,7 +856,7 @@ infixl 0 ..~^^>
 -- | Extract the tail, lift the result
 (>..~^^>) ::
    ( Monad m
-   , Liftable xs (a ': zs)
+   , LiftVariant xs (a ': zs)
    ) => Flow m  (a ': l) -> (V l -> Flow m xs) -> Flow m (a ': zs)
 {-# INLINABLE (>..~^^>) #-}
 (>..~^^>) = liftm (..~^^>)
@@ -889,7 +889,7 @@ infixl 0 >..~^>
 (..?~^>) ::
    ( Monad m
    , a :<? xs
-   , Liftable (Filter a xs) ys
+   , LiftVariant (Remove a xs) ys
    ) => V (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': ys)
 {-# INLINABLE (..?~^>) #-}
 (..?~^>) v f = v ..~..> (\v' -> v' ?~^> f)
@@ -900,7 +900,7 @@ infixl 0 ..?~^>
 (>..?~^>) ::
    ( Monad m
    , a :<? xs
-   , Liftable (Filter a xs) ys
+   , LiftVariant (Remove a xs) ys
    ) => Flow m (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': ys)
 {-# INLINABLE (>..?~^>) #-}
 (>..?~^>) = liftm (..?~^>)
@@ -911,7 +911,7 @@ infixl 0 >..?~^>
 (..%~^>) ::
    ( Monad m
    , a :< xs
-   , Liftable (Filter a xs) ys
+   , LiftVariant (Remove a xs) ys
    ) => V (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': ys)
 {-# INLINABLE (..%~^>) #-}
 (..%~^>) v f = v ..~..> (\v' -> v' %~^> f)
@@ -922,7 +922,7 @@ infixl 0 ..%~^>
 (>..%~^>) ::
    ( Monad m
    , a :< xs
-   , Liftable (Filter a xs) ys
+   , LiftVariant (Remove a xs) ys
    ) => Flow m (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': ys)
 {-# INLINABLE (>..%~^>) #-}
 (>..%~^>) = liftm (..%~^>)
@@ -933,8 +933,8 @@ infixl 0 >..%~^>
 (..?~^^>) ::
    ( Monad m
    , a :<? xs
-   , Liftable (Filter a xs) zs
-   , Liftable ys zs
+   , LiftVariant (Remove a xs) zs
+   , LiftVariant ys zs
    ) => V (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': zs)
 {-# INLINABLE (..?~^^>) #-}
 (..?~^^>) v f = v ..~..> (\v' -> v' ?~^^> f)
@@ -945,8 +945,8 @@ infixl 0 ..?~^^>
 (>..?~^^>) ::
    ( Monad m
    , a :<? xs
-   , Liftable (Filter a xs) zs
-   , Liftable ys zs
+   , LiftVariant (Remove a xs) zs
+   , LiftVariant ys zs
    ) => Flow m (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': zs)
 {-# INLINABLE (>..?~^^>) #-}
 (>..?~^^>) = liftm (..?~^^>)
@@ -957,8 +957,8 @@ infixl 0 >..?~^^>
 (..%~^^>) ::
    ( Monad m
    , a :< xs
-   , Liftable (Filter a xs) zs
-   , Liftable ys zs
+   , LiftVariant (Remove a xs) zs
+   , LiftVariant ys zs
    ) => V (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': zs)
 {-# INLINABLE (..%~^^>) #-}
 (..%~^^>) v f = v ..~..> (\v' -> v' %~^^> f)
@@ -969,8 +969,8 @@ infixl 0 ..%~^^>
 (>..%~^^>) ::
    ( Monad m
    , a :< xs
-   , Liftable (Filter a xs) zs
-   , Liftable ys zs
+   , LiftVariant (Remove a xs) zs
+   , LiftVariant ys zs
    ) => Flow m (x ': xs) -> (a -> Flow m ys) -> Flow m (x ': zs)
 {-# INLINABLE (>..%~^^>) #-}
 (>..%~^^>) = liftm (..%~^^>)
@@ -981,7 +981,7 @@ infixl 0 >..%~^^>
 (..?~$>) ::
    ( Monad m
    , a :<? xs
-   , Liftable (Filter a xs) (x ': xs)
+   , LiftVariant (Remove a xs) (x ': xs)
    ) => V (x ': xs) -> (a -> Flow m (x ': xs)) -> Flow m (x ': xs)
 {-# INLINABLE (..?~$>) #-}
 (..?~$>) v f = case popVariantHead v of
@@ -994,7 +994,7 @@ infixl 0 ..?~$>
 (>..?~$>) ::
    ( Monad m
    , a :<? xs
-   , Liftable (Filter a xs) (x ': xs)
+   , LiftVariant (Remove a xs) (x ': xs)
    ) => Flow m (x ': xs) -> (a -> Flow m (x ': xs)) -> Flow m (x ': xs)
 {-# INLINABLE (>..?~$>) #-}
 (>..?~$>) = liftm (..?~$>)
@@ -1005,7 +1005,7 @@ infixl 0 >..?~$>
 (..%~$>) ::
    ( Monad m
    , a :< xs
-   , Liftable (Filter a xs) (x ': xs)
+   , LiftVariant (Remove a xs) (x ': xs)
    ) => V (x ': xs) -> (a -> Flow m (x ': xs)) -> Flow m (x ': xs)
 {-# INLINABLE (..%~$>) #-}
 (..%~$>) v f = case popVariantHead v of
@@ -1018,7 +1018,7 @@ infixl 0 ..%~$>
 (>..%~$>) ::
    ( Monad m
    , a :< xs
-   , Liftable (Filter a xs) (x ': xs)
+   , LiftVariant (Remove a xs) (x ': xs)
    ) => Flow m (x ': xs) -> (a -> Flow m (x ': xs)) -> Flow m (x ': xs)
 {-# INLINABLE (>..%~$>) #-}
 (>..%~$>) = liftm (..%~$>)
@@ -1090,7 +1090,7 @@ infixl 0 >..~!!>
 (..?~!!>) ::
    ( Monad m
    , y :<? xs
-   ) => V (x ': xs) -> (y -> m ()) -> Flow m (x ': Filter y xs)
+   ) => V (x ': xs) -> (y -> m ()) -> Flow m (x ': Remove y xs)
 {-# INLINABLE (..?~!!>) #-}
 (..?~!!>) v f = v ..~..> (\xs -> xs ?~!!> f)
 
@@ -1100,7 +1100,7 @@ infixl 0 ..?~!!>
 (>..?~!!>) ::
    ( Monad m
    , y :<? xs
-   ) => Flow m (x ': xs) -> (y -> m ()) -> Flow m (x ': Filter y xs)
+   ) => Flow m (x ': xs) -> (y -> m ()) -> Flow m (x ': Remove y xs)
 {-# INLINABLE (>..?~!!>) #-}
 (>..?~!!>) = liftm (..?~!!>)
 
@@ -1110,7 +1110,7 @@ infixl 0 >..?~!!>
 (..%~!!>) ::
    ( Monad m
    , y :< xs
-   ) => V (x ': xs) -> (y -> m ()) -> Flow m (x ': Filter y xs)
+   ) => V (x ': xs) -> (y -> m ()) -> Flow m (x ': Remove y xs)
 {-# INLINABLE (..%~!!>) #-}
 (..%~!!>) v f = v ..~..> (\xs -> xs %~!!> f)
 
@@ -1120,7 +1120,7 @@ infixl 0 ..%~!!>
 (>..%~!!>) ::
    ( Monad m
    , y :< xs
-   ) => Flow m (x ': xs) -> (y -> m ()) -> Flow m (x ': Filter y xs)
+   ) => Flow m (x ': xs) -> (y -> m ()) -> Flow m (x ': Remove y xs)
 {-# INLINABLE (>..%~!!>) #-}
 (>..%~!!>) = liftm (..%~!!>)
 
@@ -1176,7 +1176,7 @@ infixl 0 >..%~!>
 
 -- | Pop element, set the first value
 (?~.>) :: forall x xs y ys m.
-   ( ys ~ Filter x xs
+   ( ys ~ Remove x xs
    , Monad m
    , x :<? xs
    ) => V xs -> (x -> m y) -> Flow m (y ': ys)
@@ -1189,7 +1189,7 @@ infixl 0 ?~.>
 
 -- | Pop element, set the first value
 (>?~.>) ::
-   ( ys ~ Filter x xs
+   ( ys ~ Remove x xs
    , Monad m
    , x :<? xs
    ) => Flow m xs -> (x -> m y) -> Flow m (y ': ys)
@@ -1200,7 +1200,7 @@ infixl 0 >?~.>
 
 -- | Pop element, set the first value
 (%~.>) :: forall x xs y ys m.
-   ( ys ~ Filter x xs
+   ( ys ~ Remove x xs
    , Monad m
    , x :< xs
    ) => V xs -> (x -> m y) -> Flow m (y ': ys)
@@ -1211,7 +1211,7 @@ infixl 0 %~.>
 
 -- | Pop element, set the first value
 (>%~.>) ::
-   ( ys ~ Filter x xs
+   ( ys ~ Remove x xs
    , Monad m
    , x :< xs
    ) => Flow m xs -> (x -> m y) -> Flow m (y ': ys)
@@ -1225,10 +1225,10 @@ infixl 0 >%~.>
    ( Monad m
    , x :<? xs
    , KnownNat (Length ys)
-   ) => V xs -> (x -> Flow m ys) -> Flow m (Concat ys (Filter x xs))
+   ) => V xs -> (x -> Flow m ys) -> Flow m (Concat ys (Remove x xs))
 {-# INLINABLE (?~+>) #-}
 (?~+>) v f = case popVariantMaybe v of
-   Right x -> appendVariant  @(Filter x xs) <$> f x
+   Right x -> appendVariant  @(Remove x xs) <$> f x
    Left ys -> prependVariant @ys            <$> return ys
 
 infixl 0 ?~+>
@@ -1238,7 +1238,7 @@ infixl 0 ?~+>
    ( Monad m
    , x :< xs
    , KnownNat (Length ys)
-   ) => Flow m xs -> (x -> Flow m ys) -> Flow m (Concat ys (Filter x xs))
+   ) => Flow m xs -> (x -> Flow m ys) -> Flow m (Concat ys (Remove x xs))
 {-# INLINABLE (>?~+>) #-}
 (>?~+>) = liftm (?~+>)
 
@@ -1249,7 +1249,7 @@ infixl 0 >?~+>
    ( Monad m
    , x :< xs
    , KnownNat (Length ys)
-   ) => V xs -> (x -> Flow m ys) -> Flow m (Concat ys (Filter x xs))
+   ) => V xs -> (x -> Flow m ys) -> Flow m (Concat ys (Remove x xs))
 {-# INLINABLE (%~+>) #-}
 (%~+>) = (?~+>)
 
@@ -1260,7 +1260,7 @@ infixl 0 %~+>
    ( Monad m
    , x :< xs
    , KnownNat (Length ys)
-   ) => Flow m xs -> (x -> Flow m ys) -> Flow m (Concat ys (Filter x xs))
+   ) => Flow m xs -> (x -> Flow m ys) -> Flow m (Concat ys (Remove x xs))
 {-# INLINABLE (>%~+>) #-}
 (>%~+>) = liftm (%~+>)
 
@@ -1270,8 +1270,8 @@ infixl 0 >%~+>
 (?~^^>) :: forall x xs ys zs m.
    ( Monad m
    , x :<? xs
-   , Liftable (Filter x xs) zs
-   , Liftable ys zs
+   , LiftVariant (Remove x xs) zs
+   , LiftVariant ys zs
    ) => V xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINABLE (?~^^>) #-}
 (?~^^>) v f = case popVariantMaybe v of
@@ -1284,8 +1284,8 @@ infixl 0 ?~^^>
 (>?~^^>) :: forall x xs ys zs m.
    ( Monad m
    , x :<? xs
-   , Liftable (Filter x xs) zs
-   , Liftable ys zs
+   , LiftVariant (Remove x xs) zs
+   , LiftVariant ys zs
    ) => Flow m xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINABLE (>?~^^>) #-}
 (>?~^^>) = liftm (?~^^>)
@@ -1296,8 +1296,8 @@ infixl 0 >?~^^>
 (%~^^>) :: forall x xs ys zs m.
    ( Monad m
    , x :< xs
-   , Liftable (Filter x xs) zs
-   , Liftable ys zs
+   , LiftVariant (Remove x xs) zs
+   , LiftVariant ys zs
    ) => V xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINABLE (%~^^>) #-}
 (%~^^>) = (?~^^>)
@@ -1308,8 +1308,8 @@ infixl 0 %~^^>
 (>%~^^>) :: forall x xs ys zs m.
    ( Monad m
    , x :< xs
-   , Liftable (Filter x xs) zs
-   , Liftable ys zs
+   , LiftVariant (Remove x xs) zs
+   , LiftVariant ys zs
    ) => Flow m xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINABLE (>%~^^>) #-}
 (>%~^^>) = liftm (%~^^>)
@@ -1320,7 +1320,7 @@ infixl 0 >%~^^>
 (?~^>) :: forall x xs zs m.
    ( Monad m
    , x :<? xs
-   , Liftable (Filter x xs) zs
+   , LiftVariant (Remove x xs) zs
    ) => V xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINABLE (?~^>) #-}
 (?~^>) v f = case popVariantMaybe v of
@@ -1333,7 +1333,7 @@ infixl 0 ?~^>
 (>?~^>) :: forall x xs zs m.
    ( Monad m
    , x :<? xs
-   , Liftable (Filter x xs) zs
+   , LiftVariant (Remove x xs) zs
    ) => Flow m xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINABLE (>?~^>) #-}
 (>?~^>) = liftm (?~^>)
@@ -1344,7 +1344,7 @@ infixl 0 >?~^>
 (%~^>) :: forall x xs zs m.
    ( Monad m
    , x :< xs
-   , Liftable (Filter x xs) zs
+   , LiftVariant (Remove x xs) zs
    ) => V xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINABLE (%~^>) #-}
 (%~^>) = (?~^>)
@@ -1355,7 +1355,7 @@ infixl 0 %~^>
 (>%~^>) :: forall x xs zs m.
    ( Monad m
    , x :< xs
-   , Liftable (Filter x xs) zs
+   , LiftVariant (Remove x xs) zs
    ) => Flow m xs -> (x -> Flow m zs) -> Flow m zs
 {-# INLINABLE (>%~^>) #-}
 (>%~^>) = liftm (%~^>)
@@ -1408,9 +1408,9 @@ infixl 0 >%~$>
 (?~|>) :: forall x xs ys zs m.
    ( Monad m
    , x :<? xs
-   , Liftable (Filter x xs) zs
-   , Liftable ys zs
-   , zs ~ Union (Filter x xs) ys
+   , LiftVariant (Remove x xs) zs
+   , LiftVariant ys zs
+   , zs ~ Union (Remove x xs) ys
    ) => V xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINABLE (?~|>) #-}
 (?~|>) v f = case popVariantMaybe v of
@@ -1423,9 +1423,9 @@ infixl 0 ?~|>
 (>?~|>) :: forall x xs ys zs m.
    ( Monad m
    , x :<? xs
-   , Liftable (Filter x xs) zs
-   , Liftable ys zs
-   , zs ~ Union (Filter x xs) ys
+   , LiftVariant (Remove x xs) zs
+   , LiftVariant ys zs
+   , zs ~ Union (Remove x xs) ys
    ) => Flow m xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINABLE (>?~|>) #-}
 (>?~|>) = liftm (?~|>)
@@ -1436,9 +1436,9 @@ infixl 0 >?~|>
 (%~|>) :: forall x xs ys zs m.
    ( Monad m
    , x :< xs
-   , Liftable (Filter x xs) zs
-   , Liftable ys zs
-   , zs ~ Union (Filter x xs) ys
+   , LiftVariant (Remove x xs) zs
+   , LiftVariant ys zs
+   , zs ~ Union (Remove x xs) ys
    ) => V xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINABLE (%~|>) #-}
 (%~|>) = (?~|>)
@@ -1449,9 +1449,9 @@ infixl 0 %~|>
 (>%~|>) :: forall x xs ys zs m.
    ( Monad m
    , x :< xs
-   , Liftable (Filter x xs) zs
-   , Liftable ys zs
-   , zs ~ Union (Filter x xs) ys
+   , LiftVariant (Remove x xs) zs
+   , LiftVariant ys zs
+   , zs ~ Union (Remove x xs) ys
    ) => Flow m xs -> (x -> Flow m ys) -> Flow m zs
 {-# INLINABLE (>%~|>) #-}
 (>%~|>) = liftm (%~|>)
@@ -1546,7 +1546,7 @@ infixl 0 >%~!>
 (?~!!>) :: forall x xs m.
    ( Monad m
    , x :<? xs
-   ) => V xs -> (x -> m ()) -> Flow m (Filter x xs)
+   ) => V xs -> (x -> m ()) -> Flow m (Remove x xs)
 {-# INLINABLE (?~!!>) #-}
 (?~!!>) v f = case popVariantMaybe v of
    Right x -> f x >> error "?~!!> error"
@@ -1558,7 +1558,7 @@ infixl 0 ?~!!>
 (>?~!!>) :: forall x xs m.
    ( Monad m
    , x :<? xs
-   ) => Flow m xs -> (x -> m ()) -> Flow m (Filter x xs)
+   ) => Flow m xs -> (x -> m ()) -> Flow m (Remove x xs)
 {-# INLINABLE (>?~!!>) #-}
 (>?~!!>) = liftm (?~!!>)
 
@@ -1568,7 +1568,7 @@ infixl 0 >?~!!>
 (%~!!>) :: forall x xs m.
    ( Monad m
    , x :< xs
-   ) => V xs -> (x -> m ()) -> Flow m (Filter x xs)
+   ) => V xs -> (x -> m ()) -> Flow m (Remove x xs)
 {-# INLINABLE (%~!!>) #-}
 (%~!!>) = (?~!!>)
 
@@ -1578,7 +1578,7 @@ infixl 0 %~!!>
 (>%~!!>) :: forall x xs m.
    ( Monad m
    , x :< xs
-   ) => Flow m xs -> (x -> m ()) -> Flow m (Filter x xs)
+   ) => Flow m xs -> (x -> m ()) -> Flow m (Remove x xs)
 {-# INLINABLE (>%~!!>) #-}
 (>%~!!>) = liftm (%~!!>)
 
@@ -1624,7 +1624,7 @@ selectTail = flipEither . selectFirst
 -- | Select by type
 selectType ::
    ( x :< xs
-   ) => V xs -> Either (V (Filter x xs)) (V '[x])
+   ) => V xs -> Either (V (Remove x xs)) (V '[x])
 {-# INLINABLE selectType #-}
 selectType = fmap (toVariantAt @0) . popVariant
 
@@ -1686,8 +1686,8 @@ combineConcat = \case
 
 -- | Union
 combineUnion ::
-   ( Liftable xs (Union xs ys)
-   , Liftable ys (Union xs ys)
+   ( LiftVariant xs (Union xs ys)
+   , LiftVariant ys (Union xs ys)
    ) => Either (V ys) (V xs) -> V (Union xs ys)
 {-# INLINABLE combineUnion #-}
 combineUnion = \case
@@ -1696,7 +1696,7 @@ combineUnion = \case
 
 -- | Lift unselected
 combineLiftUnselected ::
-   ( Liftable ys xs
+   ( LiftVariant ys xs
    ) => Either (V ys) (V xs) -> V xs
 {-# INLINABLE combineLiftUnselected #-}
 combineLiftUnselected = \case
@@ -1705,8 +1705,8 @@ combineLiftUnselected = \case
 
 -- | Lift both
 combineLiftBoth ::
-   ( Liftable ys zs
-   , Liftable xs zs
+   ( LiftVariant ys zs
+   , LiftVariant xs zs
    ) => Either (V ys) (V xs) -> V zs
 {-# INLINABLE combineLiftBoth #-}
 combineLiftBoth = \case
@@ -1907,7 +1907,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , ContVariant xs
    , ys ~ FlattenVariant zs
    , Flattenable (V zs) (V ys)
-   , Liftable ys (Nub ys)
+   , LiftVariant ys (Nub ys)
    , rs ~ Nub ys
    ) => V xs -> fs -> V rs
 (~||) v fs = nubVariant (flattenVariant (v -|| fs))
@@ -1960,7 +1960,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , ys ~ FlattenVariant ks
    , Flattenable (V ks) (V ys)
    , rs ~ Nub ys
-   , Liftable ys rs
+   , LiftVariant ys rs
    , Applicative m
    , JoinVariant m zs
    ) => V xs -> fs -> Flow m rs
@@ -1976,7 +1976,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , ys ~ FlattenVariant ks
    , Flattenable (V ks) (V ys)
    , rs ~ Nub ys
-   , Liftable ys rs
+   , LiftVariant ys rs
    , Monad m
    , JoinVariant m zs
    ) => Flow m xs -> fs -> Flow m rs

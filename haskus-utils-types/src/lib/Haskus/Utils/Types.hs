@@ -68,7 +68,7 @@ type family If (c :: Bool) (t :: k) (e :: k) where
 -- | Like: If cond t (TypeError msg)
 --
 -- The difference is that the TypeError doesn't appear in the RHS of the type
--- which lead to better error messages (see GHC #14771).
+-- which leads to better error messages (see GHC #14771).
 --
 -- For instance:
 --    type family F n where

@@ -61,6 +61,7 @@ type EADTF' f e cs =
    , Index (IndexOf (f e) (ApplyAll e cs)) (ApplyAll e cs) ~ f e
    , PopVariant (f e) (ApplyAll e cs)
    , KnownNat (IndexOf (f e) (ApplyAll e cs))
+   , Remove (f e) (ApplyAll e cs) ~ ApplyAll e (Remove f cs)
    )
 
 -- | Pattern-match in an extensible ADT
@@ -83,7 +84,7 @@ appendEADT (Fix v) = Fix (appendVariantF @ys (fmap (appendEADT @ys) v))
 -- | Lift an EADT into another
 liftEADT :: forall e as bs.
    ( e ~ Fix (VariantF bs)
-   , LiftableF e as bs
+   , LiftVariantF e as bs
    , Functor (VariantF as)
    ) => EADT as -> EADT bs
 liftEADT = cata (Fix . liftVariantF)
@@ -93,8 +94,7 @@ popEADT :: forall f xs e.
    ( f :<: xs
    , e ~ EADT xs
    , f e :< ApplyAll e xs
-   , Filter (f e) (ApplyAll e xs) ~ ApplyAll e (Filter f xs)
-   ) => EADT xs -> Either (VariantF (Filter f xs) (EADT xs)) (f (EADT xs))
+   ) => EADT xs -> Either (VariantF (Remove f xs) (EADT xs)) (f (EADT xs))
 popEADT (Fix v) = popVariantF v
 
 type AlterEADT c xs = AlterVariantF c (EADT xs) xs
