@@ -32,7 +32,7 @@ module Haskus.Utils.Types.List
    , Replicate
    , Generate
    , IsMember
-   , IsSubset
+   , IsSublist
    , Indexes
    , MapTest
    , Zip
@@ -189,19 +189,19 @@ type family IsMember' (i :: [k]) (a :: k) (l :: [k]) :: Bool where
                                    ':<>: 'ShowType i)
 
 
--- | Check that a list is a subset of another
-type family IsSubset (l1 :: [k]) (l2 :: [k]) :: Bool where
-   IsSubset l1 l1 = 'True
-   IsSubset l1 l2 = IsSubset' l2 l1 l2
+-- | Check that a list is a sublist of another
+type family IsSublist (l1 :: [k]) (l2 :: [k]) :: Bool where
+   IsSublist l1 l1 = 'True
+   IsSublist l1 l2 = IsSublist' l2 l1 l2
 
--- | Helper for IsSubset
-type family IsSubset' (i :: [k]) (l1 :: [k]) (l2 :: [k]) :: Bool where
-   IsSubset' i '[] l2 = 'True
-   IsSubset' i l1 '[] = TypeError (     'ShowType l1
+-- | Helper for IsSublist
+type family IsSublist' (i :: [k]) (l1 :: [k]) (l2 :: [k]) :: Bool where
+   IsSublist' i '[] l2 = 'True
+   IsSublist' i l1 '[] = TypeError (     'ShowType l1
                                    ':$$: 'Text "is not a subset of"
                                    ':$$: 'ShowType i)
-   IsSubset' i (x ': xs) (x ': ys) = IsSubset' i xs i
-   IsSubset' i (x ': xs) (y ': ys) = IsSubset' i (x ': xs) ys
+   IsSublist' i (x ': xs) (x ': ys) = IsSublist' i xs i
+   IsSublist' i (x ': xs) (y ': ys) = IsSublist' i (x ': xs) ys
 
 -- | Get list indexes
 type family Indexes (l :: [k]) :: [Nat] where

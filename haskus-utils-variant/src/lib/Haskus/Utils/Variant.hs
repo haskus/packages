@@ -718,7 +718,7 @@ prependVariant (Variant t a) = Variant (n+t) a
 
 -- | xs is liftable in ys
 type Liftable xs ys =
-   ( IsSubset xs ys ~ 'True
+   ( IsSubList xs ys ~ 'True
    , LiftVariant xs ys
    )
 
