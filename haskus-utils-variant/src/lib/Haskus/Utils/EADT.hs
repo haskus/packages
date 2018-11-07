@@ -84,7 +84,7 @@ appendEADT (Fix v) = Fix (appendVariantF @ys (fmap (appendEADT @ys) v))
 -- | Lift an EADT into another
 liftEADT :: forall e as bs.
    ( e ~ Fix (VariantF bs)
-   , LiftVariantF e as bs
+   , LiftVariantF as bs e
    , Functor (VariantF as)
    ) => EADT as -> EADT bs
 liftEADT = cata (Fix . liftVariantF)

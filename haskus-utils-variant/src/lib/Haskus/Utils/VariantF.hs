@@ -137,14 +137,14 @@ mapVariantF :: forall a b cs ds e.
 mapVariantF f (VariantF v) = VariantF (mapVariant @(a e) @(b e) @(ApplyAll e cs) f v)
 
 -- | xs is liftable in ys
-type LiftVariantF e xs ys =
+type LiftVariantF xs ys e =
    ( IsSubset xs ys ~ 'True
    , LiftVariant (ApplyAll e xs) (ApplyAll e ys)
    )
 
 -- | Lift a VariantF into another
-liftVariantF :: forall e as bs.
-   ( LiftVariantF e as bs
+liftVariantF :: forall as bs e.
+   ( LiftVariantF as bs e
    ) => VariantF as e -> VariantF bs e
 liftVariantF (VariantF v) = VariantF (liftVariant' v)
 
