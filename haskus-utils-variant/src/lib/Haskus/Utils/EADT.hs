@@ -127,6 +127,12 @@ eadtToContM ::
      -> ContFlow (ApplyAll (Fix (VariantF xs)) xs) (m r)
 eadtToContM f = variantFToContM (unfix <$> f)
 
+-- Orphan instance...
+-- instance ContVariant (ApplyAll (EADT xs) xs) => MultiCont (EADT xs) where
+--    type MultiContTypes (EADT xs) = ApplyAll (EADT xs) xs
+--    toCont  = eadtToCont
+--    toContM = eadtToContM
+
 -- | Convert a multi-continuation into an EADT
 contToEADT ::
    ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
