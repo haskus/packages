@@ -221,14 +221,14 @@ algVariantF f (VariantF (Variant t a)) = algVariantF' @c @e @xs f t a
 
 type SplitVariantF as xs e =
    ( Complement (ApplyAll e xs) (ApplyAll e as) ~ ApplyAll e (Complement xs as)
-   , SplitVariant (ApplyAll e as) (ApplyAll e xs) (ApplyAll e xs)
+   , SplitVariant (ApplyAll e as) (ApplyAll e (Complement xs as)) (ApplyAll e xs)
    )
 
 -- | Split a VariantF in two
 splitVariantF :: forall as xs e.
    ( SplitVariantF as xs e
    ) => VariantF xs e
-     -> Either (VariantF as e) (VariantF (Complement xs as) e)
+     -> Either (VariantF (Complement xs as) e) (VariantF as e)
 splitVariantF (VariantF v) = bimap VariantF VariantF (splitVariant v)
 
 -- | Convert a VariantF into a multi-continuation

@@ -336,7 +336,7 @@ instance forall a xs n xs' y ys.
               | otherwise -> Left (Variant t a)
 
 class SplitVariant as rs xs where
-   splitVariant' :: V xs -> Either (V as) (V (Complement rs as))
+   splitVariant' :: V xs -> Either (V rs) (V as)
 
 instance SplitVariant as rs '[] where
    {-# INLINE splitVariant' #-}
@@ -344,7 +344,7 @@ instance SplitVariant as rs '[] where
 
 instance forall as rs xs x n m.
    ( n ~ MaybeIndexOf x as
-   , m ~ IndexOf x rs
+   , m ~ MaybeIndexOf x rs
    , SplitVariant as rs xs
    , KnownNat m
    , KnownNat n
@@ -353,16 +353,18 @@ instance forall as rs xs x n m.
       {-# INLINE splitVariant' #-}
       splitVariant' (Variant 0 v)
          = case natValue' @n of
-            0 -> Right (Variant (natValue' @m) v)
-            t -> Left (Variant (t-1) v)
+            -- we assume that if `x` isn't in `as`, it is in `rs`
+            -- hence we don't test if `m == 0`
+            0 -> Left (Variant (natValue' @m - 1) v)
+            t -> Right (Variant (t-1) v)
       splitVariant' (Variant t v)
          = splitVariant' @as @rs (Variant (t-1) v :: V xs)
 
 -- | Split a variant in two
 splitVariant :: forall as xs.
-   ( SplitVariant as xs xs
-   ) => V xs -> Either (V as) (V (Complement xs as))
-splitVariant = splitVariant' @as @xs
+   ( SplitVariant as (Complement xs as) xs
+   ) => V xs -> Either (V (Complement xs as)) (V as)
+splitVariant = splitVariant' @as @(Complement xs as) @xs
 
 -- | A value of type "x" can be extracted from (V xs)
 type (:<) x xs =
