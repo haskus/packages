@@ -17,6 +17,7 @@ import Test.Tasty.QuickCheck as QC
 import Data.Either
 
 import Haskus.Utils.Variant
+import Haskus.Utils.ContFlow
 
 data A = A deriving (Show,Eq)
 data B = B deriving (Show,Eq)
@@ -102,6 +103,15 @@ testsVariant = testGroup "Variant" $
    , testProperty "splitVariant2"                     $ case splitVariant @'[A,C,D] (V E :: V '[A,B,C,D,E,F]) of
                                                             Right (_ :: V '[A,C,D]) -> True
                                                             Left  (y :: V '[B,E,F]) -> y == V E
+   , testProperty "toCont"                            $ (toCont (V E :: V '[A,B,C,D,E,F]) >::>
+                                                            ( \(_ :: A) -> False
+                                                            , \(_ :: B) -> False
+                                                            , \(_ :: C) -> False
+                                                            , \(_ :: D) -> False
+                                                            , \(_ :: E) -> True
+                                                            , \(_ :: F) -> False
+                                                            ))
+
    ]
 
 class (Ord a, Num a) => OrdNum a
