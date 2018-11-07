@@ -4,4 +4,4 @@ module Haskus.Utils.Functor
    )
 where
 
-import Data.Functor.Foldable
+import Data.Functor.Foldable hiding (ListF(..))
