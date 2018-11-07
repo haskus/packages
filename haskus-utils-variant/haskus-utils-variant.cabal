@@ -1,5 +1,5 @@
 name:                haskus-utils-variant
-version:             2.1.1
+version:             2.2
 synopsis:            Variant and EADT
 license:             BSD3
 license-file:        LICENSE
@@ -33,7 +33,7 @@ library
   other-modules:
 
   build-depends:       
-      base                      >= 4.9
+      base                      >= 4.9 && < 5.0
    ,  template-haskell
    ,  haskus-utils-types        >= 1.2
    ,  haskus-utils-data
