@@ -38,7 +38,7 @@ library
   other-modules:
 
   build-depends:       
-         base                      >= 4.9
+         base                      >= 4.9 && < 5
       ,  haskus-utils-types
       ,  haskus-utils-data
       ,  haskus-utils-variant
