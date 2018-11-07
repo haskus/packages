@@ -51,6 +51,7 @@ test-suite tests
    default-language:    Haskell2010
    other-modules:
          Variant
+      ,  EADT
 
    build-depends:    
          base

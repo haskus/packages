@@ -6,7 +6,9 @@
 -- | Template-Haskell helpers for EADTs
 module Haskus.Utils.EADT.TH
    ( eadtPattern
+   , eadtInfixPattern
    , eadtPatternT
+   , eadtInfixPatternT
    )
 where
 
@@ -30,7 +32,25 @@ eadtPattern
    :: Name       -- ^ Actual constructor (e.g., ConsF)
    -> String     -- ^ Name of the pattern (e.g., Cons)
    -> Q [Dec]
-eadtPattern consName patStr = eadtPattern' consName patStr Nothing
+eadtPattern consName patStr = eadtPattern' consName patStr Nothing False
+
+-- | Create an infix pattern synonym for an EADT constructor
+--
+-- E.g.
+--
+-- > data ConsF a e = ConsF a e deriving (Functor)
+-- > $(eadtInfixPattern 'ConsF ":->")
+-- >
+-- > ====>
+-- >
+-- > pattern (:->) :: ConsF a :<: xs => a -> EADT xs -> EADT xs
+-- > pattern a :-> l = VF (ConsF a l)
+--
+eadtInfixPattern
+   :: Name       -- ^ Actual constructor (e.g., ConsF)
+   -> String     -- ^ Name of the pattern (e.g., Cons)
+   -> Q [Dec]
+eadtInfixPattern consName patStr = eadtPattern' consName patStr Nothing True
 
 -- | Create a pattern synonym for an EADT constructor that is part of a
 -- specified EADT.
@@ -63,16 +83,25 @@ eadtPatternT
    -> Q Type     -- ^ Type of the EADT (e.g., [t|forall a. List a|])
    -> Q [Dec]
 eadtPatternT consName patStr qtype =
-   eadtPattern' consName patStr (Just qtype)
+   eadtPattern' consName patStr (Just qtype) False
 
+-- | Like `eadtPatternT` but generating an infix pattern synonym
+eadtInfixPatternT
+   :: Name       -- ^ Actual constructor (e.g., ConsF)
+   -> String     -- ^ Name of the pattern (e.g., Cons)
+   -> Q Type     -- ^ Type of the EADT (e.g., [t|forall a. List a|])
+   -> Q [Dec]
+eadtInfixPatternT consName patStr qtype =
+   eadtPattern' consName patStr (Just qtype) True
 
 -- | Create a pattern synonym for an EADT constructor
 eadtPattern'
    :: Name       -- ^ Actual constructor (e.g., ConsF)
    -> String     -- ^ Name of the pattern (e.g., Cons)
    -> Maybe (Q Type) -- ^ EADT type
+   -> Bool       -- ^ Declare infix pattern
    -> Q [Dec]
-eadtPattern' consName patStr mEadtTy= do
+eadtPattern' consName patStr mEadtTy isInfix = do
    let patName = mkName patStr
 
    typ <- reify consName >>= \case
@@ -91,7 +120,13 @@ eadtPattern' consName patStr mEadtTy= do
 
          let vf     = mkName "Haskus.Utils.EADT.VF"
 
-         let pat    = PatSynD patName (PrefixPatSyn conArgs) ImplBidir
+         args <- if not isInfix
+            then return (PrefixPatSyn conArgs)
+            else case conArgs of
+                  [x,y] -> return (InfixPatSyn x y)
+                  xs    -> fail $ "Infix pattern should have exactly two parameters (found " ++ show (length xs) ++ ")"
+
+         let pat    = PatSynD patName args ImplBidir
                          (ConP vf [ConP consName (fmap VarP conArgs)])
 
          let
