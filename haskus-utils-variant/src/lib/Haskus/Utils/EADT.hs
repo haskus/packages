@@ -57,7 +57,7 @@ type family (:<<:) xs ys :: Constraint where
    (x ': xs) :<<: ys = (x :<: ys, xs :<<: ys)
 
 type EADTF' f e cs =
-   ( Member' f cs
+   ( Member f cs
    , Index (IndexOf (f e) (ApplyAll e cs)) (ApplyAll e cs) ~ f e
    , PopVariant (f e) (ApplyAll e cs)
    , KnownNat (IndexOf (f e) (ApplyAll e cs))

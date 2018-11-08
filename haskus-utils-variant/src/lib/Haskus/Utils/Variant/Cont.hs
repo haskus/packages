@@ -35,7 +35,7 @@ import Haskus.Utils.ContFlow
 fret :: forall x r t n xs.
    ( ExtractTuple n t (x -> r)
    , xs ~ ContTupleToList t r
-   , Member x xs
+   , CheckMember x xs
    , n ~ IndexOf x xs
    , KnownNat n
    , CheckNub xs
@@ -47,7 +47,7 @@ fret = tupleN @n @t @(x -> r)
 freturn :: forall x r t n xs.
    ( ExtractTuple n t (x -> r)
    , xs ~ ContTupleToList t r
-   , Member x xs
+   , CheckMember x xs
    , n ~ IndexOf x xs
    , KnownNat n
    , CheckNub xs

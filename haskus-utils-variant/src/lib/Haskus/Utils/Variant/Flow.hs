@@ -215,7 +215,7 @@ flowSetN :: forall (n :: Nat) xs m.
 flowSetN = return . toVariantAt @n
 
 -- | Return in the first well-typed element
-flowSet :: (Member x xs, Monad m) => x -> Flow m xs
+flowSet :: (x :< xs, Monad m) => x -> Flow m xs
 {-# INLINABLE flowSet #-}
 flowSet = return . toVariant
 
@@ -866,7 +866,7 @@ infixl 0 >..~^^>
 -- | Extract the tail, connect the result
 (..~^>) ::
    ( Monad m
-   , Member a zs
+   , a :< zs
    ) => V (a ': l) -> (V l -> Flow m zs) -> Flow m zs
 {-# INLINABLE (..~^>) #-}
 (..~^>) v f = case popVariantHead v of
@@ -878,7 +878,7 @@ infixl 0 ..~^>
 -- | Extract the tail, connect the result
 (>..~^>) ::
    ( Monad m
-   , Member a zs
+   , a :< zs
    ) => Flow m (a ': l) -> (V l -> Flow m zs) -> Flow m zs
 {-# INLINABLE (>..~^>) #-}
 (>..~^>) = liftm (..~^>)

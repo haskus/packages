@@ -63,7 +63,7 @@ type HArrayIndex (n :: Nat) t (ts :: [*]) =
 
 -- | A type `t` is indexable in the array
 type HArrayIndexT t (ts :: [*]) =
-   ( IsMember t ts ~ 'True
+   ( CheckMember t ts
    , HArrayIndex (IndexOf t ts) t ts
    )
 

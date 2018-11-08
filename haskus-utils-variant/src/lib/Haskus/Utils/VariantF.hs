@@ -138,8 +138,7 @@ mapVariantF f (VariantF v) = VariantF (mapVariant @(a e) @(b e) @(ApplyAll e cs)
 
 -- | xs is liftable in ys
 type LiftVariantF xs ys e =
-   ( IsSubset xs ys ~ 'True
-   , LiftVariant (ApplyAll e xs) (ApplyAll e ys)
+   ( LiftVariant (ApplyAll e xs) (ApplyAll e ys)
    )
 
 -- | Lift a VariantF into another

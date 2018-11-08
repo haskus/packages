@@ -97,7 +97,6 @@ module Haskus.Utils.Variant
    , fromVariant'
    , popVariant'
    , toVariant'
-   , LiftVariant'
    , PopVariant
    )
 where
@@ -137,7 +136,7 @@ pattern V x <- (fromVariant -> Just x)
 --          VSilent (x :: Int)    -> ...
 --          VSilent (x :: String) -> ...
 pattern VSilent :: forall c cs.
-   ( Member' c cs
+   ( Member c cs
    , PopVariant c cs
    ) => c -> V cs
 pattern VSilent x <- (fromVariant' -> Just x)
@@ -296,7 +295,7 @@ _ `constBindVariant` v2 = appendVariant @xs v2
 --
 -- Use the first matching type index.
 toVariant :: forall a l.
-   ( Member a l
+   ( a :< l
    ) => a -> V l
 {-# INLINABLE toVariant #-}
 toVariant = toVariantAt @(IndexOf a l)
@@ -305,7 +304,7 @@ toVariant = toVariantAt @(IndexOf a l)
 --
 -- Use the first matching type index.
 toVariant' :: forall a l.
-   ( Member' a l
+   ( Member a l
    ) => a -> V l
 {-# INLINABLE toVariant' #-}
 toVariant' = toVariantAt @(IndexOf a l)
@@ -368,7 +367,8 @@ splitVariant = splitVariant' @as @(Complement xs as) @xs
 
 -- | A value of type "x" can be extracted from (V xs)
 type (:<) x xs =
-   ( Member x xs
+   ( CheckMember x xs
+   , Member x xs
    , x :<? xs
    )
 
@@ -720,10 +720,11 @@ prependVariant (Variant t a) = Variant (n+t) a
 
 -- | xs is liftable in ys
 type LiftVariant xs ys =
-   ( IsSubset xs ys ~ 'True
-   , LiftVariant' xs ys
+   ( LiftVariant' xs ys
+   , xs :<< ys
    )
 
+-- | xs is liftable in ys
 class LiftVariant' xs ys where
    liftVariant' :: V xs -> V ys
 
