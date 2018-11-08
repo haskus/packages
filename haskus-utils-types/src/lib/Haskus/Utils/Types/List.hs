@@ -36,13 +36,13 @@ module Haskus.Utils.Types.List
    , ReplaceN
    , ReplaceNS
    -- * Set operations
-   , IsMember
-   , IsSubset
+   , CheckMember
+   , CheckMembers
    , Union
    , Complement
    , Product
    , Member
-   , Member'
+   , Members
    , CheckNub
    -- * Index operations
    , IndexOf
@@ -62,6 +62,7 @@ module Haskus.Utils.Types.List
 where
 
 import Haskus.Utils.Types
+import GHC.Exts (Constraint)
 
 -- | Map a type function
 type family Map (f :: a -> k) (xs :: [a]) :: [k] where
@@ -184,33 +185,34 @@ type family Generate (n :: Nat) (m :: Nat) :: [Nat] where
    Generate n m = n ': Generate (n+1) m
 
 -- | Check that a type is member of a type list
-type family IsMember (a :: k) (l :: [k]) :: Bool where
-   IsMember a l = IsMember' l a l
+type family CheckMember (a :: k) (l :: [k]) :: Constraint where
+   CheckMember a l = CheckMember' l a l
 
--- | Helper for IsMember
-type family IsMember' (i :: [k]) (a :: k) (l :: [k]) :: Bool where
-   IsMember' i a (a ': l) = 'True
-   IsMember' i a (b ': l) = IsMember' i a l
-   IsMember' i a '[]      = TypeError ( 'Text "`"
-                                   ':<>: 'ShowType a
-                                   ':<>: 'Text "'"
-                                   ':<>: 'Text " is not a member of "
-                                   ':<>: 'ShowType i)
+-- | Helper for CheckMember
+type family CheckMember' (i :: [k]) (a :: k) (l :: [k]) :: Constraint where
+   CheckMember' i a (a ': l) = ()
+   CheckMember' i a (b ': l) = CheckMember' i a l
+   CheckMember' i a '[]      = TypeError ( 'Text "`"
+                                     ':<>: 'ShowType a
+                                     ':<>: 'Text "'"
+                                     ':<>: 'Text " is not a member of "
+                                     ':<>: 'ShowType i)
 
 
 -- | Check that a list is a subset of another
-type family IsSubset (l1 :: [k]) (l2 :: [k]) :: Bool where
-   IsSubset l1 l1 = 'True
-   IsSubset l1 l2 = IsSubset' l2 l1 l2
+type family CheckMembers (l1 :: [k]) (l2 :: [k]) :: Constraint where
+   CheckMembers l1 l1 = ()
+   CheckMembers l1 l2 = CheckMembers' l2 '[] l1 l2
 
--- | Helper for IsSubset
-type family IsSubset' (i :: [k]) (l1 :: [k]) (l2 :: [k]) :: Bool where
-   IsSubset' i '[] l2 = 'True
-   IsSubset' i l1 '[] = TypeError (     'ShowType l1
-                                   ':$$: 'Text "is not a subset of"
-                                   ':$$: 'ShowType i)
-   IsSubset' i (x ': xs) (x ': ys) = IsSubset' i xs i
-   IsSubset' i (x ': xs) (y ': ys) = IsSubset' i (x ': xs) ys
+-- | Helper for CheckMembers
+type family CheckMembers' (i :: [k]) (e :: [k]) (l1 :: [k]) (l2 :: [k]) :: Constraint where
+   CheckMembers' i e '[] l2  = ()
+   CheckMembers' i e '[] '[] = TypeError (   'ShowType e
+                                       ':$$: 'Text "is not a subset of"
+                                       ':$$: 'ShowType i)
+   CheckMembers' i e (l ': ls) '[]       = CheckMembers' i (l ': e) ls i
+   CheckMembers' i e (x ': xs) (x ': ys) = CheckMembers' i e xs i
+   CheckMembers' i e (x ': xs) (y ': ys) = CheckMembers' i e (x ': xs) ys
 
 -- | Get list indexes
 type family Indexes (l :: [k]) :: [Nat] where
@@ -310,16 +312,14 @@ type family Product' (x :: *) (ys :: [*]) :: [*] where
 
 -- | Constraint: x member of xs
 type Member x xs =
-   ( IsMember x xs ~ 'True
-   , x ~ Index (IndexOf x xs) xs
-   , KnownNat (IndexOf x xs)
-   )
-
--- | Constraint: x member of xs (silent)
-type Member' x xs =
    ( x ~ Index (IndexOf x xs) xs
    , KnownNat (IndexOf x xs)
    )
+
+-- | Constraint: all the xs are members of ys
+type family Members xs ys :: Constraint where
+   Members '[] ys       = ()
+   Members (x ': xs) ys = (Member x ys, Members xs ys)
 
 -- | Check that a list only contain a value of each type
 type CheckNub (l :: [k]) =
