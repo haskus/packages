@@ -93,6 +93,7 @@ module Haskus.Utils.Variant
    , ContVariant (..)
    -- ** Internals
    , pattern VSilent
+   , LiftVariant'
    , liftVariant'
    , fromVariant'
    , popVariant'
