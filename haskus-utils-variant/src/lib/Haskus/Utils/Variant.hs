@@ -39,6 +39,8 @@ module Haskus.Utils.Variant
    , foldMapVariantAtM
    , bindVariant
    , constBindVariant
+   , variantHeadTail
+   , mapVariantHeadTail
    -- * Operations by type
    , toVariant
    , Member
@@ -287,6 +289,20 @@ constBindVariant :: forall xs ys.
 {-# INLINABLE constBindVariant #-}
 _ `constBindVariant` v2 = appendVariant @xs v2
 
+
+-- | List-like catamorphism
+variantHeadTail :: (x -> u) -> (V xs -> u) -> V (x ': xs) -> u
+{-# INLINABLE variantHeadTail #-}
+variantHeadTail fh ft x = case popVariantHead x of
+   Right h -> fh h
+   Left  t -> ft t
+
+-- | Bimap Variant head and tail 
+mapVariantHeadTail :: (x -> y) -> (V xs -> V ys) -> V (x ': xs) -> V (y ': ys)
+{-# INLINABLE mapVariantHeadTail #-}
+mapVariantHeadTail fh ft x = case popVariantHead x of
+   Right h -> toVariantHead (fh h)
+   Left  t -> toVariantTail (ft t)
 
 -----------------------------------------------------------
 -- Operations by type

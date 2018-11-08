@@ -23,6 +23,7 @@ library
   exposed-modules:
     Haskus.Utils.ContFlow
     Haskus.Utils.Variant
+    Haskus.Utils.Variant.OldFlow
     Haskus.Utils.Variant.Flow
     Haskus.Utils.Variant.Cont
     Haskus.Utils.Variant.Syntax
@@ -34,6 +35,7 @@ library
 
   build-depends:       
       base                      >= 4.9 && < 5.0
+   ,  transformers
    ,  template-haskell
    ,  haskus-utils-types        >= 1.3
    ,  haskus-utils-data
