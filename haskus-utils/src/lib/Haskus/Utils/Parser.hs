@@ -30,7 +30,7 @@ where
 import Prelude hiding (min,max)
 import Haskus.Utils.HList
 import Haskus.Utils.Types.List
-import Haskus.Utils.Flow
+import Haskus.Utils.Variant.OldFlow
 import Haskus.Utils.Variant
 
 
