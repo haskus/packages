@@ -180,22 +180,65 @@ instance
          (Right _, Left _)  -> LT
          (Left _, Right _)  -> GT
 
-instance Show (V '[]) where
-   show _ = "V '[]"
+class ShowVariantValue a where
+   showVariantValue :: a -> ShowS
+
+instance ShowVariantValue (V '[]) where
+   {-# INLINE showVariantValue #-}
+   showVariantValue _ = showString "undefined"
+
+instance
+   ( ShowVariantValue (V xs)
+   , Show x
+   , Typeable x
+   ) => ShowVariantValue (V (x ': xs))
+   where
+   {-# INLINE showVariantValue #-}
+   showVariantValue v = case popVariantHead v of
+         Right x -> showString "V @"
+                    . showsPrec 10 (typeOf x)
+                    . showChar ' '
+                    . showsPrec 10 x
+         Left xs -> showVariantValue xs
 
 instance
    ( Show (V xs)
-   , Show x
-   , Typeable x
-   ) => Show (V (x ': xs))
+   , Typeable xs
+   , ShowTypeList (V xs)
+   , ShowVariantValue (V xs)
+   ) => Show (V xs)
    where
-      show v = case popVariantHead v of
-         Right x -> let parens s
-                           | ' ' `elem` s = "(" ++ s ++ ")"
-                           | otherwise    = s
-                        -- naive parenthesing but it works
-                     in "V @" ++ parens (show (typeOf x)) ++ " " ++ parens (show x)
-         Left xs -> show xs
+      showsPrec d v = showParen (d /= 0) $
+         showVariantValue v
+         . showString " :: "
+         -- disabled until GHC fixes #14341
+         -- . showsPrec 0 (typeOf v)
+         -- workaround:
+         . showString "V "
+         . showList__ (showTypeList v)
+
+-- | Show a list of ShowS
+showList__ :: [ShowS] -> ShowS
+showList__ []     s = "'[]" ++ s
+showList__ (x:xs) s = '\'' : '[' : x (showl xs)
+  where
+    showl []     = ']' : s
+    showl (y:ys) = ',' : ' ' : y (showl ys)
+
+-- Workaround as GHC doesn't print type-level lists correctly as of GHC 8.6
+-- (see https://ghc.haskell.org/trac/ghc/ticket/14341)
+--
+-- We use V as we would use Proxy
+class ShowTypeList a where
+   showTypeList :: a -> [ShowS]
+
+instance ShowTypeList (V '[]) where
+   {-# INLINE showTypeList #-}
+   showTypeList _ = []
+
+instance (Typeable x, ShowTypeList (V xs)) => ShowTypeList (V (x ': xs)) where
+   {-# INLINE showTypeList #-}
+   showTypeList _ = showsPrec 0 (typeOf (undefined :: x)) : showTypeList (undefined :: V xs)
 
 -----------------------------------------------------------
 -- Operations by index
