@@ -43,8 +43,6 @@ module Haskus.Utils.Variant
    , mapVariantHeadTail
    -- * Operations by type
    , toVariant
-   , Member
-   , Remove
    , popVariant
    , popVariantMaybe
    , fromVariant
@@ -52,37 +50,39 @@ module Haskus.Utils.Variant
    , fromVariantFirst
    , mapVariantFirst
    , mapVariantFirstM
-   , ReplaceAll
-   , MapVariant
    , mapVariant
    , mapNubVariant
    , foldMapVariantFirst
    , foldMapVariantFirstM
    , foldMapVariant
+   , Member
+   , Remove
+   , ReplaceAll
+   , MapVariant
    -- * Generic operations with type classes
-   , NoConstraint
-   , AlterVariant
    , alterVariant
-   , TraverseVariant
    , traverseVariant
    , traverseVariant_
-   , ReduceVariant
    , reduceVariant
+   , NoConstraint
+   , AlterVariant
+   , TraverseVariant
+   , ReduceVariant
    -- * Conversions between variants
    , appendVariant
    , prependVariant
-   , LiftVariant
    , liftVariant
    , nubVariant
    , productVariant
-   , Flattenable
-   , FlattenVariant
    , flattenVariant
-   , ExtractM
    , joinVariant
    , joinVariantUnsafe
-   , JoinVariant
    , splitVariant
+   , LiftVariant
+   , Flattenable
+   , FlattenVariant
+   , ExtractM
+   , JoinVariant
    , SplitVariant
    -- * Conversions to/from other data types
    , variantToValue
@@ -95,11 +95,11 @@ module Haskus.Utils.Variant
    , ContVariant (..)
    -- ** Internals
    , pattern VSilent
-   , LiftVariant'
    , liftVariant'
    , fromVariant'
    , popVariant'
    , toVariant'
+   , LiftVariant'
    , PopVariant
    )
 where
@@ -114,6 +114,13 @@ import Haskus.Utils.Tuple
 import Haskus.Utils.HList
 import Haskus.Utils.ContFlow
 import Haskus.Utils.Types.List
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XTypeFamilies
+
 
 -- | A variant contains a value whose type is at the given position in the type
 -- list
@@ -245,10 +252,21 @@ instance (Typeable x, ShowTypeList (V xs)) => ShowTypeList (V (x ': xs)) where
 -----------------------------------------------------------
 
 -- | Get Variant index
+-- >>> let x = V "Test" :: V '[Int,String,Double]
+-- >>> variantIndex x
+-- 1
+-- >>> let y = toVariantAt @0 10 :: V '[Int,String,Double]
+-- >>> variantIndex y
+-- 0
+--
 variantIndex :: V a -> Word
 variantIndex (Variant n _) = n
 
 -- | Set the value with the given indexed type
+--
+-- >>> toVariantAt @1 10 :: V '[Word,Int,Double]
+-- V @Int 10 :: V '[Word, Int, Double]
+--
 toVariantAt :: forall (n :: Nat) (l :: [*]).
    ( KnownNat n
    ) => Index n l -> V l
@@ -256,16 +274,35 @@ toVariantAt :: forall (n :: Nat) (l :: [*]).
 toVariantAt a = Variant (natValue' @n) (unsafeCoerce a)
 
 -- | Set the first value
+--
+-- >>> toVariantHead 10 :: V '[Int,Float,Word]
+-- V @Int 10 :: V '[Int, Float, Word]
+--
 toVariantHead :: forall x xs. x -> V (x ': xs)
 {-# INLINABLE toVariantHead #-}
 toVariantHead a = Variant 0 (unsafeCoerce a)
 
 -- | Set the tail
+--
+-- >>> let x = V @Int 10 :: V '[Int,String,Float]
+-- >>> let y = toVariantTail @Double x
+-- >>> y
+-- V @Int 10 :: V '[Double, Int, [Char], Float]
+--
 toVariantTail :: forall x xs. V xs -> V (x ': xs)
 {-# INLINABLE toVariantTail #-}
 toVariantTail (Variant t a) = Variant (t+1) a
 
--- | Get the value if it has the indexed type
+-- | Try to get a value by index into the type list
+--
+-- >>> let x = V "Test" :: V '[Int,String,Float]
+-- >>> fromVariantAt @0 x
+-- Nothing
+-- >>> fromVariantAt @1 x
+-- Just "Test"
+-- >>> fromVariantAt @2 x
+-- Nothing
+--
 fromVariantAt :: forall (n :: Nat) (l :: [*]).
    ( KnownNat n
    ) => V l -> Maybe (Index n l)
@@ -276,6 +313,15 @@ fromVariantAt (Variant t a) = do
 
 -- | Pop a variant value by index, return either the value or the remaining
 -- variant
+--
+-- >>> let x = V @Word 10 :: V '[Int,Word,Float]
+-- >>> popVariantAt @0 x
+-- Left (V @Word 10 :: V '[Word, Float])
+-- >>> popVariantAt @1 x
+-- Right 10
+-- >>> popVariantAt @2 x
+-- Left (V @Word 10 :: V '[Int, Word])
+--
 popVariantAt :: forall (n :: Nat) l. 
    ( KnownNat n
    ) => V l -> Either (V (RemoveAt n l)) (Index n l)
@@ -287,6 +333,15 @@ popVariantAt v@(Variant t a) = case fromVariantAt @n v of
       else Variant t a
 
 -- | Pop the head of a variant value
+--
+-- >>> let x = V @Word 10 :: V '[Int,Word,Float]
+-- >>> popVariantHead x
+-- Left (V @Word 10 :: V '[Word, Float])
+--
+-- >>> let y = V @Int 10 :: V '[Int,Word,Float]
+-- >>> popVariantHead y
+-- Right 10
+--
 popVariantHead :: forall x xs. V (x ': xs) -> Either (V xs) x
 {-# INLINABLE popVariantHead #-}
 popVariantHead v@(Variant t a) = case fromVariantAt @0 v of
@@ -294,6 +349,14 @@ popVariantHead v@(Variant t a) = case fromVariantAt @0 v of
    Nothing -> Left $ Variant (t-1) a
 
 -- | Update a single variant value by index
+--
+-- >>> import Data.Char (toUpper)
+-- >>> let x = V @String "Test" :: V '[Int,String,Float]
+-- >>> mapVariantAt @1 (fmap toUpper) x
+-- V @[Char] "TEST" :: V '[Int, [Char], Float]
+--
+-- >>> mapVariantAt @0 (+1) x
+-- V @[Char] "Test" :: V '[Int, [Char], Float]
 mapVariantAt :: forall (n :: Nat) a b l.
    ( KnownNat n
    , a ~ Index n l
@@ -305,6 +368,30 @@ mapVariantAt f v@(Variant t a) =
       Just x  -> Variant t (unsafeCoerce (f x))
 
 -- | Applicative update of a single variant value by index
+--
+-- Example with `Maybe`:
+--
+-- >>> let f s = if s == "Test" then Just (42 :: Word) else Nothing
+-- >>> let x = V @String "Test" :: V '[Int,String,Float]
+-- >>> mapVariantAtM @1 f x
+-- Just (V @Word 42 :: V '[Int, Word, Float])
+--
+-- >>> let y = V @String "NotTest" :: V '[Int,String,Float]
+-- >>> mapVariantAtM @1 f y
+-- Nothing
+--
+-- Example with `IO`:
+--
+-- >>> mapVariantAtM @0 print x
+-- V @[Char] "Test" :: V '[(), [Char], Float]
+--
+-- >>> mapVariantAtM @1 print x
+-- "Test"
+-- V @() () :: V '[Int, (), Float]
+--
+-- >>> mapVariantAtM @2 print x
+-- V @[Char] "Test" :: V '[Int, [Char], ()]
+--
 mapVariantAtM :: forall (n :: Nat) a b l m .
    ( KnownNat n
    , Applicative m
@@ -461,7 +548,10 @@ popVariantMaybe v = popVariant' @a v
 
 -- | Pick the first matching type of a Variant
 --
--- fromVariantFirst @A (Variant 2 undefined :: V '[A,B,A]) == Nothing
+-- >>> let x = toVariantAt @2 10 :: V '[Int,String,Int]
+-- >>> fromVariantFirst @Int x
+-- Nothing
+--
 fromVariantFirst :: forall a l.
    ( Member a l
    ) => V l -> Maybe a
@@ -469,6 +559,18 @@ fromVariantFirst :: forall a l.
 fromVariantFirst = fromVariantAt @(IndexOf a l)
 
 -- | Try to a get a value of a given type from a Variant
+--
+-- Equivalent to pattern `V`.
+--
+-- >>> let x = toVariantAt @2 10 :: V '[Int,String,Int]
+-- >>> fromVariant @Int x
+-- Just 10
+-- >>> fromVariant @Double x
+-- <BLANKLINE>
+-- ... error:
+-- ... `Double' is not a member of '[Int, String, Int]
+-- ...
+--
 fromVariant :: forall a xs.
    ( a :< xs
    ) => V xs -> Maybe a
@@ -488,6 +590,13 @@ fromVariant' v = case popVariant' v of
 
 -- | Try to a get a value of a given type from a Variant that may not even
 -- support the given type.
+--
+-- >>> let x = V @Int 10 :: V '[Int,String,Float]
+-- >>> fromVariantMaybe @Int x
+-- Just 10
+-- >>> fromVariantMaybe @Double x
+-- Nothing
+--
 fromVariantMaybe :: forall a xs.
    ( a :<? xs
    ) => V xs -> Maybe a
@@ -496,7 +605,16 @@ fromVariantMaybe v = case popVariantMaybe v of
    Right a -> Just a
    Left _  -> Nothing
 
--- | Update of the first matching variant value
+-- | Update the first matching variant value
+--
+-- >>> let x = toVariantAt @0 10 :: V '[Int,String,Int]
+-- >>> mapVariantFirst @Int (+32) x
+-- V @Int 42 :: V '[Int, [Char], Int]
+--
+-- >>> let y = toVariantAt @2 10 :: V '[Int,String,Int]
+-- >>> mapVariantFirst @Int (+32) y
+-- V @Int 10 :: V '[Int, [Char], Int]
+--
 mapVariantFirst :: forall a b n l.
    ( Member a l
    , n ~ IndexOf a l
@@ -505,6 +623,31 @@ mapVariantFirst :: forall a b n l.
 mapVariantFirst f v = mapVariantAt @n f v
 
 -- | Applicative update of the first matching variant value
+--
+-- Example with `Maybe`:
+--
+-- >>> let f s = if s == (42 :: Int) then Just "Yeah!" else Nothing
+-- >>> mapVariantFirstM f (toVariantAt @0 42 :: V '[Int,Float,Int])
+-- Just (V @[Char] "Yeah!" :: V '[[Char], Float, Int])
+--
+-- >>> mapVariantFirstM f (toVariantAt @2 42 :: V '[Int,Float,Int])
+-- Just (V @Int 42 :: V '[[Char], Float, Int])
+--
+-- >>> mapVariantFirstM f (toVariantAt @0 10 :: V '[Int,Float,Int])
+-- Nothing
+--
+-- >>> mapVariantFirstM f (toVariantAt @2 10 :: V '[Int,Float,Int])
+-- Just (V @Int 10 :: V '[[Char], Float, Int])
+--
+-- Example with `IO`:
+--
+-- >>> mapVariantFirstM @Int print (toVariantAt @0 42 :: V '[Int,Float,Int])
+-- 42
+-- V @() () :: V '[(), Float, Int]
+--
+-- >>> mapVariantFirstM @Int print (toVariantAt @2 42 :: V '[Int,Float,Int])
+-- V @Int 42 :: V '[(), Float, Int]
+--
 mapVariantFirstM :: forall a b n l m.
    ( Member a l
    , n ~ IndexOf a l

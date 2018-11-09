@@ -60,3 +60,4 @@ test-suite tests
       ,  haskus-utils-variant
       ,  tasty                   >= 0.11
       ,  tasty-quickcheck        >= 0.8
+      ,  doctest                 >= 0.16
