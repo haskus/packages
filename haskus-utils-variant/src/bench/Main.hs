@@ -6,11 +6,18 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-module Main where
+module Main (main) where
 
 
 import Haskus.Utils.Variant
+import Haskus.Utils.EADT
+import Haskus.Utils.EADT.TH
 import Haskus.Utils.ContFlow
 
 import Criterion
@@ -18,28 +25,6 @@ import Criterion.Main (defaultMain)
 import Test.QuickCheck
 import Control.DeepSeq
 import GHC.Generics
-
-
-main :: IO ()
-main = do
-   let
-      evalEnv n = do
-         !tree1 <- generate (resize n (arbitrary :: Gen (Node Int)))
-         let !tree2 = nodeToVariantNode tree1
-         return  (n,tree1,tree2)
-
-      evalTest ~(n,tree1,tree2) = bgroup ("Tree Eval at size=" ++ show n)
-         [ bench "ADT"                      $ whnf evalNode tree1
-         , bench "Variant ADT - V"          $ whnf evalVariantNode tree2
-         , bench "Variant ADT - Safe match" $ whnf evalVariantNodeSafe tree2
-         ]
-
-
-   defaultMain
-      [ env (evalEnv 10) evalTest
-      ]
-
-
 
 
 data Node a
@@ -64,6 +49,9 @@ evalNode (NPlus a b)  = evalNode a + evalNode b
 evalNode (NMinus a b) = evalNode a - evalNode b
 
 
+------------------------------------------
+-- Variant
+------------------------------------------
 
 data Plus a     = Plus a a  deriving (Generic,NFData)
 data Minus a    = Minus a a deriving (Generic,NFData)
@@ -91,3 +79,64 @@ nodeToVariantNode :: Node a -> VariantNode a
 nodeToVariantNode !(NValue a)   = VariantNode (toVariantAt @0 (Value a))
 nodeToVariantNode !(NPlus a b)  = VariantNode (toVariantAt @1 (Plus (nodeToVariantNode a) (nodeToVariantNode b)))
 nodeToVariantNode !(NMinus a b) = VariantNode (toVariantAt @2 (Minus (nodeToVariantNode a) (nodeToVariantNode b)))
+
+------------------------------------------
+-- EADT
+------------------------------------------
+
+data PlusF       e = PlusF e e  deriving (Generic,NFData)
+data MinusF      e = MinusF e e deriving (Generic,NFData)
+newtype ValueF a e = ValueF a   deriving newtype (NFData)
+
+eadtPattern 'PlusF  "EPlus"
+eadtPattern 'MinusF "EMinus"
+eadtPattern 'ValueF "EValue"
+
+type EADTNode a = EADT '[ValueF a, PlusF, MinusF]
+
+nodeToEADTNode :: Node a -> EADTNode a
+nodeToEADTNode !(NValue a)   = EValue a
+nodeToEADTNode !(NPlus a b)  = EPlus (nodeToEADTNode a) (nodeToEADTNode b)
+nodeToEADTNode !(NMinus a b) = EMinus (nodeToEADTNode a) (nodeToEADTNode b)
+
+evalEADTNode :: Num a => EADTNode a -> a
+evalEADTNode (EValue v)   = v
+evalEADTNode (EPlus a b)  = evalEADTNode a + evalEADTNode b
+evalEADTNode (EMinus a b) = evalEADTNode a - evalEADTNode b
+evalEADTNode _            = undefined
+
+evalEADTNodeSafe :: forall a. Num a => EADTNode a -> a
+evalEADTNodeSafe v = eadtToCont v >::>
+   ( \(ValueF x)   -> x
+   , \(PlusF a b)  -> evalEADTNodeSafe a + evalEADTNodeSafe b
+   , \(MinusF a b) -> evalEADTNodeSafe a - evalEADTNodeSafe b
+   )
+
+
+
+
+main :: IO ()
+main = do
+   let
+      evalEnv n = do
+         !tree1 <- generate (resize n (arbitrary :: Gen (Node Int)))
+         let !tree2 = nodeToVariantNode tree1
+         let !tree3 = nodeToEADTNode tree1
+         return  (n,tree1,tree2,tree3)
+
+      evalTest ~(n,tree1,tree2,tree3) = bgroup ("Tree Eval at size=" ++ show n)
+         [ bench "ADT"                      $ whnf evalNode tree1
+         , bench "Variant ADT - V"          $ whnf evalVariantNode tree2
+         , bench "Variant ADT - Safe match" $ whnf evalVariantNodeSafe tree2
+         , bench "EADT - Patterns"          $ whnf evalEADTNode tree3
+         , bench "EADT - Safe match"        $ whnf evalEADTNodeSafe tree3
+         ]
+
+
+   defaultMain
+      [ env (evalEnv 10) evalTest
+      ]
+
+
+
+

@@ -11,6 +11,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | Extensible ADT
 module Haskus.Utils.EADT
@@ -43,9 +46,12 @@ import Haskus.Utils.Types
 import Haskus.Utils.ContFlow
 
 import GHC.Exts (Constraint)
+import Control.DeepSeq
 
 -- | An extensible ADT
 type EADT xs = Fix (VariantF xs)
+
+deriving newtype instance NFData (VariantF xs (EADT xs)) => NFData (EADT xs)
 
 -- | Constructor `f` is in `xs`
 type family f :<: xs where
