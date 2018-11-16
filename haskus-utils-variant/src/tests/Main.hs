@@ -11,7 +11,7 @@ import EADT
 main :: IO ()
 main = wrapTests
    [ title "TASTY"   $ defaultMain tastyTests
-   , title "DOCTEST" $ doctest ["src/"]
+   , title "DOCTEST" $ doctest ["src/lib/"]
    ]
 
 title :: String -> IO () -> IO ()
