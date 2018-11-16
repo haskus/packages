@@ -51,6 +51,9 @@ import Control.DeepSeq
 -- | An extensible ADT
 type EADT xs = Fix (VariantF xs)
 
+-- TODO: GHC 8.6
+-- Replace EADT with a newtype isomorphic to Fix.
+-- Use "DerivingVia" to derive instances from "Fix"
 deriving newtype instance NFData (VariantF xs (EADT xs)) => NFData (EADT xs)
 
 -- | Constructor `f` is in `xs`
