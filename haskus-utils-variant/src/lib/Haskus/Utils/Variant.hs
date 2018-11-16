@@ -206,7 +206,7 @@ instance
          Right x -> showString "V @"
                     . showsPrec 10 (typeOf x)
                     . showChar ' '
-                    . showsPrec 10 x
+                    . showsPrec 11 x
          Left xs -> showVariantValue xs
 
 instance
@@ -700,6 +700,14 @@ type ReplaceAll a b cs = ReplaceNS (IndexesOf a cs) b cs
 
 
 -- | Map the matching types of a variant
+--
+-- >>> let add1 = mapVariant @Int (+1)
+-- >>> add1 (toVariantAt @0 10 :: V '[Int,Float,Int,Double])
+-- V @Int 11 :: V '[Int, Float, Int, Double]
+--
+-- >>> add1 (toVariantAt @2 10 :: V '[Int,Float,Int, Double])
+-- V @Int 11 :: V '[Int, Float, Int, Double]
+--
 mapVariant :: forall a b cs.
    ( MapVariant a b cs
    ) => (a -> b) -> V cs -> V (ReplaceAll a b cs)
@@ -707,6 +715,14 @@ mapVariant :: forall a b cs.
 mapVariant = mapVariant' @a @b @cs @(IndexesOf a cs)
 
 -- | Map the matching types of a variant and nub the result
+--
+-- >>> let add1 = mapNubVariant @Int (+1)
+-- >>> add1 (toVariantAt @0 10 :: V '[Int,Float,Int,Double])
+-- V @Int 11 :: V '[Int, Float, Double]
+--
+-- >>> add1 (toVariantAt @2 10 :: V '[Int,Float,Int, Double])
+-- V @Int 11 :: V '[Int, Float, Double]
+--
 mapNubVariant :: forall a b cs ds rs.
    ( MapVariant a b cs
    , ds ~ ReplaceNS (IndexesOf a cs) b cs
@@ -718,6 +734,16 @@ mapNubVariant f = nubVariant . mapVariant f
 
 
 -- | Update a variant value with a variant and fold the result
+--
+-- >>> newtype Odd  = Odd Int  deriving (Show)
+-- >>> newtype Even = Even Int deriving (Show)
+-- >>> let f x = if even x then V (Even x) else V (Odd x) :: V '[Odd, Even]
+-- >>> foldMapVariantAt @1 f (V @Int 10 :: V '[Float,Int,Double])
+-- V @Even (Even 10) :: V '[Float, Odd, Even, Double]
+--
+-- >>> foldMapVariantAt @1 f (V @Float 0.5 :: V '[Float,Int,Double])
+-- V @Float 0.5 :: V '[Float, Odd, Even, Double]
+--
 foldMapVariantAt :: forall (n :: Nat) l l2 .
    ( KnownNat n
    , KnownNat (Length l2)
@@ -780,6 +806,16 @@ foldMapVariantFirstM f v = foldMapVariantAtM @n f v
 
 
 -- | Update a variant value with a variant and fold the result
+--
+-- >>> newtype Odd  = Odd Int  deriving (Show)
+-- >>> newtype Even = Even Int deriving (Show)
+-- >>> let f x = if even x then V (Even x) else V (Odd x) :: V '[Odd, Even]
+-- >>> foldMapVariant @Int f (V @Int 10 :: V '[Float,Int,Double])
+-- V @Even (Even 10) :: V '[Float, Odd, Even, Double]
+--
+-- >>> foldMapVariant @Int f (V @Float 0.5 :: V '[Float,Int,Double])
+-- V @Float 0.5 :: V '[Float, Odd, Even, Double]
+--
 foldMapVariant :: forall a cs ds i.
    ( i ~ IndexOf a cs
    , a :< cs
