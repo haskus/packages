@@ -422,6 +422,14 @@ _ `constBindVariant` v2 = appendVariant @xs v2
 
 
 -- | List-like catamorphism
+--
+-- >>> let f = variantHeadTail (\i -> "Found Int: " ++ show i) (const "Something else")
+-- >>> f (V @String "Test" :: V '[Int,String,Float])
+-- "Something else"
+--
+-- >>> f (V @Int 10 :: V '[Int,String,Float])
+-- "Found Int: 10"
+--
 variantHeadTail :: (x -> u) -> (V xs -> u) -> V (x ': xs) -> u
 {-# INLINABLE variantHeadTail #-}
 variantHeadTail fh ft x = case popVariantHead x of
@@ -429,6 +437,14 @@ variantHeadTail fh ft x = case popVariantHead x of
    Left  t -> ft t
 
 -- | Bimap Variant head and tail 
+--
+-- >>> let f = mapVariantHeadTail (+5) (appendVariant @'[Double,Char])
+-- >>> f (V @Int 10 :: V '[Int,Word,Float])
+-- V @Int 15 :: V '[Int, Word, Float, Double, Char]
+--
+-- >>> f (V @Word 20 :: V '[Int,Word,Float])
+-- V @Word 20 :: V '[Int, Word, Float, Double, Char]
+--
 mapVariantHeadTail :: (x -> y) -> (V xs -> V ys) -> V (x ': xs) -> V (y ': ys)
 {-# INLINABLE mapVariantHeadTail #-}
 mapVariantHeadTail fh ft x = case popVariantHead x of
