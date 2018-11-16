@@ -13,6 +13,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | VariantF functor
 module Haskus.Utils.VariantF
@@ -54,6 +56,7 @@ import Haskus.Utils.ContFlow
 import Unsafe.Coerce
 import Data.Bifunctor
 import GHC.Exts (Any,Constraint)
+import Control.DeepSeq
 
 -- | Recursive Functor-like Variant
 newtype VariantF (xs :: [* -> *]) e
@@ -261,3 +264,5 @@ instance ContVariant (ApplyAll e xs) => MultiCont (VariantF xs e) where
    type MultiContTypes (VariantF xs e) = ApplyAll e xs
    toCont  = variantFToCont
    toContM = variantFToContM
+
+deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
