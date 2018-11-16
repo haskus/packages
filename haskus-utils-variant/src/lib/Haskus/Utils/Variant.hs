@@ -107,6 +107,7 @@ where
 import Unsafe.Coerce
 import GHC.Exts (Any,Constraint)
 import Data.Typeable
+import Control.DeepSeq
 
 import Haskus.Utils.Monad
 import Haskus.Utils.Types
@@ -1034,6 +1035,17 @@ joinVariantUnsafe :: forall m xs ys.
 {-# INLINABLE joinVariantUnsafe #-}
 joinVariantUnsafe (Variant t act) = Variant t <$> (unsafeCoerce act :: m Any)
 
+
+
+instance NFData (V '[]) where
+   {-# INLINE rnf #-}
+   rnf _ = ()
+
+instance (NFData x, NFData (V xs)) => NFData (V (x ': xs)) where
+   {-# INLINE rnf #-}
+   rnf v = case popVariantHead v of
+      Right x -> rnf x
+      Left xs -> rnf xs
 
 
 -----------------------------------------------------------
