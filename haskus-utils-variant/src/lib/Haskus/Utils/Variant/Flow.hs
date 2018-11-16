@@ -146,8 +146,8 @@ instance MonadMask m => MonadMask (FlowT e m) where
                _                                 -> runFlowT (release resource ExitCaseAbort))
          (variantHeadTail (runFlowT . use) (return . toVariantTail))
       return $ runFlow $ do
-         -- The order in which we perform those two 'Either' effects determines
-         -- which error will win if they are both 'Left's. We want the error from
+         -- The order in which we perform those two 'FlowT' effects determines
+         -- which error will win if they are both erroring. We want the error from
          -- 'release' to win.
          c <- FlowT (return ec)
          b <- FlowT (return eb)
