@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -29,6 +30,7 @@ import Data.Functor.Identity
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Control.Monad
+import Control.Monad.Catch
 
 ------------------------------------------------------------------------------
 -- Flow
@@ -110,6 +112,47 @@ instance MonadTrans (FlowT e) where
 instance (MonadIO m) => MonadIO (FlowT es m) where
     {-# INLINE liftIO #-}
     liftIO = lift . liftIO
+
+
+-- | Throws exceptions into the base monad.
+instance MonadThrow m => MonadThrow (FlowT e m) where
+   {-# INLINE throwM #-}
+   throwM = lift . throwM
+
+-- | Catches exceptions from the base monad.
+instance MonadCatch m => MonadCatch (FlowT e m) where
+   catch (FlowT m) f = FlowT $ catch m (runFlowT . f)
+
+instance MonadMask m => MonadMask (FlowT e m) where
+   mask f = FlowT $ mask $ \u -> runFlowT $ f (q u)
+      where
+         q :: (m (V (a ': e)) -> m (V (a ': e))) -> FlowT e m a -> FlowT e m a
+         q u (FlowT b) = FlowT (u b)
+
+   uninterruptibleMask f = FlowT $ uninterruptibleMask $ \u -> runFlowT $ f (q u)
+      where
+         q :: (m (V (a ': e)) -> m (V (a ': e))) -> FlowT e m a -> FlowT e m a
+         q u (FlowT b) = FlowT (u b)
+
+   generalBracket acquire release use = FlowT $ do
+      (eb, ec) <- generalBracket
+         (runFlowT acquire)
+         (\eresource exitCase -> case popVariantHead eresource of
+            Left e -> return (toVariantTail e) -- nothing to release, acquire didn't succeed
+            Right resource -> case exitCase of
+               ExitCaseSuccess v
+                  | Just b <- fromVariantAt @0 v -> runFlowT (release resource (ExitCaseSuccess b))
+               ExitCaseException e               -> runFlowT (release resource (ExitCaseException e))
+               _                                 -> runFlowT (release resource ExitCaseAbort))
+         (variantHeadTail (runFlowT . use) (return . toVariantTail))
+      return $ runFlow $ do
+         -- The order in which we perform those two 'Either' effects determines
+         -- which error will win if they are both 'Left's. We want the error from
+         -- 'release' to win.
+         c <- FlowT (return ec)
+         b <- FlowT (return eb)
+         return (b, c)
+
 
 
 -- | Success value
