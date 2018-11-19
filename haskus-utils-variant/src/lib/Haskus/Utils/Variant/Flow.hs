@@ -16,6 +16,7 @@ module Haskus.Utils.Variant.Flow
    , runFlowT
    , mapFlowT
    , liftFlowT
+   , variantToFlowT
    , success
    , throwE
    , catchE
@@ -180,3 +181,7 @@ m `catchE` h = FlowT $ do
       Left  ls -> case popVariant ls of
          Right l -> runFlowT (liftFlowT (h l))
          Left rs -> return (toVariantTail (liftVariant rs))
+
+-- | Convert a Variant into a FlowT
+variantToFlowT :: Monad m => V (a ': es) -> FlowT es m a
+variantToFlowT v = FlowT (return v)
