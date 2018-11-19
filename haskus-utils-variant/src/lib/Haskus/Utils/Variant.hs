@@ -31,6 +31,7 @@ module Haskus.Utils.Variant
    , toVariantHead
    , toVariantTail
    , fromVariantAt
+   , fromVariantHead
    , popVariantAt
    , popVariantHead
    , mapVariantAt
@@ -311,6 +312,19 @@ fromVariantAt :: forall (n :: Nat) (l :: [*]).
 fromVariantAt (Variant t a) = do
    guard (t == natValue' @n)
    return (unsafeCoerce a) -- we know it is the effective type
+
+-- | Try to get the first variant value
+--
+-- >>> let x = V "Test" :: V '[Int,String,Float]
+-- >>> fromVariantHead x
+-- Nothing
+-- >>> let y = V @Int 10 :: V '[Int,String,Float]
+-- >>> fromVariantHead y
+-- Just 10
+--
+fromVariantHead :: V (x ': xs) -> Maybe x
+{-# INLINABLE fromVariantHead #-}
+fromVariantHead v = fromVariantAt @0 v
 
 -- | Pop a variant value by index, return either the value or the remaining
 -- variant
