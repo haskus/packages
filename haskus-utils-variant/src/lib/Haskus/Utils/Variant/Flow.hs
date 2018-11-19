@@ -23,6 +23,7 @@ module Haskus.Utils.Variant.Flow
    , catchE
    , catchLift
    , catchRemove
+   , catchLiftLeft
    , onError_
    -- * Reexport
    , module Haskus.Utils.Variant
@@ -215,6 +216,22 @@ m `catchRemove` h = FlowT $ do
       Left  ls -> case popVariantHead ls of
          Right l -> runFlowT (h l)
          Left rs -> return (toVariantTail rs)
+
+-- | Handle an exception. Remove it from the flow
+catchLiftLeft :: forall e es es' a m.
+   ( Monad m
+   , e :< es
+   , LiftVariant (Remove e es) es'
+   ) =>
+    FlowT es m a -> (e -> FlowT es' m a) -> FlowT es' m a
+{-# INLINE catchLiftLeft #-}
+m `catchLiftLeft` h = FlowT $ do
+   a <- runFlowT m
+   case popVariantHead a of
+      Right r -> return (toVariantHead r)
+      Left  ls -> case popVariant ls of
+         Right l -> runFlowT (h l)
+         Left rs -> return (toVariantTail (liftVariant rs))
 
 -- | Do something in case of error
 onError_ :: Monad m => FlowT es m a -> m () -> FlowT es m a
