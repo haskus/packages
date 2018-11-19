@@ -25,6 +25,7 @@ module Haskus.Utils.Variant.Flow
    , catchLiftLeft
    , catchLiftRight
    , catchAllE
+   , catchDie
    , catchRemove
    , onError_
    -- * Reexport
@@ -259,6 +260,17 @@ m `catchAllE` h = FlowT $ do
    case popVariantAt @0 a of
       Right x  -> return (toVariantHead x)
       Left xs  -> runFlowT (h xs)
+
+-- | Catch and die in case of error
+catchDie :: (e :< es, Monad m) => FlowT es m a -> (e -> m ()) -> FlowT (Remove e es) m a
+{-# INLINE catchDie #-}
+m `catchDie` h = FlowT $ do
+   a <- runFlowT m
+   case popVariantHead a of
+      Right r -> return (toVariantHead r)
+      Left  ls -> case popVariant ls of
+         Right l -> h l >> error "catchDie"
+         Left rs -> return (toVariantTail rs)
 
 -- | Do something in case of error
 onError_ :: Monad m => FlowT es m a -> m () -> FlowT es m a
