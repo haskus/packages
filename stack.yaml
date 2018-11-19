@@ -1,13 +1,13 @@
-resolver: lts-12.1
+resolver: lts-12.19
 
 packages:
 - '.'
 
 extra-deps:
-- haskus-utils-1.0
-- haskus-utils-data-1.0
-- haskus-utils-types-1.0
-- haskus-utils-variant-1.0
+- haskus-utils-1.3
+- haskus-utils-data-1.1
+- haskus-utils-types-1.3
+- haskus-utils-variant-2.4
 
 ghc-options:
    "$locals": -fhide-source-paths

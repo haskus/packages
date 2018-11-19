@@ -78,20 +78,20 @@ import qualified Foreign.Storable as FS
 newtype Union (x :: [*]) = Union (ForeignPtr ()) deriving (Show)
 
 -- | Retrieve a union member from its type
-fromUnion :: (Storable a, IsMember a l ~ 'True) => Union l -> a
+fromUnion :: (Storable a, Member a l) => Union l -> a
 fromUnion (Union fp) = unsafePerformIO $ withForeignPtr fp (peek . castPtr)
 
 -- | Create a new union from one of the union types
-toUnion :: forall a l . (Storable (Union l), Storable a, IsMember a l ~ 'True) => a -> Union l
+toUnion :: forall a l . (Storable (Union l), Storable a, Member a l) => a -> Union l
 toUnion = toUnion' False
 
 -- | Like 'toUnion' but set the remaining bytes to 0
-toUnionZero :: forall a l . (Storable (Union l), Storable a, IsMember a l ~ 'True) => a -> Union l
+toUnionZero :: forall a l . (Storable (Union l), Storable a, Member a l) => a -> Union l
 toUnionZero = toUnion' True
 
 
 -- | Create a new union from one of the union types
-toUnion' :: forall a l . (Storable (Union l), Storable a, IsMember a l ~ 'True) => Bool -> a -> Union l
+toUnion' :: forall a l . (Storable (Union l), Storable a, Member a l) => Bool -> a -> Union l
 toUnion' zero v = unsafePerformIO $ do
    let sz = sizeOfT @(Union l)
    fp <- mallocForeignPtrBytes (fromIntegral sz)
