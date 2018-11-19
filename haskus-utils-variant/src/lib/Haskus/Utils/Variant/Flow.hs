@@ -25,12 +25,10 @@ module Haskus.Utils.Variant.Flow
    )
 where
 
+import Haskus.Utils.Monad
 import Haskus.Utils.Variant
 import Data.Functor.Identity
 
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Class
-import Control.Monad
 import Control.Monad.Catch
 
 ------------------------------------------------------------------------------
@@ -185,3 +183,12 @@ m `catchE` h = FlowT $ do
 -- | Convert a Variant into a FlowT
 variantToFlowT :: Monad m => V (a ': es) -> FlowT es m a
 variantToFlowT v = FlowT (return v)
+
+instance MonadInIO m => MonadInIO (FlowT es m) where
+   {-# INLINE liftWith #-}
+   liftWith wth f =
+      FlowT $ liftWith wth (\a -> runFlowT (f a))
+
+   {-# INLINE liftWith2 #-}
+   liftWith2 wth f =
+      FlowT $ liftWith2 wth (\a b -> runFlowT (f a b))
