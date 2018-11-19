@@ -20,6 +20,7 @@ module Haskus.Utils.Variant.Flow
    , success
    , throwE
    , catchE
+   , onError_
    -- * Reexport
    , module Haskus.Utils.Variant
    )
@@ -179,6 +180,15 @@ m `catchE` h = FlowT $ do
       Left  ls -> case popVariant ls of
          Right l -> runFlowT (liftFlowT (h l))
          Left rs -> return (toVariantTail (liftVariant rs))
+
+-- | Do something in case of error
+onError_ :: Monad m => FlowT es m a -> m () -> FlowT es m a
+{-# INLINE onError_ #-}
+m `onError_` h = FlowT $ do
+   a <- runFlowT m
+   case fromVariantAt @0 a of
+      Just _  -> return a
+      Nothing -> h >> return a
 
 -- | Convert a Variant into a FlowT
 variantToFlowT :: Monad m => V (a ': es) -> FlowT es m a
