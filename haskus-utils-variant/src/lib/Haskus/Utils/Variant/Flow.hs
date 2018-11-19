@@ -203,7 +203,7 @@ m `catchLift` h = FlowT $ do
          Right l -> runFlowT (liftFlowT (h l))
          Left rs -> return (toVariantTail (liftVariant rs))
 
--- | Handle an exception. Remove it from the flow
+-- | Handle an exception. Assume it is in the first position
 catchRemove :: forall e es a m.
    ( Monad m
    ) =>
@@ -217,7 +217,7 @@ m `catchRemove` h = FlowT $ do
          Right l -> runFlowT (h l)
          Left rs -> return (toVariantTail rs)
 
--- | Handle an exception. Remove it from the flow
+-- | Handle an exception. Lift the remaining errors into the resulting flow
 catchLiftLeft :: forall e es es' a m.
    ( Monad m
    , e :< es
