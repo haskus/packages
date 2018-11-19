@@ -92,6 +92,7 @@ test-suite tests
          base
       ,  haskus-binary
       ,  haskus-utils
+      ,  haskus-utils-data
       ,  tasty                   >= 0.11
       ,  tasty-quickcheck        >= 0.8
       ,  QuickCheck              >= 2.8
