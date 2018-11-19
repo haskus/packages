@@ -21,9 +21,10 @@ module Haskus.Utils.Variant.Flow
    , failure
    , throwE
    , catchE
-   , catchLift
-   , catchRemove
+   , catchLiftBoth
    , catchLiftLeft
+   , catchLiftRight
+   , catchRemove
    , onError_
    -- * Reexport
    , module Haskus.Utils.Variant
@@ -183,19 +184,19 @@ catchE :: forall e es' es'' es a m.
    ) =>
     FlowT es m a -> (e -> FlowT es'' m a) -> FlowT es' m a
 {-# INLINE catchE #-}
-m `catchE` h = m `catchLift` h
+m `catchE` h = m `catchLiftBoth` h
 
 -- | Handle an exception. Lift both normal and exceptional flows into the result
 -- flow
-catchLift :: forall e es' es'' es a m.
+catchLiftBoth :: forall e es' es'' es a m.
    ( Monad m
    , e :< es
    , LiftVariant (Remove e es) es'
    , LiftVariant es'' es'
    ) =>
     FlowT es m a -> (e -> FlowT es'' m a) -> FlowT es' m a
-{-# INLINE catchLift #-}
-m `catchLift` h = FlowT $ do
+{-# INLINE catchLiftBoth #-}
+m `catchLiftBoth` h = FlowT $ do
    a <- runFlowT m
    case popVariantHead a of
       Right r -> return (toVariantHead r)
@@ -232,6 +233,22 @@ m `catchLiftLeft` h = FlowT $ do
       Left  ls -> case popVariant ls of
          Right l -> runFlowT (h l)
          Left rs -> return (toVariantTail (liftVariant rs))
+
+-- | Handle an exception. Lift the handler into the resulting flow
+catchLiftRight :: forall e es es' a m.
+   ( Monad m
+   , e :< es
+   , LiftVariant es' (Remove e es)
+   ) =>
+    FlowT es m a -> (e -> FlowT es' m a) -> FlowT (Remove e es) m a
+{-# INLINE catchLiftRight #-}
+m `catchLiftRight` h = FlowT $ do
+   a <- runFlowT m
+   case popVariantHead a of
+      Right r -> return (toVariantHead r)
+      Left  ls -> case popVariant ls of
+         Right l -> runFlowT (liftFlowT (h l))
+         Left rs -> return (toVariantTail rs)
 
 -- | Do something in case of error
 onError_ :: Monad m => FlowT es m a -> m () -> FlowT es m a
