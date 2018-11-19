@@ -9,7 +9,7 @@ homepage:            http://www.haskus.org/system
 copyright:           Sylvain Henry 2017
 category:            System
 build-type:          Simple
-cabal-version:       >=1.20
+cabal-version:       1.20
 
 description:
    A set of types and tools to manipulate binary data, memory, etc. In
@@ -79,7 +79,7 @@ test-suite tests
    type:                exitcode-stdio-1.0
    main-is:             Main.hs
    hs-source-dirs:      src/tests/
-   ghc-options:         -O2 -Wall -threaded
+   ghc-options:         -Wall -threaded
    default-language:    Haskell2010
    other-modules:
          Haskus.Tests.Format.Binary
@@ -101,7 +101,7 @@ Benchmark bench-BitReverse
    type:               exitcode-stdio-1.0
    main-is:            BitReverse.hs
    hs-source-dirs:     src/bench
-   ghc-options:         -Wall -threaded -O3
+   ghc-options:         -Wall -threaded
    default-language:     Haskell2010
    build-depends:
          base
