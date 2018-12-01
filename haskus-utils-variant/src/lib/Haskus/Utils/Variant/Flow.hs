@@ -15,6 +15,7 @@ module Haskus.Utils.Variant.Flow
    , FlowT
    , runFlowT
    , evalFlowT
+   , evalCatchFlowT
    , mapFlowT
    , liftFlowT
    , variantToFlowT
@@ -266,6 +267,15 @@ m `catchAllE` h = FlowT $ do
    case popVariantAt @0 a of
       Right x  -> return (toVariantHead x)
       Left xs  -> runFlowT (h xs)
+
+-- | Evaluate a FlowT. Use the provided fucntion to handle error cases.
+evalCatchFlowT :: Monad m => FlowT es m a -> (V es -> m a) -> m a
+{-# INLINE evalCatchFlowT #-}
+m `evalCatchFlowT` h = do
+   a <- runFlowT m
+   case popVariantAt @0 a of
+      Right x  -> return x
+      Left xs  -> h xs
 
 -- | Catch and die in case of error
 catchDie :: (e :< es, Monad m) => FlowT es m a -> (e -> m ()) -> FlowT (Remove e es) m a
