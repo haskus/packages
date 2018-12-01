@@ -269,9 +269,9 @@ m `catchAllE` h = FlowT $ do
       Left xs  -> runFlowT (h xs)
 
 -- | Evaluate a FlowT. Use the provided fucntion to handle error cases.
-evalCatchFlowT :: Monad m => FlowT es m a -> (V es -> m a) -> m a
+evalCatchFlowT :: Monad m => (V es -> m a) -> FlowT es m a -> m a
 {-# INLINE evalCatchFlowT #-}
-m `evalCatchFlowT` h = do
+evalCatchFlowT h m = do
    a <- runFlowT m
    case popVariantAt @0 a of
       Right x  -> return x
