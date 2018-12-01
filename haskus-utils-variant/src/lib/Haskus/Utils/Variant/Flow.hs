@@ -16,6 +16,7 @@ module Haskus.Utils.Variant.Flow
    , runFlowT
    , evalFlowT
    , evalCatchFlowT
+   , injectFlowT
    , mapFlowT
    , liftFlowT
    , variantToFlowT
@@ -60,6 +61,10 @@ deriving instance Show (m (V (a ': es))) => Show (FlowT es m a)
 runFlowT :: FlowT es m a -> m (V (a ': es))
 {-# INLINE runFlowT #-}
 runFlowT (FlowT m) = m
+
+injectFlowT :: Monad m => FlowT es m a -> FlowT es m (V (a ': es))
+{-# INLINE injectFlowT #-}
+injectFlowT (FlowT m) = return =<< lift m
 
 -- | Convert a flow without error into a value
 evalFlowT :: Monad m => FlowT '[] m a -> m a
