@@ -30,7 +30,8 @@ module Haskus.Utils.Variant.Flow
    , catchAllE
    , catchDie
    , catchRemove
-   , onError_
+   , onFlowError_
+   , onFlowError
    -- * Reexport
    , module Haskus.Utils.Variant
    )
@@ -273,7 +274,7 @@ m `catchAllE` h = FlowT $ do
       Right x  -> return (toVariantHead x)
       Left xs  -> runFlowT (h xs)
 
--- | Evaluate a FlowT. Use the provided fucntion to handle error cases.
+-- | Evaluate a FlowT. Use the provided function to handle error cases.
 evalCatchFlowT :: Monad m => (V es -> m a) -> FlowT es m a -> m a
 {-# INLINE evalCatchFlowT #-}
 evalCatchFlowT h m = do
@@ -294,13 +295,22 @@ m `catchDie` h = FlowT $ do
          Left rs -> return (toVariantTail rs)
 
 -- | Do something in case of error
-onError_ :: Monad m => FlowT es m a -> m () -> FlowT es m a
-{-# INLINE onError_ #-}
-m `onError_` h = FlowT $ do
+onFlowError_ :: Monad m => FlowT es m a -> m () -> FlowT es m a
+{-# INLINE onFlowError_ #-}
+m `onFlowError_` h = FlowT $ do
    a <- runFlowT m
-   case fromVariantAt @0 a of
+   case fromVariantHead a of
       Just _  -> return a
       Nothing -> h >> return a
+
+-- | Do something in case of error
+onFlowError :: Monad m => FlowT es m a -> (V es -> m ()) -> FlowT es m a
+{-# INLINE onFlowError #-}
+m `onFlowError` h = FlowT $ do
+   a <- runFlowT m
+   case popVariantHead a of
+      Right _  -> return a
+      Left es  -> h es >> return a
 
 -- | Convert a Variant into a FlowT
 variantToFlowT :: Monad m => V (a ': es) -> FlowT es m a
