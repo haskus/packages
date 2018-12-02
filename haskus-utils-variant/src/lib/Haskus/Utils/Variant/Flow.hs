@@ -32,6 +32,7 @@ module Haskus.Utils.Variant.Flow
    , catchRemove
    , onFlowError_
    , onFlowError
+   , finallyFlow
    -- * Reexport
    , module Haskus.Utils.Variant
    )
@@ -311,6 +312,14 @@ m `onFlowError` h = FlowT $ do
    case popVariantHead a of
       Right _  -> return a
       Left es  -> h es >> return a
+
+-- | Finally for FlowT
+finallyFlow :: Monad m => FlowT es m a -> m () -> FlowT es m a
+{-# INLINE finallyFlow #-}
+m `finallyFlow` h = FlowT $ do
+   a <- runFlowT m
+   h
+   return a
 
 -- | Convert a Variant into a FlowT
 variantToFlowT :: Monad m => V (a ': es) -> FlowT es m a
