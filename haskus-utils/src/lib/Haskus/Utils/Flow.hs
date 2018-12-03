@@ -20,6 +20,7 @@ module Haskus.Utils.Flow
    , foldM_
    , forM
    , forM_
+   , forMaybeM
    , mapM
    , mapM_
    , sequence
@@ -41,6 +42,7 @@ where
 import Haskus.Utils.Variant
 import Haskus.Utils.Variant.Flow
 import Haskus.Utils.Monad
+import Haskus.Utils.Maybe
 
 import Control.Monad.Trans.Class (lift)
 
@@ -71,3 +73,7 @@ infixl 0 ||>
 f <|| x = fmap f x
 
 infixr 0 <||
+
+-- | Composition of catMaybes and forM
+forMaybeM :: Monad m => [a] -> (a -> m (Maybe b)) -> m [b]
+forMaybeM xs f = catMaybes <|| forM xs f
