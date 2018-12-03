@@ -33,12 +33,16 @@ module Haskus.Utils.Flow
    , whileM
    -- * Variant based operators
    , module Haskus.Utils.Variant.Flow
+   -- * Monad transformers
+   , lift
    )
 where
 
 import Haskus.Utils.Variant
 import Haskus.Utils.Variant.Flow
 import Haskus.Utils.Monad
+
+import Control.Monad.Trans.Class (lift)
 
 -- | Apply a function
 (|>) :: a -> (a -> b) -> b
