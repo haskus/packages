@@ -14,6 +14,7 @@ module Haskus.Utils.Variant.Flow
    -- * FlowT
    , FlowT
    , runFlowT
+   , runFlowT_
    , evalFlowT
    , evalCatchFlowT
    , injectFlowT
@@ -63,6 +64,10 @@ deriving instance Show (m (V (a ': es))) => Show (FlowT es m a)
 runFlowT :: FlowT es m a -> m (V (a ': es))
 {-# INLINE runFlowT #-}
 runFlowT (FlowT m) = m
+
+runFlowT_ :: Functor m => FlowT es m a -> m ()
+{-# INLINE runFlowT_ #-}
+runFlowT_ m = void (runFlowT m)
 
 injectFlowT :: Monad m => FlowT es m a -> FlowT es m (V (a ': es))
 {-# INLINE injectFlowT #-}
