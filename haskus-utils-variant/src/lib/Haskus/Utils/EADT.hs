@@ -114,13 +114,13 @@ alterEADT :: forall c xs.
    ) => (forall f. c f => f (EADT xs) -> f (EADT xs)) -> EADT xs -> EADT xs
 alterEADT f (Fix v) = Fix (alterVariantF @c @(EADT xs) f v)
 
-type AlgEADT c xs = AlgVariantF c (EADT xs) xs
+type AlgEADT c r xs = AlgVariantF c (EADT xs) r xs
 
 -- | Apply an algebra to an EADT value
-algEADT :: forall c xs.
-   ( AlgEADT c xs
-   ) => (forall f. c f => f (EADT xs) -> EADT xs) -> EADT xs -> EADT xs
-algEADT f (Fix v) = algVariantF @c @(EADT xs) f v
+algEADT :: forall c r xs.
+   ( AlgEADT c r xs
+   ) => (forall f. c f => f (EADT xs) -> r) -> EADT xs -> r
+algEADT f (Fix v) = algVariantF @c @(EADT xs) @r f v
 
 -- | Convert an EADT into a multi-continuation
 eadtToCont ::

@@ -190,23 +190,23 @@ alterVariantF f (VariantF (Variant t a)) =
    VariantF (Variant t (alterVariantF' @c @e @xs f t a))
 
 
-class AlgVariantF (c :: (* -> *) -> Constraint) e (xs :: [* -> *]) where
-   algVariantF' :: (forall (f :: * -> *). c f => f e -> e) -> Word -> Any -> e
+class AlgVariantF (c :: (* -> *) -> Constraint) e r (xs :: [* -> *]) where
+   algVariantF' :: (forall (f :: * -> *). c f => f e -> r) -> Word -> Any -> r
 
-instance AlgVariantF c e '[] where
+instance AlgVariantF c e r '[] where
    {-# INLINE algVariantF' #-}
    algVariantF' _ = undefined
 
 instance
-   ( AlgVariantF c e xs
+   ( AlgVariantF c e r xs
    , c x
-   ) => AlgVariantF c e (x ': xs)
+   ) => AlgVariantF c e r (x ': xs)
    where
       {-# INLINE algVariantF' #-}
       algVariantF' f t v =
          case t of
             0 -> f (unsafeCoerce v :: x e)
-            n -> algVariantF' @c @e @xs f (n-1) v
+            n -> algVariantF' @c @e @r @xs f (n-1) v
 
 -- | Apply an algebra to a VariantF. You need to specify the constraints
 -- required by the modifying function.
@@ -216,11 +216,11 @@ instance
 -- >  algVariantF @NoConstraint id         v
 -- >  algVariantF @Resizable    (resize 4) v
 --
-algVariantF :: forall c e (xs :: [* -> *]).
-   ( AlgVariantF c e xs
-   ) => (forall (f :: * -> *). c f => f e -> e) -> VariantF xs e -> e
+algVariantF :: forall c e r (xs :: [* -> *]).
+   ( AlgVariantF c e r xs
+   ) => (forall (f :: * -> *). c f => f e -> r) -> VariantF xs e -> r
 {-# INLINABLE algVariantF #-}
-algVariantF f (VariantF (Variant t a)) = algVariantF' @c @e @xs f t a
+algVariantF f (VariantF (Variant t a)) = algVariantF' @c @e @r @xs f t a
 
 type SplitVariantF as xs e =
    ( Complement (ApplyAll e xs) (ApplyAll e as) ~ ApplyAll e (Complement xs as)
