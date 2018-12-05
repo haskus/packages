@@ -15,6 +15,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PolyKinds #-}
 
 -- | VariantF functor
 module Haskus.Utils.VariantF
@@ -66,7 +67,7 @@ newtype VariantF (xs :: [* -> *]) e
 --
 -- > ApplyAll e '[f,g,h] ==> '[f e, g e, h e]
 --
-type family ApplyAll e (xs :: [* -> *]) :: [*] where
+type family ApplyAll e (xs :: [* -> k]) :: [k] where
    ApplyAll e '[]       = '[]
    ApplyAll e (f ': fs) = f e ': ApplyAll e fs
 
