@@ -7,6 +7,8 @@ module Haskus.Utils.Flow
    , (<|)
    , (||>)
    , (<||)
+   , (|||>)
+   , (<|||)
    -- * Monadic/applicative operators
    , when
    , unless
@@ -73,6 +75,20 @@ infixl 0 ||>
 f <|| x = fmap f x
 
 infixr 0 <||
+
+-- | Apply a function in a Functor
+(|||>) :: (Functor f, Functor g) => f (g a) -> (a -> b) -> f (g b)
+{-# INLINE (|||>) #-}
+x |||> f = fmap (fmap f) x
+
+infixl 0 |||>
+
+-- | Apply a function in a Functor
+(<|||) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
+{-# INLINE (<|||) #-}
+f <||| x = fmap (fmap f) x
+
+infixr 0 <|||
 
 -- | Composition of catMaybes and forM
 forMaybeM :: Monad m => [a] -> (a -> m (Maybe b)) -> m [b]
