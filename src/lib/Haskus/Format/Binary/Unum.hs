@@ -10,6 +10,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
+#if MIN_VERSION_GLASGOW_HASKELL (8,6,0,0)
+{-# LANGUAGE NoStarIsType #-}
+#endif
 
 module Haskus.Format.Binary.Unum
    ( Unum
@@ -76,6 +80,8 @@ import Haskus.Utils.Types.List
 import Haskus.Utils.HList
 import Haskus.Utils.Flow
 
+import Data.Kind (Type)
+
 -- | An Unum
 --
 -- 0 (and its reciprocal) is always included.
@@ -85,7 +91,7 @@ import Haskus.Utils.Flow
 --       Unum '[I 1] => /0 .. -1 .. 0 .. 1 .. /0
 --       Unum '[I 1, I 2] => /0 .. -2 .. -1 .. -/2 .. 0 .. /2 .. 1 .. 2 .. /0
 --       Unum '[I 1, PI]  => /0 .. -PI .. -1 .. -/PI .. 0 .. /PI .. 1 .. PI .. /0
-data Unum (xs :: [*])
+data Unum (xs :: [Type])
 
 
 class UnumNum a where

@@ -11,6 +11,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
+#if MIN_VERSION_GLASGOW_HASKELL (8,6,0,0)
+{-# LANGUAGE NoStarIsType #-}
+#endif
 
 
 -- | Vector with size in the type
