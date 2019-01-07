@@ -206,10 +206,10 @@ type family CheckMembers (l1 :: [k]) (l2 :: [k]) :: Constraint where
 
 -- | Helper for CheckMembers
 type family CheckMembers' (i :: [k]) (e :: [k]) (l1 :: [k]) (l2 :: [k]) :: Constraint where
-   CheckMembers' i e '[] l2  = ()
    CheckMembers' i e '[] '[] = TypeError (   'ShowType e
                                        ':$$: 'Text "is not a subset of"
                                        ':$$: 'ShowType i)
+   CheckMembers' i e '[] l2  = ()
    CheckMembers' i e (l ': ls) '[]       = CheckMembers' i (l ': e) ls i
    CheckMembers' i e (x ': xs) (x ': ys) = CheckMembers' i e xs i
    CheckMembers' i e (x ': xs) (y ': ys) = CheckMembers' i e (x ': xs) ys

@@ -23,12 +23,14 @@ where
 import Prelude hiding (lookup,null)
 
 import Haskus.Utils.STM
-import qualified STMContainers.Map as SMAP
-import STMContainers.Map (Key)
+import qualified StmContainers.Map as SMAP
 import ListT (fold)
 import qualified ListT
+import Data.Hashable
 
 import Haskus.Utils.Maybe (fromJust,isJust,isNothing)
+
+type Key a = (Eq a, Hashable a)
 
 -- | STM hashmap
 type TMap a b = SMAP.Map a b
@@ -39,7 +41,7 @@ null = SMAP.null
 
 -- | Get the number of elements in the map
 size :: TMap a b -> STM Int
-size = fold f 0 . SMAP.stream
+size = fold f 0 . SMAP.listT
    where 
       f n _ = return (n+1)
 
@@ -83,7 +85,7 @@ delete = SMAP.delete
 
 -- | Create a list of (key,value)
 toList :: TMap a b -> STM [(a,b)]
-toList = ListT.toList . SMAP.stream
+toList = ListT.toList . SMAP.listT
 
 -- | Get values
 elems :: TMap a b -> STM [b]

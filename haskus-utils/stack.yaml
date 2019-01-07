@@ -1,4 +1,4 @@
-resolver: lts-12.1
+resolver: lts-13.1
 
 packages:
 - '.'
@@ -7,6 +7,9 @@ extra-deps:
 - '../haskus-utils-types'
 - '../haskus-utils-data'
 - '../haskus-utils-variant'
+- stm-containers-1.1.0.2
+- stm-hamt-1.2.0.2
+- primitive-extras-0.7.1
 
 ghc-options:
    "$locals": -fhide-source-paths

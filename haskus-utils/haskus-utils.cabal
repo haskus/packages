@@ -45,13 +45,14 @@ library
       ,  containers                >= 0.5
       ,  list-t                    >= 0.4
       ,  stm                       >= 2.4
-      ,  stm-containers            >= 0.2
+      ,  stm-containers            >= 1.1
       ,  vector                    >= 0.11
       ,  transformers              >= 0.4
       ,  mtl                       >= 2.2
       ,  template-haskell          >= 2.10
       ,  file-embed                >= 0.0.10
       ,  extra                     >= 1.4
+      ,  hashable                  >= 1.2
 
   build-tools: 
   ghc-options:          -Wall

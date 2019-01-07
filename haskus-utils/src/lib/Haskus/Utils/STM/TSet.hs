@@ -3,6 +3,7 @@
 -- | STM mutable set
 module Haskus.Utils.STM.TSet
    ( TSet
+   , Element
    , null
    , size
    , member
@@ -23,12 +24,14 @@ where
 import Prelude hiding (lookup,null,map)
 
 import Haskus.Utils.STM
-import qualified STMContainers.Set as SSET
-import STMContainers.Set (Element)
+import qualified StmContainers.Set as SSET
 import ListT (ListT, fold)
 import qualified ListT
+import Data.Hashable
 
 import Haskus.Utils.Flow (forM_)
+
+type Element a = (Eq a, Hashable a)
 
 -- | STM Set
 type TSet a = SSET.Set a
@@ -39,7 +42,7 @@ null = SSET.null
 
 -- | Number of elements in the set
 size :: TSet a -> STM Int
-size = fold f 0 . SSET.stream
+size = fold f 0 . SSET.listT
    where 
       f n _ = return (n+1)
 
@@ -72,7 +75,7 @@ delete = SSET.delete
 
 -- | Convert a set into a list
 toList :: TSet e -> STM [e]
-toList = ListT.toList . SSET.stream
+toList = ListT.toList . SSET.listT
 
 -- | Create a set from a list
 fromList :: Element e => [e] -> STM (TSet e)
@@ -87,7 +90,7 @@ elems = toList
 
 -- | Get the set as a ListT stream
 stream :: TSet e -> ListT STM e
-stream = SSET.stream
+stream = SSET.listT
 
 -- | Perform a set union
 unions :: Element e => [TSet e] -> STM (TSet e)
