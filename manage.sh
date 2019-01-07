@@ -42,7 +42,7 @@ function report {
 
 function report_all {
    echo "==============================================================="
-   echo "Reporting package infos"
+   echo "Reporting package in fos"
    echo "==============================================================="
    dirs=$(ls -d */ | cut -d'/' -f1)
    for i in $dirs
@@ -127,6 +127,18 @@ function check_dev_versions {
    done
 }
 
+function check_rep_state {
+   echo "==============================================================="
+   echo "Checking repository state"
+   echo "==============================================================="
+
+   local r=$(git status -s --untracked-files=no)
+   if [ "$r" != "" ]
+      then echo "Repository isn't clean:" && git status && exit 1
+      else echo "Repositry is clean"
+   fi
+}
+
 case "$1" in
    report)
       report_all
@@ -144,6 +156,7 @@ case "$1" in
    release)
       check_resolvers
       check_dev_versions
+      check_rep_state
       report_all
       build_all
       showdone
