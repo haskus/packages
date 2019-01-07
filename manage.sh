@@ -1,4 +1,6 @@
 #!/bin/sh
+dirs=$(ls -d haskus-*/ | cut -d'/' -f1)
+
 function last_tag {
    git tag -l | grep "$1-[0-9]" | sort -r -V | head -n 1
 }
@@ -42,9 +44,8 @@ function report {
 
 function report_all {
    echo "==============================================================="
-   echo "Reporting package in fos"
+   echo "Reporting package infos"
    echo "==============================================================="
-   dirs=$(ls -d */ | cut -d'/' -f1)
    for i in $dirs
    do
       report $i
@@ -86,8 +87,6 @@ function build {
 }
 
 function build_all {
-   dirs=$(ls -d */ | cut -d'/' -f1)
-
    for i in $dirs
    do
       build $i
@@ -119,8 +118,6 @@ function check_dev_versions {
    echo "==============================================================="
    echo "Checking release versions"
    echo "==============================================================="
-   dirs=$(ls -d */ | cut -d'/' -f1)
-
    for i in $dirs
    do
       check_dev_version $i
