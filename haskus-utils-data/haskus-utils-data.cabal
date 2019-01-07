@@ -1,6 +1,6 @@
 name:                haskus-utils-data
 version:             1.1.1
-synopsis:            Haskus utility modules
+synopsis:            Haskus data utility modules
 license:             BSD3
 license-file:        LICENSE
 author:              Sylvain Henry
