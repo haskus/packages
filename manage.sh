@@ -56,7 +56,7 @@ function check_resolvers {
    echo "==============================================================="
    echo "Checking resolvers"
    echo "==============================================================="
-   yamls=$(find haskus-utils* -name stack.yaml)
+   yamls=$(find haskus-* -name stack.yaml)
    resolver=""
 
    for yaml in $yamls
