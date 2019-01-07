@@ -144,6 +144,7 @@ case "$1" in
    check)
       check_resolvers
       check_dev_versions
+      check_rep_state
       showdone
       ;;
    build)
