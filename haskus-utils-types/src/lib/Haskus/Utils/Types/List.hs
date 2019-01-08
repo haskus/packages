@@ -36,6 +36,8 @@ module Haskus.Utils.Types.List
    , ReplaceN
    , ReplaceNS
    -- * Set operations
+   , Subset
+   , SetEq
    , CheckMember
    , CheckMembers
    , Union
@@ -49,6 +51,8 @@ module Haskus.Utils.Types.List
    , IndexesOf
    , MaybeIndexOf
    , Index
+   , Elem
+   , MapElem
    , Reverse
    -- * Nat list
    , Generate
@@ -62,6 +66,7 @@ module Haskus.Utils.Types.List
 where
 
 import Haskus.Utils.Types
+import Haskus.Utils.Types.Bool
 import GHC.Exts (Constraint)
 
 -- | Map a type function
@@ -286,6 +291,27 @@ type family MaybeIndexOf' (n :: Nat) (a :: k) (l :: [k]) where
 type family Index (n :: Nat) (l :: [k]) :: k where
    Index 0 (x ': xs) = x
    Index n (x ': xs) = Index (n-1) xs
+
+-- | List membership test
+type family Elem (t :: b) (f :: b) (x :: k) (xs :: [k]) :: b where
+   Elem t f x '[]       = f
+   Elem t f x (x ': xs) = t
+   Elem t f x (y ': xs) = Elem t f x xs
+
+-- | MapElem t f xs ys = Map (\x -> Elem t f x ys) xs
+type family MapElem (t :: b) (f :: b) (xs :: [a]) (ys :: [a]) :: [b] where
+   MapElem t f '[]       ys = '[]
+   MapElem t f (x ': xs) ys = Elem t f x ys ':  MapElem t f xs ys
+
+-- | Subset test
+type family Subset (t :: b) (f :: b) (xs :: [a]) (ys :: [a]) :: b where
+   Subset t f '[] '[] = t
+   Subset t f xs ys   = AndMany t f (MapElem t f xs ys)
+
+-- | Set equality
+type family SetEq (t :: b) (f :: b) (xs :: [a]) (ys :: [a]) :: b where
+   SetEq t f xs ys = And t f (Subset t f xs ys)
+                             (Subset t f ys xs)
 
 -- | Union two lists
 type family Union (xs :: [k]) (ys :: [k]) :: [k] where
