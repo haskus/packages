@@ -20,6 +20,7 @@
 module Haskus.Utils.Variant
    ( V (..)
    , variantIndex
+   , variantSize
    -- * Patterns
    , pattern V
    , pattern VMaybe
@@ -249,11 +250,8 @@ instance (Typeable x, ShowTypeList (V xs)) => ShowTypeList (V (x ': xs)) where
    {-# INLINE showTypeList #-}
    showTypeList _ = showsPrec 0 (typeOf (undefined :: x)) : showTypeList (undefined :: V xs)
 
------------------------------------------------------------
--- Operations by index
------------------------------------------------------------
-
 -- | Get Variant index
+--
 -- >>> let x = V "Test" :: V '[Int,String,Double]
 -- >>> variantIndex x
 -- 1
@@ -263,6 +261,21 @@ instance (Typeable x, ShowTypeList (V xs)) => ShowTypeList (V (x ': xs)) where
 --
 variantIndex :: V a -> Word
 variantIndex (Variant n _) = n
+
+-- | Get variant size
+--
+-- >>> let x = V "Test" :: V '[Int,String,Double]
+-- >>> variantSize x
+-- 3
+-- >>> let y = toVariantAt @0 10 :: V '[Int,String,Double,Int]
+-- >>> variantSize y
+-- 4
+variantSize :: forall xs. (KnownNat (Length xs)) => V xs -> Word
+variantSize _ = natValue @(Length xs)
+
+-----------------------------------------------------------
+-- Operations by index
+-----------------------------------------------------------
 
 -- | Set the value with the given indexed type
 --
