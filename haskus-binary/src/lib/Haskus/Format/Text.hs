@@ -158,5 +158,13 @@ instance ShowText 'ASCII (Buffer mut pin gc) where
 -- >>> showText t
 -- "HELLO"
 --
+-- >>> let badt = "José" :: TextI 'ASCII
+-- >>> showText badt
+-- "*** Exception: Invalid ASCII character: é
+--
 instance (IsList b, Item b ~ Word8) => IsString (TextBuffer 'ASCII b) where
-   fromString s = TextBuffer (fromList (fmap (fromIntegral . ord) s))
+   fromString s = TextBuffer (fromList (fmap (toWord8 . ord) s))
+      where
+         toWord8 x
+            | x >= 128  = errorWithoutStackTrace ("Invalid ASCII character: " ++ [chr x])
+            | otherwise = fromIntegral x
