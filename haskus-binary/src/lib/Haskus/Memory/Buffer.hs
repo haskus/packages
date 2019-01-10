@@ -170,24 +170,29 @@ makeFinalizable x@(BufferMPF {}) = return x
 --
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
-withBufferAddr# :: Buffer s mut 'Pinned f -> (Addr# -> IO ()) -> IO ()
+withBufferAddr# :: Buffer s mut 'Pinned f -> (Addr# -> IO a) -> IO a
 withBufferAddr# b@(BufferP ba) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
-   f addr
+   r <- f addr
    touch b
+   return r
 withBufferAddr# b@(BufferMP ba) f = do
    let !(BA.Addr addr) = BA.mutableByteArrayContents ba
-   f addr
+   r <- f addr
    touch b
+   return r
 withBufferAddr# b@(BufferPF ba _fin) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
-   f addr
+   r <- f addr
    touch b
+   return r
 withBufferAddr# b@(BufferMPF ba _fin) f = do
    let !(BA.Addr addr) = BA.mutableByteArrayContents ba
-   f addr
+   r <- f addr
    touch b
+   return r
 withBufferAddr# (BufferE  addr)        f = f (addr)
 withBufferAddr# b@(BufferEF addr _fin) f = do
-   f addr
+   r <- f addr
    touch b
+   return r
