@@ -18,7 +18,9 @@ module Haskus.Memory.Buffer
    , Management (..)
    , Mutability (..)
    , withBufferAddr#
+   , withBufferPtr
    , bufferSize
+   , bufferToList
    -- * Finalizers
    , addFinalizer
    , makeFinalizable
@@ -26,14 +28,20 @@ module Haskus.Memory.Buffer
    )
 where
 
+import Haskus.Format.Binary.Word
+import Haskus.Format.Binary.Storable
+import Haskus.Format.Binary.Ptr
+import Haskus.Utils.Monad
+
 import qualified Data.Primitive.ByteArray as BA
 import qualified Data.Primitive.Types     as BA
 import Control.Monad.Primitive
-import Control.Monad
 import Data.IORef
+import Unsafe.Coerce
 
 import GHC.Prim
 import GHC.Weak
+import GHC.Exts (toList)
 
 -- | Is the buffer pinned into memory?
 data Pinning
@@ -54,36 +62,36 @@ data Mutability
    | Immutable
    deriving (Show,Eq)
 
-data Buffer s (mut :: Mutability) (pin :: Pinning) (gc :: Management) where
-   Buffer    :: BA.ByteArray                        -> Buffer s 'Immutable 'NotPinned 'Managed
-   BufferP   :: BA.ByteArray                        -> Buffer s 'Immutable 'Pinned    'Managed
-   BufferM   :: BA.MutableByteArray s               -> Buffer s 'Mutable   'NotPinned 'Managed
-   BufferMP  :: BA.MutableByteArray s               -> Buffer s 'Mutable   'Pinned    'Managed
-   BufferE   :: Addr# -> Word                       -> Buffer s 'Mutable   'Pinned    'NotManaged
-   BufferF   :: BA.ByteArray          -> Finalizers -> Buffer s 'Immutable 'NotPinned 'Finalized
-   BufferPF  :: BA.ByteArray          -> Finalizers -> Buffer s 'Immutable 'Pinned    'Finalized
-   BufferMF  :: BA.MutableByteArray s -> Finalizers -> Buffer s 'Mutable   'NotPinned 'Finalized
-   BufferMPF :: BA.MutableByteArray s -> Finalizers -> Buffer s 'Mutable   'Pinned    'Finalized
-   BufferEF  :: Addr# -> Word         -> Finalizers -> Buffer s 'Mutable   'Pinned    'Finalized
+data Buffer (mut :: Mutability) (pin :: Pinning) (gc :: Management) where
+   Buffer    :: BA.ByteArray                                -> Buffer 'Immutable 'NotPinned 'Managed
+   BufferP   :: BA.ByteArray                                -> Buffer 'Immutable 'Pinned    'Managed
+   BufferM   :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'NotPinned 'Managed
+   BufferMP  :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'Pinned    'Managed
+   BufferE   :: Addr# -> Word                               -> Buffer 'Mutable   'Pinned    'NotManaged
+   BufferF   :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'NotPinned 'Finalized
+   BufferPF  :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized
+   BufferMF  :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'NotPinned 'Finalized
+   BufferMPF :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized
+   BufferEF  :: Addr# -> Word                 -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized
 
 -- | A buffer with an additional phantom type indicating its binary format
-newtype TypedBuffer (t :: k) s mut pin gc = TypedBuffer (Buffer s mut pin gc)
+newtype TypedBuffer (t :: k) mut pin gc = TypedBuffer (Buffer mut pin gc)
 
 -----------------------------------------------------------------
 -- Allocation
 -----------------------------------------------------------------
 
 -- | Allocate a buffer (mutable, unpinned)
-newBuffer :: PrimMonad m => Word -> m (Buffer (PrimState m) 'Mutable 'NotPinned 'Managed)
-newBuffer sz = BufferM <$> BA.newByteArray (fromIntegral sz)
+newBuffer :: MonadIO m => Word -> m (Buffer 'Mutable 'NotPinned 'Managed)
+newBuffer sz = BufferM <$> liftIO (BA.newByteArray (fromIntegral sz))
 
 -- | Allocate a buffer (mutable, pinned)
-newPinnedBuffer :: PrimMonad m => Word -> m (Buffer (PrimState m) 'Mutable 'Pinned 'Managed)
-newPinnedBuffer sz = BufferMP <$> BA.newPinnedByteArray (fromIntegral sz)
+newPinnedBuffer :: MonadIO m => Word -> m (Buffer 'Mutable 'Pinned 'Managed)
+newPinnedBuffer sz = BufferMP <$> liftIO (BA.newPinnedByteArray (fromIntegral sz))
 
 -- | Allocate an aligned buffer (mutable, pinned)
-newAlignedPinnedBuffer :: PrimMonad m => Word -> Word -> m (Buffer (PrimState m) 'Mutable 'Pinned 'Managed)
-newAlignedPinnedBuffer sz al = BufferMP <$> BA.newAlignedPinnedByteArray (fromIntegral sz) (fromIntegral al)
+newAlignedPinnedBuffer :: MonadIO m => Word -> Word -> m (Buffer 'Mutable 'Pinned 'Managed)
+newAlignedPinnedBuffer sz al = BufferMP <$> liftIO (BA.newAlignedPinnedByteArray (fromIntegral sz) (fromIntegral al))
 
 -----------------------------------------------------------------
 -- Finalizers
@@ -99,7 +107,7 @@ insertFinalizer (Finalizers rfs) f = do
     fs -> (f:fs, False)
 
 -- | Add a finalizer.
-addFinalizer :: Buffer s mut pin 'Finalized -> IO () -> IO ()
+addFinalizer :: Buffer mut pin 'Finalized -> IO () -> IO ()
 addFinalizer b f = case b of
    BufferEF _addr _sz fin@(Finalizers rfs) -> do
       wasEmpty <- insertFinalizer fin f
@@ -138,23 +146,23 @@ newFinalizers :: IO Finalizers
 newFinalizers = Finalizers <$> newIORef []
 
 -- | Touch a buffer
-touchBuffer :: PrimMonad m => Buffer s mut pin gc -> m ()
-touchBuffer (Buffer    ba                        ) = touch ba
-touchBuffer (BufferP   ba                        ) = touch ba
-touchBuffer (BufferM   ba                        ) = touch ba
-touchBuffer (BufferMP  ba                        ) = touch ba
-touchBuffer (BufferF   ba         _fin           ) = touch ba
-touchBuffer (BufferPF  ba         _fin           ) = touch ba
-touchBuffer (BufferMF  ba         _fin           ) = touch ba
-touchBuffer (BufferMPF ba         _fin           ) = touch ba
+touchBuffer :: MonadIO m => Buffer mut pin gc -> m ()
+touchBuffer (Buffer    ba                        ) = liftIO $ touch ba
+touchBuffer (BufferP   ba                        ) = liftIO $ touch ba
+touchBuffer (BufferM   ba                        ) = liftIO $ touch ba
+touchBuffer (BufferMP  ba                        ) = liftIO $ touch ba
+touchBuffer (BufferF   ba         _fin           ) = liftIO $ touch ba
+touchBuffer (BufferPF  ba         _fin           ) = liftIO $ touch ba
+touchBuffer (BufferMF  ba         _fin           ) = liftIO $ touch ba
+touchBuffer (BufferMPF ba         _fin           ) = liftIO $ touch ba
 touchBuffer (BufferE   _addr _sz                 ) = return ()
-touchBuffer (BufferEF  _addr _sz (Finalizers fin)) = touch fin
+touchBuffer (BufferEF  _addr _sz (Finalizers fin)) = liftIO $ touch fin
 
 -- | Make a buffer finalizable
 --
 -- The new buffer liveness is used to trigger finalizers.
 --
-makeFinalizable :: Buffer s mut pin f -> IO (Buffer s mut pin 'Finalized)
+makeFinalizable :: Buffer mut pin f -> IO (Buffer mut pin 'Finalized)
 makeFinalizable (BufferE addr sz) = BufferEF  addr sz <$> newFinalizers
 makeFinalizable (Buffer  ba  )    = BufferF   ba      <$> newFinalizers
 makeFinalizable (BufferP ba  )    = BufferPF  ba      <$> newFinalizers
@@ -171,7 +179,7 @@ makeFinalizable x@(BufferMPF {})  = return x
 --
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
-withBufferAddr# :: Buffer s mut 'Pinned gc -> (Addr# -> IO a) -> IO a
+withBufferAddr# :: Buffer mut 'Pinned gc -> (Addr# -> IO a) -> IO a
 withBufferAddr# b@(BufferP ba) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
    r <- f addr
@@ -198,17 +206,42 @@ withBufferAddr# b@(BufferEF addr _sz _fin) f = do
    touch b
    return r
 
+-- | Do something with a buffer pointer
+--
+-- Note: don't write into immutable buffer as it would break referential
+-- consistency
+withBufferPtr :: Buffer mut 'Pinned gc -> (Ptr b -> IO a) -> IO a
+withBufferPtr b f = withBufferAddr# b g
+   where
+      g addr = f (Ptr addr)
+
 
 -- | Get buffer size
-bufferSize :: PrimMonad m => Buffer (PrimState m) mut pin gc -> m Word
+bufferSize :: MonadIO m => Buffer mut pin gc -> m Word
 bufferSize = \case
-   BufferM ba             -> fromIntegral <$> BA.getSizeofMutableByteArray ba
-   BufferMP ba            -> fromIntegral <$> BA.getSizeofMutableByteArray ba
-   BufferMF  ba _fin      -> fromIntegral <$> BA.getSizeofMutableByteArray ba
-   BufferMPF ba _fin      -> fromIntegral <$> BA.getSizeofMutableByteArray ba
+   BufferM ba             -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
+   BufferMP ba            -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
+   BufferMF  ba _fin      -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
+   BufferMPF ba _fin      -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
    BufferE  _addr sz      -> return sz
    BufferEF _addr sz _fin -> return sz
    Buffer  ba             -> return $ fromIntegral $ BA.sizeofByteArray ba
    BufferP ba             -> return $ fromIntegral $ BA.sizeofByteArray ba
    BufferF   ba _fin      -> return $ fromIntegral $ BA.sizeofByteArray ba
    BufferPF  ba _fin      -> return $ fromIntegral $ BA.sizeofByteArray ba
+
+
+-- | Get contents as a list of bytes
+bufferToList :: MonadIO m => Buffer mut pin gc -> m [Word8]
+bufferToList = \case
+   Buffer  ba             -> return (toList ba)
+   BufferP ba             -> return (toList ba)
+   BufferF   ba _fin      -> return (toList ba)
+   BufferPF  ba _fin      -> return (toList ba)
+   BufferM ba             -> return (toList (unsafeCoerce ba :: BA.ByteArray))
+   BufferMP ba            -> return (toList (unsafeCoerce ba :: BA.ByteArray))
+   BufferMF  ba _fin      -> return (toList (unsafeCoerce ba :: BA.ByteArray))
+   BufferMPF ba _fin      -> return (toList (unsafeCoerce ba :: BA.ByteArray))
+   BufferE  addr sz       -> peekArray sz (Ptr addr)
+   BufferEF addr sz _fin  -> peekArray sz (Ptr addr)
+
