@@ -38,7 +38,7 @@ newtype CodePoint = CodePoint Word32 deriving (Eq)
 -- U+1234A
 --
 instance Show CodePoint where
-   show (CodePoint v) = "U+" ++ f (showHex v "")
+   show (CodePoint v) = "U+" ++ f (fmap toUpper (showHex v ""))
       where
          f xs@[_,_,_] = '0':xs
          f xs@[_,_]   = "00"   <> xs
