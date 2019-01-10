@@ -21,7 +21,7 @@ import Data.String
 import GHC.Exts (IsList(..))
 
 import Haskus.Format.Binary.Word
-import Haskus.Memory.Buffer
+import Haskus.Data.Buffer
 import Haskus.Utils.Flow
 
 -- $setup

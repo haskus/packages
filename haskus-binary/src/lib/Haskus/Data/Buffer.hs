@@ -7,7 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Haskus.Memory.Buffer
+module Haskus.Data.Buffer
    ( Buffer (..)
    , TypedBuffer (..)
    -- * Buffers taxonomy

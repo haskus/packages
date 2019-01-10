@@ -59,7 +59,7 @@ library
     Haskus.Format.Text
 
     Haskus.Utils.Memory
-    Haskus.Memory.Buffer
+    Haskus.Data.Buffer
 
   other-modules:
 
