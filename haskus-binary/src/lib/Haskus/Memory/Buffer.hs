@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE PolyKinds #-}
 
 module Haskus.Memory.Buffer
    ( Buffer (..)
@@ -62,7 +63,7 @@ data Buffer s (mut :: Mutability) (pin :: Pinning) (gc :: Management) where
    BufferEF  :: Addr#                 -> Finalizers -> Buffer s    'Mutable   'Pinned    'Finalized
 
 -- | A buffer with an additional phantom type indicating its binary format
-newtype TypedBuffer t s mut pin gc = TypedBuffer (Buffer s mut pin gc)
+newtype TypedBuffer (t :: k) s mut pin gc = TypedBuffer (Buffer s mut pin gc)
 
 -----------------------------------------------------------------
 -- Allocation
