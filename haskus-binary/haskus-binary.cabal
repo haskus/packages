@@ -72,7 +72,6 @@ library
       ,  cereal                    >= 0.5
       ,  bytestring                >= 0.10
       ,  mtl                       >= 2.2
-      ,  text
       ,  primitive
 
   build-tools: 
