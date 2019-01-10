@@ -6,9 +6,8 @@ module Haskus.Format.Text.Unicode.UCDParser
    , parseCodePoint
    , parseCommentLine
    , skipCommentLines
-   -- * Blocks
+   , parseFile
    , parseBlocks
-   , loadBlocks
    )
 where
 
@@ -58,6 +57,15 @@ skipCommentLines p = do
       Just r  -> fmap (r:) (skipCommentLines p)
       Nothing -> return []
 
+-- | Parse a file and lift the result into a TH expression
+parseFile :: Lift a => FilePath -> Parser a -> ExpQ
+parseFile fp p = do
+   addDependentFile fp
+   str <- liftIO (readFile fp)
+   case runParser p fp str of
+      Right e   -> [| e |]
+      Left err  -> fail (show err)
+
 ----------------------------------------------------------------
 -- Blocks.txt parser
 ----------------------------------------------------------------
@@ -73,13 +81,3 @@ parseBlocks = skipCommentLines parseBlockLine
          void <| string "; "
          n <- anySingle `manyTill` eol
          return (r1,r2,n)
-
--- | Load blocks from the UCD file
-loadBlocks :: ExpQ
-loadBlocks = do
-   let fp = "src/data/ucd/Blocks.txt"
-   addDependentFile fp
-   str <- liftIO (readFile fp)
-   case runParser parseBlocks fp str of
-      Right e   -> [| e |]
-      Left err  -> fail (show err)

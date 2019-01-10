@@ -15,4 +15,4 @@ import Haskus.Format.Text.Unicode
 -- (U+0080,U+00FF,"Latin-1 Supplement")
 --
 blocks :: [(CodePoint,CodePoint,String)]
-blocks = $(loadBlocks)
+blocks = $(parseFile "src/data/ucd/Blocks.txt" parseBlocks)
