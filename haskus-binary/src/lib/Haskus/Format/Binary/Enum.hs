@@ -137,5 +137,9 @@ makeEnum x =fromConstr (indexConstr t x')
 
 
 -- | Retrieve data tag
+--
+-- >>> data D = A | B | C
+-- >>> dataToTag B
+-- 1
 dataToTag :: a -> Int
 dataToTag a = I# (dataToTag# a)

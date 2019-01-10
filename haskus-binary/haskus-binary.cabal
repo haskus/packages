@@ -102,6 +102,7 @@ test-suite tests
       ,  tasty-quickcheck        >= 0.8
       ,  QuickCheck              >= 2.8
       ,  bytestring
+      ,  doctest
 
 Benchmark bench-BitReverse
    type:               exitcode-stdio-1.0
