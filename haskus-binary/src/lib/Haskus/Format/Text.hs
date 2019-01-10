@@ -15,11 +15,6 @@ module Haskus.Format.Text
    )
 where
 
-import Data.Char
-import Data.String
-import GHC.Exts (IsList(..))
-
-import Haskus.Format.Binary.Word
 import Haskus.Data.Buffer
 import Haskus.Utils.Flow
 
