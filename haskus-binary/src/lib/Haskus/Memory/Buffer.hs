@@ -4,6 +4,7 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Haskus.Memory.Buffer
    ( Buffer (..)
@@ -200,14 +201,14 @@ withBufferAddr# b@(BufferEF addr _sz _fin) f = do
 
 -- | Get buffer size
 bufferSize :: PrimMonad m => Buffer (PrimState m) mut pin gc -> m Word
-bufferSize (BufferM ba  )           = fromIntegral <$> BA.getSizeofMutableByteArray ba
-bufferSize (BufferMP ba )           = fromIntegral <$> BA.getSizeofMutableByteArray ba
-bufferSize (BufferMF  ba _fin)      = fromIntegral <$> BA.getSizeofMutableByteArray ba
-bufferSize (BufferMPF ba _fin)      = fromIntegral <$> BA.getSizeofMutableByteArray ba
-bufferSize (BufferE  _addr sz     ) = return sz
-bufferSize (BufferEF _addr sz _fin) = return sz
-bufferSize (Buffer  ba  )           = return $ fromIntegral $ BA.sizeofByteArray ba
-bufferSize (BufferP ba  )           = return $ fromIntegral $ BA.sizeofByteArray ba
-bufferSize (BufferF   ba _fin)      = return $ fromIntegral $ BA.sizeofByteArray ba
-bufferSize (BufferPF  ba _fin)      = return $ fromIntegral $ BA.sizeofByteArray ba
-
+bufferSize = \case
+   BufferM ba             -> fromIntegral <$> BA.getSizeofMutableByteArray ba
+   BufferMP ba            -> fromIntegral <$> BA.getSizeofMutableByteArray ba
+   BufferMF  ba _fin      -> fromIntegral <$> BA.getSizeofMutableByteArray ba
+   BufferMPF ba _fin      -> fromIntegral <$> BA.getSizeofMutableByteArray ba
+   BufferE  _addr sz      -> return sz
+   BufferEF _addr sz _fin -> return sz
+   Buffer  ba             -> return $ fromIntegral $ BA.sizeofByteArray ba
+   BufferP ba             -> return $ fromIntegral $ BA.sizeofByteArray ba
+   BufferF   ba _fin      -> return $ fromIntegral $ BA.sizeofByteArray ba
+   BufferPF  ba _fin      -> return $ fromIntegral $ BA.sizeofByteArray ba
