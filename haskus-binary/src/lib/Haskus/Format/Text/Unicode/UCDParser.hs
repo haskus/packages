@@ -23,7 +23,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
-import Haskus.Format.Text.Unicode
+import Haskus.Format.Text.Unicode.CodePoint
 import Haskus.Utils.Flow
 
 type Parser = Parsec () String
@@ -50,12 +50,12 @@ parseCodePointValue = do
 -- >>> runParser parseCodePointRange "" "1234..5678"
 -- Right (U+1234,U+5678)
 --
-parseCodePointRange :: Parser (CodePoint,CodePoint)
+parseCodePointRange :: Parser CodePointRange
 parseCodePointRange = do
    r1 <- parseCodePointValue
    void <| string ".."
    r2 <- parseCodePointValue
-   return (r1,r2)
+   return (CodePointRange r1 r2)
 
 -- | Parse either a range of code-points or a single code-point
 --
@@ -65,7 +65,7 @@ parseCodePointRange = do
 -- >>> runParser parseCodePointValueOrRange "" "1234"
 -- Right (Left U+1234)
 --
-parseCodePointValueOrRange :: Parser (Either CodePoint (CodePoint,CodePoint))
+parseCodePointValueOrRange :: Parser (Either CodePoint CodePointRange)
 parseCodePointValueOrRange = do
    (Right <$> try parseCodePointRange)
       <|> (Left <$> parseCodePointValue)
@@ -119,17 +119,17 @@ stripComments = skipCommentLines (anySingle `manyTill` eol)
 ----------------------------------------------------------------
 
 -- | Parse Blocks.txt file
-parseBlocks :: Parser [(CodePoint,CodePoint,String)]
+parseBlocks :: Parser [(CodePointRange,String)]
 parseBlocks = skipCommentLines parseLine
    where
       parseLine = do
-         (r1,r2) <- parseCodePointRange
+         r <- parseCodePointRange
          void <| string "; "
          n <- anySingle `manyTill` eol
-         return (r1,r2,n)
+         return (r,n)
 
 -- | Parse DerivedName.txt file
-parseDerivedName :: Parser [(Either CodePoint (CodePoint,CodePoint),String)]
+parseDerivedName :: Parser [(Either CodePoint CodePointRange,String)]
 parseDerivedName = skipCommentLines parseLine
    where
       parseLine = do

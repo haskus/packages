@@ -4,7 +4,7 @@
 
 -- | Unicode
 module Haskus.Format.Text.Unicode
-   ( CodePoint (..)
+   ( module Haskus.Format.Text.Unicode.CodePoint
    -- * Planes
    , Plane (..)
    , codePointPlane
@@ -27,36 +27,8 @@ where
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Bits
 import Haskus.Utils.Types
-import Numeric
 import Data.Kind
-import Data.Char (toUpper)
-import Language.Haskell.TH.Syntax (Lift)
-
--- | Code point
---
--- Number from 0 to 0x10FFFF
-newtype CodePoint = CodePoint Word32 deriving (Eq,Lift)
-
--- | Show instance for CodePoint
---
--- >>> CodePoint 0x1234
--- U+1234
---
--- >>> CodePoint 0x12
--- U+0012
---
--- >>> CodePoint 0x1234A
--- U+1234A
---
-instance Show CodePoint where
-   show (CodePoint v) = "U+" ++ f (fmap toUpper (showHex v ""))
-      where
-         f xs@[_,_,_] = '0':xs
-         f xs@[_,_]   = "00"   <> xs
-         f xs@[_]     = "000"  <> xs
-         f xs@[]      = "0000" <> xs
-         f xs         = xs
-
+import Haskus.Format.Text.Unicode.CodePoint
 
 --------------------------------------------------
 -- Planes

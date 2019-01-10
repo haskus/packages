@@ -11,14 +11,14 @@ module Haskus.Format.Text.Unicode.UCD
 where
 
 import Haskus.Format.Text.Unicode.UCDParser
-import Haskus.Format.Text.Unicode
+import Haskus.Format.Text.Unicode.CodePoint
 
 -- | Plane blocks
 --
 -- >>> blocks !! 1
--- (U+0080,U+00FF,"Latin-1 Supplement")
+-- (U+0080..U+00FF,"Latin-1 Supplement")
 --
-blocks :: [(CodePoint,CodePoint,String)]
+blocks :: [(CodePointRange,String)]
 blocks = $(parseFile "src/data/ucd/Blocks.txt" parseBlocks)
 
 -- | Names
@@ -27,7 +27,7 @@ blocks = $(parseFile "src/data/ucd/Blocks.txt" parseBlocks)
 -- (Left U+0021,"EXCLAMATION MARK")
 --
 -- >> names !! 41630
--- (Right (U+2B740,U+2B81D),"CJK UNIFIED IDEOGRAPH-*")
+-- (Right U+2B740..U+2B81D,"CJK UNIFIED IDEOGRAPH-*")
 --
-names :: [(Either CodePoint (CodePoint,CodePoint),String)]
+names :: [(Either CodePoint CodePointRange,String)]
 names = $(parseFile "src/data/ucd/extracted/DerivedName.txt" parseDerivedName)

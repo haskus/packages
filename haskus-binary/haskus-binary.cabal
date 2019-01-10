@@ -59,6 +59,7 @@ library
     Haskus.Format.Text
     Haskus.Format.Text.ASCII
     Haskus.Format.Text.Unicode
+    Haskus.Format.Text.Unicode.CodePoint
     Haskus.Format.Text.Unicode.UCD
     Haskus.Format.Text.Unicode.UCDParser
 
