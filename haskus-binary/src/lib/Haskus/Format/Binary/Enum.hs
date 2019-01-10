@@ -62,16 +62,15 @@ toEnumField = EnumField . fromCEnum
 
 -- | Extended Enum
 --
--- By default, use fromEnum and toEnum to convert from and to an Integral.
+-- By default, use dataToTag and toEnum to convert from and to an Integral.
 --
 -- But it can be overloaded to perform transformation before using
 -- fromEnum/toEnum. E.g. if values are shifted by 1 compared to Enum values,
--- define fromCEnum = (+1) . fromIntegral . fromEnum
+-- define fromCEnum = (+1) . fromIntegral . dataToTag
 --
 class CEnum a where
-   fromCEnum         :: Integral b => a -> b
-   default fromCEnum :: (Enum a, Integral b) => a -> b
-   fromCEnum         = fromIntegral . fromEnum
+   fromCEnum       :: Integral b => a -> b
+   fromCEnum       = fromIntegral . dataToTag
 
    toCEnum         :: Integral b => b -> a
    default toCEnum :: (Enum a, Integral b) => b -> a
