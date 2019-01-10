@@ -57,6 +57,8 @@ library
 
     Haskus.Format.Binary.Layout
     Haskus.Format.Text
+    Haskus.Format.Text.ASCII
+    Haskus.Format.Text.Unicode
 
     Haskus.Utils.Memory
     Haskus.Data.Buffer
