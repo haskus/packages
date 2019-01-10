@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MagicHash #-}
 
 -- | Store an Enum in the given backing word type
 module Haskus.Format.Binary.Enum
@@ -13,6 +14,7 @@ module Haskus.Format.Binary.Enum
    , makeEnum
    , makeEnumMaybe
    , makeEnumWithCustom
+   , dataToTag
    )
 where
 
@@ -20,6 +22,8 @@ import Haskus.Format.Binary.Storable
 import Haskus.Format.Binary.Ptr
 
 import Data.Data
+import GHC.Prim
+import GHC.Int
 
 -----------------------------------------------------------------------------
 -- EnumField b a: directly store the value of enum "a" as a "b"
@@ -131,3 +135,7 @@ makeEnum x =fromConstr (indexConstr t x')
       x'  = fromIntegral x + 1
       t   = dataTypeOf (undefined :: a)
 
+
+-- | Retrieve data tag
+dataToTag :: a -> Int
+dataToTag a = I# (dataToTag# a)
