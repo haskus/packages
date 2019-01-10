@@ -13,6 +13,9 @@ module Haskus.Memory.Buffer
    , newBuffer
    , newPinnedBuffer
    , newAlignedPinnedBuffer
+   , Pinning (..)
+   , Management (..)
+   , Mutability (..)
    , withBufferAddr#
    -- * Finalizers
    , addFinalizer
