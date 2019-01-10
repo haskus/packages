@@ -5,26 +5,41 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Haskus.Memory.Buffer
    ( Buffer (..)
    , TypedBuffer (..)
-   , Finalizers
-   , module Control.Monad.Primitive
-   , newBuffer
-   , newPinnedBuffer
-   , newAlignedPinnedBuffer
+   -- * Buffers taxonomy
    , Pinning (..)
    , Management (..)
    , Mutability (..)
+   , BufferI
+   , BufferP
+   , BufferM
+   , BufferMP
+   , BufferE
+   , BufferF
+   , BufferPF
+   , BufferMF
+   , BufferMPF
+   , BufferEF
+   -- * Operations
+   , newBuffer
+   , newPinnedBuffer
+   , newAlignedPinnedBuffer
    , withBufferAddr#
    , withBufferPtr
    , bufferSize
-   , bufferToList
+   , bufferToListIO
+   , BufferToList (..)
    -- * Finalizers
+   , Finalizers
    , addFinalizer
    , makeFinalizable
    , touchBuffer
+   -- * Reexport
+   , module Control.Monad.Primitive
    )
 where
 
@@ -41,7 +56,13 @@ import Unsafe.Coerce
 
 import GHC.Prim
 import GHC.Weak
-import GHC.Exts (toList)
+import GHC.Exts (toList, IsList(..))
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XTypeFamilies
 
 -- | Is the buffer pinned into memory?
 data Pinning
@@ -73,6 +94,17 @@ data Buffer (mut :: Mutability) (pin :: Pinning) (gc :: Management) where
    BufferMF  :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'NotPinned 'Finalized
    BufferMPF :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized
    BufferEF  :: Addr# -> Word                 -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized
+
+type BufferI   = Buffer 'Immutable 'NotPinned 'Managed
+type BufferP   = Buffer 'Immutable 'Pinned    'Managed
+type BufferM   = Buffer 'Mutable   'NotPinned 'Managed
+type BufferMP  = Buffer 'Mutable   'Pinned    'Managed
+type BufferE   = Buffer 'Mutable   'Pinned    'NotManaged
+type BufferF   = Buffer 'Immutable 'NotPinned 'Finalized
+type BufferPF  = Buffer 'Immutable 'Pinned    'Finalized
+type BufferMF  = Buffer 'Mutable   'NotPinned 'Finalized
+type BufferMPF = Buffer 'Mutable   'Pinned    'Finalized
+type BufferEF  = Buffer 'Mutable   'Pinned    'Finalized
 
 -- | A buffer with an additional phantom type indicating its binary format
 newtype TypedBuffer (t :: k) mut pin gc = TypedBuffer (Buffer mut pin gc)
@@ -232,8 +264,8 @@ bufferSize = \case
 
 
 -- | Get contents as a list of bytes
-bufferToList :: MonadIO m => Buffer mut pin gc -> m [Word8]
-bufferToList = \case
+bufferToListIO :: MonadIO m => Buffer mut pin gc -> m [Word8]
+bufferToListIO = \case
    Buffer  ba             -> return (toList ba)
    BufferP ba             -> return (toList ba)
    BufferF   ba _fin      -> return (toList ba)
@@ -245,3 +277,26 @@ bufferToList = \case
    BufferE  addr sz       -> peekArray sz (Ptr addr)
    BufferEF addr sz _fin  -> peekArray sz (Ptr addr)
 
+class BufferToList a where
+   -- | Get contents as a list of bytes
+   bufferToList :: a -> [Word8]
+
+instance BufferToList BufferI where
+   bufferToList (Buffer ba) = toList ba
+instance BufferToList BufferP where
+   bufferToList (BufferP ba) = toList ba
+instance BufferToList BufferF where
+   bufferToList (BufferF ba _fin) = toList ba
+instance BufferToList BufferPF where
+   bufferToList (BufferPF ba _fin) = toList ba
+
+-- | Support for OverloadedLists
+--
+-- >>> :set -XOverloadedLists
+-- >>> let b = [25,26,27,28] :: Buffer 'Immutable 'NotPinned 'Managed
+--
+instance IsList (Buffer 'Immutable 'NotPinned 'Managed) where
+   type Item (Buffer 'Immutable 'NotPinned 'Managed) = Word8
+   toList (Buffer ba) = toList ba
+   fromList xs        = Buffer (fromList xs)
+   fromListN sz xs    = Buffer (fromListN sz xs)

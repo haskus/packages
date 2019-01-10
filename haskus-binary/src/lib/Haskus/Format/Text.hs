@@ -1,9 +1,11 @@
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Haskus.Format.Text
    ( Text
@@ -11,7 +13,7 @@ module Haskus.Format.Text
    , toTextShow
    -- * Text
    , TextFormat (..)
-   , TypedText (..)
+   , TextBuffer (..)
    , ShowText (..)
    )
 where
@@ -22,6 +24,12 @@ import Data.Char
 import Haskus.Format.Binary.Word
 import Haskus.Memory.Buffer
 import Haskus.Utils.Flow
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XTypeFamilies
 
 -- | UTF-16 encoded strict text
 type Text = T.Text
@@ -106,14 +114,27 @@ data TextFormat
    | UTF32_LE
    deriving (Show,Eq)
 
-newtype TypedText (t :: k) mut pin gc
-   = TypedText (TypedBuffer t mut pin gc )
+newtype TextBuffer (t :: k) b
+   = TextBuffer b
 
-class ShowText a where
-   showText :: a -> IO String
+class ShowText t b where
+   -- | Show text in IO
+   showTextIO :: MonadIO m => TextBuffer t b -> m String
 
-instance ShowText (TypedText 'ASCII mut 'Pinned gc) where
-   showText (TypedText (TypedBuffer b)) = do
-      bs <- bufferToList b
+   -- | Pure show text
+   showText   :: BufferToList b => TextBuffer t b -> String
+
+-- | Instance for ASCII text
+--
+-- >>> :set -XOverloadedLists
+-- >>> let b = [72,69,76,76,79] :: BufferI
+-- >>> showText (TextBuffer @ASCII b)
+-- "HELLO"
+--
+instance ShowText 'ASCII (Buffer mut pin gc) where
+   showTextIO (TextBuffer b) = do
+      bs <- bufferToListIO b
       return (bs ||> fromIntegral ||> chr)
-   
+
+   showText (TextBuffer b) =
+      bufferToList b ||> fromIntegral ||> chr
