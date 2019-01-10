@@ -1,13 +1,19 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE LambdaCase #-}
 
 -- | Unicode character database parsers
 module Haskus.Format.Text.Unicode.UCDParser
    ( parseCodePointValue
    , parseCodePoint
+   , parseCodePointRange
+   , parseCodePointValueOrRange
    , parseCommentLine
    , skipCommentLines
    , parseFile
+   , stripComments
+   -- * File specific
    , parseBlocks
+   , parseDerivedName
    )
 where
 
@@ -27,6 +33,10 @@ type Parser = Parsec () String
 ----------------------------------------------------------------
 
 -- | Parse a code-point value without the "U+" prefix
+--
+-- >>> runParser parseCodePointValue "" "1234"
+-- Right U+1234
+--
 parseCodePointValue :: Parser CodePoint
 parseCodePointValue = do
    v <- L.hexadecimal
@@ -35,27 +45,61 @@ parseCodePointValue = do
       error ("Parsed invalid CodePoint: " ++ show c)
    return c
 
+-- | Parse a range of code-points separated by ".."
+--
+-- >>> runParser parseCodePointRange "" "1234..5678"
+-- Right (U+1234,U+5678)
+--
+parseCodePointRange :: Parser (CodePoint,CodePoint)
+parseCodePointRange = do
+   r1 <- parseCodePointValue
+   void <| string ".."
+   r2 <- parseCodePointValue
+   return (r1,r2)
+
+-- | Parse either a range of code-points or a single code-point
+--
+-- >>> runParser parseCodePointValueOrRange "" "1234..5678"
+-- Right (Right (U+1234,U+5678))
+--
+-- >>> runParser parseCodePointValueOrRange "" "1234"
+-- Right (Left U+1234)
+--
+parseCodePointValueOrRange :: Parser (Either CodePoint (CodePoint,CodePoint))
+parseCodePointValueOrRange = do
+   (Right <$> try parseCodePointRange)
+      <|> (Left <$> parseCodePointValue)
+
 -- | Parse a code-point value with the "U+" prefix
+--
+-- >>> runParser parseCodePoint "" "U+1234"
+-- Right U+1234
+--
 parseCodePoint :: Parser CodePoint
 parseCodePoint = do
    void <| string "U+"
    parseCodePointValue
 
 -- | Parse a comment line ("^# ...<eol>")
+--
+-- >>> runParser parseCommentLine "" "# comment"
+-- Right " comment"
+--
 parseCommentLine :: Parser String
 parseCommentLine = do
    void <| string "#"
-   anySingle `manyTill` eol
+   anySingle `manyTill` (void eol <|> try eof)
 
 -- | Parse valid line with the given parser, skipping comment lines
 skipCommentLines :: Parser a -> Parser [a]
 skipCommentLines p = do
-   mr <- skipManyTill
-            (eol <|> parseCommentLine)
-            (fmap Just p <|> fmap (const Nothing) eof)
-   case mr of
-      Just r  -> fmap (r:) (skipCommentLines p)
-      Nothing -> return []
+   skipMany (eol <|> parseCommentLine)
+   atEnd >>= \case
+      True  -> return []
+      False -> do
+         x  <- p
+         xs <- skipCommentLines p
+         return (x:xs)
 
 -- | Parse a file and lift the result into a TH expression
 parseFile :: Lift a => FilePath -> Parser a -> ExpQ
@@ -66,18 +110,31 @@ parseFile fp p = do
       Right e   -> [| e |]
       Left err  -> fail (show err)
 
+-- | Strip comments
+stripComments :: Parser [String]
+stripComments = skipCommentLines (anySingle `manyTill` eol)
+
 ----------------------------------------------------------------
--- Blocks.txt parser
+-- File specific
 ----------------------------------------------------------------
 
 -- | Parse Blocks.txt file
 parseBlocks :: Parser [(CodePoint,CodePoint,String)]
-parseBlocks = skipCommentLines parseBlockLine
+parseBlocks = skipCommentLines parseLine
    where
-      parseBlockLine = do
-         r1 <- parseCodePointValue
-         void <| string ".."
-         r2 <- parseCodePointValue
+      parseLine = do
+         (r1,r2) <- parseCodePointRange
          void <| string "; "
          n <- anySingle `manyTill` eol
          return (r1,r2,n)
+
+-- | Parse DerivedName.txt file
+parseDerivedName :: Parser [(Either CodePoint (CodePoint,CodePoint),String)]
+parseDerivedName = skipCommentLines parseLine
+   where
+      parseLine = do
+         e <- parseCodePointValueOrRange
+         space
+         void <| string "; "
+         n <- anySingle `manyTill` (void eol <|> try eof)
+         return (e,n)
