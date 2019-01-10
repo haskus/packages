@@ -199,7 +199,7 @@ withBufferAddr# b@(BufferEF addr _sz _fin) f = do
 
 
 -- | Get buffer size
-bufferSize :: (PrimState m ~ s, PrimMonad m) => Buffer s mut pin gc -> m Word
+bufferSize :: PrimMonad m => Buffer (PrimState m) mut pin gc -> m Word
 bufferSize (BufferM ba  )           = fromIntegral <$> BA.getSizeofMutableByteArray ba
 bufferSize (BufferMP ba )           = fromIntegral <$> BA.getSizeofMutableByteArray ba
 bufferSize (BufferMF  ba _fin)      = fromIntegral <$> BA.getSizeofMutableByteArray ba
@@ -210,3 +210,4 @@ bufferSize (Buffer  ba  )           = return $ fromIntegral $ BA.sizeofByteArray
 bufferSize (BufferP ba  )           = return $ fromIntegral $ BA.sizeofByteArray ba
 bufferSize (BufferF   ba _fin)      = return $ fromIntegral $ BA.sizeofByteArray ba
 bufferSize (BufferPF  ba _fin)      = return $ fromIntegral $ BA.sizeofByteArray ba
+
