@@ -128,7 +128,6 @@ getHostEndianness = do
    alloca $ \p -> do
       poke p magic
       rs <- peekArray 4 (castPtr p :: Ptr Word8)
-      print (show rs)
       return $ if rs == [1,2,3,4] then BigEndian else LittleEndian
 
 -- | Detected host endianness
