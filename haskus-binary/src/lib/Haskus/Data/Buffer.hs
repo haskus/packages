@@ -39,6 +39,15 @@ module Haskus.Data.Buffer
    , bufferReadWord8IO
    , bufferReadWord8
    , bufferWriteWord8IO
+   , bufferReadWord16IO
+   , bufferReadWord16
+   , bufferWriteWord16IO
+   , bufferReadWord32IO
+   , bufferReadWord32
+   , bufferWriteWord32IO
+   , bufferReadWord64IO
+   , bufferReadWord64
+   , bufferWriteWord64IO
    -- * Finalizers
    , Finalizers
    , addFinalizer
@@ -70,6 +79,8 @@ import GHC.Types (IO(..))
 -- >>> :set -XTypeApplications
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
+-- >>> :set -XScopedTypeVariables
+-- >>> import Haskus.Format.Binary.Bits
 
 -- | Is the buffer pinned into memory?
 data Pinning
@@ -344,8 +355,8 @@ bufferReadWord8IO b (fromIntegral -> !(I# off)) = case b of
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
    BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
    BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
-   BufferE  addr _sz                         -> return (W8# (indexWord8OffAddr# addr off))
-   BufferEF addr _sz _fin                    -> return (W8# (indexWord8OffAddr# addr off))
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case readWord8OffAddr# addr off s of (# s2 , r #) -> (# s2 , W8# r #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case readWord8OffAddr# addr off s of (# s2 , r #) -> (# s2 , W8# r #)
    Buffer  (BA.ByteArray ba)                 -> return (W8# (indexWord8Array# ba off))
    BufferP (BA.ByteArray ba)                 -> return (W8# (indexWord8Array# ba off))
    BufferF   (BA.ByteArray ba) _fin          -> return (W8# (indexWord8Array# ba off))
@@ -384,3 +395,167 @@ bufferWriteWord8IO b (fromIntegral -> !(I# off)) (W8# v) = case b of
    BufferE  addr _sz                         -> liftIO $ IO $ \s -> case writeWord8OffAddr# addr off v s of s2 -> (# s2 , () #)
    BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case writeWord8OffAddr# addr off v s of s2 -> (# s2 , () #)
 
+
+
+
+
+-- | Read a Word16, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> let b = [0x12,0x34,0x56,0x78] :: BufferI
+-- >>> x <- bufferReadWord16IO b 0
+-- >>> (x == 0x1234) || (x == 0x3412)
+-- True
+--
+bufferReadWord16IO :: MonadIO m => Buffer mut pin gc heap -> Word -> m Word16
+bufferReadWord16IO b (fromIntegral -> !(I# off)) = case b of
+   BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
+   BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
+   BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
+   BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case readWord16OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W16# r #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case readWord16OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W16# r #)
+   Buffer  (BA.ByteArray ba)                 -> return (W16# (indexWord8ArrayAsWord16# ba off))
+   BufferP (BA.ByteArray ba)                 -> return (W16# (indexWord8ArrayAsWord16# ba off))
+   BufferF   (BA.ByteArray ba) _fin          -> return (W16# (indexWord8ArrayAsWord16# ba off))
+   BufferPF  (BA.ByteArray ba) _fin          -> return (W16# (indexWord8ArrayAsWord16# ba off))
+
+-- | Read a Word16 in an immutable buffer, offset in bytes
+--
+-- We don't check that the offset is valid
+bufferReadWord16 :: Buffer 'Immutable pin gc heap -> Word -> Word16
+bufferReadWord16 b (fromIntegral -> !(I# off)) = case b of
+   Buffer  (BA.ByteArray ba)                 -> W16# (indexWord8ArrayAsWord16# ba off)
+   BufferP (BA.ByteArray ba)                 -> W16# (indexWord8ArrayAsWord16# ba off)
+   BufferF   (BA.ByteArray ba) _fin          -> W16# (indexWord8ArrayAsWord16# ba off)
+   BufferPF  (BA.ByteArray ba) _fin          -> W16# (indexWord8ArrayAsWord16# ba off)
+
+-- | Write a Word16, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> b <- newBuffer 10
+-- >>> let v = 1234 :: Word16
+-- >>> bufferWriteWord16IO b 1 v
+-- >>> bufferReadWord16IO b 1
+-- 1234
+--
+-- >>> (x :: Word16) <- fromIntegral <$> bufferReadWord8IO b 1
+-- >>> (y :: Word16) <- fromIntegral <$> bufferReadWord8IO b 2
+-- >>> (((x `shiftL` 8) .|. y) == v)   ||   (((y `shiftL` 8) .|. x) == v)
+-- True
+--
+bufferWriteWord16IO :: MonadIO m => Buffer 'Mutable pin gc heap -> Word -> Word16 -> m ()
+bufferWriteWord16IO b (fromIntegral -> !(I# off)) (W16# v) = case b of
+   BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord16# ba off v s of s2 -> (# s2 , () #)
+   BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord16# ba off v s of s2 -> (# s2 , () #)
+   BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord16# ba off v s of s2 -> (# s2 , () #)
+   BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord16# ba off v s of s2 -> (# s2 , () #)
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case writeWord16OffAddr# (addr `plusAddr#` off) 0# v s of s2 -> (# s2 , () #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case writeWord16OffAddr# (addr `plusAddr#` off) 0# v s of s2 -> (# s2 , () #)
+
+
+
+-- | Read a Word32, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> let b = [0x12,0x34,0x56,0x78] :: BufferI
+-- >>> x <- bufferReadWord32IO b 0
+-- >>> (x == 0x12345678) || (x == 0x78563412)
+-- True
+--
+bufferReadWord32IO :: MonadIO m => Buffer mut pin gc heap -> Word -> m Word32
+bufferReadWord32IO b (fromIntegral -> !(I# off)) = case b of
+   BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
+   BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
+   BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
+   BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case readWord32OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W32# r #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case readWord32OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W32# r #)
+   Buffer  (BA.ByteArray ba)                 -> return (W32# (indexWord8ArrayAsWord32# ba off))
+   BufferP (BA.ByteArray ba)                 -> return (W32# (indexWord8ArrayAsWord32# ba off))
+   BufferF   (BA.ByteArray ba) _fin          -> return (W32# (indexWord8ArrayAsWord32# ba off))
+   BufferPF  (BA.ByteArray ba) _fin          -> return (W32# (indexWord8ArrayAsWord32# ba off))
+
+-- | Read a Word32 in an immutable buffer, offset in bytes
+--
+-- We don't check that the offset is valid
+bufferReadWord32 :: Buffer 'Immutable pin gc heap -> Word -> Word32
+bufferReadWord32 b (fromIntegral -> !(I# off)) = case b of
+   Buffer  (BA.ByteArray ba)                 -> W32# (indexWord8ArrayAsWord32# ba off)
+   BufferP (BA.ByteArray ba)                 -> W32# (indexWord8ArrayAsWord32# ba off)
+   BufferF   (BA.ByteArray ba) _fin          -> W32# (indexWord8ArrayAsWord32# ba off)
+   BufferPF  (BA.ByteArray ba) _fin          -> W32# (indexWord8ArrayAsWord32# ba off)
+
+-- | Write a Word32, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> b <- newBuffer 10
+-- >>> let v = 1234 :: Word32
+-- >>> bufferWriteWord32IO b 1 v
+-- >>> bufferReadWord32IO b 1
+-- 1234
+--
+bufferWriteWord32IO :: MonadIO m => Buffer 'Mutable pin gc heap -> Word -> Word32 -> m ()
+bufferWriteWord32IO b (fromIntegral -> !(I# off)) (W32# v) = case b of
+   BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord32# ba off v s of s2 -> (# s2 , () #)
+   BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord32# ba off v s of s2 -> (# s2 , () #)
+   BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord32# ba off v s of s2 -> (# s2 , () #)
+   BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord32# ba off v s of s2 -> (# s2 , () #)
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case writeWord32OffAddr# (addr `plusAddr#` off) 0# v s of s2 -> (# s2 , () #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case writeWord32OffAddr# (addr `plusAddr#` off) 0# v s of s2 -> (# s2 , () #)
+
+
+-- | Read a Word64, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> let b = [0x12,0x34,0x56,0x78,0x9A,0xBC,0xDE,0xF0] :: BufferI
+-- >>> x <- bufferReadWord64IO b 0
+-- >>> (x == 0x123456789ABCDEF0) || (x == 0xF0DEBC9A78563412)
+-- True
+--
+bufferReadWord64IO :: MonadIO m => Buffer mut pin gc heap -> Word -> m Word64
+bufferReadWord64IO b (fromIntegral -> !(I# off)) = case b of
+   BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
+   BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
+   BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
+   BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case readWord64OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W64# r #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case readWord64OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W64# r #)
+   Buffer  (BA.ByteArray ba)                 -> return (W64# (indexWord8ArrayAsWord64# ba off))
+   BufferP (BA.ByteArray ba)                 -> return (W64# (indexWord8ArrayAsWord64# ba off))
+   BufferF   (BA.ByteArray ba) _fin          -> return (W64# (indexWord8ArrayAsWord64# ba off))
+   BufferPF  (BA.ByteArray ba) _fin          -> return (W64# (indexWord8ArrayAsWord64# ba off))
+
+-- | Read a Word64 in an immutable buffer, offset in bytes
+--
+-- We don't check that the offset is valid
+bufferReadWord64 :: Buffer 'Immutable pin gc heap -> Word -> Word64
+bufferReadWord64 b (fromIntegral -> !(I# off)) = case b of
+   Buffer  (BA.ByteArray ba)                 -> W64# (indexWord8ArrayAsWord64# ba off)
+   BufferP (BA.ByteArray ba)                 -> W64# (indexWord8ArrayAsWord64# ba off)
+   BufferF   (BA.ByteArray ba) _fin          -> W64# (indexWord8ArrayAsWord64# ba off)
+   BufferPF  (BA.ByteArray ba) _fin          -> W64# (indexWord8ArrayAsWord64# ba off)
+
+-- | Write a Word64, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> b <- newBuffer 10
+-- >>> let v = 1234 :: Word64
+-- >>> bufferWriteWord64IO b 1 v
+-- >>> bufferReadWord64IO b 1
+-- 1234
+--
+bufferWriteWord64IO :: MonadIO m => Buffer 'Mutable pin gc heap -> Word -> Word64 -> m ()
+bufferWriteWord64IO b (fromIntegral -> !(I# off)) (W64# v) = case b of
+   BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
+   BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
+   BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
+   BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case writeWord64OffAddr# (addr `plusAddr#` off) 0# v s of s2 -> (# s2 , () #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case writeWord64OffAddr# (addr `plusAddr#` off) 0# v s of s2 -> (# s2 , () #)
