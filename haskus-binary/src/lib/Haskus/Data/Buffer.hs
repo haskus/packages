@@ -6,6 +6,8 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 module Haskus.Data.Buffer
    ( Buffer (..)
@@ -34,6 +36,8 @@ module Haskus.Data.Buffer
    , BufferSize (..)
    , bufferToListIO
    , BufferToList (..)
+   , bufferReadWord8IO
+   , bufferWriteWord8IO
    -- * Finalizers
    , Finalizers
    , addFinalizer
@@ -58,6 +62,7 @@ import Unsafe.Coerce
 import GHC.Prim
 import GHC.Weak
 import GHC.Exts (toList, IsList(..))
+import GHC.Types (IO(..))
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -322,3 +327,44 @@ instance IsList BufferI where
    toList (Buffer ba) = toList ba
    fromList xs        = Buffer (fromList xs)
    fromListN sz xs    = Buffer (fromListN sz xs)
+
+
+-- | Read a Word8, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> let b = [25,26,27,28] :: BufferI
+-- >>> bufferReadWord8IO b 2 
+-- 27
+--
+bufferReadWord8IO :: MonadIO m => Buffer mut pin gc heap -> Word -> m Word8
+bufferReadWord8IO b (fromIntegral -> !(I# off)) = case b of
+   BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
+   BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
+   BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
+   BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
+   BufferE  addr _sz                         -> return (W8# (indexWord8OffAddr# addr off))
+   BufferEF addr _sz _fin                    -> return (W8# (indexWord8OffAddr# addr off))
+   Buffer  (BA.ByteArray ba)                 -> return (W8# (indexWord8Array# ba off))
+   BufferP (BA.ByteArray ba)                 -> return (W8# (indexWord8Array# ba off))
+   BufferF   (BA.ByteArray ba) _fin          -> return (W8# (indexWord8Array# ba off))
+   BufferPF  (BA.ByteArray ba) _fin          -> return (W8# (indexWord8Array# ba off))
+
+-- | Write a Word8, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> b <- newBuffer 10
+-- >>> bufferWriteWord8IO b 1 123
+-- >>> bufferReadWord8IO b 1 
+-- 123
+--
+bufferWriteWord8IO :: MonadIO m => Buffer 'Mutable pin gc heap -> Word -> Word8 -> m ()
+bufferWriteWord8IO b (fromIntegral -> !(I# off)) (W8# v) = case b of
+   BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8Array# ba off v s of s2 -> (# s2 , () #)
+   BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8Array# ba off v s of s2 -> (# s2 , () #)
+   BufferMF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8Array# ba off v s of s2 -> (# s2 , () #)
+   BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8Array# ba off v s of s2 -> (# s2 , () #)
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case writeWord8OffAddr# addr off v s of s2 -> (# s2 , () #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case writeWord8OffAddr# addr off v s of s2 -> (# s2 , () #)
+
