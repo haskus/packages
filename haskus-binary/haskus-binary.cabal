@@ -55,6 +55,7 @@ library
     Haskus.Format.Binary.Word
     Haskus.Format.Binary.Ptr
     Haskus.Format.Binary.Serialize
+    Haskus.Format.Binary.Serialize.Buffer
 
     Haskus.Format.Binary.Layout
     Haskus.Format.Text
@@ -81,6 +82,7 @@ library
       ,  primitive
       ,  megaparsec
       ,  template-haskell
+      ,  transformers
 
   build-tools: 
   ghc-options:          -Wall
