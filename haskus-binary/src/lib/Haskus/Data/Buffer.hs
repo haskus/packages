@@ -78,6 +78,7 @@ data Management
    | NotManaged -- ^ Not managed at all
    deriving (Show,Eq)
 
+-- | Allocation heap
 data Heap
    = Internal -- ^ GHC heap
    | External -- ^ External heap
