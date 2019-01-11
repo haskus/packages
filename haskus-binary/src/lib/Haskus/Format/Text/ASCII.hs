@@ -38,7 +38,7 @@ data ASCII = ASCII
 -- >>> showText (TextBuffer @ASCII b)
 -- "HELLO"
 --
-instance ShowText ASCII (Buffer mut pin gc) where
+instance ShowText ASCII (Buffer mut pin gc heap) where
    showTextIO (TextBuffer b) = do
       bs <- bufferToListIO b
       return (bs ||> fromIntegral ||> chr)
