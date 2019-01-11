@@ -37,6 +37,7 @@ module Haskus.Data.Buffer
    , bufferToListIO
    , BufferToList (..)
    , bufferReadWord8IO
+   , bufferReadWord8
    , bufferWriteWord8IO
    -- * Finalizers
    , Finalizers
@@ -349,6 +350,21 @@ bufferReadWord8IO b (fromIntegral -> !(I# off)) = case b of
    BufferP (BA.ByteArray ba)                 -> return (W8# (indexWord8Array# ba off))
    BufferF   (BA.ByteArray ba) _fin          -> return (W8# (indexWord8Array# ba off))
    BufferPF  (BA.ByteArray ba) _fin          -> return (W8# (indexWord8Array# ba off))
+
+-- | Read a Word8 in an immutable buffer, offset in bytes
+--
+-- We don't check that the offset is valid
+--
+-- >>> let b = [25,26,27,28] :: BufferI
+-- >>> putStrLn $ "Word8 at offset 2 is " ++ show (bufferReadWord8 b 2)
+-- Word8 at offset 2 is 27
+--
+bufferReadWord8 :: Buffer 'Immutable pin gc heap -> Word -> Word8
+bufferReadWord8 b (fromIntegral -> !(I# off)) = case b of
+   Buffer  (BA.ByteArray ba)                 -> W8# (indexWord8Array# ba off)
+   BufferP (BA.ByteArray ba)                 -> W8# (indexWord8Array# ba off)
+   BufferF   (BA.ByteArray ba) _fin          -> W8# (indexWord8Array# ba off)
+   BufferPF  (BA.ByteArray ba) _fin          -> W8# (indexWord8Array# ba off)
 
 -- | Write a Word8, offset in bytes
 --
