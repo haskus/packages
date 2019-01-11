@@ -54,6 +54,7 @@ library
     Haskus.Format.Binary.Storable
     Haskus.Format.Binary.Word
     Haskus.Format.Binary.Ptr
+    Haskus.Format.Binary.Serialize
 
     Haskus.Format.Binary.Layout
     Haskus.Format.Text
