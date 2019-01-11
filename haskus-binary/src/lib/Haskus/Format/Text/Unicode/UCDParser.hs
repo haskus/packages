@@ -48,7 +48,7 @@ parseCodePointValue = do
 -- | Parse a range of code-points separated by ".."
 --
 -- >>> runParser parseCodePointRange "" "1234..5678"
--- Right (U+1234,U+5678)
+-- Right U+1234..U+5678
 --
 parseCodePointRange :: Parser CodePointRange
 parseCodePointRange = do
@@ -60,7 +60,7 @@ parseCodePointRange = do
 -- | Parse either a range of code-points or a single code-point
 --
 -- >>> runParser parseCodePointValueOrRange "" "1234..5678"
--- Right (Right (U+1234,U+5678))
+-- Right (Right U+1234..U+5678)
 --
 -- >>> runParser parseCodePointValueOrRange "" "1234"
 -- Right (Left U+1234)
