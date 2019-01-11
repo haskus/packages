@@ -1,12 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 
--- Avoid trying to optimize huge data structures
-{-# OPTIONS_GHC -fobject-code -O0 #-}
-
 -- | Unicode character database
 module Haskus.Format.Text.Unicode.UCD
    ( blocks
-   , names
+   --, names
    )
 where
 
@@ -29,5 +26,5 @@ blocks = $(parseFile "src/data/ucd/Blocks.txt" parseBlocks)
 -- >> names !! 41630
 -- (Right U+2B740..U+2B81D,"CJK UNIFIED IDEOGRAPH-*")
 --
-names :: [(Either CodePoint CodePointRange,String)]
-names = $(parseFile "src/data/ucd/extracted/DerivedName.txt" parseDerivedName)
+--names :: [(Either CodePoint CodePointRange,String)]
+--names = $(parseFile "src/data/ucd/extracted/DerivedName.txt" parseDerivedName)
