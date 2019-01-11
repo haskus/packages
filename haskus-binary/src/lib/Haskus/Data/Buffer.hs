@@ -24,11 +24,13 @@ module Haskus.Data.Buffer
    , BufferM
    , BufferMP
    , BufferME
+   , BufferE
    , BufferF
    , BufferPF
    , BufferMF
    , BufferMPF
    , BufferMEF
+   , BufferEF
    -- * Operations
    , newBuffer
    , newPinnedBuffer
@@ -116,22 +118,26 @@ data Buffer (mut :: Mutability) (pin :: Pinning) (gc :: Management) (heap :: Hea
    BufferM   :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'NotPinned 'Managed    'Internal
    BufferMP  :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'Pinned    'Managed    'Internal
    BufferME  :: Addr# -> Word                               -> Buffer 'Mutable   'Pinned    'NotManaged 'External
+   BufferE   :: Addr# -> Word                               -> Buffer 'Immutable 'Pinned    'NotManaged 'External
    BufferF   :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'NotPinned 'Finalized  'Internal
    BufferPF  :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized  'Internal
    BufferMF  :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'NotPinned 'Finalized  'Internal
    BufferMPF :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized  'Internal
    BufferMEF :: Addr# -> Word                 -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized  'External
+   BufferEF  :: Addr# -> Word                 -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized  'External
 
 type BufferI   = Buffer 'Immutable 'NotPinned 'Managed     'Internal
 type BufferP   = Buffer 'Immutable 'Pinned    'Managed     'Internal
 type BufferM   = Buffer 'Mutable   'NotPinned 'Managed     'Internal
 type BufferMP  = Buffer 'Mutable   'Pinned    'Managed     'Internal
 type BufferME  = Buffer 'Mutable   'Pinned    'NotManaged  'External
+type BufferE   = Buffer 'Immutable   'Pinned    'NotManaged  'External
 type BufferF   = Buffer 'Immutable 'NotPinned 'Finalized   'Internal
 type BufferPF  = Buffer 'Immutable 'Pinned    'Finalized   'Internal
 type BufferMF  = Buffer 'Mutable   'NotPinned 'Finalized   'Internal
 type BufferMPF = Buffer 'Mutable   'Pinned    'Finalized   'Internal
 type BufferMEF = Buffer 'Mutable   'Pinned    'Finalized   'External
+type BufferEF  = Buffer 'Immutable 'Pinned    'Finalized   'External
 
 -- | A buffer with an additional phantom type indicating its binary format
 newtype TypedBuffer (t :: k) mut pin gc heap = TypedBuffer (Buffer mut pin gc heap)
@@ -169,6 +175,11 @@ insertFinalizer (Finalizers rfs) f = do
 addFinalizer :: Buffer mut pin 'Finalized heap -> IO () -> IO ()
 addFinalizer b f = case b of
    BufferMEF _addr _sz fin@(Finalizers rfs) -> do
+      wasEmpty <- insertFinalizer fin f
+      -- add the weak reference to the finalizer IORef (not to Addr#)
+      when wasEmpty $ void $ mkWeakIORef rfs (runFinalizers fin)
+
+   BufferEF _addr _sz fin@(Finalizers rfs) -> do
       wasEmpty <- insertFinalizer fin f
       -- add the weak reference to the finalizer IORef (not to Addr#)
       when wasEmpty $ void $ mkWeakIORef rfs (runFinalizers fin)
@@ -215,7 +226,9 @@ touchBuffer (BufferPF  ba         _fin           ) = liftIO $ touch ba
 touchBuffer (BufferMF  ba         _fin           ) = liftIO $ touch ba
 touchBuffer (BufferMPF ba         _fin           ) = liftIO $ touch ba
 touchBuffer (BufferME  _addr _sz                 ) = return ()
+touchBuffer (BufferE   _addr _sz                 ) = return ()
 touchBuffer (BufferMEF _addr _sz (Finalizers fin)) = liftIO $ touch fin
+touchBuffer (BufferEF  _addr _sz (Finalizers fin)) = liftIO $ touch fin
 
 -- | Make a buffer finalizable
 --
@@ -223,12 +236,14 @@ touchBuffer (BufferMEF _addr _sz (Finalizers fin)) = liftIO $ touch fin
 --
 makeFinalizable :: Buffer mut pin f heap -> IO (Buffer mut pin 'Finalized heap)
 makeFinalizable (BufferME addr sz) = BufferMEF addr sz <$> newFinalizers
+makeFinalizable (BufferE  addr sz) = BufferEF  addr sz <$> newFinalizers
 makeFinalizable (Buffer   ba  )    = BufferF   ba      <$> newFinalizers
 makeFinalizable (BufferP  ba  )    = BufferPF  ba      <$> newFinalizers
 makeFinalizable (BufferM  ba  )    = BufferMF  ba      <$> newFinalizers
 makeFinalizable (BufferMP ba  )    = BufferMPF ba      <$> newFinalizers
 makeFinalizable x@(BufferF {})     = return x
 makeFinalizable x@(BufferMEF{})    = return x
+makeFinalizable x@(BufferEF{})     = return x
 makeFinalizable x@(BufferPF {})    = return x
 makeFinalizable x@(BufferMF {})    = return x
 makeFinalizable x@(BufferMPF {})   = return x
@@ -260,7 +275,12 @@ withBufferAddr# b@(BufferMPF ba _fin) f = do
    touch b
    return r
 withBufferAddr# (BufferME addr _sz)         f = f (addr)
+withBufferAddr# (BufferE  addr _sz)         f = f (addr)
 withBufferAddr# b@(BufferMEF addr _sz _fin) f = do
+   r <- f addr
+   touch b
+   return r
+withBufferAddr# b@(BufferEF addr _sz _fin)  f = do
    r <- f addr
    touch b
    return r
@@ -284,6 +304,8 @@ bufferSizeIO = \case
    BufferMPF ba _fin       -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
    BufferME  _addr sz      -> return sz
    BufferMEF _addr sz _fin -> return sz
+   BufferE   _addr sz      -> return sz
+   BufferEF  _addr sz _fin -> return sz
    Buffer  ba              -> return $ fromIntegral $ BA.sizeofByteArray ba
    BufferP ba              -> return $ fromIntegral $ BA.sizeofByteArray ba
    BufferF   ba _fin       -> return $ fromIntegral $ BA.sizeofByteArray ba
@@ -305,6 +327,10 @@ instance BufferSize BufferME where
    bufferSize (BufferME _addr sz) = sz
 instance BufferSize BufferMEF where
    bufferSize (BufferMEF _addr sz _fin) = sz
+instance BufferSize BufferE where
+   bufferSize (BufferE _addr sz) = sz
+instance BufferSize BufferEF where
+   bufferSize (BufferEF _addr sz _fin) = sz
 
 -- | Get contents as a list of bytes
 bufferToListIO :: MonadIO m => Buffer mut pin gc heap -> m [Word8]
@@ -319,6 +345,8 @@ bufferToListIO = \case
    BufferMPF ba _fin      -> return (toList (unsafeCoerce ba :: BA.ByteArray))
    BufferME addr sz       -> peekArray sz (Ptr addr)
    BufferMEF addr sz _fin -> peekArray sz (Ptr addr)
+   BufferE  addr sz       -> peekArray sz (Ptr addr)
+   BufferEF  addr sz _fin -> peekArray sz (Ptr addr)
 
 class BufferToList a where
    -- | Get contents as a list of bytes
@@ -361,6 +389,8 @@ bufferReadWord8IO b (fromIntegral -> !(I# off)) = case b of
    BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
    BufferME  addr _sz                        -> liftIO $ IO $ \s -> case readWord8OffAddr# addr off s of (# s2 , r #) -> (# s2 , W8# r #)
    BufferMEF addr _sz _fin                   -> liftIO $ IO $ \s -> case readWord8OffAddr# addr off s of (# s2 , r #) -> (# s2 , W8# r #)
+   BufferE   addr _sz                        -> liftIO $ IO $ \s -> case readWord8OffAddr# addr off s of (# s2 , r #) -> (# s2 , W8# r #)
+   BufferEF  addr _sz _fin                   -> liftIO $ IO $ \s -> case readWord8OffAddr# addr off s of (# s2 , r #) -> (# s2 , W8# r #)
    Buffer  (BA.ByteArray ba)                 -> return (W8# (indexWord8Array# ba off))
    BufferP (BA.ByteArray ba)                 -> return (W8# (indexWord8Array# ba off))
    BufferF   (BA.ByteArray ba) _fin          -> return (W8# (indexWord8Array# ba off))
@@ -380,6 +410,8 @@ bufferReadWord8 b (fromIntegral -> !(I# off)) = case b of
    BufferP (BA.ByteArray ba)                 -> W8# (indexWord8Array# ba off)
    BufferF   (BA.ByteArray ba) _fin          -> W8# (indexWord8Array# ba off)
    BufferPF  (BA.ByteArray ba) _fin          -> W8# (indexWord8Array# ba off)
+   BufferE  addr _sz                         -> W8# (indexWord8OffAddr# (addr `plusAddr#` off) 0#)
+   BufferEF addr _sz _fin                    -> W8# (indexWord8OffAddr# (addr `plusAddr#` off) 0#)
 
 -- | Write a Word8, offset in bytes
 --
@@ -420,6 +452,8 @@ bufferReadWord16IO b (fromIntegral -> !(I# off)) = case b of
    BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
    BufferME  addr _sz                        -> liftIO $ IO $ \s -> case readWord16OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W16# r #)
    BufferMEF addr _sz _fin                   -> liftIO $ IO $ \s -> case readWord16OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W16# r #)
+   BufferE   addr _sz                        -> liftIO $ IO $ \s -> case readWord16OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W16# r #)
+   BufferEF  addr _sz _fin                   -> liftIO $ IO $ \s -> case readWord16OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W16# r #)
    Buffer  (BA.ByteArray ba)                 -> return (W16# (indexWord8ArrayAsWord16# ba off))
    BufferP (BA.ByteArray ba)                 -> return (W16# (indexWord8ArrayAsWord16# ba off))
    BufferF   (BA.ByteArray ba) _fin          -> return (W16# (indexWord8ArrayAsWord16# ba off))
@@ -434,6 +468,8 @@ bufferReadWord16 b (fromIntegral -> !(I# off)) = case b of
    BufferP (BA.ByteArray ba)                 -> W16# (indexWord8ArrayAsWord16# ba off)
    BufferF   (BA.ByteArray ba) _fin          -> W16# (indexWord8ArrayAsWord16# ba off)
    BufferPF  (BA.ByteArray ba) _fin          -> W16# (indexWord8ArrayAsWord16# ba off)
+   BufferE  addr _sz                         -> W16# (indexWord16OffAddr# (addr `plusAddr#` off) 0#)
+   BufferEF addr _sz _fin                    -> W16# (indexWord16OffAddr# (addr `plusAddr#` off) 0#)
 
 -- | Write a Word16, offset in bytes
 --
@@ -478,6 +514,8 @@ bufferReadWord32IO b (fromIntegral -> !(I# off)) = case b of
    BufferMPF  (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
    BufferME   addr _sz                        -> liftIO $ IO $ \s -> case readWord32OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W32# r #)
    BufferMEF  addr _sz _fin                   -> liftIO $ IO $ \s -> case readWord32OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W32# r #)
+   BufferE    addr _sz                        -> liftIO $ IO $ \s -> case readWord32OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W32# r #)
+   BufferEF   addr _sz _fin                   -> liftIO $ IO $ \s -> case readWord32OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W32# r #)
    Buffer     (BA.ByteArray ba)               -> return (W32# (indexWord8ArrayAsWord32# ba off))
    BufferP    (BA.ByteArray ba)               -> return (W32# (indexWord8ArrayAsWord32# ba off))
    BufferF    (BA.ByteArray ba) _fin          -> return (W32# (indexWord8ArrayAsWord32# ba off))
@@ -492,6 +530,8 @@ bufferReadWord32 b (fromIntegral -> !(I# off)) = case b of
    BufferP (BA.ByteArray ba)                 -> W32# (indexWord8ArrayAsWord32# ba off)
    BufferF   (BA.ByteArray ba) _fin          -> W32# (indexWord8ArrayAsWord32# ba off)
    BufferPF  (BA.ByteArray ba) _fin          -> W32# (indexWord8ArrayAsWord32# ba off)
+   BufferE  addr _sz                         -> W32# (indexWord32OffAddr# (addr `plusAddr#` off) 0#)
+   BufferEF addr _sz _fin                    -> W32# (indexWord32OffAddr# (addr `plusAddr#` off) 0#)
 
 -- | Write a Word32, offset in bytes
 --
@@ -530,6 +570,8 @@ bufferReadWord64IO b (fromIntegral -> !(I# off)) = case b of
    BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
    BufferME  addr _sz                        -> liftIO $ IO $ \s -> case readWord64OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W64# r #)
    BufferMEF addr _sz _fin                   -> liftIO $ IO $ \s -> case readWord64OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W64# r #)
+   BufferE  addr _sz                         -> liftIO $ IO $ \s -> case readWord64OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W64# r #)
+   BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case readWord64OffAddr# (addr `plusAddr#` off) 0# s of (# s2 , r #) -> (# s2 , W64# r #)
    Buffer  (BA.ByteArray ba)                 -> return (W64# (indexWord8ArrayAsWord64# ba off))
    BufferP (BA.ByteArray ba)                 -> return (W64# (indexWord8ArrayAsWord64# ba off))
    BufferF   (BA.ByteArray ba) _fin          -> return (W64# (indexWord8ArrayAsWord64# ba off))
@@ -544,6 +586,8 @@ bufferReadWord64 b (fromIntegral -> !(I# off)) = case b of
    BufferP   (BA.ByteArray ba)               -> W64# (indexWord8ArrayAsWord64# ba off)
    BufferF   (BA.ByteArray ba) _fin          -> W64# (indexWord8ArrayAsWord64# ba off)
    BufferPF  (BA.ByteArray ba) _fin          -> W64# (indexWord8ArrayAsWord64# ba off)
+   BufferE  addr _sz                         -> W64# (indexWord64OffAddr# (addr `plusAddr#` off) 0#)
+   BufferEF addr _sz _fin                    -> W64# (indexWord64OffAddr# (addr `plusAddr#` off) 0#)
 
 -- | Write a Word64, offset in bytes
 --
@@ -596,11 +640,13 @@ copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegr
          BufferM   mba2        -> mbaToMba mba2 mba
          BufferMP  mba2        -> mbaToMba mba2 mba
          BufferME  addr _sz    -> addrToMba addr mba
+         BufferE   addr _sz    -> addrToMba addr mba
          BufferF   ba       _f -> baToMba ba mba
          BufferPF  ba       _f -> baToMba ba mba
          BufferMF  mba2     _f -> mbaToMba mba2 mba
          BufferMPF mba2     _f -> mbaToMba mba2 mba
          BufferMEF addr _sz _f -> addrToMba addr mba
+         BufferEF  addr _sz _f -> addrToMba addr mba
 
       toAddr :: Addr# -> m ()
       toAddr addr = case sb of
@@ -609,11 +655,13 @@ copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegr
          BufferM   mba          -> mbaToAddr mba addr
          BufferMP  mba          -> mbaToAddr mba addr
          BufferME  addr2 _sz    -> addrToAddr addr2 addr
+         BufferE   addr2 _sz    -> addrToAddr addr2 addr
          BufferF   ba        _f -> baToAddr ba addr
          BufferPF  ba        _f -> baToAddr ba addr
          BufferMF  mba       _f -> mbaToAddr mba addr
          BufferMPF mba       _f -> mbaToAddr mba addr
          BufferMEF addr2 _sz _f -> addrToAddr addr2 addr
+         BufferEF  addr2 _sz _f -> addrToAddr addr2 addr
 
       mbaToMba :: BA.MutableByteArray RealWorld -> BA.MutableByteArray RealWorld -> m ()
       mbaToMba   (BA.MutableByteArray mba1) (BA.MutableByteArray mba2) =
