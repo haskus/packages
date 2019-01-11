@@ -8,7 +8,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UnliftedFFITypes #-}
 
+-- | A buffer in memory
 module Haskus.Data.Buffer
    ( Buffer (..)
    , TypedBuffer (..)
@@ -48,6 +51,7 @@ module Haskus.Data.Buffer
    , bufferReadWord64IO
    , bufferReadWord64
    , bufferWriteWord64IO
+   , copyBuffer
    -- * Finalizers
    , Finalizers
    , addFinalizer
@@ -559,3 +563,94 @@ bufferWriteWord64IO b (fromIntegral -> !(I# off)) (W64# v) = case b of
    BufferMPF (BA.MutableByteArray ba) _fin   -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
    BufferE  addr _sz                         -> liftIO $ IO $ \s -> case writeWord64OffAddr# (addr `plusAddr#` off) 0# v s of s2 -> (# s2 , () #)
    BufferEF addr _sz _fin                    -> liftIO $ IO $ \s -> case writeWord64OffAddr# (addr `plusAddr#` off) 0# v s of s2 -> (# s2 , () #)
+
+
+-- | Copy a buffer into another from/to the given offsets
+--
+-- We don't check buffer limits.
+--
+-- >>> let b = [0,1,2,3,4,5,6,7,8] :: BufferI
+-- >>> b2 <- newBuffer 8
+-- >>> copyBuffer b 4 b2 0 4
+-- >>> copyBuffer b 0 b2 4 4
+-- >>> forM [0..7] (bufferReadWord8IO b2)
+-- [4,5,6,7,0,1,2,3]
+--
+copyBuffer :: forall m mut pin0 gc0 heap0 pin1 gc1 heap1.
+   ( MonadIO m
+   ) => Buffer mut pin0 gc0 heap0 -> Word -> Buffer 'Mutable pin1 gc1 heap1 -> Word -> Word -> m ()
+copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegral -> I# cnt) = buf2buf
+   where
+      buf2buf = case db of
+         BufferM   mba         -> toMba mba
+         BufferMP  mba         -> toMba mba
+         BufferMF  mba      _f -> toMba mba
+         BufferMPF mba      _f -> toMba mba
+         BufferE   addr _sz    -> toAddr addr
+         BufferEF  addr _sz _f -> toAddr addr
+
+      toMba :: BA.MutableByteArray RealWorld -> m ()
+      toMba mba = case sb of
+         Buffer    ba          -> baToMba ba mba
+         BufferP   ba          -> baToMba ba mba
+         BufferM   mba2        -> mbaToMba mba2 mba
+         BufferMP  mba2        -> mbaToMba mba2 mba
+         BufferE   addr _sz    -> addrToMba addr mba
+         BufferF   ba       _f -> baToMba ba mba
+         BufferPF  ba       _f -> baToMba ba mba
+         BufferMF  mba2     _f -> mbaToMba mba2 mba
+         BufferMPF mba2     _f -> mbaToMba mba2 mba
+         BufferEF  addr _sz _f -> addrToMba addr mba
+
+      toAddr :: Addr# -> m ()
+      toAddr addr = case sb of
+         Buffer    ba           -> baToAddr ba addr
+         BufferP   ba           -> baToAddr ba addr
+         BufferM   mba          -> mbaToAddr mba addr
+         BufferMP  mba          -> mbaToAddr mba addr
+         BufferE   addr2 _sz    -> addrToAddr addr2 addr
+         BufferF   ba        _f -> baToAddr ba addr
+         BufferPF  ba        _f -> baToAddr ba addr
+         BufferMF  mba       _f -> mbaToAddr mba addr
+         BufferMPF mba       _f -> mbaToAddr mba addr
+         BufferEF  addr2 _sz _f -> addrToAddr addr2 addr
+
+      mbaToMba :: BA.MutableByteArray RealWorld -> BA.MutableByteArray RealWorld -> m ()
+      mbaToMba   (BA.MutableByteArray mba1) (BA.MutableByteArray mba2) =
+         liftIO $ IO $ \s ->
+            case copyMutableByteArray# mba1 soff mba2 doff cnt s of
+               s2 -> (# s2, () #)
+
+      baToMba :: BA.ByteArray -> BA.MutableByteArray RealWorld -> m ()
+      baToMba (BA.ByteArray ba) (BA.MutableByteArray mba) =
+         liftIO $ IO $ \s ->
+            case copyByteArray# ba soff mba doff cnt s of
+               s2 -> (# s2, () #)
+
+      addrToMba :: Addr# -> BA.MutableByteArray RealWorld -> m ()
+      addrToMba addr (BA.MutableByteArray mba) =
+         liftIO $ IO $ \s ->
+            case copyAddrToByteArray# (addr `plusAddr#` soff) mba doff cnt s of
+               s2 -> (# s2, () #)
+
+      baToAddr :: BA.ByteArray -> Addr# -> m ()
+      baToAddr (BA.ByteArray ba) addr =
+         liftIO $ IO $ \s ->
+            case copyByteArrayToAddr# ba soff (addr `plusAddr#` doff) cnt s of
+               s2 -> (# s2, () #)
+
+
+      mbaToAddr :: BA.MutableByteArray RealWorld -> Addr# -> m ()
+      mbaToAddr (BA.MutableByteArray mba) addr =
+         liftIO $ IO $ \s ->
+            case copyMutableByteArrayToAddr# mba soff (addr `plusAddr#` doff) cnt s of
+               s2 -> (# s2, () #)
+
+      addrToAddr :: Addr# -> Addr# -> m ()
+      addrToAddr addr1 addr2 =
+         liftIO $ memcpy (addr1 `plusAddr#` soff)
+                         (addr2 `plusAddr#` doff)
+                         cnt
+        
+foreign import ccall unsafe "string.h" memcpy  :: Addr# -> Addr# -> Int# -> IO ()
+

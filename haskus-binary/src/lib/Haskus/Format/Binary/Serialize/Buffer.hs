@@ -180,7 +180,6 @@ instance
             F.fail $ "Not enough space in the target buffer ("
                    ++ show (l+off) ++ " > " ++ show bs ++ ")"
 
-      -- | FIXME: we should use a faster buffer copy than byte by byte...
       putBuffer x = do
          off <- getPutOffset
          b   <- getPutBuffer
@@ -190,7 +189,5 @@ instance
             F.fail $ "Not enough space in the target buffer ("
                    ++ show (l+off) ++ " > " ++ show bs ++ ")"
 
-         forM_ [0..l-1] $ \boff -> do
-            bufferReadWord8IO x boff >>= bufferWriteWord8IO b (boff+off)
-
+         copyBuffer x 0 b off l
          setPutOffset (off+l)
