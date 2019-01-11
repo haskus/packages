@@ -13,4 +13,4 @@ extra-deps:
 - primitive-extras-0.7.1
 
 ghc-options:
-   "$locals": -fhide-source-paths
+   "$locals": -fhide-source-paths -freverse-errors
