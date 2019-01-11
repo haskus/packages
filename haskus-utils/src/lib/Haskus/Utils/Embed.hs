@@ -34,7 +34,7 @@ Usage:
 
 @
     ghci> :set -XQuasiQuotes
-    ghci> import Text.RawString.QQ
+    ghci> import Haskus.Utils.Embed
     ghci> let s = [raw|\\w+\@[a-zA-Z_]+?\\.[a-zA-Z]{2,3}|]
     ghci> s
     \"\\\\w+\@[a-zA-Z_]+?\\\\.[a-zA-Z]{2,3}\"
@@ -62,7 +62,6 @@ want to embed that character sequence inside the raw string.
 -}
 raw :: QuasiQuoter
 raw = QuasiQuoter {
-    -- Extracted from dead-simple-json.
     quoteExp  = return . LitE . StringL . normaliseNewlines,
 
     quotePat  = \_ -> fail "illegal raw string QuasiQuote \
