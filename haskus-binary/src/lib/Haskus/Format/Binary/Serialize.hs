@@ -12,6 +12,31 @@ module Haskus.Format.Binary.Serialize
    , GetMonad (..)
    , Serializable (..)
    , Size (..)
+   -- * Endianness helpers
+   , putWord16BE
+   , putWord32BE
+   , putWord64BE
+   , putWord16LE
+   , putWord32LE
+   , putWord64LE
+   , putWord16BEs
+   , putWord32BEs
+   , putWord64BEs
+   , putWord16LEs
+   , putWord32LEs
+   , putWord64LEs
+   , getWord16BE
+   , getWord32BE
+   , getWord64BE
+   , getWord16LE
+   , getWord32LE
+   , getWord64LE
+   , getWord16BEs
+   , getWord32BEs
+   , getWord64BEs
+   , getWord16LEs
+   , getWord32LEs
+   , getWord64LEs
    )
 where
 
@@ -34,26 +59,6 @@ class Monad m => PutMonad m where
    -- | Write a Word64
    putWord64 :: Word64 -> m ()
 
-   -- | Write a Word16 with little-endian order
-   putWord16LE :: Word16 -> m ()
-   putWord16LE x = putWord16 (hostToLittleEndian x)
-   -- | Write a Word32 with little-endian order
-   putWord32LE :: Word32 -> m ()
-   putWord32LE x = putWord32 (hostToLittleEndian x)
-   -- | Write a Word64 with little-endian order
-   putWord64LE :: Word64 -> m ()
-   putWord64LE x = putWord64 (hostToLittleEndian x)
-
-   -- | Write a Word16 with big-endian order
-   putWord16BE :: Word16 -> m ()
-   putWord16BE x = putWord16 (hostToBigEndian x)
-   -- | Write a Word32 with big-endian order
-   putWord32BE :: Word32 -> m ()
-   putWord32BE x = putWord32 (hostToBigEndian x)
-   -- | Write a Word64 with big-endian order
-   putWord64BE :: Word64 -> m ()
-   putWord64BE x = putWord64 (hostToBigEndian x)
-
    -- | Write some Word8
    putWord8s   :: [Word8]  -> m ()
    putWord8s xs = forM_ xs putWord8
@@ -69,30 +74,6 @@ class Monad m => PutMonad m where
    -- | Write some Word64
    putWord64s  :: [Word64] -> m ()
    putWord64s xs = forM_ xs putWord64
-
-   -- | Write some Word16 with little-endian order
-   putWord16LEs  :: [Word16] -> m ()
-   putWord16LEs xs = putWord16s (fmap hostToLittleEndian xs)
-
-   -- | Write some Word32 with little-endian order
-   putWord32LEs  :: [Word32] -> m ()
-   putWord32LEs xs = putWord32s (fmap hostToLittleEndian xs)
-
-   -- | Write some Word64 with little-endian order
-   putWord64LEs :: [Word64] -> m ()
-   putWord64LEs xs = putWord64s (fmap hostToLittleEndian xs)
-
-   -- | Write some Word16 with big-endian order
-   putWord16BEs  :: [Word16] -> m ()
-   putWord16BEs xs = putWord16s (fmap hostToBigEndian xs)
-
-   -- | Write some Word32 with big-endian order
-   putWord32BEs  :: [Word32] -> m ()
-   putWord32BEs xs = putWord32s (fmap hostToBigEndian xs)
-
-   -- | Write some Word64 with big-endian order
-   putWord64BEs :: [Word64] -> m ()
-   putWord64BEs xs = putWord64s (fmap hostToBigEndian xs)
 
    -- | Write the contents of a buffer
    putBuffer   :: Buffer mut pin gc heap -> m ()
@@ -114,25 +95,6 @@ class Monad m => GetMonad m where
    -- | Read a Word64 with host endianness
    getWord64   :: m Word64
 
-   -- | Read a Word16 with little-endian order
-   getWord16LE   :: m Word16
-   getWord16LE = littleEndianToHost <$> getWord16
-   -- | Read a Word32 with little-endian order
-   getWord32LE   :: m Word32
-   getWord32LE = littleEndianToHost <$> getWord32
-   -- | Read a Word64 with little-endian order
-   getWord64LE   :: m Word64
-   getWord64LE = littleEndianToHost <$> getWord64
-   -- | Read a Word16 with big-endian order
-   getWord16BE   :: m Word16
-   getWord16BE = bigEndianToHost <$> getWord16
-   -- | Read a Word32 with big-endian order
-   getWord32BE   :: m Word32
-   getWord32BE = bigEndianToHost <$> getWord32
-   -- | Read a Word64 with big-endian order
-   getWord64BE   :: m Word64
-   getWord64BE = bigEndianToHost <$> getWord64
-
    -- | Read some Word8
    getWord8s     :: Word -> m [Word8]
    getWord8s n = replicateM (fromIntegral n) getWord8
@@ -145,25 +107,6 @@ class Monad m => GetMonad m where
    -- | Read some Word64 with host endianness
    getWord64s    :: Word -> m [Word64]
    getWord64s n = replicateM (fromIntegral n) getWord64
-
-   -- | Read some Word16 with little-endian order
-   getWord16LEs    :: Word -> m [Word16]
-   getWord16LEs n = replicateM (fromIntegral n) getWord16LE
-   -- | Read some Word32 with little-endian order
-   getWord32LEs    :: Word -> m [Word32]
-   getWord32LEs n = replicateM (fromIntegral n) getWord32LE
-   -- | Read some Word64 with little-endian order
-   getWord64LEs    :: Word -> m [Word64]
-   getWord64LEs n = replicateM (fromIntegral n) getWord64LE
-   -- | Read some Word16 with big-endian order
-   getWord16BEs    :: Word -> m [Word16]
-   getWord16BEs n = replicateM (fromIntegral n) getWord16BE
-   -- | Read some Word32 with big-endian order
-   getWord32BEs    :: Word -> m [Word32]
-   getWord32BEs n = replicateM (fromIntegral n) getWord32BE
-   -- | Read some Word64 with big-endian order
-   getWord64BEs    :: Word -> m [Word64]
-   getWord64BEs n = replicateM (fromIntegral n) getWord64BE
 
    -- | Read the given amount of bytes into a new buffer
    getBuffer     :: Word -> m BufferI
@@ -183,7 +126,7 @@ data Size
 -- | Binary serializable data
 class Serializable a where
 
-   -- | Size of the data in bytes (Dynamic or Static Nat)
+   -- | Size of the data in bytes
    type SizeOf a :: Size
 
    -- | Sensible to endianness
@@ -197,6 +140,90 @@ class Serializable a where
 
    -- | Deserialize a value
    get :: GetMonad m => Endianness -> Word -> m a
+
+
+--------------------------------------------
+-- Helpers for endianness
+--------------------------------------------
+
+-- | Write a Word16 with little-endian order
+putWord16LE :: PutMonad m => Word16 -> m ()
+putWord16LE x = putWord16 (hostToLittleEndian x)
+-- | Write a Word32 with little-endian order
+putWord32LE :: PutMonad m => Word32 -> m ()
+putWord32LE x = putWord32 (hostToLittleEndian x)
+-- | Write a Word64 with little-endian order
+putWord64LE :: PutMonad m => Word64 -> m ()
+putWord64LE x = putWord64 (hostToLittleEndian x)
+
+-- | Write a Word16 with big-endian order
+putWord16BE :: PutMonad m => Word16 -> m ()
+putWord16BE x = putWord16 (hostToBigEndian x)
+-- | Write a Word32 with big-endian order
+putWord32BE :: PutMonad m => Word32 -> m ()
+putWord32BE x = putWord32 (hostToBigEndian x)
+-- | Write a Word64 with big-endian order
+putWord64BE :: PutMonad m => Word64 -> m ()
+putWord64BE x = putWord64 (hostToBigEndian x)
+
+-- | Write some Word16 with little-endian order
+putWord16LEs  :: PutMonad m => [Word16] -> m ()
+putWord16LEs xs = putWord16s (fmap hostToLittleEndian xs)
+-- | Write some Word32 with little-endian order
+putWord32LEs  :: PutMonad m => [Word32] -> m ()
+putWord32LEs xs = putWord32s (fmap hostToLittleEndian xs)
+-- | Write some Word64 with little-endian order
+putWord64LEs :: PutMonad m => [Word64] -> m ()
+putWord64LEs xs = putWord64s (fmap hostToLittleEndian xs)
+-- | Write some Word16 with big-endian order
+putWord16BEs  :: PutMonad m => [Word16] -> m ()
+putWord16BEs xs = putWord16s (fmap hostToBigEndian xs)
+-- | Write some Word32 with big-endian order
+putWord32BEs  :: PutMonad m => [Word32] -> m ()
+putWord32BEs xs = putWord32s (fmap hostToBigEndian xs)
+-- | Write some Word64 with big-endian order
+putWord64BEs :: PutMonad m => [Word64] -> m ()
+putWord64BEs xs = putWord64s (fmap hostToBigEndian xs)
+
+-- | Read a Word16 with little-endian order
+getWord16LE   :: GetMonad m => m Word16
+getWord16LE = littleEndianToHost <$> getWord16
+-- | Read a Word32 with little-endian order
+getWord32LE   :: GetMonad m => m Word32
+getWord32LE = littleEndianToHost <$> getWord32
+-- | Read a Word64 with little-endian order
+getWord64LE   :: GetMonad m => m Word64
+getWord64LE = littleEndianToHost <$> getWord64
+-- | Read a Word16 with big-endian order
+getWord16BE   :: GetMonad m => m Word16
+getWord16BE = bigEndianToHost <$> getWord16
+-- | Read a Word32 with big-endian order
+getWord32BE   :: GetMonad m => m Word32
+getWord32BE = bigEndianToHost <$> getWord32
+-- | Read a Word64 with big-endian order
+getWord64BE   :: GetMonad m => m Word64
+getWord64BE = bigEndianToHost <$> getWord64
+
+
+-- | Read some Word16 with little-endian order
+getWord16LEs    :: GetMonad m => Word -> m [Word16]
+getWord16LEs n = fmap littleEndianToHost <$> getWord16s n
+-- | Read some Word32 with little-endian order
+getWord32LEs    :: GetMonad m => Word -> m [Word32]
+getWord32LEs n =  fmap littleEndianToHost <$> getWord32s n
+-- | Read some Word64 with little-endian order
+getWord64LEs    :: GetMonad m => Word -> m [Word64]
+getWord64LEs n =  fmap littleEndianToHost <$> getWord64s n
+
+-- | Read some Word16 with big-endian order
+getWord16BEs    :: GetMonad m => Word -> m [Word16]
+getWord16BEs n = fmap bigEndianToHost <$> getWord16s n
+-- | Read some Word32 with big-endian order
+getWord32BEs    :: GetMonad m => Word -> m [Word32]
+getWord32BEs n = fmap bigEndianToHost <$> getWord32s n
+-- | Read some Word64 with big-endian order
+getWord64BEs    :: GetMonad m => Word -> m [Word64]
+getWord64BEs n = fmap bigEndianToHost <$> getWord64s n
 
 
 --------------------------------------------
