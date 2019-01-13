@@ -26,7 +26,7 @@ newtype TextBuffer (t :: k) b
 
 -- type aliases
 type TextI t                 = TextBuffer t BufferI
-type TextB t mut pin gc heap = TextBuffer t (Buffer mut pin gc heap)
+type TextB t mut pin fin heap = TextBuffer t (Buffer mut pin fin heap)
 
 
 class ShowText t b where

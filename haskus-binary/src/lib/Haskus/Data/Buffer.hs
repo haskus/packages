@@ -17,7 +17,7 @@ module Haskus.Data.Buffer
    , TypedBuffer (..)
    -- * Buffers taxonomy
    , Pinning (..)
-   , Management (..)
+   , Finalization (..)
    , Mutability (..)
    , BufferI
    , BufferP
@@ -95,10 +95,10 @@ data Pinning
    deriving (Show,Eq)
 
 -- | Is the buffer automatically garbage collected?
-data Management
-   = Managed    -- ^ GCed
-   | Finalized  -- ^ Finalizers run just before GCing
-   | NotManaged -- ^ Not managed at all
+data Finalization
+   = Collected    -- ^ Automatically collected by the garbage-collector
+   | Finalized    -- ^ Finalizers are run just before GCing
+   | NotFinalized -- ^ Not managed at all
    deriving (Show,Eq)
 
 -- | Allocation heap
@@ -112,35 +112,35 @@ data Mutability
    | Immutable -- ^ Bytes are immutable
    deriving (Show,Eq)
 
-data Buffer (mut :: Mutability) (pin :: Pinning) (gc :: Management) (heap :: Heap) where
-   Buffer    :: BA.ByteArray                                -> Buffer 'Immutable 'NotPinned 'Managed    'Internal
-   BufferP   :: BA.ByteArray                                -> Buffer 'Immutable 'Pinned    'Managed    'Internal
-   BufferM   :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'NotPinned 'Managed    'Internal
-   BufferMP  :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'Pinned    'Managed    'Internal
-   BufferME  :: Addr# -> Word                               -> Buffer 'Mutable   'Pinned    'NotManaged 'External
-   BufferE   :: Addr# -> Word                               -> Buffer 'Immutable 'Pinned    'NotManaged 'External
-   BufferF   :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'NotPinned 'Finalized  'Internal
-   BufferPF  :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized  'Internal
-   BufferMF  :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'NotPinned 'Finalized  'Internal
-   BufferMPF :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized  'Internal
-   BufferMEF :: Addr# -> Word                 -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized  'External
-   BufferEF  :: Addr# -> Word                 -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized  'External
+data Buffer (mut :: Mutability) (pin :: Pinning) (fin :: Finalization) (heap :: Heap) where
+   Buffer    :: BA.ByteArray                                -> Buffer 'Immutable 'NotPinned 'Collected    'Internal
+   BufferP   :: BA.ByteArray                                -> Buffer 'Immutable 'Pinned    'Collected    'Internal
+   BufferM   :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'NotPinned 'Collected    'Internal
+   BufferMP  :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'Pinned    'Collected    'Internal
+   BufferME  :: Addr# -> Word                               -> Buffer 'Mutable   'Pinned    'NotFinalized 'External
+   BufferE   :: Addr# -> Word                               -> Buffer 'Immutable 'Pinned    'NotFinalized 'External
+   BufferF   :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'NotPinned 'Finalized    'Internal
+   BufferPF  :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized    'Internal
+   BufferMF  :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'NotPinned 'Finalized    'Internal
+   BufferMPF :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized    'Internal
+   BufferMEF :: Addr# -> Word                 -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized    'External
+   BufferEF  :: Addr# -> Word                 -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized    'External
 
-type BufferI   = Buffer 'Immutable 'NotPinned 'Managed     'Internal
-type BufferP   = Buffer 'Immutable 'Pinned    'Managed     'Internal
-type BufferM   = Buffer 'Mutable   'NotPinned 'Managed     'Internal
-type BufferMP  = Buffer 'Mutable   'Pinned    'Managed     'Internal
-type BufferME  = Buffer 'Mutable   'Pinned    'NotManaged  'External
-type BufferE   = Buffer 'Immutable   'Pinned    'NotManaged  'External
-type BufferF   = Buffer 'Immutable 'NotPinned 'Finalized   'Internal
-type BufferPF  = Buffer 'Immutable 'Pinned    'Finalized   'Internal
-type BufferMF  = Buffer 'Mutable   'NotPinned 'Finalized   'Internal
-type BufferMPF = Buffer 'Mutable   'Pinned    'Finalized   'Internal
-type BufferMEF = Buffer 'Mutable   'Pinned    'Finalized   'External
-type BufferEF  = Buffer 'Immutable 'Pinned    'Finalized   'External
+type BufferI   = Buffer 'Immutable 'NotPinned 'Collected    'Internal
+type BufferP   = Buffer 'Immutable 'Pinned    'Collected    'Internal
+type BufferM   = Buffer 'Mutable   'NotPinned 'Collected    'Internal
+type BufferMP  = Buffer 'Mutable   'Pinned    'Collected    'Internal
+type BufferME  = Buffer 'Mutable   'Pinned    'NotFinalized 'External
+type BufferE   = Buffer 'Immutable 'Pinned    'NotFinalized 'External
+type BufferF   = Buffer 'Immutable 'NotPinned 'Finalized    'Internal
+type BufferPF  = Buffer 'Immutable 'Pinned    'Finalized    'Internal
+type BufferMF  = Buffer 'Mutable   'NotPinned 'Finalized    'Internal
+type BufferMPF = Buffer 'Mutable   'Pinned    'Finalized    'Internal
+type BufferMEF = Buffer 'Mutable   'Pinned    'Finalized    'External
+type BufferEF  = Buffer 'Immutable 'Pinned    'Finalized    'External
 
 -- | A buffer with an additional phantom type indicating its binary format
-newtype TypedBuffer (t :: k) mut pin gc heap = TypedBuffer (Buffer mut pin gc heap)
+newtype TypedBuffer (t :: k) mut pin fin heap = TypedBuffer (Buffer mut pin fin heap)
 
 -----------------------------------------------------------------
 -- Allocation
@@ -216,7 +216,7 @@ newFinalizers :: IO Finalizers
 newFinalizers = Finalizers <$> newIORef []
 
 -- | Touch a buffer
-touchBuffer :: MonadIO m => Buffer mut pin gc heap -> m ()
+touchBuffer :: MonadIO m => Buffer mut pin fin heap -> m ()
 touchBuffer (Buffer    ba                        ) = liftIO $ touch ba
 touchBuffer (BufferP   ba                        ) = liftIO $ touch ba
 touchBuffer (BufferM   ba                        ) = liftIO $ touch ba
@@ -253,7 +253,7 @@ makeFinalizable x@(BufferMPF {})   = return x
 --
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
-withBufferAddr# :: Buffer mut 'Pinned gc heap -> (Addr# -> IO a) -> IO a
+withBufferAddr# :: Buffer mut 'Pinned fin heap -> (Addr# -> IO a) -> IO a
 withBufferAddr# b@(BufferP ba) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
    r <- f addr
@@ -289,14 +289,14 @@ withBufferAddr# b@(BufferEF addr _sz _fin)  f = do
 --
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
-withBufferPtr :: Buffer mut 'Pinned gc heap -> (Ptr b -> IO a) -> IO a
+withBufferPtr :: Buffer mut 'Pinned fin heap -> (Ptr b -> IO a) -> IO a
 withBufferPtr b f = withBufferAddr# b g
    where
       g addr = f (Ptr addr)
 
 
 -- | Get buffer size
-bufferSizeIO :: MonadIO m => Buffer mut pin gc heap -> m Word
+bufferSizeIO :: MonadIO m => Buffer mut pin fin heap -> m Word
 bufferSizeIO = \case
    BufferM ba              -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
    BufferMP ba             -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
@@ -333,7 +333,7 @@ instance BufferSize BufferEF where
    bufferSize (BufferEF _addr sz _fin) = sz
 
 -- | Get contents as a list of bytes
-bufferToListIO :: MonadIO m => Buffer mut pin gc heap -> m [Word8]
+bufferToListIO :: MonadIO m => Buffer mut pin fin heap -> m [Word8]
 bufferToListIO = \case
    Buffer  ba             -> return (toList ba)
    BufferP ba             -> return (toList ba)
@@ -381,7 +381,7 @@ instance IsList BufferI where
 -- >>> bufferReadWord8IO b 2 
 -- 27
 --
-bufferReadWord8IO :: MonadIO m => Buffer mut pin gc heap -> Word -> m Word8
+bufferReadWord8IO :: MonadIO m => Buffer mut pin fin heap -> Word -> m Word8
 bufferReadWord8IO b (fromIntegral -> !(I# off)) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
@@ -404,7 +404,7 @@ bufferReadWord8IO b (fromIntegral -> !(I# off)) = case b of
 -- >>> putStrLn $ "Word8 at offset 2 is " ++ show (bufferReadWord8 b 2)
 -- Word8 at offset 2 is 27
 --
-bufferReadWord8 :: Buffer 'Immutable pin gc heap -> Word -> Word8
+bufferReadWord8 :: Buffer 'Immutable pin fin heap -> Word -> Word8
 bufferReadWord8 b (fromIntegral -> !(I# off)) = case b of
    Buffer  (BA.ByteArray ba)                 -> W8# (indexWord8Array# ba off)
    BufferP (BA.ByteArray ba)                 -> W8# (indexWord8Array# ba off)
@@ -422,7 +422,7 @@ bufferReadWord8 b (fromIntegral -> !(I# off)) = case b of
 -- >>> bufferReadWord8IO b 1 
 -- 123
 --
-bufferWriteWord8IO :: MonadIO m => Buffer 'Mutable pin gc heap -> Word -> Word8 -> m ()
+bufferWriteWord8IO :: MonadIO m => Buffer 'Mutable pin fin heap -> Word -> Word8 -> m ()
 bufferWriteWord8IO b (fromIntegral -> !(I# off)) (W8# v) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8Array# ba off v s of s2 -> (# s2 , () #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8Array# ba off v s of s2 -> (# s2 , () #)
@@ -444,7 +444,7 @@ bufferWriteWord8IO b (fromIntegral -> !(I# off)) (W8# v) = case b of
 -- >>> (x == 0x1234) || (x == 0x3412)
 -- True
 --
-bufferReadWord16IO :: MonadIO m => Buffer mut pin gc heap -> Word -> m Word16
+bufferReadWord16IO :: MonadIO m => Buffer mut pin fin heap -> Word -> m Word16
 bufferReadWord16IO b (fromIntegral -> !(I# off)) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
@@ -462,7 +462,7 @@ bufferReadWord16IO b (fromIntegral -> !(I# off)) = case b of
 -- | Read a Word16 in an immutable buffer, offset in bytes
 --
 -- We don't check that the offset is valid
-bufferReadWord16 :: Buffer 'Immutable pin gc heap -> Word -> Word16
+bufferReadWord16 :: Buffer 'Immutable pin fin heap -> Word -> Word16
 bufferReadWord16 b (fromIntegral -> !(I# off)) = case b of
    Buffer  (BA.ByteArray ba)                 -> W16# (indexWord8ArrayAsWord16# ba off)
    BufferP (BA.ByteArray ba)                 -> W16# (indexWord8ArrayAsWord16# ba off)
@@ -486,7 +486,7 @@ bufferReadWord16 b (fromIntegral -> !(I# off)) = case b of
 -- >>> (((x `shiftL` 8) .|. y) == v)   ||   (((y `shiftL` 8) .|. x) == v)
 -- True
 --
-bufferWriteWord16IO :: MonadIO m => Buffer 'Mutable pin gc heap -> Word -> Word16 -> m ()
+bufferWriteWord16IO :: MonadIO m => Buffer 'Mutable pin fin heap -> Word -> Word16 -> m ()
 bufferWriteWord16IO b (fromIntegral -> !(I# off)) (W16# v) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord16# ba off v s of s2 -> (# s2 , () #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord16# ba off v s of s2 -> (# s2 , () #)
@@ -506,7 +506,7 @@ bufferWriteWord16IO b (fromIntegral -> !(I# off)) (W16# v) = case b of
 -- >>> (x == 0x12345678) || (x == 0x78563412)
 -- True
 --
-bufferReadWord32IO :: MonadIO m => Buffer mut pin gc heap -> Word -> m Word32
+bufferReadWord32IO :: MonadIO m => Buffer mut pin fin heap -> Word -> m Word32
 bufferReadWord32IO b (fromIntegral -> !(I# off)) = case b of
    BufferM    (BA.MutableByteArray ba)        -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
    BufferMP   (BA.MutableByteArray ba)        -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
@@ -524,7 +524,7 @@ bufferReadWord32IO b (fromIntegral -> !(I# off)) = case b of
 -- | Read a Word32 in an immutable buffer, offset in bytes
 --
 -- We don't check that the offset is valid
-bufferReadWord32 :: Buffer 'Immutable pin gc heap -> Word -> Word32
+bufferReadWord32 :: Buffer 'Immutable pin fin heap -> Word -> Word32
 bufferReadWord32 b (fromIntegral -> !(I# off)) = case b of
    Buffer  (BA.ByteArray ba)                 -> W32# (indexWord8ArrayAsWord32# ba off)
    BufferP (BA.ByteArray ba)                 -> W32# (indexWord8ArrayAsWord32# ba off)
@@ -543,7 +543,7 @@ bufferReadWord32 b (fromIntegral -> !(I# off)) = case b of
 -- >>> bufferReadWord32IO b 1
 -- 1234
 --
-bufferWriteWord32IO :: MonadIO m => Buffer 'Mutable pin gc heap -> Word -> Word32 -> m ()
+bufferWriteWord32IO :: MonadIO m => Buffer 'Mutable pin fin heap -> Word -> Word32 -> m ()
 bufferWriteWord32IO b (fromIntegral -> !(I# off)) (W32# v) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord32# ba off v s of s2 -> (# s2 , () #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord32# ba off v s of s2 -> (# s2 , () #)
@@ -562,7 +562,7 @@ bufferWriteWord32IO b (fromIntegral -> !(I# off)) (W32# v) = case b of
 -- >>> (x == 0x123456789ABCDEF0) || (x == 0xF0DEBC9A78563412)
 -- True
 --
-bufferReadWord64IO :: MonadIO m => Buffer mut pin gc heap -> Word -> m Word64
+bufferReadWord64IO :: MonadIO m => Buffer mut pin fin heap -> Word -> m Word64
 bufferReadWord64IO b (fromIntegral -> !(I# off)) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
@@ -580,7 +580,7 @@ bufferReadWord64IO b (fromIntegral -> !(I# off)) = case b of
 -- | Read a Word64 in an immutable buffer, offset in bytes
 --
 -- We don't check that the offset is valid
-bufferReadWord64 :: Buffer 'Immutable pin gc heap -> Word -> Word64
+bufferReadWord64 :: Buffer 'Immutable pin fin heap -> Word -> Word64
 bufferReadWord64 b (fromIntegral -> !(I# off)) = case b of
    Buffer    (BA.ByteArray ba)               -> W64# (indexWord8ArrayAsWord64# ba off)
    BufferP   (BA.ByteArray ba)               -> W64# (indexWord8ArrayAsWord64# ba off)
@@ -599,7 +599,7 @@ bufferReadWord64 b (fromIntegral -> !(I# off)) = case b of
 -- >>> bufferReadWord64IO b 1
 -- 1234
 --
-bufferWriteWord64IO :: MonadIO m => Buffer 'Mutable pin gc heap -> Word -> Word64 -> m ()
+bufferWriteWord64IO :: MonadIO m => Buffer 'Mutable pin fin heap -> Word -> Word64 -> m ()
 bufferWriteWord64IO b (fromIntegral -> !(I# off)) (W64# v) = case b of
    BufferM   (BA.MutableByteArray ba)        -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
    BufferMP  (BA.MutableByteArray ba)        -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
@@ -620,9 +620,9 @@ bufferWriteWord64IO b (fromIntegral -> !(I# off)) (W64# v) = case b of
 -- >>> forM [0..7] (bufferReadWord8IO b2)
 -- [4,5,6,7,0,1,2,3]
 --
-copyBuffer :: forall m mut pin0 gc0 heap0 pin1 gc1 heap1.
+copyBuffer :: forall m mut pin0 fin0 heap0 pin1 fin1 heap1.
    ( MonadIO m
-   ) => Buffer mut pin0 gc0 heap0 -> Word -> Buffer 'Mutable pin1 gc1 heap1 -> Word -> Word -> m ()
+   ) => Buffer mut pin0 fin0 heap0 -> Word -> Buffer 'Mutable pin1 fin1 heap1 -> Word -> Word -> m ()
 copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegral -> I# cnt) = buf2buf
    where
       buf2buf = case db of
