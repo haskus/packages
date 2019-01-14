@@ -13,7 +13,9 @@ module Haskus.Memory.Allocator.Malloc
 where
 
 import GHC.Exts
-import GHC.Ptr
+import Haskus.Format.Binary.Ptr
+   ( Ptr (..), nullPtr
+   )
 import Haskus.Utils.Monad
 import Haskus.Memory.Buffer
    ( Buffer(..), BufferME, BufferMEF
