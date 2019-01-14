@@ -1,12 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DataKinds #-}
 
 -- | Embed buffers into the program
 module Haskus.Memory.Embed
    ( embedBytes
    , embedFile
    , embedMutableFile
+   , embedPinnedBuffer
    -- * Internals
    , loadSymbol
    , loadMutableSymbol
@@ -20,16 +22,18 @@ module Haskus.Memory.Embed
    )
 where
 
-import Language.Haskell.TH
-import Language.Haskell.TH.Syntax
 import Haskus.Memory.Buffer
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Ptr
 import Haskus.Utils.List (intersperse)
 import Haskus.Utils.Maybe
-import Haskus.Utils.Monad (liftIO)
+import Haskus.Utils.Monad
+
+import Language.Haskell.TH
+import Language.Haskell.TH.Syntax
 import System.Directory (getFileSize)
 import GHC.Exts
+import System.IO
 
 -- | Embed bytes at compile time using GHC's literal strings.
 --
@@ -172,15 +176,15 @@ makeEmbeddingFile path entries = do
 
 -- | Embed a mutable file in the executable. Return a BufferME
 embedMutableFile :: FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
-embedMutableFile = embedFile' True
+embedMutableFile = embedFile' False True
 
 -- | Embed a file in the executable. Return a BufferE
 embedFile :: FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
-embedFile = embedFile' False
+embedFile = embedFile' False False
 
 -- | Embed a mutable file in the executable. Return a BufferME
-embedFile' :: Bool -> FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
-embedFile' mutable path malign moffset msize = do
+embedFile' :: Bool -> Bool -> FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
+embedFile' nodep mutable path malign moffset msize = do
    nam <- newName "buffer"
    let sym = show nam ++ "_data"
    let entry = EmbedEntry
@@ -200,10 +204,28 @@ embedFile' mutable path malign moffset msize = do
             Just x  -> return x
             Nothing -> fromIntegral <$> liftIO (getFileSize path)
 
-   addDependentFile path
+   when (not nodep) $
+      addDependentFile path
+
    -- TODO: use LangASM when implemented (cf GHC #16180)
    addForeignFilePath LangC sfile
 
    if mutable
       then loadMutableSymbol sz sym
       else loadSymbol        sz sym
+
+
+-- | Embed a pinned buffer in the executable
+embedPinnedBuffer :: Buffer mut 'Pinned fin heap -> Bool -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
+embedPinnedBuffer buf mut malign moffset msize = do
+   tmp <- qAddTempFile ".dat"
+   bsz <- bufferSizeIO buf
+   let off = fromMaybe 0 moffset
+   let sz  = fromMaybe bsz msize
+   when (off+sz > bsz) $
+      fail "Invalid buffer offset/size combination"
+
+   liftIO $ unsafeWithBufferPtr buf $ \ptr -> do
+      withBinaryFile tmp WriteMode $ \hdl -> do
+         hPutBuf hdl (ptr `indexPtr` fromIntegral off) (fromIntegral sz)
+   embedFile' True mut tmp malign Nothing Nothing
