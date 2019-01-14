@@ -309,53 +309,53 @@ instance Thawable (Buffer 'Immutable pin 'NotFinalized heap)
 --
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
-unsafeWithBufferAddr# :: Buffer mut 'Pinned fin heap -> (Addr# -> IO a) -> IO a
+unsafeWithBufferAddr# :: MonadIO m => Buffer mut 'Pinned fin heap -> (Addr# -> m a) -> m a
 unsafeWithBufferAddr# b@(BufferP ba) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
    r <- f addr
-   touch b
+   touchBuffer b
    return r
 unsafeWithBufferAddr# b@(BufferMP ba) f = do
    let !(BA.Addr addr) = BA.mutableByteArrayContents ba
    r <- f addr
-   touch b
+   touchBuffer b
    return r
 unsafeWithBufferAddr# b@(BufferPF ba _fin) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
    r <- f addr
-   touch b
+   touchBuffer b
    return r
 unsafeWithBufferAddr# b@(BufferMPF ba _fin) f = do
    let !(BA.Addr addr) = BA.mutableByteArrayContents ba
    r <- f addr
-   touch b
+   touchBuffer b
    return r
 unsafeWithBufferAddr# (BufferME addr _sz)         f = f (addr)
 unsafeWithBufferAddr# (BufferE  addr _sz)         f = f (addr)
 unsafeWithBufferAddr# b@(BufferMEF addr _sz _fin) f = do
    r <- f addr
-   touch b
+   touchBuffer b
    return r
 unsafeWithBufferAddr# b@(BufferEF addr _sz _fin)  f = do
    r <- f addr
-   touch b
+   touchBuffer b
    return r
 
 -- | Do something with a buffer pointer
 --
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
-unsafeWithBufferPtr :: Buffer mut 'Pinned fin heap -> (Ptr b -> IO a) -> IO a
+unsafeWithBufferPtr :: MonadIO m => Buffer mut 'Pinned fin heap -> (Ptr b -> m a) -> m a
 unsafeWithBufferPtr b f = unsafeWithBufferAddr# b g
    where
       g addr = f (Ptr addr)
 
 -- | Do something with a buffer address
-withBufferAddr# :: Buffer 'Mutable 'Pinned fin heap -> (Addr# -> IO a) -> IO a
+withBufferAddr# :: MonadIO m => Buffer 'Mutable 'Pinned fin heap -> (Addr# -> m a) -> m a
 withBufferAddr# = unsafeWithBufferAddr#
 
 -- | Do something with a buffer pointer
-withBufferPtr :: Buffer 'Mutable 'Pinned fin heap -> (Ptr b -> IO a) -> IO a
+withBufferPtr :: MonadIO m => Buffer 'Mutable 'Pinned fin heap -> (Ptr b -> m a) -> m a
 withBufferPtr = unsafeWithBufferPtr
 
 -- | Get buffer size
@@ -685,7 +685,12 @@ bufferWriteWord64IO b (fromIntegral -> !(I# off)) (W64# v) = case b of
 --
 copyBuffer :: forall m mut pin0 fin0 heap0 pin1 fin1 heap1.
    ( MonadIO m
-   ) => Buffer mut pin0 fin0 heap0 -> Word -> Buffer 'Mutable pin1 fin1 heap1 -> Word -> Word -> m ()
+   ) => Buffer mut pin0 fin0 heap0        -- ^ Source buffer
+     -> Word                              -- ^ Offset in source buffer
+     -> Buffer 'Mutable pin1 fin1 heap1   -- ^ Target buffer
+     -> Word                              -- ^ Offset in target buffer
+     -> Word                              -- ^ Number of Word8 to copy
+     -> m ()
 copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegral -> I# cnt) = buf2buf
    where
       buf2buf = case db of
