@@ -24,7 +24,7 @@ module Haskus.Format.Binary.Serialize.Buffer
 where
 
 import Haskus.Format.Binary.Serialize
-import Haskus.Data.Buffer
+import Haskus.Memory.Buffer
 import Haskus.Utils.Monad
 
 import Data.Functor.Identity

@@ -12,7 +12,7 @@
 {-# LANGUAGE UnliftedFFITypes #-}
 
 -- | A buffer in memory
-module Haskus.Data.Buffer
+module Haskus.Memory.Buffer
    ( Buffer (..)
    , TypedBuffer (..)
    -- * Buffers taxonomy

@@ -40,7 +40,7 @@ module Haskus.Format.Binary.Serialize
    )
 where
 
-import Haskus.Data.Buffer
+import Haskus.Memory.Buffer
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Endianness
 import Haskus.Utils.Types

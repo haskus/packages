@@ -19,7 +19,7 @@ import GHC.Exts (IsList(..))
 
 import Haskus.Format.Binary.Word
 import Haskus.Format.Text
-import Haskus.Data.Buffer
+import Haskus.Memory.Buffer
 import Haskus.Utils.Flow
 
 -- $setup

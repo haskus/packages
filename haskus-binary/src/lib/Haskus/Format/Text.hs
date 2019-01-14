@@ -15,7 +15,7 @@ module Haskus.Format.Text
    )
 where
 
-import Haskus.Data.Buffer
+import Haskus.Memory.Buffer
 import Haskus.Utils.Flow
 
 -- | Text buffer
