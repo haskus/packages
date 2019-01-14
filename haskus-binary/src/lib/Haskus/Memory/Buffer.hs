@@ -10,6 +10,8 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UnliftedFFITypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 -- | A buffer in memory
 module Haskus.Memory.Buffer
@@ -31,10 +33,13 @@ module Haskus.Memory.Buffer
    , BufferMPF
    , BufferMEF
    , BufferEF
-   -- * Operations
+   -- * GHC allocator
    , newBuffer
    , newPinnedBuffer
    , newAlignedPinnedBuffer
+   -- * Operations
+   , Freezable (..)
+   , Thawable (..)
    , withBufferAddr#
    , withBufferPtr
    , bufferSizeIO
@@ -255,6 +260,48 @@ makeFinalizable x@(BufferPF {})    = return x
 makeFinalizable x@(BufferMF {})    = return x
 makeFinalizable x@(BufferMPF {})   = return x
 
+-----------------------------------------------------------------
+-- Operations
+-----------------------------------------------------------------
+
+-- | Buffer that can be frozen (converted from mutable to immutable)
+class Freezable a b | a -> b where
+   -- | Convert a mutable buffer to an immutable one without copying. The
+   -- buffer should not be modified after the conversion.
+   unsafeBufferFreeze :: MonadIO m => a -> m b
+
+instance Freezable (Buffer 'Mutable   pin 'Collected heap)
+                   (Buffer 'Immutable pin 'Collected heap)
+   where
+      unsafeBufferFreeze = \case
+         BufferM mba  -> Buffer  <$> liftIO (BA.unsafeFreezeByteArray mba)
+         BufferMP mba -> BufferP <$> liftIO (BA.unsafeFreezeByteArray mba)
+
+instance Freezable (Buffer 'Mutable   pin 'NotFinalized heap)
+                   (Buffer 'Immutable pin 'NotFinalized heap)
+   where
+      unsafeBufferFreeze = \case
+         BufferME addr sz -> return (BufferE addr sz)
+
+
+-- | Buffer that can be thawed (converted from immutable to mutable)
+class Thawable a b | a -> b where
+   -- | Convert an immutable buffer to a mutable one without copying. The
+   -- original buffer should not be used after the conversion.
+   unsafeBufferThaw :: MonadIO m => a -> m b
+
+instance Thawable (Buffer 'Immutable pin 'Collected heap)
+                  (Buffer 'Mutable   pin 'Collected heap)
+   where
+      unsafeBufferThaw = \case
+         Buffer mba  -> BufferM  <$> liftIO (BA.unsafeThawByteArray mba)
+         BufferP mba -> BufferMP <$> liftIO (BA.unsafeThawByteArray mba)
+
+instance Thawable (Buffer 'Immutable pin 'NotFinalized heap)
+                  (Buffer 'Mutable   pin 'NotFinalized heap)
+   where
+      unsafeBufferThaw = \case
+         BufferE addr sz -> return (BufferME addr sz)
 
 -- | Do something with a buffer address
 --
