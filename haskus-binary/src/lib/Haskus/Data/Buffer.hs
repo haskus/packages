@@ -168,44 +168,48 @@ newAlignedPinnedBuffer sz al = BufferMP <$> liftIO (BA.newAlignedPinnedByteArray
 newtype Finalizers = Finalizers (IORef [IO ()])
 
 -- | Insert a finalizer. Return True if there was no finalizer before
-insertFinalizer :: Finalizers -> IO () -> IO Bool
+insertFinalizer :: MonadIO m => Finalizers -> IO () -> m Bool
 insertFinalizer (Finalizers rfs) f = do
-  atomicModifyIORef rfs $ \finalizers -> case finalizers of
+  liftIO $ atomicModifyIORef rfs $ \finalizers -> case finalizers of
     [] -> ([f] , True)
     fs -> (f:fs, False)
 
 -- | Add a finalizer.
-addFinalizer :: Buffer mut pin 'Finalized heap -> IO () -> IO ()
+--
+-- The latest added finalizers are executed first. Finalizers are not guaranteed
+-- to run (e.g. if the program exits before the buffer is collected).
+--
+addFinalizer :: MonadIO m => Buffer mut pin 'Finalized heap -> IO () -> m ()
 addFinalizer b f = case b of
    BufferMEF _addr _sz fin@(Finalizers rfs) -> do
       wasEmpty <- insertFinalizer fin f
       -- add the weak reference to the finalizer IORef (not to Addr#)
-      when wasEmpty $ void $ mkWeakIORef rfs (runFinalizers fin)
+      when wasEmpty $ void $ liftIO $ mkWeakIORef rfs (runFinalizers fin)
 
    BufferEF _addr _sz fin@(Finalizers rfs) -> do
       wasEmpty <- insertFinalizer fin f
       -- add the weak reference to the finalizer IORef (not to Addr#)
-      when wasEmpty $ void $ mkWeakIORef rfs (runFinalizers fin)
+      when wasEmpty $ void $ liftIO $ mkWeakIORef rfs (runFinalizers fin)
 
    BufferF ba fin -> do
       wasEmpty <- insertFinalizer fin f
       -- add the weak reference to the ByteArray
-      when wasEmpty $ void $ mkWeak ba () (Just (runFinalizers fin))
+      when wasEmpty $ void $ liftIO $ mkWeak ba () (Just (runFinalizers fin))
 
    BufferPF ba fin -> do
       wasEmpty <- insertFinalizer fin f
       -- add the weak reference to the ByteArray
-      when wasEmpty $ void $ mkWeak ba () (Just (runFinalizers fin))
+      when wasEmpty $ void $ liftIO $ mkWeak ba () (Just (runFinalizers fin))
 
    BufferMF ba fin -> do
       wasEmpty <- insertFinalizer fin f
       -- add the weak reference to the MutableByteArray
-      when wasEmpty $ void $ mkWeak ba () (Just (runFinalizers fin))
+      when wasEmpty $ void $ liftIO $ mkWeak ba () (Just (runFinalizers fin))
 
    BufferMPF ba fin -> do
       wasEmpty <- insertFinalizer fin f
       -- add the weak reference to the MutableByteArray
-      when wasEmpty $ void $ mkWeak ba () (Just (runFinalizers fin))
+      when wasEmpty $ void $ liftIO $ mkWeak ba () (Just (runFinalizers fin))
 
 -- | Internal function used to execute finalizers
 runFinalizers :: Finalizers -> IO ()
@@ -215,8 +219,8 @@ runFinalizers (Finalizers rfs) = do
    sequence_ fs
 
 -- | Create empty Finalizers
-newFinalizers :: IO Finalizers
-newFinalizers = Finalizers <$> newIORef []
+newFinalizers :: MonadIO m => m Finalizers
+newFinalizers = Finalizers <$> liftIO (newIORef [])
 
 -- | Touch a buffer
 touchBuffer :: MonadIO m => Buffer mut pin fin heap -> m ()
@@ -237,7 +241,7 @@ touchBuffer (BufferEF  _addr _sz (Finalizers fin)) = liftIO $ touch fin
 --
 -- The new buffer liveness is used to trigger finalizers.
 --
-makeFinalizable :: Buffer mut pin f heap -> IO (Buffer mut pin 'Finalized heap)
+makeFinalizable :: MonadIO m => Buffer mut pin f heap -> m (Buffer mut pin 'Finalized heap)
 makeFinalizable (BufferME addr sz) = BufferMEF addr sz <$> newFinalizers
 makeFinalizable (BufferE  addr sz) = BufferEF  addr sz <$> newFinalizers
 makeFinalizable (Buffer   ba  )    = BufferF   ba      <$> newFinalizers
