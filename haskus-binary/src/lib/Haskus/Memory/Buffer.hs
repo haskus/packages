@@ -120,18 +120,18 @@ data Mutability
    deriving (Show,Eq)
 
 data Buffer (mut :: Mutability) (pin :: Pinning) (fin :: Finalization) (heap :: Heap) where
-   Buffer    :: BA.ByteArray                                -> Buffer 'Immutable 'NotPinned 'Collected    'Internal
-   BufferP   :: BA.ByteArray                                -> Buffer 'Immutable 'Pinned    'Collected    'Internal
-   BufferM   :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'NotPinned 'Collected    'Internal
-   BufferMP  :: BA.MutableByteArray RealWorld               -> Buffer 'Mutable   'Pinned    'Collected    'Internal
-   BufferME  :: Addr# -> Word                               -> Buffer 'Mutable   'Pinned    'NotFinalized 'External
-   BufferE   :: Addr# -> Word                               -> Buffer 'Immutable 'Pinned    'NotFinalized 'External
-   BufferF   :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'NotPinned 'Finalized    'Internal
-   BufferPF  :: BA.ByteArray                  -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized    'Internal
-   BufferMF  :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'NotPinned 'Finalized    'Internal
-   BufferMPF :: BA.MutableByteArray RealWorld -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized    'Internal
-   BufferMEF :: Addr# -> Word                 -> Finalizers -> Buffer 'Mutable   'Pinned    'Finalized    'External
-   BufferEF  :: Addr# -> Word                 -> Finalizers -> Buffer 'Immutable 'Pinned    'Finalized    'External
+   Buffer    :: {-# UNPACK #-} !BA.ByteArray                                                  -> BufferI
+   BufferP   :: {-# UNPACK #-} !BA.ByteArray                                                  -> BufferP
+   BufferM   :: {-# UNPACK #-} !(BA.MutableByteArray RealWorld)                               -> BufferM
+   BufferMP  :: {-# UNPACK #-} !(BA.MutableByteArray RealWorld)                               -> BufferMP
+   BufferME  :: Addr# -> {-# UNPACK #-} !Word                                                 -> BufferME
+   BufferE   :: Addr# -> {-# UNPACK #-} !Word                                                 -> BufferE
+   BufferF   :: {-# UNPACK #-} !BA.ByteArray                    -> {-# UNPACK #-} !Finalizers -> BufferF
+   BufferPF  :: {-# UNPACK #-} !BA.ByteArray                    -> {-# UNPACK #-} !Finalizers -> BufferPF
+   BufferMF  :: {-# UNPACK #-} !(BA.MutableByteArray RealWorld) -> {-# UNPACK #-} !Finalizers -> BufferMF
+   BufferMPF :: {-# UNPACK #-} !(BA.MutableByteArray RealWorld) -> {-# UNPACK #-} !Finalizers -> BufferMPF
+   BufferMEF :: Addr# -> {-# UNPACK #-} !Word                   -> {-# UNPACK #-} !Finalizers -> BufferMEF
+   BufferEF  :: Addr# -> {-# UNPACK #-} !Word                   -> {-# UNPACK #-} !Finalizers -> BufferEF
 
 type BufferI   = Buffer 'Immutable 'NotPinned 'Collected    'Internal
 type BufferP   = Buffer 'Immutable 'Pinned    'Collected    'Internal
@@ -158,14 +158,17 @@ newtype TypedBuffer (t :: k) mut pin fin heap = TypedBuffer (Buffer mut pin fin 
 -- >>> b <- newBuffer 1024
 --
 newBuffer :: MonadIO m => Word -> m BufferM
+{-# INLINE newBuffer #-}
 newBuffer sz = BufferM <$> liftIO (BA.newByteArray (fromIntegral sz))
 
 -- | Allocate a buffer (mutable, pinned)
 newPinnedBuffer :: MonadIO m => Word -> m BufferMP
+{-# INLINE newPinnedBuffer #-}
 newPinnedBuffer sz = BufferMP <$> liftIO (BA.newPinnedByteArray (fromIntegral sz))
 
 -- | Allocate an aligned buffer (mutable, pinned)
 newAlignedPinnedBuffer :: MonadIO m => Word -> Word -> m BufferMP
+{-# INLINE newAlignedPinnedBuffer #-}
 newAlignedPinnedBuffer sz al = BufferMP <$> liftIO (BA.newAlignedPinnedByteArray (fromIntegral sz) (fromIntegral al))
 
 -----------------------------------------------------------------
@@ -231,6 +234,19 @@ newFinalizers = Finalizers <$> liftIO (newIORef [])
 
 -- | Touch a buffer
 touchBuffer :: MonadIO m => Buffer mut pin fin heap -> m ()
+{-# INLINABLE touchBuffer #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferI  -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferP  -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferM  -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferMP -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferME -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferE  -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferF  -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferPF -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferMF -> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferMPF-> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferMEF-> m () #-}
+{-# SPECIALIZE INLINE touchBuffer :: MonadIO m => BufferEF -> m () #-}
 touchBuffer (Buffer    ba                        ) = liftIO $ touch ba
 touchBuffer (BufferP   ba                        ) = liftIO $ touch ba
 touchBuffer (BufferM   ba                        ) = liftIO $ touch ba
@@ -248,6 +264,13 @@ touchBuffer (BufferEF  _addr _sz (Finalizers fin)) = liftIO $ touch fin
 --
 -- The new buffer liveness is used to trigger finalizers.
 --
+{-# INLINABLE makeFinalizable #-}
+{-# SPECIALIZE INLINE makeFinalizable :: MonadIO m => BufferI  -> m BufferF #-}
+{-# SPECIALIZE INLINE makeFinalizable :: MonadIO m => BufferP  -> m BufferPF #-}
+{-# SPECIALIZE INLINE makeFinalizable :: MonadIO m => BufferM  -> m BufferMF #-}
+{-# SPECIALIZE INLINE makeFinalizable :: MonadIO m => BufferMP -> m BufferMPF #-}
+{-# SPECIALIZE INLINE makeFinalizable :: MonadIO m => BufferME -> m BufferMEF #-}
+{-# SPECIALIZE INLINE makeFinalizable :: MonadIO m => BufferE  -> m BufferEF #-}
 makeFinalizable :: MonadIO m => Buffer mut pin f heap -> m (Buffer mut pin 'Finalized heap)
 makeFinalizable (BufferME addr sz) = BufferMEF addr sz <$> newFinalizers
 makeFinalizable (BufferE  addr sz) = BufferEF  addr sz <$> newFinalizers
@@ -275,15 +298,19 @@ class Freezable a b | a -> b where
 instance Freezable (Buffer 'Mutable   pin 'Collected heap)
                    (Buffer 'Immutable pin 'Collected heap)
    where
+      {-# INLINE unsafeBufferFreeze #-}
       unsafeBufferFreeze = \case
          BufferM mba  -> Buffer  <$> liftIO (BA.unsafeFreezeByteArray mba)
          BufferMP mba -> BufferP <$> liftIO (BA.unsafeFreezeByteArray mba)
 
-instance Freezable (Buffer 'Mutable   pin 'NotFinalized heap)
-                   (Buffer 'Immutable pin 'NotFinalized heap)
+instance Freezable (Buffer 'Mutable   pin fin 'External)
+                   (Buffer 'Immutable pin fin 'External)
    where
+      {-# INLINE unsafeBufferFreeze #-}
       unsafeBufferFreeze = \case
-         BufferME addr sz -> return (BufferE addr sz)
+         BufferME  addr sz     -> return (BufferE addr sz)
+         -- works because finalizers are attached to the IORef "fin"
+         BufferMEF addr sz fin -> return (BufferEF addr sz fin)
 
 
 -- | Buffer that can be thawed (converted from immutable to mutable)
@@ -295,6 +322,7 @@ class Thawable a b | a -> b where
 instance Thawable (Buffer 'Immutable pin 'Collected heap)
                   (Buffer 'Mutable   pin 'Collected heap)
    where
+      {-# INLINE unsafeBufferThaw #-}
       unsafeBufferThaw = \case
          Buffer mba  -> BufferM  <$> liftIO (BA.unsafeThawByteArray mba)
          BufferP mba -> BufferMP <$> liftIO (BA.unsafeThawByteArray mba)
@@ -302,6 +330,7 @@ instance Thawable (Buffer 'Immutable pin 'Collected heap)
 instance Thawable (Buffer 'Immutable pin 'NotFinalized heap)
                   (Buffer 'Mutable   pin 'NotFinalized heap)
    where
+      {-# INLINE unsafeBufferThaw #-}
       unsafeBufferThaw = \case
          BufferE addr sz -> return (BufferME addr sz)
 
@@ -310,6 +339,15 @@ instance Thawable (Buffer 'Immutable pin 'NotFinalized heap)
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
 unsafeWithBufferAddr# :: MonadIO m => Buffer mut 'Pinned fin heap -> (Addr# -> m a) -> m a
+{-# INLINABLE unsafeWithBufferAddr# #-}
+{-# SPECIALIZE INLINE unsafeWithBufferAddr# :: MonadIO m => BufferP  -> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferAddr# :: MonadIO m => BufferMP -> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferAddr# :: MonadIO m => BufferME -> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferAddr# :: MonadIO m => BufferE  -> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferAddr# :: MonadIO m => BufferPF -> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferAddr# :: MonadIO m => BufferMPF-> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferAddr# :: MonadIO m => BufferMEF-> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferAddr# :: MonadIO m => BufferEF -> (Addr# -> m a) -> m a #-}
 unsafeWithBufferAddr# b@(BufferP ba) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
    r <- f addr
@@ -346,20 +384,52 @@ unsafeWithBufferAddr# b@(BufferEF addr _sz _fin)  f = do
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
 unsafeWithBufferPtr :: MonadIO m => Buffer mut 'Pinned fin heap -> (Ptr b -> m a) -> m a
+{-# INLINABLE unsafeWithBufferPtr #-}
+{-# SPECIALIZE INLINE unsafeWithBufferPtr :: MonadIO m => BufferP  -> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferPtr :: MonadIO m => BufferMP -> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferPtr :: MonadIO m => BufferME -> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferPtr :: MonadIO m => BufferE  -> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferPtr :: MonadIO m => BufferPF -> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferPtr :: MonadIO m => BufferMPF-> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferPtr :: MonadIO m => BufferMEF-> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE unsafeWithBufferPtr :: MonadIO m => BufferEF -> (Ptr b -> m a) -> m a #-}
 unsafeWithBufferPtr b f = unsafeWithBufferAddr# b g
    where
       g addr = f (Ptr addr)
 
 -- | Do something with a buffer address
 withBufferAddr# :: MonadIO m => Buffer 'Mutable 'Pinned fin heap -> (Addr# -> m a) -> m a
+{-# INLINABLE withBufferAddr# #-}
+{-# SPECIALIZE INLINE withBufferAddr# :: MonadIO m => BufferMP -> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE withBufferAddr# :: MonadIO m => BufferME -> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE withBufferAddr# :: MonadIO m => BufferMPF-> (Addr# -> m a) -> m a #-}
+{-# SPECIALIZE INLINE withBufferAddr# :: MonadIO m => BufferMEF-> (Addr# -> m a) -> m a #-}
 withBufferAddr# = unsafeWithBufferAddr#
 
 -- | Do something with a buffer pointer
 withBufferPtr :: MonadIO m => Buffer 'Mutable 'Pinned fin heap -> (Ptr b -> m a) -> m a
+{-# INLINABLE withBufferPtr #-}
+{-# SPECIALIZE INLINE withBufferPtr :: MonadIO m => BufferMP -> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE withBufferPtr :: MonadIO m => BufferME -> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE withBufferPtr :: MonadIO m => BufferMPF-> (Ptr b -> m a) -> m a #-}
+{-# SPECIALIZE INLINE withBufferPtr :: MonadIO m => BufferMEF-> (Ptr b -> m a) -> m a #-}
 withBufferPtr = unsafeWithBufferPtr
 
 -- | Get buffer size
 bufferSizeIO :: MonadIO m => Buffer mut pin fin heap -> m Word
+{-# INLINABLE bufferSizeIO #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferI  -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferP  -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferM  -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferMP -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferME -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferE  -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferF  -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferPF -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferMF -> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferMPF-> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferMEF-> m Word #-}
+{-# SPECIALIZE INLINE bufferSizeIO :: MonadIO m => BufferEF -> m Word #-}
 bufferSizeIO = \case
    BufferM ba              -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
    BufferMP ba             -> fromIntegral <$> liftIO (BA.getSizeofMutableByteArray ba)
@@ -379,20 +449,28 @@ class BufferSize a where
    bufferSize :: a -> Word
 
 instance BufferSize BufferI where
+   {-# INLINE bufferSize #-}
    bufferSize (Buffer ba)  = fromIntegral $ BA.sizeofByteArray ba
 instance BufferSize BufferP where
+   {-# INLINE bufferSize #-}
    bufferSize (BufferP ba) = fromIntegral $ BA.sizeofByteArray ba
 instance BufferSize BufferF where
+   {-# INLINE bufferSize #-}
    bufferSize (BufferF ba _fin)  = fromIntegral $ BA.sizeofByteArray ba
 instance BufferSize BufferPF where
+   {-# INLINE bufferSize #-}
    bufferSize (BufferPF ba _fin) = fromIntegral $ BA.sizeofByteArray ba
 instance BufferSize BufferME where
+   {-# INLINE bufferSize #-}
    bufferSize (BufferME _addr sz) = sz
 instance BufferSize BufferMEF where
+   {-# INLINE bufferSize #-}
    bufferSize (BufferMEF _addr sz _fin) = sz
 instance BufferSize BufferE where
+   {-# INLINE bufferSize #-}
    bufferSize (BufferE _addr sz) = sz
 instance BufferSize BufferEF where
+   {-# INLINE bufferSize #-}
    bufferSize (BufferEF _addr sz _fin) = sz
 
 -- | Get contents as a list of bytes
@@ -445,6 +523,19 @@ instance IsList BufferI where
 -- 27
 --
 bufferReadWord8IO :: MonadIO m => Buffer mut pin fin heap -> Word -> m Word8
+{-# INLINABLE bufferReadWord8IO #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferI  -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferP  -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferM  -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferMP -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferME -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferE  -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferF  -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferPF -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferMF -> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferMPF-> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferMEF-> Word -> m Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8IO :: MonadIO m => BufferEF -> Word -> m Word8 #-}
 bufferReadWord8IO b (fromIntegral -> !(I# off)) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8Array# ba off s of (# s2 , r #) -> (# s2 , W8# r #)
@@ -468,6 +559,13 @@ bufferReadWord8IO b (fromIntegral -> !(I# off)) = case b of
 -- Word8 at offset 2 is 27
 --
 bufferReadWord8 :: Buffer 'Immutable pin fin heap -> Word -> Word8
+{-# INLINABLE bufferReadWord8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8 :: BufferI  -> Word -> Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8 :: BufferP  -> Word -> Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8 :: BufferE  -> Word -> Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8 :: BufferF  -> Word -> Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8 :: BufferPF -> Word -> Word8 #-}
+{-# SPECIALIZE INLINE bufferReadWord8 :: BufferEF -> Word -> Word8 #-}
 bufferReadWord8 b (fromIntegral -> !(I# off)) = case b of
    Buffer  (BA.ByteArray ba)                 -> W8# (indexWord8Array# ba off)
    BufferP (BA.ByteArray ba)                 -> W8# (indexWord8Array# ba off)
@@ -486,6 +584,13 @@ bufferReadWord8 b (fromIntegral -> !(I# off)) = case b of
 -- 123
 --
 bufferWriteWord8IO :: MonadIO m => Buffer 'Mutable pin fin heap -> Word -> Word8 -> m ()
+{-# INLINABLE bufferWriteWord8IO #-}
+{-# SPECIALIZE INLINE bufferWriteWord8IO :: MonadIO m => BufferM  -> Word -> Word8 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord8IO :: MonadIO m => BufferMP -> Word -> Word8 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord8IO :: MonadIO m => BufferME -> Word -> Word8 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord8IO :: MonadIO m => BufferMF -> Word -> Word8 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord8IO :: MonadIO m => BufferMPF-> Word -> Word8 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord8IO :: MonadIO m => BufferMEF-> Word -> Word8 -> m ()#-}
 bufferWriteWord8IO b (fromIntegral -> !(I# off)) (W8# v) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8Array# ba off v s of s2 -> (# s2 , () #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8Array# ba off v s of s2 -> (# s2 , () #)
@@ -508,6 +613,19 @@ bufferWriteWord8IO b (fromIntegral -> !(I# off)) (W8# v) = case b of
 -- True
 --
 bufferReadWord16IO :: MonadIO m => Buffer mut pin fin heap -> Word -> m Word16
+{-# INLINABLE bufferReadWord16IO #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferI  -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferP  -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferM  -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferMP -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferME -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferE  -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferF  -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferPF -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferMF -> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferMPF-> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferMEF-> Word -> m Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16IO :: MonadIO m => BufferEF -> Word -> m Word16 #-}
 bufferReadWord16IO b (fromIntegral -> !(I# off)) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8ArrayAsWord16# ba off s of (# s2 , r #) -> (# s2 , W16# r #)
@@ -526,6 +644,13 @@ bufferReadWord16IO b (fromIntegral -> !(I# off)) = case b of
 --
 -- We don't check that the offset is valid
 bufferReadWord16 :: Buffer 'Immutable pin fin heap -> Word -> Word16
+{-# INLINABLE bufferReadWord16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16 :: BufferI  -> Word -> Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16 :: BufferP  -> Word -> Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16 :: BufferE  -> Word -> Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16 :: BufferF  -> Word -> Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16 :: BufferPF -> Word -> Word16 #-}
+{-# SPECIALIZE INLINE bufferReadWord16 :: BufferEF -> Word -> Word16 #-}
 bufferReadWord16 b (fromIntegral -> !(I# off)) = case b of
    Buffer  (BA.ByteArray ba)                 -> W16# (indexWord8ArrayAsWord16# ba off)
    BufferP (BA.ByteArray ba)                 -> W16# (indexWord8ArrayAsWord16# ba off)
@@ -550,6 +675,13 @@ bufferReadWord16 b (fromIntegral -> !(I# off)) = case b of
 -- True
 --
 bufferWriteWord16IO :: MonadIO m => Buffer 'Mutable pin fin heap -> Word -> Word16 -> m ()
+{-# INLINABLE bufferWriteWord16IO #-}
+{-# SPECIALIZE INLINE bufferWriteWord16IO :: MonadIO m => BufferM  -> Word -> Word16 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord16IO :: MonadIO m => BufferMP -> Word -> Word16 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord16IO :: MonadIO m => BufferME -> Word -> Word16 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord16IO :: MonadIO m => BufferMF -> Word -> Word16 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord16IO :: MonadIO m => BufferMPF-> Word -> Word16 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord16IO :: MonadIO m => BufferMEF-> Word -> Word16 -> m ()#-}
 bufferWriteWord16IO b (fromIntegral -> !(I# off)) (W16# v) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord16# ba off v s of s2 -> (# s2 , () #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord16# ba off v s of s2 -> (# s2 , () #)
@@ -570,6 +702,19 @@ bufferWriteWord16IO b (fromIntegral -> !(I# off)) (W16# v) = case b of
 -- True
 --
 bufferReadWord32IO :: MonadIO m => Buffer mut pin fin heap -> Word -> m Word32
+{-# INLINABLE bufferReadWord32IO #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferI  -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferP  -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferM  -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferMP -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferME -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferE  -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferF  -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferPF -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferMF -> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferMPF-> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferMEF-> Word -> m Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32IO :: MonadIO m => BufferEF -> Word -> m Word32 #-}
 bufferReadWord32IO b (fromIntegral -> !(I# off)) = case b of
    BufferM    (BA.MutableByteArray ba)        -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
    BufferMP   (BA.MutableByteArray ba)        -> liftIO $ IO $ \s -> case readWord8ArrayAsWord32# ba off s of (# s2 , r #) -> (# s2 , W32# r #)
@@ -588,6 +733,13 @@ bufferReadWord32IO b (fromIntegral -> !(I# off)) = case b of
 --
 -- We don't check that the offset is valid
 bufferReadWord32 :: Buffer 'Immutable pin fin heap -> Word -> Word32
+{-# INLINABLE bufferReadWord32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32 :: BufferI  -> Word -> Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32 :: BufferP  -> Word -> Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32 :: BufferE  -> Word -> Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32 :: BufferF  -> Word -> Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32 :: BufferPF -> Word -> Word32 #-}
+{-# SPECIALIZE INLINE bufferReadWord32 :: BufferEF -> Word -> Word32 #-}
 bufferReadWord32 b (fromIntegral -> !(I# off)) = case b of
    Buffer  (BA.ByteArray ba)                 -> W32# (indexWord8ArrayAsWord32# ba off)
    BufferP (BA.ByteArray ba)                 -> W32# (indexWord8ArrayAsWord32# ba off)
@@ -607,6 +759,13 @@ bufferReadWord32 b (fromIntegral -> !(I# off)) = case b of
 -- 1234
 --
 bufferWriteWord32IO :: MonadIO m => Buffer 'Mutable pin fin heap -> Word -> Word32 -> m ()
+{-# INLINABLE bufferWriteWord32IO #-}
+{-# SPECIALIZE INLINE bufferWriteWord32IO :: MonadIO m => BufferM  -> Word -> Word32 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord32IO :: MonadIO m => BufferMP -> Word -> Word32 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord32IO :: MonadIO m => BufferME -> Word -> Word32 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord32IO :: MonadIO m => BufferMF -> Word -> Word32 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord32IO :: MonadIO m => BufferMPF-> Word -> Word32 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord32IO :: MonadIO m => BufferMEF-> Word -> Word32 -> m ()#-}
 bufferWriteWord32IO b (fromIntegral -> !(I# off)) (W32# v) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord32# ba off v s of s2 -> (# s2 , () #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord32# ba off v s of s2 -> (# s2 , () #)
@@ -626,6 +785,19 @@ bufferWriteWord32IO b (fromIntegral -> !(I# off)) (W32# v) = case b of
 -- True
 --
 bufferReadWord64IO :: MonadIO m => Buffer mut pin fin heap -> Word -> m Word64
+{-# INLINABLE bufferReadWord64IO #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferI  -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferP  -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferM  -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferMP -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferME -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferE  -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferF  -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferPF -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferMF -> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferMPF-> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferMEF-> Word -> m Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64IO :: MonadIO m => BufferEF -> Word -> m Word64 #-}
 bufferReadWord64IO b (fromIntegral -> !(I# off)) = case b of
    BufferM (BA.MutableByteArray ba)          -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
    BufferMP (BA.MutableByteArray ba)         -> liftIO $ IO $ \s -> case readWord8ArrayAsWord64# ba off s of (# s2 , r #) -> (# s2 , W64# r #)
@@ -644,6 +816,13 @@ bufferReadWord64IO b (fromIntegral -> !(I# off)) = case b of
 --
 -- We don't check that the offset is valid
 bufferReadWord64 :: Buffer 'Immutable pin fin heap -> Word -> Word64
+{-# INLINABLE bufferReadWord64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64 :: BufferI  -> Word -> Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64 :: BufferP  -> Word -> Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64 :: BufferE  -> Word -> Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64 :: BufferF  -> Word -> Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64 :: BufferPF -> Word -> Word64 #-}
+{-# SPECIALIZE INLINE bufferReadWord64 :: BufferEF -> Word -> Word64 #-}
 bufferReadWord64 b (fromIntegral -> !(I# off)) = case b of
    Buffer    (BA.ByteArray ba)               -> W64# (indexWord8ArrayAsWord64# ba off)
    BufferP   (BA.ByteArray ba)               -> W64# (indexWord8ArrayAsWord64# ba off)
@@ -663,6 +842,13 @@ bufferReadWord64 b (fromIntegral -> !(I# off)) = case b of
 -- 1234
 --
 bufferWriteWord64IO :: MonadIO m => Buffer 'Mutable pin fin heap -> Word -> Word64 -> m ()
+{-# INLINABLE bufferWriteWord64IO #-}
+{-# SPECIALIZE INLINE bufferWriteWord64IO :: MonadIO m => BufferM  -> Word -> Word64 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord64IO :: MonadIO m => BufferMP -> Word -> Word64 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord64IO :: MonadIO m => BufferME -> Word -> Word64 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord64IO :: MonadIO m => BufferMF -> Word -> Word64 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord64IO :: MonadIO m => BufferMPF-> Word -> Word64 -> m ()#-}
+{-# SPECIALIZE INLINE bufferWriteWord64IO :: MonadIO m => BufferMEF-> Word -> Word64 -> m ()#-}
 bufferWriteWord64IO b (fromIntegral -> !(I# off)) (W64# v) = case b of
    BufferM   (BA.MutableByteArray ba)        -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
    BufferMP  (BA.MutableByteArray ba)        -> liftIO $ IO $ \s -> case writeWord8ArrayAsWord64# ba off v s of s2 -> (# s2 , () #)
@@ -684,13 +870,86 @@ bufferWriteWord64IO b (fromIntegral -> !(I# off)) (W64# v) = case b of
 -- [4,5,6,7,0,1,2,3]
 --
 copyBuffer :: forall m mut pin0 fin0 heap0 pin1 fin1 heap1.
-   ( MonadIO m
-   ) => Buffer mut pin0 fin0 heap0        -- ^ Source buffer
-     -> Word                              -- ^ Offset in source buffer
-     -> Buffer 'Mutable pin1 fin1 heap1   -- ^ Target buffer
-     -> Word                              -- ^ Offset in target buffer
-     -> Word                              -- ^ Number of Word8 to copy
-     -> m ()
+   MonadIO m
+   => Buffer mut pin0 fin0 heap0        -- ^ Source buffer
+   -> Word                              -- ^ Offset in source buffer
+   -> Buffer 'Mutable pin1 fin1 heap1   -- ^ Target buffer
+   -> Word                              -- ^ Offset in target buffer
+   -> Word                              -- ^ Number of Word8 to copy
+   -> m ()
+{-# INLINABLE copyBuffer #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferI   -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferI   -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferI   -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferI   -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferI   -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferI   -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferP   -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferP   -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferP   -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferP   -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferP   -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferP   -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferM   -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferM   -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferM   -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferM   -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferM   -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferM   -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMP  -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMP  -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMP  -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMP  -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMP  -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMP  -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferME  -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferME  -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferME  -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferME  -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferME  -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferME  -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferE   -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferE   -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferE   -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferE   -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferE   -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferE   -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferF   -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferF   -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferF   -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferF   -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferF   -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferF   -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferPF  -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferPF  -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferPF  -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferPF  -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferPF  -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferPF  -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMF  -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMF  -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMF  -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMF  -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMF  -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMF  -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMPF -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMPF -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMPF -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMPF -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMPF -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMPF -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMEF -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMEF -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMEF -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMEF -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMEF -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferMEF -> Word -> BufferMEF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferEF  -> Word -> BufferM   -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferEF  -> Word -> BufferMP  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferEF  -> Word -> BufferME  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferEF  -> Word -> BufferMF  -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferEF  -> Word -> BufferMPF -> Word -> Word -> m () #-}
+{-# SPECIALIZE INLINE copyBuffer :: MonadIO m => BufferEF  -> Word -> BufferMEF -> Word -> Word -> m () #-}
 copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegral -> I# cnt) = buf2buf
    where
       buf2buf = case db of
