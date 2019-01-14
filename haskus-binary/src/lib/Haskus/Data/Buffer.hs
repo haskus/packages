@@ -90,8 +90,8 @@ import GHC.Types (IO(..))
 
 -- | Is the buffer pinned into memory?
 data Pinning
-   = Pinned
-   | NotPinned
+   = Pinned    -- ^ The buffer has a fixed associated memory address
+   | NotPinned -- ^ The buffer contents can be freely moved to another address
    deriving (Show,Eq)
 
 -- | Is the buffer automatically garbage collected?
@@ -106,10 +106,10 @@ data Heap
    = Internal -- ^ GHC heap
    | External -- ^ External heap
 
--- | Is the buffer mutable or not
+-- | Is the buffer mutable or not?
 data Mutability
-   = Mutable   -- ^ Bytes are mutable
-   | Immutable -- ^ Bytes are immutable
+   = Mutable   -- ^ Memory cells are mutable
+   | Immutable -- ^ Memory cells are immutable
    deriving (Show,Eq)
 
 data Buffer (mut :: Mutability) (pin :: Pinning) (fin :: Finalization) (heap :: Heap) where
@@ -147,6 +147,9 @@ newtype TypedBuffer (t :: k) mut pin fin heap = TypedBuffer (Buffer mut pin fin 
 -----------------------------------------------------------------
 
 -- | Allocate a buffer (mutable, unpinned)
+--
+-- >>> b <- newBuffer 1024
+--
 newBuffer :: MonadIO m => Word -> m BufferM
 newBuffer sz = BufferM <$> liftIO (BA.newByteArray (fromIntegral sz))
 
