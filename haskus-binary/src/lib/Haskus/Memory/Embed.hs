@@ -1,16 +1,22 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE RecordWildCards #-}
 
 -- | Embed buffers into the program
 module Haskus.Memory.Embed
    ( embedBytes
+   , embedFile
+   , embedMutableFile
+   -- * Internals
    , loadSymbol
    , loadMutableSymbol
-   -- * Internals
    , toBufferE
    , toBufferE'
    , toBufferME
    , toBufferME'
+   , makeEmbeddingFile
+   , EmbedEntry (..)
+   , SectionType (..)
    )
 where
 
@@ -19,6 +25,10 @@ import Language.Haskell.TH.Syntax
 import Haskus.Memory.Buffer
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Ptr
+import Haskus.Utils.List (intersperse)
+import Haskus.Utils.Maybe
+import Haskus.Utils.Monad (liftIO)
+import System.Directory (getFileSize)
 import GHC.Exts
 
 -- | Embed bytes at compile time using GHC's literal strings.
@@ -103,3 +113,97 @@ toBufferME (Ptr x) sz = BufferME x (W# sz)
 toBufferME' :: Addr# -> Word# -> BufferME
 {-# INLINE toBufferME' #-}
 toBufferME' x sz = BufferME x (W# sz)
+
+
+-- | Section type
+data SectionType
+   = ReadOnlySection       -- ^ Read-only
+   | WriteableSection      -- ^ Writable
+   | UninitializedSection  -- ^ Uninitialized
+   deriving (Show,Eq,Ord)
+
+-- | An embedding entry. Used to embed binary files into an executable
+data EmbedEntry = EmbedEntry
+   { embedEntryType       :: SectionType  -- ^ Type of data access
+   , embedEntryAlignement :: Word         -- ^ Alignement to respect
+   , embedEntrySymbol     :: String       -- ^ Symbol to associate to the data
+   , embedEntryFilePath   :: FilePath     -- ^ Input file path
+   , embedEntryOffset     :: Maybe Word   -- ^ Offset in the input file
+   , embedEntrySize       :: Maybe Word   -- ^ Size limit in the input file
+   }
+   deriving (Show,Eq,Ord)
+
+-- | Create a GAS entry to include a binary file
+makeEmbedEntry :: EmbedEntry -> String
+makeEmbedEntry EmbedEntry{..} =
+   mconcat $ intersperse "\n" $
+      [ ".section " ++ case embedEntryType of
+         ReadOnlySection      -> "\".rodata\""
+         WriteableSection     -> "\".data\""
+         UninitializedSection -> "\".bss\""
+      , ".align " ++ show embedEntryAlignement
+      , ".global \"" ++ embedEntrySymbol ++ "\""
+      , embedEntrySymbol ++ ":"
+      , ".incbin \"" ++ embedEntryFilePath ++ "\""
+                     ++ (case embedEntryOffset of
+                           Just offset -> ","++show offset
+                           Nothing     -> ",0")
+                     ++ (case embedEntrySize of
+                            Just size -> ","++show size
+                            Nothing   -> mempty)
+      , "\n"
+      ]
+
+
+-- | Create an assembler file for the given embedding entries
+makeEmbeddingFile :: FilePath -> [EmbedEntry] -> IO ()
+makeEmbeddingFile path entries = do
+   let e = concatMap makeEmbedEntry entries
+   -- TODO: remove this when we will generate an ASM file directly
+   -- (cf GHC #16180)
+   let escape v = case v of
+         ('"':xs) -> "\\\"" ++ escape xs
+         ('\\':xs) -> "\\\\" ++ escape xs
+         ('\n':xs) -> "\\n" ++ escape xs
+         x:xs     -> x : escape xs
+         []       -> []
+   let e' = ("asm(\""++escape e++"\");")
+   writeFile path e'
+
+-- | Embed a mutable file in the executable. Return a BufferME
+embedMutableFile :: FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
+embedMutableFile = embedFile' True
+
+-- | Embed a file in the executable. Return a BufferE
+embedFile :: FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
+embedFile = embedFile' False
+
+-- | Embed a mutable file in the executable. Return a BufferME
+embedFile' :: Bool -> FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
+embedFile' mutable path malign moffset msize = do
+   nam <- newName "buffer"
+   let sym = show nam ++ "_data"
+   let entry = EmbedEntry
+         { embedEntryType       = if mutable
+                                    then WriteableSection
+                                    else ReadOnlySection
+         , embedEntryAlignement = fromMaybe 1 malign
+         , embedEntrySymbol     = sym
+         , embedEntryFilePath   = path
+         , embedEntryOffset     = moffset
+         , embedEntrySize       = msize
+         }
+   sfile <- qAddTempFile ".c" -- TODO: use .s when LangASM is implemented
+   liftIO (makeEmbeddingFile sfile [entry])
+
+   sz <- case msize of
+            Just x  -> return x
+            Nothing -> fromIntegral <$> liftIO (getFileSize path)
+
+   addDependentFile path
+   -- TODO: use LangASM when implemented (cf GHC #16180)
+   addForeignFilePath LangC sfile
+
+   if mutable
+      then loadMutableSymbol sz sym
+      else loadSymbol        sz sym

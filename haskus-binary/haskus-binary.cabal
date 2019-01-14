@@ -85,6 +85,7 @@ library
       ,  megaparsec
       ,  template-haskell
       ,  transformers
+      ,  directory
 
   build-tools: 
   ghc-options:          -Wall
