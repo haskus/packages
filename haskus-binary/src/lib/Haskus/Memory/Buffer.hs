@@ -42,6 +42,8 @@ module Haskus.Memory.Buffer
    , Thawable (..)
    , withBufferAddr#
    , withBufferPtr
+   , unsafeWithBufferAddr#
+   , unsafeWithBufferPtr
    , bufferSizeIO
    , BufferSize (..)
    , bufferToListIO
@@ -307,34 +309,34 @@ instance Thawable (Buffer 'Immutable pin 'NotFinalized heap)
 --
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
-withBufferAddr# :: Buffer mut 'Pinned fin heap -> (Addr# -> IO a) -> IO a
-withBufferAddr# b@(BufferP ba) f = do
+unsafeWithBufferAddr# :: Buffer mut 'Pinned fin heap -> (Addr# -> IO a) -> IO a
+unsafeWithBufferAddr# b@(BufferP ba) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
    r <- f addr
    touch b
    return r
-withBufferAddr# b@(BufferMP ba) f = do
+unsafeWithBufferAddr# b@(BufferMP ba) f = do
    let !(BA.Addr addr) = BA.mutableByteArrayContents ba
    r <- f addr
    touch b
    return r
-withBufferAddr# b@(BufferPF ba _fin) f = do
+unsafeWithBufferAddr# b@(BufferPF ba _fin) f = do
    let !(BA.Addr addr) = BA.byteArrayContents ba
    r <- f addr
    touch b
    return r
-withBufferAddr# b@(BufferMPF ba _fin) f = do
+unsafeWithBufferAddr# b@(BufferMPF ba _fin) f = do
    let !(BA.Addr addr) = BA.mutableByteArrayContents ba
    r <- f addr
    touch b
    return r
-withBufferAddr# (BufferME addr _sz)         f = f (addr)
-withBufferAddr# (BufferE  addr _sz)         f = f (addr)
-withBufferAddr# b@(BufferMEF addr _sz _fin) f = do
+unsafeWithBufferAddr# (BufferME addr _sz)         f = f (addr)
+unsafeWithBufferAddr# (BufferE  addr _sz)         f = f (addr)
+unsafeWithBufferAddr# b@(BufferMEF addr _sz _fin) f = do
    r <- f addr
    touch b
    return r
-withBufferAddr# b@(BufferEF addr _sz _fin)  f = do
+unsafeWithBufferAddr# b@(BufferEF addr _sz _fin)  f = do
    r <- f addr
    touch b
    return r
@@ -343,11 +345,18 @@ withBufferAddr# b@(BufferEF addr _sz _fin)  f = do
 --
 -- Note: don't write into immutable buffer as it would break referential
 -- consistency
-withBufferPtr :: Buffer mut 'Pinned fin heap -> (Ptr b -> IO a) -> IO a
-withBufferPtr b f = withBufferAddr# b g
+unsafeWithBufferPtr :: Buffer mut 'Pinned fin heap -> (Ptr b -> IO a) -> IO a
+unsafeWithBufferPtr b f = unsafeWithBufferAddr# b g
    where
       g addr = f (Ptr addr)
 
+-- | Do something with a buffer address
+withBufferAddr# :: Buffer 'Mutable 'Pinned fin heap -> (Addr# -> IO a) -> IO a
+withBufferAddr# = unsafeWithBufferAddr#
+
+-- | Do something with a buffer pointer
+withBufferPtr :: Buffer 'Mutable 'Pinned fin heap -> (Ptr b -> IO a) -> IO a
+withBufferPtr = unsafeWithBufferPtr
 
 -- | Get buffer size
 bufferSizeIO :: MonadIO m => Buffer mut pin fin heap -> m Word
