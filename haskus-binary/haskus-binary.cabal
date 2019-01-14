@@ -68,6 +68,7 @@ library
     Haskus.Utils.Memory
     Haskus.Memory.Buffer
     Haskus.Memory.Allocator.Malloc
+    Haskus.Memory.Embed
 
   other-modules:
 
