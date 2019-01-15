@@ -1077,5 +1077,5 @@ copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegr
                          (addr2 `plusAddr#` doff)
                          cnt
         
-foreign import ccall unsafe "string.h" memcpy  :: Addr# -> Addr# -> Int# -> IO ()
+foreign import ccall unsafe "memcpy" memcpy :: Addr# -> Addr# -> Int# -> IO ()
 
