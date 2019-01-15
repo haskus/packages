@@ -2,14 +2,17 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 
 -- | Embed buffers into the program
 module Haskus.Memory.Embed
    ( embedBytes
    , embedFile
    , embedMutableFile
-   , embedPinnedBuffer
+   , embedBuffer
    -- * Internals
+   , embedPinnedBuffer
+   , embedUnpinnedBuffer
    , loadSymbol
    , loadMutableSymbol
    , toBufferE
@@ -236,3 +239,36 @@ embedPinnedBuffer buf mut malign moffset msize = do
       withBinaryFile tmp WriteMode $ \hdl -> do
          hPutBuf hdl (ptr `indexPtr` fromIntegral off) (fromIntegral sz)
    embedFile' True mut tmp malign Nothing Nothing
+
+-- | Embed a unpinned buffer in the executable. Return either a BufferE or a
+-- BufferME.
+embedUnpinnedBuffer
+   :: Buffer mut 'NotPinned fin heap -- ^ Source buffer
+   -> Bool        -- ^ Should the embedded buffer be mutable
+   -> Maybe Word  -- ^ Alignement
+   -> Maybe Word  -- ^ Offset in the buffer
+   -> Maybe Word  -- ^ Number of Word8 to write
+   -> Q Exp       -- ^ BufferE or BufferME, depending on mutability parameter
+embedUnpinnedBuffer buf mut malign moffset msize = do
+   bsz <- liftIO (bufferSizeIO buf)
+   let sz  = fromMaybe bsz msize
+   let off = fromMaybe 0 moffset
+   b <- newPinnedBuffer sz
+   liftIO (copyBuffer buf off b 0 sz)
+   embedPinnedBuffer b mut malign Nothing Nothing
+
+-- | Embed a buffer in the executable. Return either a BufferE or a BufferME.
+embedBuffer
+   :: Buffer mut pin fin heap -- ^ Source buffer
+   -> Bool       -- ^ Should the embedded buffer be mutable
+   -> Maybe Word -- ^ Alignement
+   -> Maybe Word -- ^ Offset in the buffer
+   -> Maybe Word -- ^ Number of Word8 to write
+   -> Q Exp      -- ^ BufferE or BufferME, depending on mutability parameter
+embedBuffer b =
+   -- Some buffers with 'NotPinned are in fact pinned by GHC as an optimization.
+   -- We detect this with `bufferDynamicallyPinned` and we avoid the copy in
+   -- these cases.
+   case bufferDynamicallyPinned b of
+      Left ub  -> embedUnpinnedBuffer ub
+      Right pb -> embedPinnedBuffer pb

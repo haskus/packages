@@ -40,6 +40,8 @@ module Haskus.Memory.Buffer
    -- * Operations
    , Freezable (..)
    , Thawable (..)
+   , bufferIsDynamicallyPinned
+   , bufferDynamicallyPinned
    , withBufferAddr#
    , withBufferPtr
    , unsafeWithBufferAddr#
@@ -333,6 +335,54 @@ instance Thawable (Buffer 'Immutable pin 'NotFinalized heap)
       {-# INLINE unsafeBufferThaw #-}
       unsafeBufferThaw = \case
          BufferE addr sz -> return (BufferME addr sz)
+
+
+
+-- | Some buffers managed by GHC can be pinned as an optimization. This function
+-- reports this.
+bufferIsDynamicallyPinned :: Buffer mut pin fin heap -> Bool
+bufferIsDynamicallyPinned = \case
+   BufferP  {}       -> True
+   BufferMP {}       -> True
+   BufferME {}       -> True
+   BufferPF {}       -> True
+   BufferE  {}       -> True
+   BufferMEF{}       -> True
+   BufferEF {}       -> True
+   BufferMPF{}       -> True
+   Buffer   ba       -> BA.isByteArrayPinned ba
+   BufferM  mba      -> BA.isMutableByteArrayPinned mba
+   BufferF  ba  _fin -> BA.isByteArrayPinned ba
+   BufferMF mba _fin -> BA.isMutableByteArrayPinned mba
+
+-- | Transform type-level NotPinned buffers into type-level Pinned if the buffer
+-- is dynamically pinned (see `bufferIsDynamicallyPinned`).
+bufferDynamicallyPinned
+   :: Buffer mut pin fin heap
+   -> Either (Buffer mut 'NotPinned fin heap) (Buffer mut 'Pinned fin heap)
+bufferDynamicallyPinned b = case b of
+   BufferP  {}      -> Right b
+   BufferMP {}      -> Right b
+   BufferME {}      -> Right b
+   BufferPF {}      -> Right b
+   BufferE  {}      -> Right b
+   BufferMEF{}      -> Right b
+   BufferEF {}      -> Right b
+   BufferMPF{}      -> Right b
+   Buffer   ba      -> if BA.isByteArrayPinned ba
+                        then Right (BufferP ba)
+                        else Left b
+   BufferM  mba     -> if BA.isMutableByteArrayPinned mba
+                        then Right (BufferMP mba)
+                        else Left b
+   BufferF  ba  fin -> if BA.isByteArrayPinned ba
+                        then Right (BufferPF ba fin)
+                        else Left b
+   BufferMF mba fin -> if BA.isMutableByteArrayPinned mba
+                        then Right (BufferMPF mba fin)
+                        else Left b
+
+
 
 -- | Do something with a buffer address
 --
