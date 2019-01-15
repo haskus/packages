@@ -202,7 +202,7 @@ embedFile' nodep path mutable malign moffset msize = do
          , embedEntryOffset     = moffset
          , embedEntrySize       = msize
          }
-   sfile <- qAddTempFile ".c" -- TODO: use .s when LangASM is implemented
+   sfile <- addTempFile ".c" -- TODO: use .s when LangASM is implemented
    liftIO (makeEmbeddingFile sfile [entry])
 
    sz <- case msize of
