@@ -187,7 +187,12 @@ embedFile
 embedFile = embedFile' False
 
 
--- | Embed a mutable file in the executable. Return a BufferME
+-- | Embed a file in the executable. Return a BufferE or a BufferME depending on
+-- the mutability parameter.
+--
+-- `nodep` parameter is used to indicate if we want to add a dependency on the
+-- input file (e.g. we don't want to do this for temporary files TH generated).
+--
 embedFile' :: Bool -> FilePath -> Bool -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
 embedFile' nodep path mutable malign moffset msize = do
    nam <- newName "buffer"
