@@ -8,7 +8,6 @@
 module Haskus.Memory.Embed
    ( embedBytes
    , embedFile
-   , embedMutableFile
    , embedBuffer
    -- * Internals
    , embedPinnedBuffer
@@ -177,17 +176,20 @@ makeEmbeddingFile path entries = do
    let e' = ("asm(\""++escape e++"\");")
    writeFile path e'
 
--- | Embed a mutable file in the executable. Return a BufferME
-embedMutableFile :: FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
-embedMutableFile = embedFile' False True
-
 -- | Embed a file in the executable. Return a BufferE
-embedFile :: FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
-embedFile = embedFile' False False
+embedFile
+   :: FilePath    -- ^ File to embed
+   -> Bool        -- ^ Mutable buffer or not
+   -> Maybe Word  -- ^ Alignment
+   -> Maybe Word  -- ^ Offset in the file in bytes
+   -> Maybe Word  -- ^ Size to include in bytes (otherwise up to the end of the file)
+   -> Q Exp       -- ^ BufferE or BufferME depending on mutability
+embedFile = embedFile' False
+
 
 -- | Embed a mutable file in the executable. Return a BufferME
-embedFile' :: Bool -> Bool -> FilePath -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
-embedFile' nodep mutable path malign moffset msize = do
+embedFile' :: Bool -> FilePath -> Bool -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
+embedFile' nodep path mutable malign moffset msize = do
    nam <- newName "buffer"
    let sym = show nam ++ "_data"
    let entry = EmbedEntry
@@ -238,7 +240,7 @@ embedPinnedBuffer buf mut malign moffset msize = do
    liftIO $ unsafeWithBufferPtr buf $ \ptr -> do
       withBinaryFile tmp WriteMode $ \hdl -> do
          hPutBuf hdl (ptr `indexPtr` fromIntegral off) (fromIntegral sz)
-   embedFile' True mut tmp malign Nothing Nothing
+   embedFile' True tmp mut malign Nothing Nothing
 
 -- | Embed a unpinned buffer in the executable. Return either a BufferE or a
 -- BufferME.

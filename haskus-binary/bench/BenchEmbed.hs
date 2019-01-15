@@ -7,5 +7,5 @@ import Haskus.Memory.Embed
 
 main :: IO ()
 main = do
-   let b = $(embedFile "bench/data.bin" Nothing Nothing Nothing)
+   let b = $(embedFile "bench/data.bin" False Nothing Nothing Nothing)
    print (bufferSize b)
