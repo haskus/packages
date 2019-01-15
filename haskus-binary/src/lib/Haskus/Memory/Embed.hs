@@ -215,8 +215,15 @@ embedFile' nodep mutable path malign moffset msize = do
       else loadSymbol        sz sym
 
 
--- | Embed a pinned buffer in the executable
-embedPinnedBuffer :: Buffer mut 'Pinned fin heap -> Bool -> Maybe Word -> Maybe Word -> Maybe Word -> Q Exp
+-- | Embed a pinned buffer in the executable. Return either a BufferE or a
+-- BufferME.
+embedPinnedBuffer
+   :: Buffer mut 'Pinned fin heap -- ^ Source buffer
+   -> Bool        -- ^ Should the embedded buffer be mutable
+   -> Maybe Word  -- ^ Alignement
+   -> Maybe Word  -- ^ Offset in the buffer
+   -> Maybe Word  -- ^ Number of Word8 to write
+   -> Q Exp       -- ^ BufferE or BufferME, depending on mutability parameter
 embedPinnedBuffer buf mut malign moffset msize = do
    tmp <- qAddTempFile ".dat"
    bsz <- bufferSizeIO buf
