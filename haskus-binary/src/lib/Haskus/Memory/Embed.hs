@@ -262,10 +262,10 @@ embedUnpinnedBuffer buf mut malign moffset msize = do
 -- | Embed a buffer in the executable. Return either a BufferE or a BufferME.
 embedBuffer
    :: Buffer mut pin fin heap -- ^ Source buffer
-   -> Bool       -- ^ Should the embedded buffer be mutable
-   -> Maybe Word -- ^ Alignement
-   -> Maybe Word -- ^ Offset in the buffer
-   -> Maybe Word -- ^ Number of Word8 to write
+   -> Bool       -- ^ Should the embedded buffer be mutable or not
+   -> Maybe Word -- ^ Optional alignement constraint
+   -> Maybe Word -- ^ Optional offset in the source buffer
+   -> Maybe Word -- ^ Optional number of bytes to include
    -> Q Exp      -- ^ BufferE or BufferME, depending on mutability parameter
 embedBuffer b =
    -- Some buffers with 'NotPinned are in fact pinned by GHC as an optimization.
