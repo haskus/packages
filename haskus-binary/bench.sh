@@ -1,6 +1,17 @@
 #!/bin/sh
 
-sizes=(128b 3K 3M 15M)
+sizes_fileembed=(128b 3K 3M 15M)
+sizes_haskus=(128b 3K 3M 15M 150M 1G)
+
+function cleanup {
+   rm -f bench/*.o
+   rm -f bench/*.hi
+   rm -f bench/*.dyn_o
+   rm -f bench/*.dyn_hi
+   rm -f bench/BenchEmbed
+   rm -f bench/BenchFileEmbed
+   rm -f bench/data.bin
+}
 
 function bench_haskus {
    echo "================================"
@@ -10,15 +21,15 @@ function bench_haskus {
    echo "Warming up..."
    dd if=/dev/zero of=bench/data.bin bs=256 count=1 2> /dev/null
    stack exec -- ghc -v0 bench/BenchEmbed.hs -fforce-recomp -O > /dev/null
-   rm -f bench/data.bin
+   cleanup
 
-   for sz in ${sizes[*]}
+   for sz in ${sizes_haskus[*]}
    do
       echo -n "# Benchmarking size: $sz"
 
       dd if=/dev/zero of=bench/data.bin bs=$sz count=1 2> /dev/null
       time stack exec -- ghc -v0 bench/BenchEmbed.hs -fforce-recomp -O
-      rm -f bench/data.bin
+      cleanup
       echo ""
    done
    echo ""
@@ -32,15 +43,15 @@ function bench_file_embed {
    echo "Warming up..."
    dd if=/dev/zero of=bench/data.bin bs=256 count=1 2> /dev/null
    stack exec -- ghc -v0 bench/BenchFileEmbed.hs -fforce-recomp -O > /dev/null
-   rm -f bench/data.bin
+   cleanup
 
-   for sz in ${sizes[*]}
+   for sz in ${sizes_fileembed[*]}
    do
       echo -n "# Benchmarking size: $sz"
 
       dd if=/dev/zero of=bench/data.bin bs=$sz count=1 2> /dev/null
       time stack exec -- ghc -v0 bench/BenchFileEmbed.hs -fforce-recomp -O
-      rm -f bench/data.bin
+      cleanup
       echo ""
    done
    echo ""
@@ -48,3 +59,4 @@ function bench_file_embed {
 
 bench_haskus
 bench_file_embed
+
