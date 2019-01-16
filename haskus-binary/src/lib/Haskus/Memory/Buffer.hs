@@ -12,11 +12,13 @@
 {-# LANGUAGE UnliftedFFITypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | A buffer in memory
 module Haskus.Memory.Buffer
    ( Buffer (..)
    , TypedBuffer (..)
+   , AnyBuffer (..)
    -- * Buffers taxonomy
    , Pinning (..)
    , Finalization (..)
@@ -1079,3 +1081,9 @@ copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegr
         
 foreign import ccall unsafe "memcpy" memcpy :: Addr# -> Addr# -> Int# -> IO ()
 
+-----------------------------------------------------------------
+-- AnyBuffer
+-----------------------------------------------------------------
+
+-- | Wrapper containing any kind of buffer
+newtype AnyBuffer = AnyBuffer (forall mut pin fin heap. Buffer mut pin fin heap)
