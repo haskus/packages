@@ -5,6 +5,49 @@
 {-# LANGUAGE DataKinds #-}
 
 -- | A view (e.g. a slice) of a buffer
+--
+-- Suppose we have a big buffer B.
+--
+-- We can have buffer views on B, say vb1 and vb2.
+--
+--   B <----- vb1
+--   ^------- vb2
+--
+-- These views don't duplicate B's contents and they keep B alive.
+-- If the views are much smaller than B, it may not be what we want: a lot of
+-- space is wasted and we would better duplicate B's data required by the views
+-- and free B.
+--
+-- To support this, we can use "weak buffer views", say wvb1 and wvb2.
+--
+--   B <~~~~~ wvb1
+--   ^~~~~~~~ wvb2
+--
+-- If/when B is collected, new buffers are created from it for the views:
+--
+--   B' <----- wvb1
+--   B''<----- wvb2
+--
+-- We can also create "weak view views", say wvv1 and wvv2:
+--
+--   B <~~~~~ wvb1 <~~~~~ wvv1
+--              ^~~~~~~~~ wvv2
+--
+-- If/when B is collected before wvb1, the sharing is kept while the required
+-- contents of B is duplicated:
+--
+--   B' <---- wvb1 <~~~~~ wvv1
+--              ^~~~~~~~~ wvv2
+--
+-- When wvb1 is collected, we can be in one of the following state depending if
+-- B has been collected already or not:
+--
+--   B <~~~~~~~~~~~~~~~~~ wvv1
+--   ^~~~~~~~~~~~~~~~~~~~ wvv2
+--
+--              B' <~~~~~ wvv1
+--              ^~~~~~~~~ wvv2
+--
 module Haskus.Memory.View
    ( View (..)
    , ViewSource (..)
@@ -42,7 +85,7 @@ data ViewSource
    | forall pin fin heap. SourceWeakBuffer (Weak (Buffer 'Immutable pin fin heap))
       -- ^ The source is a weak buffer. If the buffer is collected, its contents
       -- is copied in to a new buffer and the view is updated to use it.
-   | SourceWeakView   (Weak ViewIORef)
+   | SourceWeakView (Weak ViewIORef)
       -- ^ The source is a weak view. If the source view is collected, the
       -- current view is updated to use whatever the source view uses as a
       -- source (another view or a buffer).
