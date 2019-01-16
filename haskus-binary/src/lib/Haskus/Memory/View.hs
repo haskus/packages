@@ -13,7 +13,8 @@ module Haskus.Memory.View
    , newBufferView
    , newBufferWeakView
    , newViewWeakView
-   , withValidView
+   , copyBufferWithPattern
+   , viewToBuffer
    )
 where
 
@@ -189,18 +190,8 @@ bufferWeakViewFinalier b pat wViewRef = deRefWeak wViewRef >>= \case
          Pattern2D _ w h _ | w == 0 || h == 0 -> error "Invalid Pattern2D: width or height set to 0"
 
          _ -> do
-            let !sz = patternSize pat
             -- we allocate a new buffer and copy the contents in it
-            b' <- newBuffer sz
-            case pat of
-               PatternFull               -> error "Unreachable code"
-               Pattern1D poff psz        -> copyBuffer b poff b' 0 psz
-               Pattern2D poff w h stride -> forM_ [0..h-1] $ \r ->
-                  copyBuffer b (poff + r*(w+stride)) b' (r*w) w
-               PatternOn _p1 _p2         -> forM_ [0..sz-1] $ \off -> do
-                  -- Not very efficient to copy byte by byte...
-                  v <- bufferReadWord8IO b (patternOffset pat off)
-                  bufferWriteWord8IO b' off v
+            b'  <- copyBufferWithPattern b pat
             b'' <- unsafeBufferFreeze b'
             return (SourceBuffer b'')
 
@@ -258,3 +249,31 @@ viewWeakViewFinalizer weakView srcRef pat = deRefWeak weakView >>= \case
             let newPat = pat `patternApplyOn` srcPat
             assignViewWeakView v srcV newPat
          )
+
+-- | Allocate a new buffer initialized with the contents of the source buffer
+-- according to the given pattern
+copyBufferWithPattern :: Buffer mut pin fin heap -> ViewPattern -> IO BufferM
+copyBufferWithPattern b pat = do
+   let !sz = patternSize pat
+   b' <- newBuffer sz
+   case pat of
+      PatternFull               -> error "Unreachable code"
+      Pattern1D poff psz        -> copyBuffer b poff b' 0 psz
+      Pattern2D poff w h stride -> forM_ [0..h-1] $ \r ->
+         copyBuffer b (poff + r*(w+stride)) b' (r*w) w
+      PatternOn _p1 _p2         -> forM_ [0..sz-1] $ \off -> do
+         -- Not very efficient to copy byte by byte...
+         v <- bufferReadWord8IO b (patternOffset pat off)
+         bufferWriteWord8IO b' off v
+   return b'
+
+
+-- | Convert a view into an actual buffer
+viewToBuffer :: View -> IO BufferM
+viewToBuffer = go PatternFull
+   where
+      go :: ViewPattern -> View -> IO BufferM
+      go pat v = withValidView v
+         (\b pat2 -> copyBufferWithPattern b (pat `patternApplyOn` pat2))
+         (\b pat2 -> copyBufferWithPattern b (pat `patternApplyOn` pat2))
+         (\v2 pat2 -> go (pat `patternApplyOn` pat2) v2)
