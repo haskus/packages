@@ -37,157 +37,106 @@ data BufferPutState b = BufferPutState
    , bufferPutOffset :: Word -- ^ Current offset
    } 
 
-newtype BufferPutT m b a
+-- | A Put monad than fails when there is not enough space in the target buffer
+newtype BufferPutT b m a
    = BufferPutT (StateT (BufferPutState b) m a) 
-   deriving newtype (Functor, Applicative, Monad, MonadFail, MonadFix, MonadIO)
+   deriving newtype
+      (Functor, Applicative, Monad, MonadFail, MonadFix, MonadIO, MonadTrans)
 
-type BufferPut b a    = BufferPutT Identity b a
+type BufferPut b a    = BufferPutT b Identity a
 
 -- | Run a buffer put
-runBufferPut :: Monad m => b -> Word -> BufferPutT m b a -> m (a,Word)
+runBufferPut :: Monad m => b -> Word -> BufferPutT b m a -> m (a,Word)
 runBufferPut b off (BufferPutT s) = do
    (a,s') <- runStateT s (BufferPutState b off)
    return (a,bufferPutOffset s')
 
 -- | Get current offset
-getPutOffset :: Monad m => BufferPutT m b Word
+getPutOffset :: Monad m => BufferPutT b m Word
 getPutOffset = BufferPutT (bufferPutOffset <$> S.get)
 
 -- | Get buffer
-getPutBuffer :: Monad m => BufferPutT m b b
+getPutBuffer :: Monad m => BufferPutT b m b
 getPutBuffer = BufferPutT (bufferPutBuffer <$> S.get)
 
 -- | Get current offset
-setPutOffset :: Monad m => Word -> BufferPutT m b ()
+setPutOffset :: Monad m => Word -> BufferPutT b m ()
 setPutOffset v = BufferPutT $ do
    S.modify (\s -> s { bufferPutOffset = v })
 
 
+-- | Called when there is not enough space left in the buffer
+bufferPutNotEnoughSpace :: (MonadFail m, MonadIO m) => Word -> BufferPutT b m ()
+bufferPutNotEnoughSpace reqSize = do
+   F.fail $ "Not enough space in the target buffer (requiring "
+          ++ show reqSize ++ " bytes)"
+   
+-- | Helper to put something
+putSomething
+   :: (MonadIO m, MonadFail m)
+   => Word
+   -> (Buffer mut pin fin heap -> Word -> t -> m ())
+   -> t
+   -> BufferPutT (Buffer mut pin fin heap) m ()
+{-# INLINE putSomething #-}
+putSomething sz act v = do
+   off <- getPutOffset
+   b   <- getPutBuffer
+   bs  <- liftIO (bufferSizeIO b)
+   let !newOff = off+sz
+   when (newOff > bs) $ bufferPutNotEnoughSpace sz
+   lift (act b off v)
+   setPutOffset newOff
+
+-- | Helper to put some things
+putSomeThings
+   :: (MonadIO m, MonadFail m)
+   => Word
+   -> (Buffer mut pin fin heap -> Word -> m ())
+   -> BufferPutT (Buffer mut pin fin heap) m ()
+{-# INLINE putSomeThings #-}
+putSomeThings sz act = do
+   off <- getPutOffset
+   b   <- getPutBuffer
+   bs  <- liftIO (bufferSizeIO b)
+   let !newOff = off+sz
+   when (newOff > bs) $ bufferPutNotEnoughSpace sz
+   lift (act b off)
+   setPutOffset newOff
+   
+
 instance
    ( MonadIO m
    , MonadFail m
-   ) => PutMonad (BufferPutT m (Buffer 'Mutable pin gc heap))
+   ) => PutMonad (BufferPutT (Buffer 'Mutable pin gc heap) m)
    where
-      putWord8 v = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         let !l = off+1
-         when (l > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show l ++ " > " ++ show bs ++ ")"
+      putWord8  = putSomething 1 bufferWriteWord8IO
+      putWord16 = putSomething 2 bufferWriteWord16IO
+      putWord32 = putSomething 4 bufferWriteWord32IO
+      putWord64 = putSomething 8 bufferWriteWord64IO
 
-         bufferWriteWord8IO b off v
-         setPutOffset l
-
-      putWord16 v = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         let !l = off+2
-         when (l > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show l ++ " > " ++ show bs ++ ")"
-
-         bufferWriteWord16IO b off v
-         setPutOffset l
-
-      putWord32 v = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         let !l = off+4
-         when (l > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show l ++ " > " ++ show bs ++ ")"
-
-         bufferWriteWord32IO b off v
-         setPutOffset l
-
-      putWord64 v = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         let !l = off+4
-         when (l > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show l ++ " > " ++ show bs ++ ")"
-
-         bufferWriteWord64IO b off v
-         setPutOffset l
-
-      putWord8s xs = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         let !l = fromIntegral (length xs)
-         when (l+off > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show (l+off) ++ " > " ++ show bs ++ ")"
-
+      putWord8s xs = putSomeThings (fromIntegral (length xs)) $ \b off -> do
          forM_ ([off,(off+1)..] `zip` xs) $ \(boff,v) -> do
             bufferWriteWord8IO b boff v
 
-         setPutOffset (off+l)
-
-      putWord16s xs = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         let !l = 2*fromIntegral (length xs)
-         when (l+off > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show (l+off) ++ " > " ++ show bs ++ ")"
-
+      putWord16s xs = putSomeThings (2*fromIntegral (length xs)) $ \b off -> do
          forM_ ([off,(off+2)..] `zip` xs) $ \(boff,v) -> do
             bufferWriteWord16IO b boff v
 
-         setPutOffset (off+l)
-
-      putWord32s xs = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         let !l = 4*fromIntegral (length xs)
-         when (l+off > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show (l+off) ++ " > " ++ show bs ++ ")"
-
+      putWord32s xs = putSomeThings (4*fromIntegral (length xs)) $ \b off -> do
          forM_ ([off,(off+4)..] `zip` xs) $ \(boff,v) -> do
             bufferWriteWord32IO b boff v
 
-         setPutOffset (off+l)
-
-      putWord64s xs = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         let !l = 8*fromIntegral (length xs)
-         when (l+off > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show (l+off) ++ " > " ++ show bs ++ ")"
-
+      putWord64s xs = putSomeThings (8*fromIntegral (length xs)) $ \b off -> do
          forM_ ([off,(off+8)..] `zip` xs) $ \(boff,v) -> do
             bufferWriteWord64IO b boff v
-
-         setPutOffset (off+l)
 
       preAllocateAtLeast l = do
          off <- getPutOffset
          b   <- getPutBuffer
          bs  <- liftIO (bufferSizeIO b)
-         when (l+off > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show (l+off) ++ " > " ++ show bs ++ ")"
+         when (l+off > bs) $ bufferPutNotEnoughSpace l
 
       putBuffer x = do
-         off <- getPutOffset
-         b   <- getPutBuffer
-         bs  <- liftIO (bufferSizeIO b)
-         l   <- liftIO (bufferSizeIO x)
-         when (l+off > bs) $
-            F.fail $ "Not enough space in the target buffer ("
-                   ++ show (l+off) ++ " > " ++ show bs ++ ")"
-
-         copyBuffer x 0 b off l
-         setPutOffset (off+l)
+         sz <- liftIO (bufferSizeIO x)
+         putSomeThings sz (\b off -> copyBuffer x 0 b off sz)
