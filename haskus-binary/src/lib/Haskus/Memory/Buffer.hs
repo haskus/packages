@@ -19,7 +19,7 @@ module Haskus.Memory.Buffer
    ( Buffer (..)
    , TypedBuffer (..)
    , AnyBuffer (..)
-   -- * Buffers taxonomy
+   -- * Buffer taxonomy
    , Pinning (..)
    , Finalization (..)
    , Mutability (..)
@@ -108,8 +108,12 @@ data Pinning
 -- | Is the buffer automatically garbage collected?
 data Finalization
    = Collected    -- ^ Automatically collected by the garbage-collector
-   | Finalized    -- ^ Finalizers are run just before GCing
-   | NotFinalized -- ^ Not managed at all
+   | Finalized    -- ^ Finalizers are run just before the garbage collector
+                  -- collects the buffer entity. The memory used by the buffer
+                  -- may be collected too (Internal heap), explicitly freed by a
+                  -- finalizer or not freed at all.
+   | NotFinalized -- ^ The buffer contents is not automatically freed and we
+                  -- can't attach finalizers to the buffer.
    deriving (Show,Eq)
 
 -- | Allocation heap
