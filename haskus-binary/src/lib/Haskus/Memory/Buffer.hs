@@ -39,30 +39,32 @@ module Haskus.Memory.Buffer
    , newBuffer
    , newPinnedBuffer
    , newAlignedPinnedBuffer
-   -- * Operations
+   -- * Buffer size
+   , bufferSizeIO
+   , BufferSize (..)
+   -- * Buffer freeze/thaw
    , Freezable (..)
    , Thawable (..)
+   -- * Buffer address
    , bufferIsDynamicallyPinned
    , bufferDynamicallyPinned
    , withBufferAddr#
    , withBufferPtr
    , unsafeWithBufferAddr#
    , unsafeWithBufferPtr
-   , bufferSizeIO
-   , BufferSize (..)
-   , bufferToListIO
-   , BufferToList (..)
+   -- * Buffer read
    , bufferReadWord8IO
    , bufferReadWord8
-   , bufferWriteWord8IO
    , bufferReadWord16IO
    , bufferReadWord16
-   , bufferWriteWord16IO
    , bufferReadWord32IO
    , bufferReadWord32
-   , bufferWriteWord32IO
    , bufferReadWord64IO
    , bufferReadWord64
+   -- * Buffer write and copy
+   , bufferWriteWord8IO
+   , bufferWriteWord16IO
+   , bufferWriteWord32IO
    , bufferWriteWord64IO
    , copyBuffer
    -- * Finalizers
@@ -70,6 +72,9 @@ module Haskus.Memory.Buffer
    , addFinalizer
    , makeFinalizable
    , touchBuffer
+   -- * Conversions
+   , bufferToListIO
+   , BufferToList (..)
    -- * Reexport
    , module Control.Monad.Primitive
    )
