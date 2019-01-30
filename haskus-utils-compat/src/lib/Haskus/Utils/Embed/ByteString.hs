@@ -78,16 +78,13 @@ embedBSOneFileOf ps =
 -- > myDir = $(embedDir "dirName")
 embedBSDir :: FilePath -> Q Exp
 embedBSDir fp = do
-    typ <- [t| [(FilePath, BS.ByteString)] |]
-    e <- ListE <$> ((runIO $ fileList fp) >>= mapM (pairToExp fp))
-    return $ SigE e typ
-
--- | Embed a file. Return an expression (FilePath, ByteString)
-pairToExp :: FilePath -> (FilePath, BS.ByteString) -> Q Exp
-pairToExp root (path, bs) = do
-    qAddDependentFile $ root ++ '/' : path
-    exp' <- embedBS bs
-    return $! TupE [LitE $ StringL path, exp']
+   typ <- [t| [(FilePath, BS.ByteString)] |]
+   bufToBs <- [| bufferToByteString |]
+   let embedPair (relpath,realpath) = do
+         exp' <- embedFile realpath False Nothing Nothing Nothing
+         return $! TupE [LitE $ StringL relpath, bufToBs `AppE` exp']
+   e <- ListE <$> ((runIO $ listDirectoryRec fp) >>= mapM embedPair)
+   return $ SigE e typ
 
 -- | Embed a ByteString into an executable
 embedBS :: BS.ByteString -> Q Exp
@@ -110,23 +107,21 @@ bufferToByteString b = unsafePerformIO $ do
    case b of
       BufferE  addr sz -> pack addr sz
       BufferME addr sz -> pack addr sz
-   
-fileList :: FilePath -> IO [(FilePath, BS.ByteString)]
-fileList top = fileList' top ""
 
-fileList' :: FilePath -> FilePath -> IO [(FilePath, BS.ByteString)]
-fileList' realTop top = do
-    allContents <- filter notHidden <$> getDirectoryContents (realTop </> top)
-    let all' = map ((top </>) &&& (\x -> realTop </> top </> x)) allContents
-    files <- filterM (doesFileExist . snd) all' >>=
-             mapM (liftPair2 . second BS.readFile)
-    dirs <- filterM (doesDirectoryExist . snd) all' >>=
-            mapM (fileList' realTop . fst)
-    return $ concat $ files : dirs
+-- | List a directory recursively, only returning non-hidden files.
+--
+-- Return tuples (relative path, real path)
+listDirectoryRec :: FilePath -> IO [(FilePath,FilePath)]
+listDirectoryRec realTop = go ""
+   where
+      notHidden :: FilePath -> Bool
+      notHidden ('.':_) = False
+      notHidden _       = True
 
-liftPair2 :: Monad m => (a, m b) -> m (a, b)
-liftPair2 (a, b) = b >>= \b' -> return (a, b')
+      go top = do
+         allContents <- filter notHidden <$> getDirectoryContents (realTop </> top)
+         let all' = map ((top </>) &&& (\x -> realTop </> top </> x)) allContents
+         files <- filterM (doesFileExist . snd) all'
+         dirs  <- filterM (doesDirectoryExist . snd) all' >>= mapM (go . fst)
+         return $ concat $ files : dirs
 
-notHidden :: FilePath -> Bool
-notHidden ('.':_) = False
-notHidden _       = True
