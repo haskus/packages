@@ -45,7 +45,7 @@ import System.IO
 -- 5
 embedBytes :: [Word8] -> Q (TExp BufferE)
 embedBytes bs = do
-   Just bufE <- lookupValueName "toBufferE'"
+   bufE <- fromMaybe (error "Please import Haskus.Memory.Embed") <$> lookupValueName "toBufferE'"
    return $ TExp $ VarE bufE
       `AppE` LitE (StringPrimL bs)
       `AppE` LitE (WordPrimL (fromIntegral (length bs)))
@@ -64,7 +64,7 @@ embedBytes bs = do
 loadSymbol :: Word -> String -> Q Exp
 loadSymbol sz sym = do
    nam <- newName sym
-   Just bufE <- lookupValueName "toBufferE"
+   bufE <- fromMaybe (error "Please import Haskus.Memory.Embed") <$> lookupValueName "toBufferE"
    ptrTy <- [t| Ptr () |]
    addTopDecls
       [ ForeignD $ ImportF CCall unsafe ("&"++sym) nam ptrTy
@@ -94,7 +94,7 @@ loadSymbol sz sym = do
 loadMutableSymbol :: Word -> String -> Q Exp
 loadMutableSymbol sz sym = do
    nam <- newName sym
-   Just bufE <- lookupValueName "toBufferME"
+   bufE <- fromMaybe (error "Please import Haskus.Memory.Embed") <$> lookupValueName "toBufferME"
    ptrTy <- [t| Ptr () |]
    addTopDecls
       [ ForeignD $ ImportF CCall unsafe ("&"++sym) nam ptrTy
