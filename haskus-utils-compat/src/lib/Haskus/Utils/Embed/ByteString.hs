@@ -5,10 +5,11 @@
 -- | Embed files as ByteStrings into an executable
 module Haskus.Utils.Embed.ByteString
    ( bufferToByteString
-   , embedByteString
-   , embedFile
-   , embedOneFileOf
-   , embedDir
+   , embedBS
+   , embedBSFile
+   , embedBSOneFileOf
+   , embedBSDir
+   , module Haskus.Memory.Embed
    )
 where
 
@@ -23,7 +24,7 @@ import System.FilePath
 import Control.Arrow
 
 import Haskus.Memory.Buffer
-import qualified Haskus.Memory.Embed as E
+import Haskus.Memory.Embed
 import Haskus.Utils.Monad
 
 ----------------------------------------------------------------------
@@ -41,11 +42,11 @@ import Haskus.Utils.Monad
 -- >
 -- > myFile :: Data.ByteString.ByteString
 -- > myFile = $(embedFile "dirName/fileName")
-embedFile :: FilePath -> Q Exp
-embedFile fp = do
+embedBSFile :: FilePath -> Q Exp
+embedBSFile fp = do
    qAddDependentFile fp
    bs <- runIO $ BS.readFile fp
-   embedByteString bs
+   embedBS bs
 
 -- | Embed a single existing file in your source code
 -- out of list a list of paths supplied.
@@ -54,17 +55,17 @@ embedFile fp = do
 -- >
 -- > myFile :: Data.ByteString.ByteString
 -- > myFile = $(embedOneFileOf [ "dirName/fileName", "src/dirName/fileName" ])
-embedOneFileOf :: [FilePath] -> Q Exp
-embedOneFileOf ps =
+embedBSOneFileOf :: [FilePath] -> Q Exp
+embedBSOneFileOf ps =
   (runIO $ readExistingFile ps) >>= \(path, content) -> do
     qAddDependentFile path
-    embedByteString content
+    embedBS content
   where
     readExistingFile :: [FilePath] -> IO (FilePath, BS.ByteString)
     readExistingFile xs = do
       ys <- filterM doesFileExist xs
       case ys of
-        (p:_) -> BS.readFile p >>= \ c -> return (p, c)
+        (p:_) -> BS.readFile p >>= \c -> return (p, c)
         _     -> error "Cannot find file to embed as resource"
 
 
@@ -75,8 +76,8 @@ embedOneFileOf ps =
 -- >
 -- > myDir :: [(FilePath, Data.ByteString.ByteString)]
 -- > myDir = $(embedDir "dirName")
-embedDir :: FilePath -> Q Exp
-embedDir fp = do
+embedBSDir :: FilePath -> Q Exp
+embedBSDir fp = do
     typ <- [t| [(FilePath, BS.ByteString)] |]
     e <- ListE <$> ((runIO $ fileList fp) >>= mapM (pairToExp fp))
     return $ SigE e typ
@@ -85,18 +86,18 @@ embedDir fp = do
 pairToExp :: FilePath -> (FilePath, BS.ByteString) -> Q Exp
 pairToExp root (path, bs) = do
     qAddDependentFile $ root ++ '/' : path
-    exp' <- embedByteString bs
+    exp' <- embedBS bs
     return $! TupE [LitE $ StringL path, exp']
 
 -- | Embed a ByteString into an executable
-embedByteString :: BS.ByteString -> Q Exp
-embedByteString bs = do
+embedBS :: BS.ByteString -> Q Exp
+embedBS bs = do
    bufToBs <- [| bufferToByteString |]
    -- make an input BufferE from the ByteString
    buf <- runIO $ BS.unsafeUseAsCStringLen bs $ \(Ptr addr, sz) -> do
             return (BufferE addr (fromIntegral sz))
    -- embed it
-   outBuf <- E.embedBuffer buf False Nothing Nothing Nothing
+   outBuf <- embedBuffer buf False Nothing Nothing Nothing
    -- keep the ByteString alive up to here
    runIO $ touch bs
    -- return an expression converting the embedded buffer into a ByteString
