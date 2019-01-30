@@ -17,49 +17,49 @@ import Data.Word
 embedBytes :: [Word8] -> Q Exp
 embedBytes bs = return $ LitE (StringPrimL bs)
 
+----------------------------------------------------------------------
+-- Raw text quasiquoter (adapted from raw-strings-qq package (BSD3)
+----------------------------------------------------------------------
 
 
-{-| Adapted from the raw-strings-qq package (BSD3)
-
-A quasiquoter for raw string literals - that is, string literals that don't
-recognise the standard escape sequences (such as @\'\\n\'@). Basically, they
-make your code more readable by freeing you from the responsibility to escape
-backslashes. They are useful when working with regular expressions, DOS/Windows
-paths and markup languages (such as XML).
-
-Don't forget the @LANGUAGE QuasiQuotes@ pragma if you're using this
-module in your code.
-
-Usage:
-
-@
-    ghci> :set -XQuasiQuotes
-    ghci> import Haskus.Utils.Embed
-    ghci> let s = [raw|\\w+\@[a-zA-Z_]+?\\.[a-zA-Z]{2,3}|]
-    ghci> s
-    \"\\\\w+\@[a-zA-Z_]+?\\\\.[a-zA-Z]{2,3}\"
-    ghci> [raw|C:\\Windows\\SYSTEM|] ++ [raw|\\user32.dll|]
-    \"C:\\\\Windows\\\\SYSTEM\\\\user32.dll\"
-@
-
-Multiline raw string literals are also supported:
-
-@
-    multiline :: String
-    multiline = [raw|\<HTML\>
-    \<HEAD\>
-    \<TITLE\>Auto-generated html formated source\</TITLE\>
-    \<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=windows-1252\"\>
-    \</HEAD\>
-    \<BODY LINK=\"#0000ff\" VLINK=\"#800080\" BGCOLOR=\"#ffffff\"\>
-    \<P\> \</P\>
-    \<PRE\>|]
-@
-
-Caveat: since the @\"|]\"@ character sequence is used to terminate the
-quasiquotation, you can't use it inside the raw string literal. Use 'rawQ' if you
-want to embed that character sequence inside the raw string.
--}
+-- |
+--
+-- A quasiquoter for raw string literals - that is, string literals that don't
+-- recognise the standard escape sequences (such as @\'\\n\'@). Basically, they
+-- make your code more readable by freeing you from the responsibility to escape
+-- backslashes. They are useful when working with regular expressions, DOS/Windows
+-- paths and markup languages (such as XML).
+--
+-- Don't forget the @LANGUAGE QuasiQuotes@ pragma if you're using this
+-- module in your code.
+--
+-- Usage:
+--
+-- > :set -XQuasiQuotes
+-- > import Haskus.Utils.Embed
+-- > let s = [raw|\\w+\@[a-zA-Z_]+?\\.[a-zA-Z]{2,3}|]
+-- > s
+-- \"\\\\w+\@[a-zA-Z_]+?\\\\.[a-zA-Z]{2,3}\"
+-- > [raw|C:\\Windows\\SYSTEM|] ++ [raw|\\user32.dll|]
+-- \"C:\\\\Windows\\\\SYSTEM\\\\user32.dll\"
+--
+-- Multiline raw string literals are also supported:
+--
+-- @
+--     multiline :: String
+--     multiline = [raw|\<HTML\>
+--     \<HEAD\>
+--     \<TITLE\>Auto-generated html formated source\</TITLE\>
+--     \<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=windows-1252\"\>
+--     \</HEAD\>
+--     \<BODY LINK=\"#0000ff\" VLINK=\"#800080\" BGCOLOR=\"#ffffff\"\>
+--     \<P\> \</P\>
+--     \<PRE\>|]
+-- @
+--
+-- Caveat: since the @\"|]\"@ character sequence is used to terminate the
+-- quasiquotation, you can't use it inside the raw string literal. Use 'rawQ' if you
+-- want to embed that character sequence inside the raw string.
 raw :: QuasiQuoter
 raw = QuasiQuoter {
     quoteExp  = return . LitE . StringL . normaliseNewlines,
@@ -72,21 +72,22 @@ raw = QuasiQuoter {
                            \(allowed as expression only, used as a declaration)"
 }
 
-{-| A variant of 'raw' that interprets the @\"|~]\"@ sequence as @\"|]\"@,
-@\"|~~]\"@ as @\"|~]\"@ and, in general, @\"|~^n]\"@ as @\"|~^(n-1)]\"@
-for n >= 1.
-
-Usage:
-
-@
-    ghci> [rawQ||~]|~]|]
-    \"|]|]\"
-    ghci> [rawQ||~~]|]
-    \"|~]\"
-    ghci> [rawQ||~~~~]|]
-    \"|~~~]\"
-@
--}
+-- | A variant of 'raw' that interprets the @\"|~]\"@ sequence as @\"|]\"@,
+-- @\"|~~]\"@ as @\"|~]\"@ and, in general, @\"|~^n]\"@ as @\"|~^(n-1)]\"@
+-- for n >= 1.
+--
+-- Usage:
+--
+--
+-- > [rawQ||~]|~]|]
+-- \"|]|]\"
+--
+-- > [rawQ||~~]|]
+-- \"|~]\"
+--
+-- > [rawQ||~~~~]|]
+-- \"|~~~]\"
+--
 rawQ :: QuasiQuoter
 rawQ = QuasiQuoter {
     quoteExp  = return . LitE . StringL . escape_rQ . normaliseNewlines,
