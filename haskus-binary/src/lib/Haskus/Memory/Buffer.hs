@@ -23,6 +23,7 @@ module Haskus.Memory.Buffer
    , Pinning (..)
    , Finalization (..)
    , Mutability (..)
+   , Heap (..)
    , BufferI
    , BufferP
    , BufferM
