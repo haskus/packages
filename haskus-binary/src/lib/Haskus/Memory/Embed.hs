@@ -168,11 +168,11 @@ makeEmbeddingFile path entries = do
    -- TODO: remove this when we will generate an ASM file directly
    -- (cf GHC #16180)
    let escape v = case v of
-         ('"':xs) -> "\\\"" ++ escape xs
+         ('"':xs)  -> "\\\"" ++ escape xs
          ('\\':xs) -> "\\\\" ++ escape xs
          ('\n':xs) -> "\\n" ++ escape xs
-         x:xs     -> x : escape xs
-         []       -> []
+         x:xs      -> x : escape xs
+         []        -> []
    let e' = ("asm(\""++escape e++"\");")
    writeFile path e'
 
