@@ -25,8 +25,8 @@
 --
 -- If/when B is collected, new buffers are created from it for the views:
 --
---   B' <----- wvb1
---   B''<----- wvb2
+--   B1 <----- wvb1
+--   B2 <----- wvb2
 --
 -- We can also create "weak view views", say wvv1 and wvv2:
 --
@@ -76,7 +76,7 @@ import Haskus.Memory.Buffer
 --
 -- Weak views are used so that the underlying buffer can be freed by the GC.
 -- When it happens and if the view is still alive the contents of the buffer
--- used by the view is copied into a fresh (smaller) buffer.
+-- used by the view is copied into a fresh (usually smaller) buffer.
 --
 -- Weak views can also be used as sources: in this case, when the source
 -- view is GCed, the current view is updated to point to the source of the
@@ -102,18 +102,18 @@ type ViewIORef = IORef (ViewSource,ViewPattern)
 
 -- | A view pattern
 data ViewPattern
-   = PatternFull
-   | Pattern1D
-      { pattern1DOffset :: {-# UNPACK #-} !Word
-      , pattern1DSize   :: {-# UNPACK #-} !Word
+   = PatternFull  -- ^ The whole buffer
+   | Pattern1D    -- ^ 1D slice
+      { pattern1DOffset :: {-# UNPACK #-} !Word -- ^ Offset of the first cell
+      , pattern1DSize   :: {-# UNPACK #-} !Word -- ^ Number of cells
       }
-   | Pattern2D
+   | Pattern2D    -- ^ 2D slice
       { pattern2DOffset :: {-# UNPACK #-} !Word -- ^ Offset of the first line
       , pattern2DWidth  :: {-# UNPACK #-} !Word -- ^ Width (line size)
       , pattern2DHeight :: {-# UNPACK #-} !Word -- ^ Height (number of lines)
       , pattern2DStride :: {-# UNPACK #-} !Word -- ^ Stride (space between two lines)
       }
-   | PatternOn ViewPattern ViewPattern
+   | PatternOn ViewPattern ViewPattern -- ^ Composed pattern
    deriving (Show)
 
 -- | Compute an actual offset when used with the given pattern
@@ -168,9 +168,9 @@ withValidView
    -> (forall pin fin heap. Buffer 'Immutable pin fin heap -> ViewPattern -> m a)
    -> (View -> ViewPattern -> m a)
    -> m a
-withValidView (View ref) fb fwb fwv = go
+withValidView (View ref) fb fwb fwv = go True
    where
-      go = do
+      go _firstRun = do
          (src,pat) <- liftIO (readIORef ref)
 
          let waitForSource = do
@@ -178,7 +178,12 @@ withValidView (View ref) fb fwb fwv = go
                -- to life so we give it some space to run with `yield` and then
                -- we retry
                liftIO yield
-               go
+               -- TODO: We execute the spin-lock in a thread to avoid locking
+               -- the finalizer thread
+               -- if firstRun
+               --    then forkIO (go False)
+               --    else go False
+               go False
 
          case src of
             SourceBuffer b      -> fb b pat
@@ -338,6 +343,33 @@ viewToBuffer = go PatternFull
 
 
 -- | Display the state of a View
+--
+-- >>> :set -XOverloadedLists
+-- >>> import System.Mem
+-- >>> v <- newBufferWeakView ([10,11,12,13,14,15,16,17] :: BufferI) (Pattern1D 2 4)
+-- >>> v2 <- newViewWeakView v (Pattern1D 1 1)
+-- >>> putStr =<< showViewState v2
+-- View source: weak view
+-- Source size: 4
+-- View pattern: Pattern1D {pattern1DOffset = 1, pattern1DSize = 1}
+-- Wasted space: 75%
+-- Source:
+--    View source: weak buffer
+--    Source size: 8
+--    View pattern: Pattern1D {pattern1DOffset = 2, pattern1DSize = 4}
+--    Wasted space: 50%
+-- >>> performGC
+-- >>> putStr =<< showViewState v2
+-- View source: weak view
+-- Source size: 4
+-- View pattern: Pattern1D {pattern1DOffset = 1, pattern1DSize = 1}
+-- Wasted space: 75%
+-- Source:
+--    View source: buffer
+--    Source size: 4
+--    View pattern: PatternFull
+--    Wasted space: 0%
+--
 showViewState :: MonadIO m => View -> m String
 showViewState = fmap fst . go
 
