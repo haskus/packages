@@ -58,6 +58,9 @@ module Haskus.Memory.View
    , newViewWeakView
    , copyBufferWithPattern
    , viewToBuffer
+   , showViewState
+   , patternSize
+   , unsafePatternSize
    )
 where
 
@@ -111,6 +114,7 @@ data ViewPattern
       , pattern2DStride :: {-# UNPACK #-} !Word -- ^ Stride (space between two lines)
       }
    | PatternOn ViewPattern ViewPattern
+   deriving (Show)
 
 -- | Compute an actual offset when used with the given pattern
 patternOffset :: ViewPattern -> Word -> Word
@@ -121,12 +125,20 @@ patternOffset pat off = case pat of
    PatternOn p1 p2            -> patternOffset p2 (patternOffset p1 off)
 
 -- | Compute the effective size occupied by a pattern
-patternSize :: ViewPattern -> Word
-patternSize = \case
-   PatternFull                -> error "Don't call patternSize on PatternFull"
+unsafePatternSize :: ViewPattern -> Word
+unsafePatternSize = \case
+   PatternFull                -> error "Don't call unsafePatternSize on PatternFull"
    Pattern1D _off sz          -> sz
    Pattern2D _off w h _stride -> w * h
-   PatternOn p1 _p2           -> patternSize p1
+   PatternOn p1 _p2           -> unsafePatternSize p1
+
+-- | Compute the effective size occupied by a pattern
+patternSize :: ViewPattern -> Word -> Word
+patternSize v bsz = case v of
+   PatternFull                -> bsz
+   Pattern1D _off sz          -> sz
+   Pattern2D _off w h _stride -> w * h
+   PatternOn p1 p2            -> patternSize p1 (patternSize p2 bsz)
 
 -- | Combine two patterns
 --
@@ -147,6 +159,8 @@ viewReadWord8 view off =
       (\v pat -> viewReadWord8     v (patternOffset pat off))
 
 
+-- | Wait for a view to be valid then use one of the 3 passed functions on it
+-- depending on its source type (Buffer, WeakBuffer, WeakView).
 withValidView
    :: MonadIO m
    => View
@@ -297,7 +311,8 @@ viewWeakViewFinalizer weakView srcRef pat = deRefWeak weakView >>= \case
 -- according to the given pattern
 copyBufferWithPattern :: Buffer mut pin fin heap -> ViewPattern -> IO BufferM
 copyBufferWithPattern b pat = do
-   let !sz = patternSize pat
+   bsz <- bufferSizeIO b
+   let !sz = patternSize pat bsz
    b' <- newBuffer sz
    case pat of
       PatternFull               -> error "Unreachable code"
@@ -320,3 +335,42 @@ viewToBuffer = go PatternFull
          (\b pat2 -> copyBufferWithPattern b (pat `patternApplyOn` pat2))
          (\b pat2 -> copyBufferWithPattern b (pat `patternApplyOn` pat2))
          (\v2 pat2 -> go (pat `patternApplyOn` pat2) v2)
+
+
+-- | Display the state of a View
+showViewState :: MonadIO m => View -> m String
+showViewState = fmap fst . go
+
+   where
+      go v = withValidView v
+         (\b pat -> do
+            sz <- bufferSizeIO b
+            let psz = patternSize pat sz
+            return (unlines
+               [ "View source: buffer"
+               , "Source size: " ++ show sz
+               , "View pattern: " ++ show pat
+               , "Wasted space: " ++ show (100 - ((psz * 100) `div` sz)) ++ "%"
+               ], psz)
+         )
+         (\b pat -> do
+            sz <- bufferSizeIO b
+            let psz = patternSize pat sz
+            return (unlines
+               [ "View source: weak buffer"
+               , "Source size: " ++ show sz
+               , "View pattern: " ++ show pat
+               , "Wasted space: " ++ show (100 - ((psz * 100) `div` sz)) ++ "%"
+               ], psz)
+         )
+         (\v2 pat -> do
+            (r,sz) <- go v2
+            let psz = patternSize pat sz
+            return (unlines $
+               [ "View source: weak view"
+               , "Source size: " ++ show sz
+               , "View pattern: " ++ show pat
+               , "Wasted space: " ++ show (100 - ((psz * 100) `div` sz)) ++ "%"
+               , "Source:"
+               ] ++ fmap ("   " ++) (lines r), psz)
+         )
