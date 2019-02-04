@@ -54,7 +54,6 @@ jqueryFiles = msum
    [ dir "script" $ dir "jquery" $ msum
       [ dir "jquery-3.2.1.min.js"          $ sendJS $ $(embedBSFile "src/scripts/jquery-3.2.1.min.js")
       , dir "jquery-ui.min.js"             $ sendJS $ $(embedBSFile "src/scripts/jquery-ui.min.js")
-      , dir "jquery-ui.min.js"             $ sendJS $ $(embedBSFile "src/scripts/jquery-ui.min.js")
       , dir "jquery-ui.js"                 $ sendJS $ $(embedBSFile "src/scripts/jquery-ui.js")
       , dir "jquery.ui.touch-punch.min.js" $ sendJS $ $(embedBSFile "src/scripts/jquery.ui.touch-punch.min.js")
       , dir "jquery.blockUI.js"            $ sendJS $ $(embedBSFile "src/scripts/jquery.blockUI.js")
