@@ -1,7 +1,8 @@
+cabal-version:       2.4
 name:                haskus-web
-version:             1.0
+version:             1.1
 synopsis:            Haskus web
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Sylvain Henry
 maintainer:          sylvain@haskus.fr
@@ -9,10 +10,13 @@ homepage:            http://www.haskus.org
 copyright:           Sylvain Henry 2019
 category:            System
 build-type:          Simple
-cabal-version:       1.20
 
 description:
    Haskus web related modules
+
+extra-source-files:
+   src/scripts/**/*.js
+   src/css/**/*.css
 
 source-repository head
   type: git
