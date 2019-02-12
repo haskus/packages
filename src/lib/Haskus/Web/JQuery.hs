@@ -43,6 +43,12 @@ jqueryHtmlHeader minimized = do
       "/script/jquery/jquery.blockUI.js" --TODO: minimized script
       "/script/jquery/jquery.blockUI.js"
 
+   -- ability to detect that images are loaded
+   -- From: https://github.com/desandro/imagesloaded
+   addScript
+      "/script/jquery/imagesloaded.pkgd.min.js"
+      "/script/jquery/imagesloaded.pkgd.js"
+
    link_ [ rel_  "stylesheet"
          , type_ "text/css"
          , href_ "/style/jquery/jquery-ui.theme.css"
@@ -57,6 +63,8 @@ jqueryFiles = msum
       , dir "jquery-ui.js"                 $ sendJS $ $(embedBSFile "src/scripts/jquery-ui.js")
       , dir "jquery.ui.touch-punch.min.js" $ sendJS $ $(embedBSFile "src/scripts/jquery.ui.touch-punch.min.js")
       , dir "jquery.blockUI.js"            $ sendJS $ $(embedBSFile "src/scripts/jquery.blockUI.js")
+      , dir "imagesloaded.pkgd.min.js"     $ sendJS $ $(embedBSFile "src/scripts/imagesloaded.pkgd.min.js")
+      , dir "imagesloaded.pkgd.js"         $ sendJS $ $(embedBSFile "src/scripts/imagesloaded.pkgd.js")
       ]
    , dir "style" $ dir "jquery" $ msum
       [ dir "jquery-ui.theme.css"            $ sendJS $ $(embedBSFile "src/css/jquery-ui.theme.css")
