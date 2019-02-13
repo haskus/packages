@@ -24,6 +24,7 @@ module Haskus.Format.Number
    , makeW
    , zeroW
    , oneW
+   , extractW
    , compareW
    , (.+.)
    , (.-.)
@@ -104,6 +105,10 @@ makeW x = case x `uncheckedShiftR` natValue' @a of
    0 -> unsafeMakeW x
    _ -> error $ "Trying to create a natural of " ++ show (natValue' @a)
          ++ " bits from the too big value " ++ show x
+
+-- | Extract the primitive value
+extractW :: W a -> WW a
+extractW (W a) = a
 
 -------------------------------------------------
 -- Widening
