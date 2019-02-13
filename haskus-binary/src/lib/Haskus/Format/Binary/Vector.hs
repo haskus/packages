@@ -246,7 +246,6 @@ instance
       u .&. v        = zipWith (.&.) u v
       u .|. v        = zipWith (.|.) u v
       u `xor` v      = zipWith xor u v
-      complement u   = map complement u
 
 
 instance
@@ -259,6 +258,7 @@ instance
       type BitSize (Vector n a) = n * BitSize a
       zeroBits = fromJust (fromList (List.replicate (natValue @n) zeroBits))
       oneBits  = fromJust (fromList (List.replicate (natValue @n) oneBits))
+      complement u = map complement u
       countLeadingZeros = go 0 . toList
          where
             go !n []     = n

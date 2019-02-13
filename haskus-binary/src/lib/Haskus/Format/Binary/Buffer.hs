@@ -70,6 +70,7 @@ import qualified Data.ByteString.Unsafe as BS
 import Haskus.Format.Binary.Ptr
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
+import Haskus.Format.Binary.Bits.Helper
 import Haskus.Format.Binary.Bits.Bitwise
 import Haskus.Format.Binary.Bits.Index
 import Haskus.Format.Binary.Bits.Shift
@@ -96,20 +97,22 @@ instance Bitwise Buffer where
    (.&.)      = bufferZipWith (.&.)
    (.|.)      = bufferZipWith (.|.)
    xor        = bufferZipWith xor
-   complement = bufferMap complement
 
 instance IndexableBits Buffer where
    bit i = bufferPackByteList 
          (bit r : List.replicate (fromIntegral n) 0)
       where
-         n = i `uncheckedShiftR` 3
-         r = i .&. 0x07
+         n = byteOffset i
+         r = bitOffset i
    
    testBit b i = testBit p r
       where
          p = bufferIndex b (bufferSize b - n)
-         n = i `uncheckedShiftR` 3
-         r = i .&. 0x07
+         n = byteOffset i
+         r = bitOffset i
+
+   setBit   = error "Can't set Buffer bit"
+   clearBit = error "Can't clear Buffer bit"
 
    popCount b  = sum (fmap popCount (bufferUnpackByteList b))
 

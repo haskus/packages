@@ -38,6 +38,7 @@ library
     Haskus.Format.Binary.Bits.Get
     Haskus.Format.Binary.Bits.Put
     Haskus.Format.Binary.Bits.Mask
+    Haskus.Format.Binary.Bits.Helper
 
     Haskus.Format.Binary.BitSet
     Haskus.Format.Binary.BitField

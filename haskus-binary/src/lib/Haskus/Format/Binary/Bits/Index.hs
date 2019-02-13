@@ -10,6 +10,7 @@ where
 
 import Haskus.Format.Binary.Bits.Shift
 import Haskus.Format.Binary.Bits.Bitwise
+import Haskus.Format.Binary.Bits.Finite
 import Haskus.Format.Binary.Word
 import GHC.Exts
 
@@ -27,7 +28,7 @@ class IndexableBits a where
 
    -- | @x \`clearBit\` i@ is the same as @x .&. complement (bit i)@
    clearBit :: a -> Word -> a
-   default clearBit :: (Bitwise a) => a -> Word -> a
+   default clearBit :: (FiniteBits a,Bitwise a) => a -> Word -> a
    clearBit a i = a .&. complement (bit i)
 
    -- | @x \`complementBit\` i@ is the same as @x \`xor\` bit i@
