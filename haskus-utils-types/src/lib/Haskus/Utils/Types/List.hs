@@ -58,7 +58,8 @@ module Haskus.Utils.Types.List
    , Generate
    -- * Others
    , Map
-   , Max
+   , ListMax
+   , ListMin
    , Length
    , Indexes
    , MapTest
@@ -75,13 +76,22 @@ type family Map (f :: a -> k) (xs :: [a]) :: [k] where
    Map f (x ': xs) = f x ': Map f xs
 
 -- | Get the max of a list of Nats
-type family Max (xs :: [Nat]) where
-   Max (x ': xs) = Max' x xs
+type family ListMax (xs :: [Nat]) where
+   ListMax (x ': xs) = Max' x xs
 
 -- | Helper for Max
 type family Max' (x :: Nat) (xs :: [Nat]) where
    Max' x '[]       = x
    Max' x (a ': xs) = Max' (If (x <=? a) a x) xs
+
+-- | Get the min of a list of Nats
+type family ListMin (xs :: [Nat]) where
+   ListMin (x ': xs) = Min' x xs
+
+-- | Helper for Min
+type family Min' (x :: Nat) (xs :: [Nat]) where
+   Min' x '[]       = x
+   Min' x (a ': xs) = Min' (If (x <=? a) x a) xs
 
 -- | Tail of a list
 type family Tail (xs :: [k]) :: [k] where

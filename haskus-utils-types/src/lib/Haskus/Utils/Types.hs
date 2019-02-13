@@ -35,6 +35,8 @@ module Haskus.Utils.Types
    , If
    , Modulo
    , Same
+   , Max
+   , Min
    , Proxy (..)
    , TypeError
    , ErrorMessage (..)
@@ -98,3 +100,11 @@ type family Modulo' c a b where
 type family Same a b :: Nat where
    Same a a = 1
    Same a b = 0
+
+-- | Max of two naturals
+type family Max (a :: Nat) (b :: Nat) where
+   Max a b = If (a <=? b) b a
+
+-- | Min of two naturals
+type family Min (a :: Nat) (b :: Nat) where
+   Min a b = If (a <=? b) a b
