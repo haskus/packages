@@ -70,6 +70,8 @@ library
     Haskus.Format.Text.Unicode.UCD
     Haskus.Format.Text.Unicode.UCDParser
 
+    Haskus.Format.Number
+
     Haskus.Utils.Memory
     Haskus.Memory.Buffer
     Haskus.Memory.Allocator.Malloc
