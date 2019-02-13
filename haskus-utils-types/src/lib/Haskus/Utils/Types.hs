@@ -81,7 +81,7 @@ type family If (c :: Bool) (t :: k) (e :: k) where
 --    If GHC cannot solve `G n ~ Word`, it shows:
 --       can't match `Assert...` with `Word`
 --
-type family Assert (prop :: Bool) (val :: k) (msg :: ErrorMessage) where
+type family Assert (prop :: Bool) (val :: k) (msg :: ErrorMessage) :: k where
    Assert 'True  val msg = val
    Assert 'False val msg = TypeError msg
 
