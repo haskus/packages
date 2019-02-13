@@ -24,6 +24,7 @@ library
     Haskus.Utils.Types.Bool
     Haskus.Utils.Types.List
     Haskus.Utils.Types.Generics
+    Haskus.Utils.Types.Proxy
 
   other-modules:
 
