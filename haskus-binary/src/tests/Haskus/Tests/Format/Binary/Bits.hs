@@ -324,7 +324,7 @@ prop_bits_to_string x = bitsFromString (bitsToString x) == x
 -- | Test that words of the given length can be written and read back with
 -- BitGet/BitPut. Test every bit ordering.
 prop_reverse_word :: (Integral a, Bits a, ReversableBits a) => Word -> a -> ArbitraryBitOrder -> Bool
-prop_reverse_word n w (ArbitraryBitOrder bo) = maskLeastBits n w == dec
+prop_reverse_word n w (ArbitraryBitOrder bo) = maskDyn n w == dec
    where
       enc = getBitPutBuffer  $ putBits n w $ newBitPutState bo
       dec = getBits n $ newBitGetState bo enc
@@ -341,7 +341,7 @@ prop_reverse_bs w s (ArbitraryBuffer bs) (ArbitraryBitOrder bo) = runBitGet bo d
       dec = do
          w2  <- getBitsM (fromSize s)
          bs' <- getBitsBSM (fromIntegral len)
-         return (bs == bs' && w2 == maskLeastBits (fromSize s) w)
+         return (bs == bs' && w2 == maskDyn (fromSize s) w)
 
 -- | Test that words with arbitrary (but still valid) lengths can be written and
 -- read back with BitGet/BitPut. Test every bit ordering.
@@ -360,7 +360,7 @@ prop_split_word s1 s2 w1 w2 (ArbitraryBitOrder bo) = runBitGet bo dec (runBitPut
       dec = do
          v1 <- getBitsM (fromSize s1)
          v2 <- getBitsM (fromSize s2)
-         return (v1 == maskLeastBits (fromSize s1) w1 && v2 == maskLeastBits (fromSize s2) w2)
+         return (v1 == maskDyn (fromSize s1) w1 && v2 == maskDyn (fromSize s2) w2)
 
 -- | Test that ULEB128 decoder can read back what has been written with ULEB128
 -- encoder

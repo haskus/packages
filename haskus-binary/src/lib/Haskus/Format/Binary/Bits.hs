@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds #-}
 
 -- | Operations on bits
 module Haskus.Format.Binary.Bits
@@ -17,8 +18,10 @@ module Haskus.Format.Binary.Bits
    , reverseBitsGeneric
    , reverseLeastBits
    -- * Mask
-   , makeMask
-   , maskLeastBits
+   , MaskBits (..)
+   , Maskable
+   , maskDyn
+   , mask
    -- * String conversion
    , bitsToString
    , bitsToStringN
@@ -40,7 +43,7 @@ import Haskus.Format.Binary.Bits.Rotate
 import Haskus.Format.Binary.Bits.Shift
 import Haskus.Format.Binary.Bits.Bitwise
 import Haskus.Format.Binary.Bits.Order
-import Haskus.Format.Binary.Word
+import Haskus.Format.Binary.Bits.Mask
 
 type Bits a =
    ( Eq a
@@ -50,48 +53,17 @@ type Bits a =
    , Bitwise a
    , RotatableBits a
    , KnownNat (BitSize a)
+   , MaskBits a
    )
-
--- | makeMask 3 = 00000111
-makeMask :: forall a.
-   ( ShiftableBits a
-   , FiniteBits a
-   , KnownNat (BitSize a)
-   , Bitwise a
-   ) => Word -> a
-makeMask n = complement zeroBits `shiftR` off
-   where
-      off = natValue' @(BitSize a) - n
-
-{-# SPECIALIZE makeMask :: Word -> Int #-}
-{-# SPECIALIZE makeMask :: Word -> Int8 #-}
-{-# SPECIALIZE makeMask :: Word -> Int16 #-}
-{-# SPECIALIZE makeMask :: Word -> Int32 #-}
-{-# SPECIALIZE makeMask :: Word -> Int64 #-}
-{-# SPECIALIZE makeMask :: Word -> Word #-}
-{-# SPECIALIZE makeMask :: Word -> Word8 #-}
-{-# SPECIALIZE makeMask :: Word -> Word16 #-}
-{-# SPECIALIZE makeMask :: Word -> Word32 #-}
-{-# SPECIALIZE makeMask :: Word -> Word64 #-}
-
--- | Keep only the n least-significant bits of the given value
-maskLeastBits :: forall a.
-   ( ShiftableBits a
-   , FiniteBits a
-   , Bitwise a
-   , KnownNat (BitSize a)
-   ) => Word -> a -> a
-{-# INLINE maskLeastBits #-}
-maskLeastBits n v = v .&. makeMask n
 
 -- | Compute bit offset (equivalent to x `mod` 8 but faster)
 bitOffset :: Word -> Word
-{-# INLINE bitOffset #-}
-bitOffset n = makeMask 3 .&. n
+{-# INLINABLE bitOffset #-}
+bitOffset n = mask @3 n
 
 -- | Compute byte offset (equivalent to x `div` 8 but faster)
 byteOffset :: Word -> Word
-{-# INLINE byteOffset #-}
+{-# INLINABLE byteOffset #-}
 byteOffset n = n `uncheckedShiftR` 3
 
 -- | Reverse the @n@ least important bits of the given value. The higher bits
@@ -137,13 +109,14 @@ getBitRange :: forall b.
    , FiniteBits b
    , KnownNat (BitSize b)
    , Bitwise b
+   , MaskBits b
    ) => BitOrder -> Word -> Word -> b -> b
-{-# INLINE getBitRange #-}
+{-# INLINABLE getBitRange #-}
 getBitRange bo o n c = case bo of
-      BB -> maskLeastBits n $ c             `uncheckedShiftR` d
-      BL -> maskLeastBits n $ reverseBits c `uncheckedShiftR` o
-      LB -> maskLeastBits n $ reverseBits c `uncheckedShiftR` d
-      LL -> maskLeastBits n $ c             `uncheckedShiftR` o
+      BB -> maskDyn n $ c             `uncheckedShiftR` d
+      BL -> maskDyn n $ reverseBits c `uncheckedShiftR` o
+      LB -> maskDyn n $ reverseBits c `uncheckedShiftR` d
+      LL -> maskDyn n $ c             `uncheckedShiftR` o
    where 
       d  = bitSize c - n - o
 

@@ -75,10 +75,10 @@ putBits n w s@(BitPutState builder b o bo) = s'
       -- bits of the returned value
       selectBits :: (Bits a, ReversableBits a, Integral a) => a -> Word8
       selectBits x = fromIntegral $ case bo of
-         BB ->                       maskLeastBits cn $ x `shiftR` fromIntegral (n-cn)
-         LB -> reverseLeastBits cn $ maskLeastBits cn $ x `shiftR` fromIntegral (n-cn)
-         LL ->                       maskLeastBits cn x
-         BL -> reverseLeastBits cn $ maskLeastBits cn x
+         BB ->                       maskDyn cn $ x `shiftR` fromIntegral (n-cn)
+         LB -> reverseLeastBits cn $ maskDyn cn $ x `shiftR` fromIntegral (n-cn)
+         LL ->                       maskDyn cn x
+         BL -> reverseLeastBits cn $ maskDyn cn x
 
       -- shift left at the correct position
       shl :: Word8 -> Word8

@@ -113,13 +113,13 @@ type family MapAlignment fs where
 
 
 instance forall fs.
-      ( KnownNat (Max (MapSizeOf fs))
-      , KnownNat (Max (MapAlignment fs))
+      ( KnownNat (ListMax (MapSizeOf fs))
+      , KnownNat (ListMax (MapAlignment fs))
       )
       => StaticStorable (Union fs)
    where
-      type SizeOf (Union fs)    = Max (MapSizeOf fs)
-      type Alignment (Union fs) = Max (MapAlignment fs)
+      type SizeOf (Union fs)    = ListMax (MapSizeOf fs)
+      type Alignment (Union fs) = ListMax (MapAlignment fs)
 
       staticPeekIO ptr = do
          let sz = natValue @(SizeOf (Union fs))

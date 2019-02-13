@@ -309,3 +309,15 @@ instance ShiftableBits Integer where
 
    uncheckedShiftL = shiftL
    uncheckedShiftR = shiftR
+
+instance ShiftableBits Natural where
+   {-# INLINE shiftR #-}
+   {-# INLINE shiftL #-}
+   {-# INLINE uncheckedShiftL #-}
+   {-# INLINE uncheckedShiftR #-}
+
+   x `shiftL` (W# i#) = shiftLNatural x (I# (word2Int# i#))
+   x `shiftR` (W# i#) = shiftRNatural x (I# (word2Int# i#))
+
+   uncheckedShiftL = shiftL
+   uncheckedShiftR = shiftR

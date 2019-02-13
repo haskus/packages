@@ -274,7 +274,7 @@ unumNegate :: forall u.
    , KnownNat (UnumSize u)
    ) => U u -> U u
 {-# INLINE unumNegate #-}
-unumNegate (U w) = U (maskLeastBits s (complement w + 1))
+unumNegate (U w) = U (maskDyn s (complement w + 1))
    where
       s = unumSize @u
 
@@ -289,7 +289,7 @@ unumReciprocate :: forall u.
 unumReciprocate (U w) = U (w `xor` m + 1)
    where
       s = unumSize @u
-      m = makeMask (s-1)
+      m = makeMaskDyn (s-1)
 
 
 data Sign
@@ -375,7 +375,7 @@ sornFull :: forall u.
    ( Bits (SORNBackingWord u)
    , KnownNat (SORNSize u)
    ) => SORN u
-sornFull = SORN (maskLeastBits s (complement zeroBits))
+sornFull = SORN (maskDyn s (complement zeroBits))
    where
       s = sornSize @u
 
@@ -488,8 +488,7 @@ sornFromTo (U a) (U b) = go sornEmpty a
    where
       go w x 
          | x == b    = sornInsert w (U x)
-         | otherwise = go (sornInsert w (U x)) (mask (x+1))
-      mask = maskLeastBits s
+         | otherwise = go (sornInsert w (U x)) (maskDyn s (x+1))
       s = unumSize @u
 
 
@@ -653,7 +652,7 @@ csornToSorn c =
       else sornFromTo (csornStart c) (U x')
    where
       start = csornStart' c
-      x'    = maskLeastBits s (start + csornCount c - 1)
+      x'    = maskDyn s (start + csornCount c - 1)
       s     = unumSize @u
 
 -- | Size of a contiguous SORN in bits
@@ -706,7 +705,7 @@ csornFromTo start stop =
       U x   = start
       U y   = stop
       s     = unumSize @u
-      count = maskLeastBits s (y-x+1)
+      count = maskDyn s (y-x+1)
       b     = BitFields 0
               |> updateField' @"start" x
               |> updateField' @"count" count

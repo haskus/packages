@@ -231,11 +231,11 @@ updateField' :: forall name fields b .
    , Field (Output name fields)
    ) => Output name fields -> BitFields b fields -> BitFields b fields
 {-# INLINE updateField' #-}
-updateField' value (BitFields w) = BitFields $ ((fromField value `shiftL` off) .&. mask) .|. (w .&. complement mask)
+updateField' value (BitFields w) = BitFields $ ((fromField value `shiftL` off) .&. mask') .|. (w .&. complement mask')
    where
-      off  = natValue @(Offset name fields)
-      sz   = natValue @(Size name fields)
-      mask = ((1 `shiftL` sz) - 1) `shiftL` off
+      off   = natValue @(Offset name fields)
+      sz    = natValue @(Size name fields)
+      mask' = ((1 `shiftL` sz) - 1) `shiftL` off
 
 
 -- | Modify the value of a field

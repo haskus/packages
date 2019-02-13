@@ -209,8 +209,8 @@ positFields p = PositFields
       -- fraction size
       fs = natValue @n - es - rs - 1
 
-      expo = fromIntegral (maskLeastBits es (v `shiftR` fs))
-      frac = fromIntegral (maskLeastBits fs v)
+      expo = fromIntegral (maskDyn es (v `shiftR` fs))
+      frac = fromIntegral (maskDyn fs v)
 
 
 -- | Convert a Posit into a Rational
