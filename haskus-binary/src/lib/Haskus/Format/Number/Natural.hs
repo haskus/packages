@@ -60,9 +60,11 @@ newtype W (b :: Nat)
    = W' (WW b)
 
 pattern W :: forall (n :: Nat). (Integral (WW n), MakeW n) => Natural -> W n
+{-# COMPLETE W #-}
 pattern W x <- (toNaturalW -> x)
    where
       W x = makeW @n x
+
 
 -- | Create a natural number with the minimal number of bits required to store
 -- it
@@ -163,7 +165,7 @@ extractW :: W a -> WW a
 extractW (W' a) = a
 
 -------------------------------------------------
--- Widening
+-- Widening / Narrowing
 -------------------------------------------------
 
 -- | Widen a natural

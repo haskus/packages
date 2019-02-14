@@ -23,6 +23,8 @@ module Haskus.Format.Number.NaturalRange
    , safeMakeNatRange
    , makeNatRange
    , unsafeMakeNatRange
+   , widenNatRange
+   , (.++.)
    )
 where
 
@@ -142,7 +144,52 @@ toNaturalNatRange (NatRange' x) = natValue @f + toNaturalW x
 pattern NatRange :: forall (f :: Nat) (t :: Nat).
    ( MakeNatRange f t
    ) => Natural -> NatRange f t
+{-# COMPLETE NatRange #-}
 pattern NatRange x <- (toNaturalNatRange -> x)
    where
       NatRange x = makeNatRange @f @t x
+
+
+-------------------------------------------------
+-- Widening
+-------------------------------------------------
+
+-- | Widen a natural
+--
+-- >>> let a = NatRange @18 @100 25
+-- >>> widenNatRange @16 @200 a
+-- NatRange @16 @200 25
+--
+widenNatRange :: forall f2 t2 f1 t1.
+   ( WidenNatRange f1 t1 f2 t2
+   ) => NatRange f1 t1 -> NatRange f2 t2
+widenNatRange (NatRange a) = NatRange a
+
+type WidenNatRange f1 t1 f2 t2 =
+   ( Assert ((f2 <=? f1) `AndB` (t1 <=? t2)) (() :: Constraint)
+      ('Text "Can't widen a natural range ["
+       ':<>: 'ShowType f1
+       ':<>: 'Text ","
+       ':<>: 'ShowType t1
+       ':<>: 'Text "] into range ["
+       ':<>: 'ShowType f2
+       ':<>: 'Text ","
+       ':<>: 'ShowType t2
+       ':<>: 'Text "]"
+      )
+   , MakeNatRange f1 t1
+   , MakeNatRange f2 t2
+   )
+
+-- | Add two natural ranges
+--
+-- >>> NatRange @2 @4 3 .++. NatRange @7 @17 13
+-- NatRange @9 @21 16
+--
+(.++.) ::
+   ( MakeNatRange f1 t1
+   , MakeNatRange f2 t2
+   , MakeNatRange (f1+f2) (t1+t2)
+   ) => NatRange f1 t1 -> NatRange f2 t2 -> NatRange (f1+f2) (t1+t2)
+(.++.) (NatRange x) (NatRange y) = NatRange (x+y)
 
