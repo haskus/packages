@@ -87,7 +87,6 @@ import Haskus.Format.Binary.Bits
 import Haskus.Format.Binary.Storable
 import Haskus.Utils.HList
 import Haskus.Utils.Types
-import Haskus.Utils.Types.List
 
 -- | Bit fields on a base type b
 newtype BitFields b (f :: [*]) = BitFields b deriving (Storable)

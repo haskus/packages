@@ -50,8 +50,7 @@ module Haskus.Format.Binary.Union
 where
 
 import Haskus.Utils.Memory (memCopy, memSet)
-import Haskus.Utils.Types
-import Haskus.Utils.Types.List hiding (Union)
+import Haskus.Utils.Types hiding (Union)
 import Haskus.Utils.HList
 import Haskus.Utils.Flow (when)
 import Haskus.Format.Binary.Storable

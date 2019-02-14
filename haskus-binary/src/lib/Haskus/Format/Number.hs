@@ -13,6 +13,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Haskus.Format.Number
    ( NatVal (..)
@@ -22,6 +23,7 @@ module Haskus.Format.Number
    , narrow
    , W
    , pattern W
+   , nat
    , unsafeMakeW
    , safeMakeW
    , zeroW
@@ -40,9 +42,7 @@ where
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Bits
 import Haskus.Utils.Types
-import Haskus.Utils.Types.Proxy
 import Numeric.Natural
-import Data.Kind
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -54,10 +54,30 @@ import Data.Kind
 newtype W (b :: Nat)
    = W' (WW b)
 
-pattern W :: forall n. (Integral (WW n), MakeW n) => Natural -> W n
+pattern W :: forall (n :: Nat). (Integral (WW n), MakeW n) => Natural -> W n
 pattern W x <- (toNatural -> x)
    where
       W x = makeW @n x
+
+-- | Create a natural number with the minimal number of bits required to store
+-- it
+--
+-- >>> nat @5
+-- W @3 5
+--
+-- >>> nat @0
+-- W @1 0
+--
+-- >>> nat @158748521123465897456465
+-- W @78 158748521123465897456465
+--
+nat :: forall (v :: Nat) (n :: Nat).
+   ( n ~ NatBitCount v
+   , Integral (WW n)
+   , MakeW n
+   , KnownNat v
+   ) => W n
+nat = W @n (natValue @v)
 
 mapW :: (WW a -> WW a) -> W a -> W a
 mapW f (W' x) = W' (f x)

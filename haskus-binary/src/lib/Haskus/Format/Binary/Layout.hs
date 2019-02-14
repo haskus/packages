@@ -24,7 +24,6 @@ module Haskus.Format.Binary.Layout
 where
 
 import Haskus.Utils.Types
-import Haskus.Utils.Types.List
 
 -- | Path in a layout
 data LayoutPath (path :: [*])   = LayoutPath

@@ -88,7 +88,7 @@ type family RequiredPadding a b where
 
 -- | Compute the required padding between the size sz and b to respect b's alignment
 type family Padding (sz :: Nat) b where
-   Padding sz b = PaddingEx (Modulo sz (Alignment b)) (Alignment b)
+   Padding sz b = PaddingEx (Mod sz (Alignment b)) (Alignment b)
 
 type family PaddingEx (m :: Nat) (a :: Nat) where
    PaddingEx 0 a = 0

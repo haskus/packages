@@ -8,7 +8,7 @@ extra-deps:
 - haskus-utils-data-1.1.1
   # - haskus-utils-types-1.3.1
 - git: http://github.com/haskus/haskus-utils
-  commit: 40a6d7704239996a6c394fbda507990ab28a06d5
+  commit: 74f0fa74254410facc931cb6facd5fe0caf52ec3
   subdirs:
       - haskus-utils-types
       

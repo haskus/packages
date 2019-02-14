@@ -18,7 +18,6 @@ module Haskus.Format.Binary.Record
    , Field
    , RecordSize
    , Alignment
-   , Modulo
    , Path
    , recordSize
    , recordAlignment
@@ -73,7 +72,7 @@ type family FieldType (name :: Symbol) (fs :: [*]) where
 type family FullRecordSize fs where
    FullRecordSize fs =
       RecordSize fs 0
-      + PaddingEx (Modulo (RecordSize fs 0) (RecordAlignment fs 1))
+      + PaddingEx (Mod (RecordSize fs 0) (RecordAlignment fs 1))
          (RecordAlignment fs 1)
 
 -- | Record alignment

@@ -75,8 +75,7 @@ where
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Bits
 import Haskus.Format.Binary.BitField
-import Haskus.Utils.Types
-import Haskus.Utils.Types.List
+import Haskus.Utils.Types hiding (Log2)
 import Haskus.Utils.HList
 import Haskus.Utils.Flow
 
