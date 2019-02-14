@@ -27,7 +27,8 @@ module Haskus.Utils.Types.Nat
    , CmpNat
    , type (<=?)
    , type (<=)
-   , Same
+   , NatEq
+   , NatNotEq
    , Max
    , Min
    , IsZero
@@ -68,9 +69,14 @@ natValue' = natValue @n
 
 
 -- | Type equality to Nat
-type family Same a b :: Nat where
-   Same a a = 1
-   Same a b = 0
+type family NatEq a b :: Nat where
+   NatEq a a = 1
+   NatEq a b = 0
+
+-- | Type inequality to Nat
+type family NatNotEq a b :: Nat where
+   NatNotEq a a = 0
+   NatNotEq a b = 1
 
 -- | Max of two naturals
 type family Max (a :: Nat) (b :: Nat) where
@@ -91,6 +97,9 @@ type family Min (a :: Nat) (b :: Nat) where
 -- >>> natValue' @(NatBitCount 2)
 -- 2
 --
+-- >>> natValue' @(NatBitCount 5)
+-- 3
+--
 -- >>> natValue' @(NatBitCount 15)
 -- 4
 --
@@ -99,7 +108,10 @@ type family Min (a :: Nat) (b :: Nat) where
 --
 type family NatBitCount (n :: Nat) :: Nat where
    NatBitCount 0 = 1
-   NatBitCount n = Log2 (n+1) + Mod (n+1) 2
+   NatBitCount n = NatBitCount' (n+1) (Log2 (n+1))
+
+type family NatBitCount' v log2 where
+   NatBitCount' v log2 = log2 + NatNotEq v (2^log2)
 
 -- | Return 1 if 0, and 0 otherwise
 type family IsZero (n :: Nat) :: Nat where
