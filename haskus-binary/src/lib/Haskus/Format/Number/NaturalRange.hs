@@ -30,6 +30,14 @@ import Haskus.Format.Number.Natural
 import Haskus.Utils.Types
 import Numeric.Natural
 
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XTypeFamilies
+-- >>> :set -XScopedTypeVariables
+
+
 -- | A natural number in the specified range
 newtype NatRange (f :: Nat) (t :: Nat) = NatRange' (W (NatBitCount (t-f+1)))
 
@@ -128,7 +136,7 @@ toNaturalNatRange (NatRange' x) = natValue @f + toNaturalW x
 
 -- | Natural range pattern
 --
--- >>> NatRange @10 @ 12 11
+-- >>> NatRange @10 @12 11
 -- NatRange @10 @12 11
 --
 pattern NatRange :: forall (f :: Nat) (t :: Nat).

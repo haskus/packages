@@ -146,7 +146,7 @@ safeMakeW x =
       0 -> Just (unsafeMakeW x')
       _ -> Nothing
 
--- | Create a natural (check overflow and throw an error)
+-- | Create a natural (check overflow and throw on error)
 makeW :: forall a. MakeW a => Natural -> W a
 makeW x = case safeMakeW x of
    Just y  -> y

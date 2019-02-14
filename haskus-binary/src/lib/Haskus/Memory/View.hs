@@ -341,14 +341,14 @@ viewToBuffer = go PatternFull
          (\b pat2 -> copyBufferWithPattern b (pat `patternApplyOn` pat2))
          (\v2 pat2 -> go (pat `patternApplyOn` pat2) v2)
 
-
 -- | Display the state of a View
 --
 -- >>> :set -XOverloadedLists
 -- >>> import System.Mem
 -- >>> v <- newBufferWeakView ([10,11,12,13,14,15,16,17] :: BufferI) (Pattern1D 2 4)
 -- >>> v2 <- newViewWeakView v (Pattern1D 1 1)
--- >>> putStr =<< showViewState v2
+--
+-- > putStr =<< showViewState v2
 -- View source: weak view
 -- Source size: 4
 -- View pattern: Pattern1D {pattern1DOffset = 1, pattern1DSize = 1}
@@ -358,8 +358,9 @@ viewToBuffer = go PatternFull
 --    Source size: 8
 --    View pattern: Pattern1D {pattern1DOffset = 2, pattern1DSize = 4}
 --    Wasted space: 50%
--- >>> performGC
--- >>> putStr =<< showViewState v2
+--
+-- > performGC
+-- > putStr =<< showViewState v2
 -- View source: weak view
 -- Source size: 4
 -- View pattern: Pattern1D {pattern1DOffset = 1, pattern1DSize = 1}
