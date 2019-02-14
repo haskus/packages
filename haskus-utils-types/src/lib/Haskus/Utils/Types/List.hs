@@ -66,9 +66,10 @@ module Haskus.Utils.Types.List
    )
 where
 
-import Haskus.Utils.Types
 import Haskus.Utils.Types.Bool
-import GHC.Exts (Constraint)
+import Haskus.Utils.Types.Error
+import Haskus.Utils.Types.Nat
+import Haskus.Utils.Types.Constraint
 
 -- | Map a type function
 type family Map (f :: a -> k) (xs :: [a]) :: [k] where

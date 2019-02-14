@@ -5,9 +5,10 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
--- | Utils for type booleans
+-- | Type level booleans
 module Haskus.Utils.Types.Bool
-   ( NotB
+   ( If
+   , NotB
    , OrB
    , AndB
    , XorB
@@ -31,6 +32,12 @@ where
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
 -- >>> import Haskus.Utils.Types
+
+
+-- | If-then-else
+type family If (c :: Bool) (t :: k) (e :: k) where
+   If 'True  t e = t
+   If 'False t e = e
 
 
 -- | Type-level Bool known at compile time

@@ -25,6 +25,10 @@ library
     Haskus.Utils.Types.List
     Haskus.Utils.Types.Generics
     Haskus.Utils.Types.Proxy
+    Haskus.Utils.Types.Nat
+    Haskus.Utils.Types.Symbol
+    Haskus.Utils.Types.Error
+    Haskus.Utils.Types.Constraint
 
   other-modules:
 
