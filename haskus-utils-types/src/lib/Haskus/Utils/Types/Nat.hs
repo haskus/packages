@@ -30,6 +30,8 @@ module Haskus.Utils.Types.Nat
    , Same
    , Max
    , Min
+   , IsZero
+   , IsNotZero
    -- * Operations
    , type (+)
    , type (-)
@@ -38,12 +40,21 @@ module Haskus.Utils.Types.Nat
    , Mod
    , Log2
    , Div
+   -- * Helpers
+   , NatBitCount
    )
 where
 
 import GHC.TypeNats
 import Haskus.Utils.Types.Bool
 import Data.Proxy
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XTypeFamilies
+-- >>> import Haskus.Utils.Types
 
 -- | Get a Nat value
 natValue :: forall (n :: Nat) a. (KnownNat n, Num a) => a
@@ -55,15 +66,6 @@ natValue' :: forall (n :: Nat). KnownNat n => Word
 {-# INLINABLE natValue' #-}
 natValue' = natValue @n
 
-
--- | Modulo
-type family Modulo (a :: Nat) (b :: Nat) where
-   Modulo a b = Modulo' (a <=? b) a b
-
--- | Helper for Modulo
-type family Modulo' c a b where
-   Modulo' 'True  a b = a
-   Modulo' 'False a b = Modulo' ((a-b) <=? b) (a-b) b
 
 -- | Type equality to Nat
 type family Same a b :: Nat where
@@ -77,3 +79,34 @@ type family Max (a :: Nat) (b :: Nat) where
 -- | Min of two naturals
 type family Min (a :: Nat) (b :: Nat) where
    Min a b = If (a <=? b) a b
+
+-- | Number of bits (>= 1) required to store a Nat value
+--
+-- >>> natValue' @(NatBitCount 0)
+-- 1
+--
+-- >>> natValue' @(NatBitCount 1)
+-- 1
+--
+-- >>> natValue' @(NatBitCount 2)
+-- 2
+--
+-- >>> natValue' @(NatBitCount 15)
+-- 4
+--
+-- >>> natValue' @(NatBitCount 16)
+-- 5
+--
+type family NatBitCount (n :: Nat) :: Nat where
+   NatBitCount 0 = 1
+   NatBitCount n = Log2 (n+1) + Mod (n+1) 2
+
+-- | Return 1 if 0, and 0 otherwise
+type family IsZero (n :: Nat) :: Nat where
+   IsZero 0 = 1
+   IsZero _ = 0
+
+-- | Return 0 if 0, and 1 otherwise
+type family IsNotZero (n :: Nat) :: Nat where
+   IsNotZero 0 = 0
+   IsNotZero _ = 1
