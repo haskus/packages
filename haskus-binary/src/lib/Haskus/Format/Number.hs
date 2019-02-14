@@ -12,6 +12,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Haskus.Format.Number
    ( NatVal (..)
@@ -20,9 +21,9 @@ module Haskus.Format.Number
    , Narrow
    , narrow
    , W
+   , pattern W
    , unsafeMakeW
    , safeMakeW
-   , makeW
    , zeroW
    , oneW
    , extractW
@@ -51,17 +52,22 @@ import Data.Kind
 -- >>> :set -XScopedTypeVariables
 
 newtype W (b :: Nat)
-   = W (WW b)
+   = W' (WW b)
+
+pattern W :: forall n. (Integral (WW n), MakeW n) => Natural -> W n
+pattern W x <- (toNatural -> x)
+   where
+      W x = makeW @n x
 
 mapW :: (WW a -> WW a) -> W a -> W a
-mapW f (W x) = W (f x)
+mapW f (W' x) = W' (f x)
 
 zipWithW :: (WW a -> WW a -> WW b) -> W a -> W a -> W b
-zipWithW f (W x) (W y) = W (f x y)
+zipWithW f (W' x) (W' y) = W' (f x y)
 
 -- | Show instance for naturals
 instance (KnownNat b, Show (WW b)) => Show (W b) where
-   showsPrec d (W x) = showParen (d /= 0)
+   showsPrec d (W' x) = showParen (d /= 0)
       $ showString "W @"
       . showsPrec 0 (natValue' @b)
       . showString " "
@@ -84,24 +90,30 @@ type family WW' b8 b16 b32 b64 where
 
 -- | Zero natural
 zeroW :: Num (WW a) => W a
-zeroW = W 0
+zeroW = W' 0
 
 -- | One natural
 oneW :: Num (WW a) => W a
-oneW = W 1
+oneW = W' 1
+
+-- | Convert a W into a Natural
+toNatural :: Integral (WW a) => W a -> Natural
+toNatural (W' x) = fromIntegral x
 
 -- | Create a natural
 unsafeMakeW :: forall a. (Maskable a (WW a)) => WW a -> W a
-unsafeMakeW x = W (mask @a x)
+unsafeMakeW x = W' (mask @a x)
 
--- | Create a natural (check overflow)
-safeMakeW :: forall a.
+type MakeW a =
    ( Maskable a (WW a)
    , ShiftableBits (WW a)
    , Show (WW a)
    , Eq (WW a)
    , Num (WW a)
-   ) => Natural -> Maybe (W a)
+   )
+
+-- | Create a natural (check overflow)
+safeMakeW :: forall a. MakeW a => Natural -> Maybe (W a)
 safeMakeW x = 
    let
       x' = fromIntegral x :: WW a
@@ -110,13 +122,7 @@ safeMakeW x =
       _ -> Nothing
 
 -- | Create a natural (check overflow and throw an error)
-makeW :: forall a.
-   ( Maskable a (WW a)
-   , ShiftableBits (WW a)
-   , Show (WW a)
-   , Eq (WW a)
-   , Num (WW a)
-   ) => Natural -> W a
+makeW :: forall a. MakeW a => Natural -> W a
 makeW x = case safeMakeW x of
    Just y  -> y
    Nothing -> error $
@@ -129,7 +135,7 @@ makeW x = case safeMakeW x of
 
 -- | Extract the primitive value
 extractW :: W a -> WW a
-extractW (W a) = a
+extractW (W' a) = a
 
 -------------------------------------------------
 -- Widening
@@ -137,11 +143,11 @@ extractW (W a) = a
 
 -- | Widen a natural
 --
--- >>>  widen @7 (makeW @5 25)
+-- >>>  widen @7 (W @5 25)
 -- W @7 25
 --
 widen :: forall b a. Widen a b => W a -> W b
-widen (W a) = W (fromIntegral a)
+widen (W' a) = W' (fromIntegral a)
 
 type Widen a b =
    ( Assert (a <=? b) (() :: Constraint)
@@ -157,11 +163,11 @@ type Widen a b =
 
 -- | Narrow a natural
 --
--- >>> narrow @3 (makeW @5 25)
+-- >>> narrow @3 (W @5 25)
 -- W @3 1
 --
 narrow :: forall b a. Narrow a b => W a -> W b
-narrow (W a) = unsafeMakeW (fromIntegral a)
+narrow (W' a) = unsafeMakeW (fromIntegral a)
 
 type Narrow a b =
    ( Assert (b <=? a) (() :: Constraint)
@@ -188,14 +194,14 @@ compareW :: forall a b.
    ) => W a -> W b -> Ordering
 compareW x y = compare x' y'
    where
-      W x' = widen @(Max a b) x
-      W y' = widen @(Max a b) y
+      W' x' = widen @(Max a b) x
+      W' y' = widen @(Max a b) y
 
 instance Eq (WW a) => Eq (W a) where
-   (W x) == (W y) = x == y
+   (W' x) == (W' y) = x == y
 
 instance Ord (WW a) => Ord (W a) where
-   compare (W x) (W y) = compare x y
+   compare (W' x) (W' y) = compare x y
 
 -------------------------------------------------
 -- Addition / Subtraction
@@ -203,7 +209,7 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Add two Naturals
 --
--- >>> makeW @5 25 .+. makeW @2 3
+-- >>> W @5 25 .+. W @2 3
 -- W @6 28
 --
 (.+.) :: forall a b m.
@@ -216,10 +222,10 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Sub two Naturals
 --
--- >>> makeW @5 25 .-. makeW @2 3
+-- >>> W @5 25 .-. W @2 3
 -- Just (W @5 22)
 --
--- >>> makeW @5 2 .-. makeW @2 3
+-- >>> W @5 2 .-. W @2 3
 -- Nothing
 --
 (.-.) :: forall a b m.
@@ -235,7 +241,7 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Multiply two Naturals
 --
--- >>> makeW @5 25 .*. makeW @2 3
+-- >>> W @5 25 .*. W @2 3
 -- W @7 75
 --
 (.*.) :: forall a b m.
@@ -248,13 +254,13 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Divide two Naturals, return (factor,rest)
 --
--- >>> makeW @5 25 ./. makeW @2 3
+-- >>> W @5 25 ./. W @2 3
 -- Just (W @5 8,W @2 1)
 --
--- >>> makeW @5 25 ./. makeW @2 0
+-- >>> W @5 25 ./. W @2 0
 -- Nothing
 --
--- > makeW @2 3 ./. makeW @5 25
+-- > W @2 3 ./. W @5 25
 -- Just (W @2 0,W @5 3)
 --
 (./.) :: forall a b m.
@@ -265,11 +271,11 @@ instance Ord (WW a) => Ord (W a) where
    ) => W a -> W b -> Maybe (W a,W (Min a b))
 (./.) x y
    | y == zeroW = Nothing
-   | otherwise  = Just (W (fromIntegral q), W (fromIntegral r))
+   | otherwise  = Just (W' (fromIntegral q), W' (fromIntegral r))
    where
       (q,r) = quotRem x' y'
-      W x' = widen @m x
-      W y' = widen @m y
+      W' x' = widen @m x
+      W' y' = widen @m y
 
 -------------------------------------------------
 -- Shift
@@ -277,14 +283,14 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Shift-left naturals
 --
--- >>> let x = makeW @5 25
+-- >>> let x = W @5 25
 -- >>> x .<<. NatVal @2
 -- W @7 100
 --
--- >>> show (x .<<. NatVal @2) == show (x .*. makeW @3 4)
+-- >>> show (x .<<. NatVal @2) == show (x .*. W @3 4)
 -- False
 --
--- >>> x .<<. NatVal @2 == narrow (x .*. makeW @3 4)
+-- >>> x .<<. NatVal @2 == narrow (x .*. W @3 4)
 -- True
 --
 (.<<.) :: forall (s :: Nat) a.
@@ -296,7 +302,7 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Shift-right naturals
 --
--- >>> makeW @5 25 .>>. NatVal @2
+-- >>> W @5 25 .>>. NatVal @2
 -- W @3 6
 --
 (.>>.) :: forall (s :: Nat) a.
