@@ -21,6 +21,7 @@ module Haskus.Format.Number
    , narrow
    , W
    , unsafeMakeW
+   , safeMakeW
    , makeW
    , zeroW
    , oneW
@@ -67,7 +68,7 @@ instance (KnownNat b, Show (WW b)) => Show (W b) where
       . showsPrec 0 x
 
 type family WW b where
-   WW 0 = TypeError ('Text "Naturals of 0 bits are not allowed")
+   WW 0 = TypeError ('Text "Naturals encoded on 0 bits are not allowed")
    WW b = WW' (b <=? 8) (b <=? 16) (b <=? 32) (b <=? 64)
 
 type family WW' b8 b16 b32 b64 where
@@ -81,10 +82,6 @@ type family WW' b8 b16 b32 b64 where
 -- Creation
 -------------------------------------------------
 
--- | Create a natural
-unsafeMakeW :: forall a. (Maskable a (WW a)) => WW a -> W a
-unsafeMakeW x = W (mask @a x)
-
 -- | Zero natural
 zeroW :: Num (WW a) => W a
 zeroW = W 0
@@ -93,18 +90,42 @@ zeroW = W 0
 oneW :: Num (WW a) => W a
 oneW = W 1
 
+-- | Create a natural
+unsafeMakeW :: forall a. (Maskable a (WW a)) => WW a -> W a
+unsafeMakeW x = W (mask @a x)
+
 -- | Create a natural (check overflow)
+safeMakeW :: forall a.
+   ( Maskable a (WW a)
+   , ShiftableBits (WW a)
+   , Show (WW a)
+   , Eq (WW a)
+   , Num (WW a)
+   ) => Natural -> Maybe (W a)
+safeMakeW x = 
+   let
+      x' = fromIntegral x :: WW a
+   in case x' `uncheckedShiftR` natValue' @a of
+      0 -> Just (unsafeMakeW x')
+      _ -> Nothing
+
+-- | Create a natural (check overflow and throw an error)
 makeW :: forall a.
    ( Maskable a (WW a)
    , ShiftableBits (WW a)
    , Show (WW a)
    , Eq (WW a)
    , Num (WW a)
-   ) => WW a -> W a
-makeW x = case x `uncheckedShiftR` natValue' @a of
-   0 -> unsafeMakeW x
-   _ -> error $ "Trying to create a natural of " ++ show (natValue' @a)
-         ++ " bits from the too big value " ++ show x
+   ) => Natural -> W a
+makeW x = case safeMakeW x of
+   Just y  -> y
+   Nothing -> error $
+               "`" ++ show x
+               ++ "` is out of the range of values that can be encoded by a "
+               ++ show (natValue' @a)
+               ++ "-bit natural number: [0.."
+               ++ show (2 ^ (natValue' @a) -1 :: Natural)
+               ++ "]"
 
 -- | Extract the primitive value
 extractW :: W a -> WW a
