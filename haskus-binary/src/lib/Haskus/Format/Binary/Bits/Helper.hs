@@ -1,3 +1,6 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+
 module Haskus.Format.Binary.Bits.Helper
    ( bitOffset
    , byteOffset
