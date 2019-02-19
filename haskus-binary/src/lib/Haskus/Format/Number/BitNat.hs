@@ -16,14 +16,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- | Natural numbers
-module Haskus.Format.Number.Natural
+module Haskus.Format.Number.BitNat
    ( NatVal (..)
    , Widen
    , widen
    , Narrow
    , narrow
-   , W
-   , pattern W
+   , BitNat
+   , pattern BitNat
    , nat
    , unsafeMakeW
    , safeMakeW
@@ -38,7 +38,7 @@ module Haskus.Format.Number.Natural
    , (.<<.)
    , (.>>.)
    -- * Internal
-   , WW
+   , BitNatWord
    , MakeW
    , toNaturalW
    )
@@ -56,100 +56,101 @@ import Numeric.Natural
 -- >>> :set -XTypeFamilies
 -- >>> :set -XScopedTypeVariables
 
-newtype W (b :: Nat)
-   = W' (WW b)
+newtype BitNat (b :: Nat)
+   = BitNat' (BitNatWord b)
 
-pattern W :: forall (n :: Nat). (Integral (WW n), MakeW n) => Natural -> W n
-{-# COMPLETE W #-}
-pattern W x <- (toNaturalW -> x)
+pattern BitNat :: forall (n :: Nat). (Integral (BitNatWord n), MakeW n) => Natural -> BitNat n
+{-# COMPLETE BitNat #-}
+pattern BitNat x <- (toNaturalW -> x)
    where
-      W x = makeW @n x
+      BitNat x = makeW @n x
 
 
 -- | Create a natural number with the minimal number of bits required to store
 -- it
 --
 -- >>> nat @5
--- W @3 5
+-- BitNat @3 5
 --
 -- >>> nat @0
--- W @1 0
+-- BitNat @1 0
 --
 -- >>> nat @158748521123465897456465
--- W @78 158748521123465897456465
+-- BitNat @78 158748521123465897456465
 --
 nat :: forall (v :: Nat) (n :: Nat).
    ( n ~ NatBitCount v
-   , Integral (WW n)
+   , Integral (BitNatWord n)
    , MakeW n
    , KnownNat v
-   ) => W n
-nat = W @n (natValue @v)
+   ) => BitNat n
+nat = BitNat @n (natValue @v)
 
-mapW :: (WW a -> WW a) -> W a -> W a
-mapW f (W' x) = W' (f x)
+mapW :: (BitNatWord a -> BitNatWord a) -> BitNat a -> BitNat a
+mapW f (BitNat' x) = BitNat' (f x)
 
-zipWithW :: (WW a -> WW a -> WW b) -> W a -> W a -> W b
-zipWithW f (W' x) (W' y) = W' (f x y)
+zipWithW :: (BitNatWord a -> BitNatWord a -> BitNatWord b) -> BitNat a -> BitNat a -> BitNat b
+zipWithW f (BitNat' x) (BitNat' y) = BitNat' (f x y)
 
 -- | Show instance for naturals
-instance (KnownNat b, Integral (WW b)) => Show (W b) where
+instance (KnownNat b, Integral (BitNatWord b)) => Show (BitNat b) where
    showsPrec d x = showParen (d /= 0)
-      $ showString "W @"
+      $ showString "BitNat @"
       . showsPrec 0 (natValue' @b)
       . showString " "
       . showsPrec 0 (toNaturalW x)
 
-type family WW b where
-   WW 0 = TypeError ('Text "Naturals encoded on 0 bits are not allowed")
-   WW b = WW' (b <=? 8) (b <=? 16) (b <=? 32) (b <=? 64)
+-- | BitNat backing type
+type family BitNatWord b where
+   BitNatWord 0 = TypeError ('Text "Naturals encoded on 0 bits are not allowed")
+   BitNatWord b = BitNatWord' (b <=? 8) (b <=? 16) (b <=? 32) (b <=? 64)
 
-type family WW' b8 b16 b32 b64 where
-   WW' 'True _ _ _ = Word8
-   WW' _ 'True _ _ = Word16
-   WW' _ _ 'True _ = Word32
-   WW' _ _ _ 'True = Word64
-   WW' _ _ _ _     = Natural
+type family BitNatWord' b8 b16 b32 b64 where
+   BitNatWord' 'True _ _ _ = Word8
+   BitNatWord' _ 'True _ _ = Word16
+   BitNatWord' _ _ 'True _ = Word32
+   BitNatWord' _ _ _ 'True = Word64
+   BitNatWord' _ _ _ _     = Natural
 
 -------------------------------------------------
 -- Creation
 -------------------------------------------------
 
 -- | Zero natural
-zeroW :: Num (WW a) => W a
-zeroW = W' 0
+zeroW :: Num (BitNatWord a) => BitNat a
+zeroW = BitNat' 0
 
 -- | One natural
-oneW :: Num (WW a) => W a
-oneW = W' 1
+oneW :: Num (BitNatWord a) => BitNat a
+oneW = BitNat' 1
 
--- | Convert a W into a Natural
-toNaturalW :: Integral (WW a) => W a -> Natural
-toNaturalW (W' x) = fromIntegral x
+-- | Convert a BitNat into a Natural
+toNaturalW :: Integral (BitNatWord a) => BitNat a -> Natural
+toNaturalW (BitNat' x) = fromIntegral x
 
 -- | Create a natural
-unsafeMakeW :: forall a. (Maskable a (WW a)) => WW a -> W a
-unsafeMakeW x = W' (mask @a x)
+unsafeMakeW :: forall a. (Maskable a (BitNatWord a)) => BitNatWord a -> BitNat a
+unsafeMakeW x = BitNat' (mask @a x)
 
 type MakeW a =
-   ( Maskable a (WW a)
-   , ShiftableBits (WW a)
-   , Show (WW a)
-   , Eq (WW a)
-   , Num (WW a)
+   ( Maskable a (BitNatWord a)
+   , ShiftableBits (BitNatWord a)
+   , Show (BitNatWord a)
+   , Eq (BitNatWord a)
+   , Num (BitNatWord a)
    )
 
 -- | Create a natural (check overflow)
-safeMakeW :: forall a. MakeW a => Natural -> Maybe (W a)
+safeMakeW :: forall a. MakeW a => Natural -> Maybe (BitNat a)
 safeMakeW x = 
    let
-      x' = fromIntegral x :: WW a
+      x' = fromIntegral x :: BitNatWord a
    in case x' `uncheckedShiftR` natValue' @a of
       0 -> Just (unsafeMakeW x')
       _ -> Nothing
 
 -- | Create a natural (check overflow and throw on error)
-makeW :: forall a. MakeW a => Natural -> W a
+makeW :: forall a. MakeW a => Natural -> BitNat a
 makeW x = case safeMakeW x of
    Just y  -> y
    Nothing -> error $
@@ -161,8 +162,8 @@ makeW x = case safeMakeW x of
                ++ "]"
 
 -- | Extract the primitive value
-extractW :: W a -> WW a
-extractW (W' a) = a
+extractW :: BitNat a -> BitNatWord a
+extractW (BitNat' a) = a
 
 -------------------------------------------------
 -- Widening / Narrowing
@@ -170,11 +171,11 @@ extractW (W' a) = a
 
 -- | Widen a natural
 --
--- >>>  widen @7 (W @5 25)
--- W @7 25
+-- >>>  widen @7 (BitNat @5 25)
+-- BitNat @7 25
 --
-widen :: forall b a. Widen a b => W a -> W b
-widen (W' a) = W' (fromIntegral a)
+widen :: forall b a. Widen a b => BitNat a -> BitNat b
+widen (BitNat' a) = BitNat' (fromIntegral a)
 
 type Widen a b =
    ( Assert (a <=? b) (() :: Constraint)
@@ -184,17 +185,17 @@ type Widen a b =
        ':<>: 'ShowType b
        ':<>: 'Text " bits"
       )
-   , Integral (WW a)
-   , Integral (WW b)
+   , Integral (BitNatWord a)
+   , Integral (BitNatWord b)
    )
 
 -- | Narrow a natural
 --
--- >>> narrow @3 (W @5 25)
--- W @3 1
+-- >>> narrow @3 (BitNat @5 25)
+-- BitNat @3 1
 --
-narrow :: forall b a. Narrow a b => W a -> W b
-narrow (W' a) = unsafeMakeW (fromIntegral a)
+narrow :: forall b a. Narrow a b => BitNat a -> BitNat b
+narrow (BitNat' a) = unsafeMakeW (fromIntegral a)
 
 type Narrow a b =
    ( Assert (b <=? a) (() :: Constraint)
@@ -204,9 +205,9 @@ type Narrow a b =
        ':<>: 'ShowType b
        ':<>: 'Text " bits"
       )
-   , Integral (WW a)
-   , Integral (WW b)
-   , Maskable b (WW b)
+   , Integral (BitNatWord a)
+   , Integral (BitNatWord b)
+   , Maskable b (BitNatWord b)
    )
    
 -------------------------------------------------
@@ -215,20 +216,20 @@ type Narrow a b =
 
 -- | Compare two naturals
 compareW :: forall a b.
-   ( Ord (WW (Max a b))
+   ( Ord (BitNatWord (Max a b))
    , Widen a (Max a b)
    , Widen b (Max a b)
-   ) => W a -> W b -> Ordering
+   ) => BitNat a -> BitNat b -> Ordering
 compareW x y = compare x' y'
    where
-      W' x' = widen @(Max a b) x
-      W' y' = widen @(Max a b) y
+      BitNat' x' = widen @(Max a b) x
+      BitNat' y' = widen @(Max a b) y
 
-instance Eq (WW a) => Eq (W a) where
-   (W' x) == (W' y) = x == y
+instance Eq (BitNatWord a) => Eq (BitNat a) where
+   (BitNat' x) == (BitNat' y) = x == y
 
-instance Ord (WW a) => Ord (W a) where
-   compare (W' x) (W' y) = compare x y
+instance Ord (BitNatWord a) => Ord (BitNat a) where
+   compare (BitNat' x) (BitNat' y) = compare x y
 
 -------------------------------------------------
 -- Addition / Subtraction
@@ -236,31 +237,31 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Add two Naturals
 --
--- >>> W @5 25 .+. W @2 3
--- W @6 28
+-- >>> BitNat @5 25 .+. BitNat @2 3
+-- BitNat @6 28
 --
 (.+.) :: forall a b m.
    ( m ~ (Max a b + 1)
    , Widen a m
    , Widen b m
-   , Num (WW m)
-   ) => W a -> W b -> W m
+   , Num (BitNatWord m)
+   ) => BitNat a -> BitNat b -> BitNat m
 (.+.) x y = zipWithW (+) (widen @m x) (widen @m y)
 
 -- | Sub two Naturals
 --
--- >>> W @5 25 .-. W @2 3
--- Just (W @5 22)
+-- >>> BitNat @5 25 .-. BitNat @2 3
+-- Just (BitNat @5 22)
 --
--- >>> W @5 2 .-. W @2 3
+-- >>> BitNat @5 2 .-. BitNat @2 3
 -- Nothing
 --
 (.-.) :: forall a b m.
    ( m ~ Max a b
    , Widen a m
    , Widen b m
-   , Num (WW m)
-   ) => W a -> W b -> Maybe (W m)
+   , Num (BitNatWord m)
+   ) => BitNat a -> BitNat b -> Maybe (BitNat m)
 (.-.) (widen @m -> x) (widen @m -> y) = case compare x y of
    LT -> Nothing
    EQ -> Just zeroW
@@ -268,41 +269,41 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Multiply two Naturals
 --
--- >>> W @5 25 .*. W @2 3
--- W @7 75
+-- >>> BitNat @5 25 .*. BitNat @2 3
+-- BitNat @7 75
 --
 (.*.) :: forall a b m.
    ( m ~ (a + b)
    , Widen a m
    , Widen b m
-   , Num (WW m)
-   ) => W a -> W b -> W m
+   , Num (BitNatWord m)
+   ) => BitNat a -> BitNat b -> BitNat m
 (.*.) x y = zipWithW (*) (widen @m x) (widen @m y)
 
 -- | Divide two Naturals, return (factor,rest)
 --
--- >>> W @5 25 ./. W @2 3
--- Just (W @5 8,W @2 1)
+-- >>> BitNat @5 25 ./. BitNat @2 3
+-- Just (BitNat @5 8,BitNat @2 1)
 --
--- >>> W @5 25 ./. W @2 0
+-- >>> BitNat @5 25 ./. BitNat @2 0
 -- Nothing
 --
--- > W @2 3 ./. W @5 25
--- Just (W @2 0,W @5 3)
+-- > BitNat @2 3 ./. BitNat @5 25
+-- Just (BitNat @2 0,BitNat @5 3)
 --
 (./.) :: forall a b m.
    ( m ~ Max a b
    , Widen a m
    , Widen b m
-   , Num (WW (Min a b))
-   ) => W a -> W b -> Maybe (W a,W (Min a b))
+   , Num (BitNatWord (Min a b))
+   ) => BitNat a -> BitNat b -> Maybe (BitNat a,BitNat (Min a b))
 (./.) x y
    | y == zeroW = Nothing
-   | otherwise  = Just (W' (fromIntegral q), W' (fromIntegral r))
+   | otherwise  = Just (BitNat' (fromIntegral q), BitNat' (fromIntegral r))
    where
       (q,r) = quotRem x' y'
-      W' x' = widen @m x
-      W' y' = widen @m y
+      BitNat' x' = widen @m x
+      BitNat' y' = widen @m y
 
 -------------------------------------------------
 -- Shift
@@ -310,31 +311,31 @@ instance Ord (WW a) => Ord (W a) where
 
 -- | Shift-left naturals
 --
--- >>> let x = W @5 25
+-- >>> let x = BitNat @5 25
 -- >>> x .<<. NatVal @2
--- W @7 100
+-- BitNat @7 100
 --
--- >>> show (x .<<. NatVal @2) == show (x .*. W @3 4)
+-- >>> show (x .<<. NatVal @2) == show (x .*. BitNat @3 4)
 -- False
 --
--- >>> x .<<. NatVal @2 == narrow (x .*. W @3 4)
+-- >>> x .<<. NatVal @2 == narrow (x .*. BitNat @3 4)
 -- True
 --
 (.<<.) :: forall (s :: Nat) a.
-   ( ShiftableBits (WW (a + s))
+   ( ShiftableBits (BitNatWord (a + s))
    , KnownNat s
    , Widen a (a+s)
-   ) => W a -> NatVal s -> W (a + s)
+   ) => BitNat a -> NatVal s -> BitNat (a + s)
 (.<<.) x _ = mapW (`uncheckedShiftL` natValue @s) (widen @(a+s) x)
 
 -- | Shift-right naturals
 --
--- >>> W @5 25 .>>. NatVal @2
--- W @3 6
+-- >>> BitNat @5 25 .>>. NatVal @2
+-- BitNat @3 6
 --
 (.>>.) :: forall (s :: Nat) a.
-   ( ShiftableBits (WW a)
+   ( ShiftableBits (BitNatWord a)
    , KnownNat s
    , Narrow a (a-s)
-   ) => W a -> NatVal s -> W (a - s)
+   ) => BitNat a -> NatVal s -> BitNat (a - s)
 (.>>.) x _ = narrow @(a-s) (mapW (`uncheckedShiftR` natValue @s) x)

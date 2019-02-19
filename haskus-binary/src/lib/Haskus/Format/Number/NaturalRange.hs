@@ -28,7 +28,7 @@ module Haskus.Format.Number.NaturalRange
    )
 where
 
-import Haskus.Format.Number.Natural
+import Haskus.Format.Number.BitNat
 import Haskus.Utils.Types
 import Numeric.Natural
 
@@ -41,15 +41,15 @@ import Numeric.Natural
 
 
 -- | A natural number in the specified range
-newtype NatRange (f :: Nat) (t :: Nat) = NatRange' (W (NatBitCount (t-f+1)))
+newtype NatRange (f :: Nat) (t :: Nat) = NatRange' (BitNat (NatBitCount (t-f+1)))
 
 -- | Show instance for natural range
 instance
    ( KnownNat (t-f)
    , KnownNat t
    , KnownNat f
-   , Num (WW (NatBitCount (t-f+1)))
-   , Integral (WW (NatBitCount (t-f+1)))
+   , Num (BitNatWord (NatBitCount (t-f+1)))
+   , Integral (BitNatWord (NatBitCount (t-f+1)))
    ) => Show (NatRange f t) where
    showsPrec d x = showParen (d /= 0)
       $ showString "NatRange @"
@@ -81,7 +81,7 @@ type CheckInRange f t n =
 type NatRangeBitCount f t = NatBitCount (t-f+1)
 
 type MakeNatRange f t =
-   ( Integral (WW (NatRangeBitCount f t))
+   ( Integral (BitNatWord (NatRangeBitCount f t))
    , MakeW (NatRangeBitCount f t)
    , KnownNat f
    , KnownNat t
@@ -98,7 +98,7 @@ type MakeNatRange f t =
 unsafeMakeNatRange :: forall f t.
    ( MakeNatRange f t
    ) => Natural -> NatRange f t
-unsafeMakeNatRange v = NatRange' (W @(NatRangeBitCount f t) (v - natValue @f))
+unsafeMakeNatRange v = NatRange' (BitNat @(NatRangeBitCount f t) (v - natValue @f))
 
 -- | Create a value in a Natural range (check validity)
 safeMakeNatRange :: forall f t.
@@ -132,7 +132,7 @@ natRange = unsafeMakeNatRange (natValue @n)
 -- | Convert a NatRange into a Natural
 toNaturalNatRange :: forall f t.
    ( KnownNat f
-   , Integral (WW (NatBitCount (t-f+1)))
+   , Integral (BitNatWord (NatBitCount (t-f+1)))
    ) => NatRange f t -> Natural
 toNaturalNatRange (NatRange' x) = natValue @f + toNaturalW x
 

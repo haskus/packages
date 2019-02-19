@@ -4,5 +4,5 @@ module Haskus.Format.Number
    )
 where
 
-import Haskus.Format.Number.Natural as X
+import Haskus.Format.Number.BitNat as X
 import Haskus.Format.Number.NaturalRange as X

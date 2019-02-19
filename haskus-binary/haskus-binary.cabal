@@ -72,7 +72,7 @@ library
     Haskus.Format.Text.Unicode.UCDParser
 
     Haskus.Format.Number
-    Haskus.Format.Number.Natural
+    Haskus.Format.Number.BitNat
     Haskus.Format.Number.NaturalRange
 
     Haskus.Utils.Memory
