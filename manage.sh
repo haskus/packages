@@ -52,45 +52,12 @@ function report_all {
    done
 }
 
-function check_resolvers {
-   echo "==============================================================="
-   echo "Checking resolvers"
-   echo "==============================================================="
-   yamls=$(find haskus-* -name stack.yaml)
-   resolver=""
-
-   for yaml in $yamls
-   do
-      r=$(cat $yaml | grep resolver | cut -d':' -f2 | xargs)
-      echo "Found resolver: $r ($yaml)" 
-      if [ "$resolver" = "" ]
-         then resolver=$r
-         else if [ "$resolver" != "$r" ]
-               then echo "Different resolvers found: $resolver $r" && exit 1
-              fi
-      fi
-   done
-
-   echo "OK: using resolver $resolver"
-}
-
-function build {
-   echo "==============================================================="
-   echo "Building $1"
-   echo "==============================================================="
-
-   result=$(cd $1 && stack clean && stack test)
-   if [ $? -ne 0 ]
-      then echo "Error! Fix it and press a key. " && read -n 1 -s && build $1
-   fi
-   echo $result
-}
-
 function build_all {
-   for i in $dirs
-   do
-      build $i
-   done
+   echo "==============================================================="
+   echo "Building"
+   echo "==============================================================="
+
+   stack test
 }
 
 function showdone {
@@ -142,7 +109,6 @@ case "$1" in
       showdone
       ;;
    check)
-      check_resolvers
       check_dev_versions
       check_rep_state
       showdone
@@ -152,7 +118,6 @@ case "$1" in
       showdone
       ;;
    release)
-      check_resolvers
       check_dev_versions
       check_rep_state
       report_all
