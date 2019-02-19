@@ -57,7 +57,7 @@ function build_all {
    echo "Building"
    echo "==============================================================="
 
-   stack test
+   stack test --pedantic
 }
 
 function showdone {
