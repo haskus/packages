@@ -1,0 +1,17 @@
+resolver: lts-13.6
+
+packages:
+- haskus-utils-compat/
+- haskus-utils/
+- haskus-utils-types/
+- haskus-utils-data/
+- haskus-utils-variant/
+- haskus-binary/
+
+extra-deps:
+- stm-containers-1.1.0.2
+- stm-hamt-1.2.0.2
+- primitive-extras-0.7.1
+
+ghc-options:
+   "$locals": -fhide-source-paths
