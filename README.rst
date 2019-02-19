@@ -1,4 +1,3 @@
-Documentation can be found on `docs.haskus.org <https://docs.haskus.org>`_:
+This repository contains several ``haskus-*`` packages.
 
-* `Variant <https://docs.haskus.org/variant.html>`_
-* `EADT <https://docs.haskus.org/eadt.html>`_
+Documentation can be found on `docs.haskus.org <https://docs.haskus.org>`_
