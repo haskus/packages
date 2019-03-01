@@ -56,6 +56,7 @@ import Numeric.Natural
 -- >>> :set -XTypeFamilies
 -- >>> :set -XScopedTypeVariables
 
+-- | A natural on `b` bits
 newtype BitNat (b :: Nat)
    = BitNat' (BitNatWord b)
 

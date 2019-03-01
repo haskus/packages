@@ -36,7 +36,6 @@ where
 
 import Haskus.Utils.Tuple
 import Haskus.Utils.Types
-import Haskus.Utils.Types.List
 
 -- | Heterogeneous list
 data family HList (l :: [*])

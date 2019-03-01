@@ -1,12 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 
 -- | Embed files as ByteStrings into an executable
 module Haskus.Utils.Embed.ByteString
    ( bufferToByteString
    , embedBS
    , embedBSFile
+   , embedBSFilePrefix
    , embedBSOneFileOf
    , embedBSDir
    , module Haskus.Memory.Embed
@@ -47,6 +49,16 @@ embedBSFile fp = do
    qAddDependentFile fp
    bs <- runIO $ BS.readFile fp
    embedBS bs
+
+embedBSFilePrefix :: FilePath -> FilePath -> Q Exp
+embedBSFilePrefix prefix fp' = do
+   -- small hack because "stack build" and "stack repl" in the multi-package
+   -- project have different CWD
+   fp <- liftIO (doesFileExist fp') >>= \case
+            True  -> return fp'
+            False -> return (prefix </> fp')
+   embedBSFile fp
+
 
 -- | Embed a single existing file in your source code
 -- out of list a list of paths supplied.

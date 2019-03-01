@@ -116,7 +116,6 @@ import Haskus.Utils.Types
 import Haskus.Utils.Tuple
 import Haskus.Utils.HList
 import Haskus.Utils.ContFlow
-import Haskus.Utils.Types.List
 
 -- $setup
 -- >>> :set -XDataKinds

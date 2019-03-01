@@ -97,6 +97,7 @@ library
       ,  template-haskell
       ,  transformers
       ,  directory
+      ,  filepath
 
   build-tools: 
   ghc-options:          -Wall

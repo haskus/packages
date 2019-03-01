@@ -25,7 +25,6 @@ where
 
 import Haskus.Utils.Tuple
 import Haskus.Utils.Types
-import Haskus.Utils.Types.List
 import Haskus.Utils.ContFlow
 
 -- this define has to be defined in each module using ContFlow for now

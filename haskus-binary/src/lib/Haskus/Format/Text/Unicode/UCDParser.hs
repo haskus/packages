@@ -22,6 +22,8 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
+import System.Directory
+import System.FilePath
 
 import Haskus.Format.Text.Unicode.CodePoint
 import Haskus.Utils.Flow
@@ -103,7 +105,12 @@ skipCommentLines p = do
 
 -- | Parse a file and lift the result into a TH expression
 parseFile :: Lift a => FilePath -> Parser a -> ExpQ
-parseFile fp p = do
+parseFile fp' p = do
+   -- small hack because "stack build" and "stack repl" in the multi-package
+   -- project have different CWD
+   fp <- liftIO (doesFileExist fp') >>= \case
+            True  -> return fp'
+            False -> return ("haskus-binary" </> fp')
    addDependentFile fp
    str <- liftIO (readFile fp)
    case runParser p fp str of

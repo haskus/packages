@@ -193,7 +193,6 @@ where
 
 import Haskus.Utils.Variant
 import Haskus.Utils.Types
-import Haskus.Utils.Types.List
 import Haskus.Utils.ContFlow
 import Haskus.Utils.Tuple
 
