@@ -1,5 +1,5 @@
 name:                haskus-utils-variant
-version:             2.6
+version:             2.6.1
 synopsis:            Variant and EADT
 license:             BSD3
 license-file:        LICENSE
@@ -39,7 +39,7 @@ library
    ,  deepseq
    ,  exceptions                >= 0.9
    ,  template-haskell
-   ,  haskus-utils-types        >= 1.3
+   ,  haskus-utils-types        >= 1.4.1
    ,  haskus-utils-data
 
   build-tools: 
