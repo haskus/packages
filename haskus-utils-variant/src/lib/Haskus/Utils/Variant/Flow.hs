@@ -106,7 +106,7 @@ instance (Functor m, Monad m) => Applicative (FlowT es m) where
     {-# INLINABLE pure #-}
     pure a = FlowT $ return (toVariantHead a)
 
-    {-# INLINABLEABLE (<*>) #-}
+    {-# INLINABLE (<*>) #-}
     FlowT f <*> FlowT v = FlowT $ do
         mf <- f
         case popVariantHead mf of
