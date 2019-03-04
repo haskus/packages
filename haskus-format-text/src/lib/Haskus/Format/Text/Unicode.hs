@@ -34,7 +34,10 @@ import Haskus.Format.Text.Unicode.CodePoint
 -- Planes
 --------------------------------------------------
 
-newtype Plane = Plane Word deriving (Show,Eq)
+-- | Unicode "plane"
+newtype Plane
+   = Plane Word
+   deriving (Show,Eq)
 
 -- | Get the plan the code-point belongs to
 --

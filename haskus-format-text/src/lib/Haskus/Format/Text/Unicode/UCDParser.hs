@@ -110,7 +110,7 @@ parseFile fp' p = do
    -- project have different CWD
    fp <- liftIO (doesFileExist fp') >>= \case
             True  -> return fp'
-            False -> return ("haskus-binary" </> fp')
+            False -> return ("haskus-format-text" </> fp')
    addDependentFile fp
    str <- liftIO (readFile fp)
    case runParser p fp str of
