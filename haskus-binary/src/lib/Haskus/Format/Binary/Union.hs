@@ -49,12 +49,12 @@ module Haskus.Format.Binary.Union
    )
 where
 
-import Haskus.Utils.Memory (memCopy, memSet)
 import Haskus.Utils.Types hiding (Union)
 import Haskus.Utils.HList
 import Haskus.Utils.Flow (when)
 import Haskus.Format.Binary.Storable
-import Haskus.Format.Binary.Ptr
+import Haskus.Memory.Utils (memCopy, memSet)
+import Haskus.Memory.Ptr
 
 import System.IO.Unsafe (unsafePerformIO)
 

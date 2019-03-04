@@ -13,7 +13,7 @@ module Haskus.Memory.Allocator.Malloc
 where
 
 import GHC.Exts
-import Haskus.Format.Binary.Ptr
+import Haskus.Memory.Ptr
    ( Ptr (..), nullPtr
    )
 import Haskus.Utils.Monad

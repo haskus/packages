@@ -67,14 +67,14 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BS
 
-import Haskus.Format.Binary.Ptr
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
 import Haskus.Format.Binary.Bits.Helper
 import Haskus.Format.Binary.Bits.Bitwise
 import Haskus.Format.Binary.Bits.Index
 import Haskus.Format.Binary.Bits.Shift
-import Haskus.Utils.Memory (memCopy,memSet)
+import Haskus.Memory.Utils (memCopy,memSet)
+import Haskus.Memory.Ptr
 import Haskus.Utils.List as List
 import Haskus.Utils.Flow
 

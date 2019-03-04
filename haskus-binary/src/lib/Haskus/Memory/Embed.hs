@@ -25,8 +25,8 @@ module Haskus.Memory.Embed
 where
 
 import Haskus.Memory.Buffer
+import Haskus.Memory.Ptr
 import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Ptr
 import Haskus.Utils.List (intersperse)
 import Haskus.Utils.Maybe
 import Haskus.Utils.Monad

@@ -36,7 +36,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad.State
 import Control.Monad.Identity
 
-import Haskus.Format.Binary.Ptr
+import Haskus.Memory.Ptr
 import Haskus.Format.Binary.Buffer
 import Haskus.Format.Binary.Bits.Order
 import Haskus.Format.Binary.Bits

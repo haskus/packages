@@ -19,7 +19,7 @@ module Haskus.Format.Binary.Enum
 where
 
 import Haskus.Format.Binary.Storable
-import Haskus.Format.Binary.Ptr
+import Haskus.Memory.Ptr
 
 import Data.Data
 import GHC.Prim

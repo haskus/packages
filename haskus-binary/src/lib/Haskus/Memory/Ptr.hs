@@ -24,7 +24,7 @@
 -- finalizers of a ForeignPtr, which would in turn open a whole can of worms).
 -- Hence we use the `FinalizedPtr a` pointer type, which has an additional
 -- offset field.
-module Haskus.Format.Binary.Ptr
+module Haskus.Memory.Ptr
    ( PtrLike (..)
    , indexPtr'
    -- * Pointer

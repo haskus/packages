@@ -55,7 +55,6 @@ library
     Haskus.Format.Binary.Record
     Haskus.Format.Binary.Storable
     Haskus.Format.Binary.Word
-    Haskus.Format.Binary.Ptr
     Haskus.Format.Binary.Serialize
     Haskus.Format.Binary.Serialize.Buffer
     Haskus.Format.Binary.Layout
@@ -64,11 +63,12 @@ library
     Haskus.Format.Number.BitNat
     Haskus.Format.Number.NaturalRange
 
-    Haskus.Utils.Memory
+    Haskus.Memory.Utils
     Haskus.Memory.Buffer
     Haskus.Memory.Allocator.Malloc
     Haskus.Memory.Embed
     Haskus.Memory.View
+    Haskus.Memory.Ptr
 
   other-modules:
 

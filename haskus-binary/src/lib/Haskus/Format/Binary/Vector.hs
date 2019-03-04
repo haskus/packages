@@ -46,9 +46,9 @@ import Haskus.Utils.HList
 import Haskus.Utils.Maybe
 import Haskus.Utils.Flow
 import Haskus.Format.Binary.Storable
-import Haskus.Format.Binary.Ptr
 import Haskus.Format.Binary.Buffer
 import Haskus.Format.Binary.Bits
+import Haskus.Memory.Ptr
 
 -- | Vector with type-checked size
 data Vector (n :: Nat) a = Vector Buffer

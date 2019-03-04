@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 -- | Memory utilities
-module Haskus.Utils.Memory
+module Haskus.Memory.Utils
    ( memCopy
    , memSet
    , allocaArrays
@@ -13,8 +13,8 @@ module Haskus.Utils.Memory
 where
 
 import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Ptr
 import Haskus.Format.Binary.Storable
+import Haskus.Memory.Ptr
 import Haskus.Utils.Flow
 
 -- | Copy memory

@@ -31,10 +31,10 @@ where
 
 import System.IO.Unsafe
 
-import Haskus.Format.Binary.Ptr
+import Haskus.Memory.Ptr
+import Haskus.Memory.Utils
 import Haskus.Format.Binary.Storable
 import Haskus.Utils.HList
-import Haskus.Utils.Memory
 import Haskus.Utils.Types
 
 -- | Record

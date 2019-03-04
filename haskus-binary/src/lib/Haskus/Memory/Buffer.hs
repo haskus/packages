@@ -83,7 +83,7 @@ where
 
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
-import Haskus.Format.Binary.Ptr
+import Haskus.Memory.Ptr
 import Haskus.Utils.Monad
 
 import qualified Data.Primitive.ByteArray as BA

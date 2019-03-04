@@ -31,10 +31,10 @@ where
 import Haskus.Format.Binary.Get
 import Haskus.Format.Binary.Put
 import Haskus.Format.Binary.Enum
-import Haskus.Format.Binary.Ptr
 import Haskus.Format.Binary.Storable
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Bits
+import Haskus.Memory.Ptr
 
 import System.IO.Unsafe
 

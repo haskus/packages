@@ -54,7 +54,7 @@ import qualified Foreign.Marshal.Alloc as P
 import System.IO.Unsafe
 
 import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Ptr
+import Haskus.Memory.Ptr
 import Haskus.Utils.Types
 import Haskus.Utils.Types.Generics
 import Haskus.Utils.Flow
