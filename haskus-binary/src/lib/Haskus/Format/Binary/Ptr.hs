@@ -57,7 +57,7 @@ import qualified Foreign.ForeignPtr.Unsafe as FP
 -- we import GHC.Ptr instead of Foreign.Ptr to have access to Ptr constructors
 import GHC.Ptr (Ptr (..))
 import Foreign.ForeignPtr (ForeignPtr)
-import Unsafe.Coerce
+import Data.Coerce
 import System.IO.Unsafe
 
 import Haskus.Format.Binary.Layout
@@ -97,8 +97,6 @@ withFinalizedPtr (FinalizedPtr fp o) f =
 class PtrLike (p :: * -> *) where
    -- | Cast a pointer from one type to another
    castPtr :: p a -> p b
-   {-# INLINABLE castPtr #-}
-   castPtr = unsafeCoerce
 
    -- | Null pointer (offset is 0)
    nullPtr :: forall a. p a
@@ -150,6 +148,9 @@ indexPtr' p a = indexPtr p (fromIntegral a)
 
 
 instance PtrLike Ptr where
+   {-# INLINABLE castPtr #-}
+   castPtr = coerce
+
    {-# INLINABLE nullPtr #-}
    nullPtr = Ptr.nullPtr
 
@@ -167,6 +168,9 @@ instance PtrLike Ptr where
 
 
 instance PtrLike FinalizedPtr where
+   {-# INLINABLE castPtr #-}
+   castPtr = coerce
+
    {-# INLINABLE nullPtr #-}
    nullPtr = nullFinalizedPtr
 
