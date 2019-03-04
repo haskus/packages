@@ -56,11 +56,15 @@ import Control.DeepSeq
 -- >>> :set -XTypeFamilies
 -- >>> :set -XPatternSynonyms
 -- >>> :set -XDeriveFunctor
+-- >>>
 -- >>> import Data.Functor.Classes
+-- >>>
 -- >>> data ConsF a e = ConsF a e deriving (Functor)
 -- >>> data NilF    e = NilF      deriving (Functor)
+-- >>>
 -- >>> instance Eq a => Eq1 (ConsF a) where liftEq cmp (ConsF a e1) (ConsF b e2) = a == b && cmp e1 e2
 -- >>> instance Eq1 NilF where liftEq _ _ _ = True
+-- >>>
 -- >>> :{
 -- >>> pattern Cons :: ConsF a :<: xs => a -> EADT xs -> EADT xs
 -- >>> pattern Cons a l = VF (ConsF a l)
@@ -69,17 +73,17 @@ import Control.DeepSeq
 -- >>> type List a = EADT '[ConsF a, NilF]
 -- >>> :}
 
-
--- | An extensible ADT
---
--- >>> VF NilF == (VF NilF :: EADT '[ConsF Int, NilF])
--- True
+-- $setup
+-- >>>
 -- >>> let a = Cons "Hello" (Cons "World" Nil) :: List String
 -- >>> let b = Cons "Bonjour" (Cons "Monde" Nil) :: List String
 -- >>> a == b
 -- False
 -- >>> a == a
 -- True
+
+
+-- | An extensible ADT
 type EADT xs = Fix (VariantF xs)
 
 -- TODO: GHC 8.6
