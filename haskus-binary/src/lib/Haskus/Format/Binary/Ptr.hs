@@ -114,33 +114,11 @@ class PtrLike (p :: * -> *) where
    mallocBytes :: MonadIO m => Word -> m (p a)
 
    -- | Add offset to the given layout field
-   indexField :: forall path l.
-      ( KnownNat (LayoutPathOffset l path)
-      ) => p l -> path -> p (LayoutPathType l path)
-   {-# INLINABLE indexField #-}
-   indexField p _ = castPtr (p `indexPtr` natValue @(LayoutPathOffset l path))
-
-   -- | Add offset corresponding to the layout field with the given symbol
-   (-->) :: forall s l.
-      ( KnownNat (LayoutPathOffset l (LayoutPath '[LayoutSymbol s]))
-      ) => p l -> LayoutSymbol s -> p (LayoutPathType l (LayoutPath '[LayoutSymbol s]))
+   (-->) :: forall path l.
+      ( KnownNat (LPathOffset path l)
+      ) => p l -> path -> p (LPathType path l)
    {-# INLINABLE (-->) #-}
-   (-->) l _ = indexField l (layoutSymbol :: LayoutPath '[LayoutSymbol s])
-
-   -- | Add offset corresponding to the layout field with the given index
-   (-#>) :: forall n l.
-      ( KnownNat (LayoutPathOffset l (LayoutPath '[LayoutIndex n]))
-      ) => p l -> LayoutIndex n -> p (LayoutPathType l (LayoutPath '[LayoutIndex n]))
-   {-# INLINABLE (-#>) #-}
-   (-#>) l _ = indexField l (layoutIndex :: LayoutPath '[LayoutIndex n])
-
--- TODO
--- {-# RULES
---  "indexField concat paths" forall l p1 p2 .
---       indexField (indexField l p1) p2 = indexField l (concatPaths p1 p2)
---  #-}
--- concatLayoutPaths :: LayoutPath p1 -> LayoutPath p2 -> LayoutPath (Concat p1 p2)
--- concatPaths = undefined
+   (-->) p _ = castPtr (p `indexPtr` natValue @(LPathOffset path l))
 
 -- | Generalized version of 'indexPtr'
 indexPtr' :: Integral b => Ptr a -> b -> Ptr a

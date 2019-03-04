@@ -10,14 +10,12 @@
 --
 -- Describe a memory region
 module Haskus.Format.Binary.Layout
-   ( LayoutPathType
-   , LayoutPathOffset
-   , LayoutRoot
-   , LayoutPath (..)
-   , LayoutIndex (..)
-   , LayoutSymbol (..)
-   , layoutIndex
-   , layoutSymbol
+   ( LPath (..)
+   , PathElem (..)
+   , lPath
+   , LPathType
+   , LPathOffset
+   , LRoot
    , (:->)
    , (:#>)
    )
@@ -26,35 +24,34 @@ where
 import Haskus.Utils.Types
 
 -- | Path in a layout
-data LayoutPath (path :: [*])   = LayoutPath
+data LPath (path :: [PathElem])   = LPath
 
--- | Index in a layout path
-data LayoutIndex (n :: Nat)     = LayoutIndex
+-- | Layout path element
+data PathElem
+   = LIndex Nat      -- ^ Addressing via a numeric index
+   | LSymbol Symbol  -- ^ Addressing via a symbol
 
--- | Symbol in a layout path
-data LayoutSymbol (s :: Symbol) = LayoutSymbol
+-- | Layout path root
+type LRoot = LPath '[]
 
 -- | Index in the layout path
-layoutIndex :: forall n. LayoutPath '[LayoutIndex n]
-layoutIndex = LayoutPath
-
--- | Symbol in the layout path
-layoutSymbol :: forall s. LayoutPath '[LayoutSymbol s]
-layoutSymbol = LayoutPath
-
+--
+-- Helper for ``ptr --> lPath @p``
+-- until
+lPath :: forall e. LPath '[e]
+lPath = LPath
 
 -- | Type obtained when following path p
-type family LayoutPathType l p :: *
-type instance LayoutPathType l (LayoutPath '[])  = l
+type family LPathType p l :: *
+type instance LPathType (LPath '[]) l  = l
 
 -- | Offset obtained when following path p
-type family LayoutPathOffset l p :: Nat
-type instance LayoutPathOffset e (LayoutPath '[])  = 0
+type family LPathOffset p l :: Nat
+type instance LPathOffset (LPath '[]) l  = 0
 
-type LayoutRoot = LayoutPath '[]
 
 type family (:->) p (s :: Symbol) where
-   (:->) (LayoutPath xs) s = LayoutPath (Snoc xs (LayoutSymbol s))
+   (:->) (LPath xs) s = LPath (Snoc xs ('LSymbol s))
 
 type family (:#>) p (n :: Nat) where
-   (:#>) (LayoutPath xs) n = LayoutPath (Snoc xs (LayoutIndex n))
+   (:#>) (LPath xs) n = LPath (Snoc xs ('LIndex n))
