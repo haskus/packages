@@ -12,7 +12,7 @@ build-type:          Simple
 cabal-version:       1.20
 
 description:
-   Haskus types utility modules
+   Haskus types utility modules (Nat, List, etc.)
 
 source-repository head
   type: git
