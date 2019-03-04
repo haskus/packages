@@ -3,6 +3,8 @@ module Haskus.Utils.Flow
    ( MonadIO (..)
    , MonadInIO (..)
    -- * Basic operators
+   , (>.>)
+   , (<.<)
    , (|>)
    , (<|)
    , (||>)
@@ -48,48 +50,98 @@ import Haskus.Utils.Maybe
 
 import Control.Monad.Trans.Class (lift)
 
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XTypeFamilies
+
+-- | Compose functions
+--
+-- >>> (+1) >.> (*7) <| 1
+-- 14
+(>.>) :: (a -> b) -> (b -> c) -> a -> c
+f >.> g = \x -> g (f x)
+
+infixl 9 >.>
+
+-- | Compose functions
+--
+-- >>> (+1) <.< (*7) <| 1
+-- 8
+(<.<) :: (b -> c) -> (a -> b) -> a -> c
+f <.< g = \x -> f (g x)
+
+infixr 9 <.<
+
+
 -- | Apply a function
+--
+-- >>> 5 |> (*2)
+-- 10
 (|>) :: a -> (a -> b) -> b
-{-# INLINE (|>) #-}
+{-# INLINABLE (|>) #-}
 x |> f = f x
 
 infixl 0 |>
 
 -- | Apply a function
+--
+-- >>> (*2) <| 5
+-- 10
 (<|) :: (a -> b) -> a -> b
-{-# INLINE (<|) #-}
+{-# INLINABLE (<|) #-}
 f <| x = f x
 
 infixr 0 <|
 
 -- | Apply a function in a Functor
+--
+-- >>> Just 5 ||> (*2)
+-- Just 10
 (||>) :: Functor f => f a -> (a -> b) -> f b
-{-# INLINE (||>) #-}
+{-# INLINABLE (||>) #-}
 x ||> f = fmap f x
 
 infixl 0 ||>
 
 -- | Apply a function in a Functor
+--
+-- >>> (*2) <|| Just 5
+-- Just 10
 (<||) :: Functor f => (a -> b) -> f a -> f b
-{-# INLINE (<||) #-}
+{-# INLINABLE (<||) #-}
 f <|| x = fmap f x
 
 infixr 0 <||
 
 -- | Apply a function in a Functor
+--
+-- >>> Just [5] |||> (*2)
+-- Just [10]
 (|||>) :: (Functor f, Functor g) => f (g a) -> (a -> b) -> f (g b)
-{-# INLINE (|||>) #-}
+{-# INLINABLE (|||>) #-}
 x |||> f = fmap (fmap f) x
 
 infixl 0 |||>
 
 -- | Apply a function in a Functor
+--
+-- >>> (*2) <||| Just [5]
+-- Just [10]
+--
 (<|||) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
-{-# INLINE (<|||) #-}
+{-# INLINABLE (<|||) #-}
 f <||| x = fmap (fmap f) x
 
 infixr 0 <|||
 
 -- | Composition of catMaybes and forM
+-- 
+-- >>> let f x = if x > 3 then putStrLn "OK" >> return (Just x) else return Nothing
+-- >>> forMaybeM [0..5] f
+-- OK
+-- OK
+-- [4,5]
 forMaybeM :: Monad m => [a] -> (a -> m (Maybe b)) -> m [b]
 forMaybeM xs f = catMaybes <|| forM xs f
