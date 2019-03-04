@@ -1,0 +1,60 @@
+cabal-version:       2.4
+name:                haskus-format-text
+version:             1.0
+synopsis:            Haskus text
+license:             BSD-3-Clause
+license-file:        LICENSE
+author:              Sylvain Henry
+maintainer:          sylvain@haskus.fr
+homepage:            http://www.haskus.org/system
+copyright:           Sylvain Henry 2017
+category:            System
+build-type:          Simple
+
+description:
+   Text datatypes and functions. Supports ASCII, Unicode, etc.
+
+extra-source-files:
+   src/data/README
+   src/data/ucd/**/*.txt
+
+source-repository head
+  type: git
+  location: git://github.com/haskus/haskus-packages.git
+
+library
+  exposed-modules:
+    Haskus.Format.Text
+    Haskus.Format.Text.ASCII
+    Haskus.Format.Text.Unicode
+    Haskus.Format.Text.Unicode.CodePoint
+    Haskus.Format.Text.Unicode.UCD
+    Haskus.Format.Text.Unicode.UCDParser
+
+  other-modules:
+
+  build-depends:       
+         base                      >= 4.9 && <5.0
+      ,  template-haskell
+      ,  haskus-utils-types        >= 1.4
+      ,  haskus-utils              >= 1.3
+      ,  haskus-binary
+      ,  directory
+      ,  filepath
+      ,  megaparsec
+
+  build-tools: 
+  ghc-options:          -Wall
+  default-language:     Haskell2010
+  hs-source-dirs:       src/lib
+
+test-suite tests
+   type:                exitcode-stdio-1.0
+   main-is:             Main.hs
+   hs-source-dirs:      src/tests/
+   ghc-options:         -Wall -threaded
+   default-language:    Haskell2010
+
+   build-depends:    
+         base
+      ,  doctest

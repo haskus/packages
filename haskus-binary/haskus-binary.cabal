@@ -16,13 +16,9 @@ description:
    particular to interface Haskell data types with foreign data types (C
    structs, unions, enums, etc.).
 
-extra-source-files:
-   src/data/README
-   src/data/ucd/**/*.txt
-
 source-repository head
   type: git
-  location: git://github.com/haskus/haskus-binary.git
+  location: git://github.com/haskus/haskus-packages.git
 
 library
   exposed-modules:
@@ -62,14 +58,7 @@ library
     Haskus.Format.Binary.Ptr
     Haskus.Format.Binary.Serialize
     Haskus.Format.Binary.Serialize.Buffer
-
     Haskus.Format.Binary.Layout
-    Haskus.Format.Text
-    Haskus.Format.Text.ASCII
-    Haskus.Format.Text.Unicode
-    Haskus.Format.Text.Unicode.CodePoint
-    Haskus.Format.Text.Unicode.UCD
-    Haskus.Format.Text.Unicode.UCDParser
 
     Haskus.Format.Number
     Haskus.Format.Number.BitNat
