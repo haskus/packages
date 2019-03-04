@@ -30,6 +30,7 @@ module Haskus.Utils.Variant.Flow
    , catchLiftRight
    , catchAllE
    , catchDie
+   , catchDieAll
    , catchRemove
    , onFlowError_
    , onFlowError
@@ -288,6 +289,11 @@ evalCatchFlowT h m = do
    case popVariantAt @0 a of
       Right x  -> return x
       Left xs  -> h xs
+
+-- | Evaluate a FlowT. Use the provided function to handle error cases.
+catchDieAll :: Monad m => FlowT es m a -> (V es -> m a) -> m a
+{-# INLINABLE catchDieAll #-}
+catchDieAll m h = evalCatchFlowT h m
 
 -- | Catch and die in case of error
 catchDie :: (e :< es, Monad m) => FlowT es m a -> (e -> m ()) -> FlowT (Remove e es) m a
