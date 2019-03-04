@@ -1,5 +1,5 @@
 name:                haskus-utils-variant
-version:             2.5
+version:             2.6
 synopsis:            Variant and EADT
 license:             BSD3
 license-file:        LICENSE
