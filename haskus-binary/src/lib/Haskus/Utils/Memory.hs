@@ -19,7 +19,7 @@ import Haskus.Utils.Flow
 
 -- | Copy memory
 memCopy :: MonadIO m => Ptr a -> Ptr b -> Word64 -> m ()
-{-# INLINE memCopy #-}
+{-# INLINABLE memCopy #-}
 memCopy dest src size = liftIO (void (memcpy dest src size))
 
 -- | memcpy
@@ -29,7 +29,7 @@ foreign import ccall unsafe memcpy  :: Ptr a -> Ptr b -> Word64 -> IO (Ptr c)
 
 -- | Set memory
 memSet :: MonadIO m => Ptr a -> Word64 -> Word8 -> m ()
-{-# INLINE memSet #-}
+{-# INLINABLE memSet #-}
 memSet dest size fill = liftIO (void (memset dest fill size))
 
 -- | memset

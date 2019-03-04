@@ -89,7 +89,7 @@ nullFinalizedPtr = FinalizedPtr nullForeignPtr 0
 
 -- | Use a finalized pointer
 withFinalizedPtr :: FinalizedPtr a -> (Ptr a -> IO b) -> IO b
-{-# INLINE withFinalizedPtr #-}
+{-# INLINABLE withFinalizedPtr #-}
 withFinalizedPtr (FinalizedPtr fp o) f =
    FP.withForeignPtr fp (f . (`indexPtr` fromIntegral o))
 
@@ -97,7 +97,7 @@ withFinalizedPtr (FinalizedPtr fp o) f =
 class PtrLike (p :: * -> *) where
    -- | Cast a pointer from one type to another
    castPtr :: p a -> p b
-   {-# INLINE castPtr #-}
+   {-# INLINABLE castPtr #-}
    castPtr = unsafeCoerce
 
    -- | Null pointer (offset is 0)
@@ -119,21 +119,21 @@ class PtrLike (p :: * -> *) where
    indexField :: forall path l.
       ( KnownNat (LayoutPathOffset l path)
       ) => p l -> path -> p (LayoutPathType l path)
-   {-# INLINE indexField #-}
+   {-# INLINABLE indexField #-}
    indexField p _ = castPtr (p `indexPtr` natValue @(LayoutPathOffset l path))
 
    -- | Add offset corresponding to the layout field with the given symbol
    (-->) :: forall s l.
       ( KnownNat (LayoutPathOffset l (LayoutPath '[LayoutSymbol s]))
       ) => p l -> LayoutSymbol s -> p (LayoutPathType l (LayoutPath '[LayoutSymbol s]))
-   {-# INLINE (-->) #-}
+   {-# INLINABLE (-->) #-}
    (-->) l _ = indexField l (layoutSymbol :: LayoutPath '[LayoutSymbol s])
 
    -- | Add offset corresponding to the layout field with the given index
    (-#>) :: forall n l.
       ( KnownNat (LayoutPathOffset l (LayoutPath '[LayoutIndex n]))
       ) => p l -> LayoutIndex n -> p (LayoutPathType l (LayoutPath '[LayoutIndex n]))
-   {-# INLINE (-#>) #-}
+   {-# INLINABLE (-#>) #-}
    (-#>) l _ = indexField l (layoutIndex :: LayoutPath '[LayoutIndex n])
 
 -- TODO
@@ -150,32 +150,32 @@ indexPtr' p a = indexPtr p (fromIntegral a)
 
 
 instance PtrLike Ptr where
-   {-# INLINE nullPtr #-}
+   {-# INLINABLE nullPtr #-}
    nullPtr = Ptr.nullPtr
 
-   {-# INLINE indexPtr #-}
+   {-# INLINABLE indexPtr #-}
    indexPtr = Ptr.plusPtr
 
-   {-# INLINE ptrDistance #-}
+   {-# INLINABLE ptrDistance #-}
    ptrDistance = Ptr.minusPtr
 
-   {-# INLINE withPtr #-}
+   {-# INLINABLE withPtr #-}
    withPtr p f = f p
 
-   {-# INLINE mallocBytes #-}
+   {-# INLINABLE mallocBytes #-}
    mallocBytes = liftIO . Ptr.mallocBytes . fromIntegral
 
 
 instance PtrLike FinalizedPtr where
-   {-# INLINE nullPtr #-}
+   {-# INLINABLE nullPtr #-}
    nullPtr = nullFinalizedPtr
 
-   {-# INLINE indexPtr #-}
+   {-# INLINABLE indexPtr #-}
    indexPtr (FinalizedPtr fp o) n
       | n >= 0    = FinalizedPtr fp (o+fromIntegral n)
       | otherwise = FinalizedPtr fp (o-fromIntegral (abs n))
 
-   {-# INLINE ptrDistance #-}
+   {-# INLINABLE ptrDistance #-}
    ptrDistance (FinalizedPtr fp1 o1) (FinalizedPtr fp2 o2)
       | o2 > o1   = d + fromIntegral (o2 - o1)
       | otherwise = d - fromIntegral (o1 - o2)
@@ -183,10 +183,10 @@ instance PtrLike FinalizedPtr where
          d = ptrDistance (FP.unsafeForeignPtrToPtr fp1)
                          (FP.unsafeForeignPtrToPtr fp2)
 
-   {-# INLINE withPtr #-}
+   {-# INLINABLE withPtr #-}
    withPtr = withFinalizedPtr
 
-   {-# INLINE mallocBytes #-}
+   {-# INLINABLE mallocBytes #-}
    mallocBytes n = do
       fp <- mallocForeignPtrBytes (fromIntegral n)
       return (FinalizedPtr fp 0)

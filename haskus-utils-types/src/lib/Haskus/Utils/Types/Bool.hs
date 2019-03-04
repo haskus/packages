@@ -51,11 +51,11 @@ class KnownBool a where
    boolValue :: Bool
 
 instance KnownBool 'True where
-   {-# INLINE boolValue #-}
+   {-# INLINABLE boolValue #-}
    boolValue = True
 
 instance KnownBool 'False where
-   {-# INLINE boolValue #-}
+   {-# INLINABLE boolValue #-}
    boolValue = False
 
 

@@ -258,7 +258,7 @@ unumEncode :: forall u x i.
    , Num (BackingWord u)
    , Bits (BackingWord u)
    ) => UBit -> U u
-{-# INLINE unumEncode #-}
+{-# INLINABLE unumEncode #-}
 unumEncode b = case b of
       ExactNumber  -> U w
       OpenInterval -> U (setBit w 0)
@@ -272,7 +272,7 @@ unumNegate :: forall u.
    , Num (BackingWord u)
    , KnownNat (UnumSize u)
    ) => U u -> U u
-{-# INLINE unumNegate #-}
+{-# INLINABLE unumNegate #-}
 unumNegate (U w) = U (maskDyn s (complement w + 1))
    where
       s = unumSize @u
@@ -284,7 +284,7 @@ unumReciprocate :: forall u.
    , Num (BackingWord u)
    , KnownNat (UnumSize u)
    ) => U u -> U u
-{-# INLINE unumReciprocate #-}
+{-# INLINABLE unumReciprocate #-}
 unumReciprocate (U w) = U (w `xor` m + 1)
    where
       s = unumSize @u
@@ -681,7 +681,7 @@ csornEmpty = CSORN (BitFields zeroBits)
 csornIsEmpty :: forall u.
    ( Bits (CSORNBackingWord u)
    ) => CSORN u -> Bool
-{-# INLINE csornIsEmpty #-}
+{-# INLINABLE csornIsEmpty #-}
 csornIsEmpty (CSORN (BitFields b)) = b == zeroBits
 
 -- | Contiguous SORN build

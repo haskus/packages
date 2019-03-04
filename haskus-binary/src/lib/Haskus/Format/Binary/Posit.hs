@@ -99,7 +99,7 @@ isZero :: forall n es.
    , Eq (IntN n)
    , KnownNat n
    ) => Posit n es -> Bool
-{-# INLINE isZero #-}
+{-# INLINABLE isZero #-}
 isZero (Posit i) = i == zeroBits
 
 -- | Check if a posit is infinity
@@ -108,7 +108,7 @@ isInfinity :: forall n es.
    , Eq (IntN n)
    , KnownNat n
    ) => Posit n es -> Bool
-{-# INLINE isInfinity #-}
+{-# INLINABLE isInfinity #-}
 isInfinity (Posit i) = i == bit (natValue @n - 1)
 
 -- | Check if a posit is positive
@@ -117,7 +117,7 @@ isPositive :: forall n es.
    , Ord (IntN n)
    , KnownNat n
    ) => PositValue n es -> Bool
-{-# INLINE isPositive #-}
+{-# INLINABLE isPositive #-}
 isPositive (Value (Posit i)) = i > zeroBits
 
 -- | Check if a posit is negative
@@ -126,7 +126,7 @@ isNegative :: forall n es.
    , Ord (IntN n)
    , KnownNat n
    ) => PositValue n es -> Bool
-{-# INLINE isNegative #-}
+{-# INLINABLE isNegative #-}
 isNegative (Value (Posit i)) = i < zeroBits
 
 -- | Posit absolute value

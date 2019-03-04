@@ -98,14 +98,14 @@ instance forall a n.
 take :: forall n m a.
    ( KnownNat (SizeOf a * n)
    ) => Vector (m+n) a -> Vector n a
-{-# INLINE take #-}
+{-# INLINABLE take #-}
 take (Vector b) = Vector (bufferTake (natValue @(SizeOf a * n)) b)
 
 -- | Drop the first n elements
 drop :: forall n m a.
    ( KnownNat (SizeOf a * n)
    ) => Vector (m+n) a -> Vector m a
-{-# INLINE drop #-}
+{-# INLINABLE drop #-}
 drop (Vector b) = Vector (bufferDrop (natValue @(SizeOf a * n)) b)
 
 -- | /O(1)/ Index safely into the vector using a type level index.
@@ -113,7 +113,7 @@ index :: forall i a n.
    ( KnownNat (ElemOffset a i n)
    , Storable a
    ) => Vector n a -> a
-{-# INLINE index #-}
+{-# INLINABLE index #-}
 index (Vector b) = bufferPeekStorableAt b (natValue @(ElemOffset a i n))
 
 -- | Convert a list into a vector if the number of elements matches
@@ -121,7 +121,7 @@ fromList :: forall a (n :: Nat) .
    ( KnownNat n
    , Storable a
    ) => [a] -> Maybe (Vector n a)
-{-# INLINE fromList #-}
+{-# INLINABLE fromList #-}
 fromList v
    | n' /= n   = Nothing
    | n' == 0   = Just $ Vector $ emptyBuffer
@@ -135,7 +135,7 @@ fromFilledList :: forall a (n :: Nat) .
    ( KnownNat n
    , Storable a
    ) => a -> [a] -> Vector n a
-{-# INLINE fromFilledList #-}
+{-# INLINABLE fromFilledList #-}
 fromFilledList z v = Vector $ bufferPackStorableList v'
    where
       v' = List.take (natValue @n) (v ++ repeat z)
@@ -145,7 +145,7 @@ fromFilledListZ :: forall a (n :: Nat) .
    ( KnownNat n
    , Storable a
    ) => a -> [a] -> Vector n a
-{-# INLINE fromFilledListZ #-}
+{-# INLINABLE fromFilledListZ #-}
 fromFilledListZ z v = fromFilledList z v'
    where
       v' = List.take (natValue @n - 1) v
@@ -155,7 +155,7 @@ toList :: forall a (n :: Nat) .
    ( KnownNat n
    , Storable a
    ) => Vector n a -> [a]
-{-# INLINE toList #-}
+{-# INLINABLE toList #-}
 toList (Vector b)
    | n == 0    = []
    | otherwise = fmap (bufferPeekStorableAt b . (sza*)) [0..n-1]
@@ -168,7 +168,7 @@ replicate :: forall a (n :: Nat) .
    ( KnownNat n
    , Storable a
    ) => a -> Vector n a
-{-# INLINE replicate #-}
+{-# INLINABLE replicate #-}
 replicate v = fromFilledList v []
 
 

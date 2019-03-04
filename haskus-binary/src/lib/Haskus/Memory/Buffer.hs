@@ -172,17 +172,17 @@ newtype TypedBuffer (t :: k) mut pin fin heap = TypedBuffer (Buffer mut pin fin 
 -- >>> b <- newBuffer 1024
 --
 newBuffer :: MonadIO m => Word -> m BufferM
-{-# INLINE newBuffer #-}
+{-# INLINABLE newBuffer #-}
 newBuffer sz = BufferM <$> liftIO (BA.newByteArray (fromIntegral sz))
 
 -- | Allocate a buffer (mutable, pinned)
 newPinnedBuffer :: MonadIO m => Word -> m BufferMP
-{-# INLINE newPinnedBuffer #-}
+{-# INLINABLE newPinnedBuffer #-}
 newPinnedBuffer sz = BufferMP <$> liftIO (BA.newPinnedByteArray (fromIntegral sz))
 
 -- | Allocate an aligned buffer (mutable, pinned)
 newAlignedPinnedBuffer :: MonadIO m => Word -> Word -> m BufferMP
-{-# INLINE newAlignedPinnedBuffer #-}
+{-# INLINABLE newAlignedPinnedBuffer #-}
 newAlignedPinnedBuffer sz al = BufferMP <$> liftIO (BA.newAlignedPinnedByteArray (fromIntegral sz) (fromIntegral al))
 
 -----------------------------------------------------------------
@@ -312,7 +312,7 @@ class Freezable a b | a -> b where
 instance Freezable (Buffer 'Mutable   pin 'Collected heap)
                    (Buffer 'Immutable pin 'Collected heap)
    where
-      {-# INLINE unsafeBufferFreeze #-}
+      {-# INLINABLE unsafeBufferFreeze #-}
       unsafeBufferFreeze = \case
          BufferM mba  -> Buffer  <$> liftIO (BA.unsafeFreezeByteArray mba)
          BufferMP mba -> BufferP <$> liftIO (BA.unsafeFreezeByteArray mba)
@@ -320,7 +320,7 @@ instance Freezable (Buffer 'Mutable   pin 'Collected heap)
 instance Freezable (Buffer 'Mutable   pin fin 'External)
                    (Buffer 'Immutable pin fin 'External)
    where
-      {-# INLINE unsafeBufferFreeze #-}
+      {-# INLINABLE unsafeBufferFreeze #-}
       unsafeBufferFreeze = \case
          BufferME  addr sz     -> return (BufferE addr sz)
          -- works because finalizers are attached to the IORef "fin"
@@ -336,7 +336,7 @@ class Thawable a b | a -> b where
 instance Thawable (Buffer 'Immutable pin 'Collected heap)
                   (Buffer 'Mutable   pin 'Collected heap)
    where
-      {-# INLINE unsafeBufferThaw #-}
+      {-# INLINABLE unsafeBufferThaw #-}
       unsafeBufferThaw = \case
          Buffer mba  -> BufferM  <$> liftIO (BA.unsafeThawByteArray mba)
          BufferP mba -> BufferMP <$> liftIO (BA.unsafeThawByteArray mba)
@@ -344,7 +344,7 @@ instance Thawable (Buffer 'Immutable pin 'Collected heap)
 instance Thawable (Buffer 'Immutable pin 'NotFinalized heap)
                   (Buffer 'Mutable   pin 'NotFinalized heap)
    where
-      {-# INLINE unsafeBufferThaw #-}
+      {-# INLINABLE unsafeBufferThaw #-}
       unsafeBufferThaw = \case
          BufferE addr sz -> return (BufferME addr sz)
 
@@ -511,28 +511,28 @@ class BufferSize a where
    bufferSize :: a -> Word
 
 instance BufferSize BufferI where
-   {-# INLINE bufferSize #-}
+   {-# INLINABLE bufferSize #-}
    bufferSize (Buffer ba)  = fromIntegral $ BA.sizeofByteArray ba
 instance BufferSize BufferP where
-   {-# INLINE bufferSize #-}
+   {-# INLINABLE bufferSize #-}
    bufferSize (BufferP ba) = fromIntegral $ BA.sizeofByteArray ba
 instance BufferSize BufferF where
-   {-# INLINE bufferSize #-}
+   {-# INLINABLE bufferSize #-}
    bufferSize (BufferF ba _fin)  = fromIntegral $ BA.sizeofByteArray ba
 instance BufferSize BufferPF where
-   {-# INLINE bufferSize #-}
+   {-# INLINABLE bufferSize #-}
    bufferSize (BufferPF ba _fin) = fromIntegral $ BA.sizeofByteArray ba
 instance BufferSize BufferME where
-   {-# INLINE bufferSize #-}
+   {-# INLINABLE bufferSize #-}
    bufferSize (BufferME _addr sz) = sz
 instance BufferSize BufferMEF where
-   {-# INLINE bufferSize #-}
+   {-# INLINABLE bufferSize #-}
    bufferSize (BufferMEF _addr sz _fin) = sz
 instance BufferSize BufferE where
-   {-# INLINE bufferSize #-}
+   {-# INLINABLE bufferSize #-}
    bufferSize (BufferE _addr sz) = sz
 instance BufferSize BufferEF where
-   {-# INLINE bufferSize #-}
+   {-# INLINABLE bufferSize #-}
    bufferSize (BufferEF _addr sz _fin) = sz
 
 -- | Get contents as a list of bytes

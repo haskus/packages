@@ -113,7 +113,7 @@ wordBytes :: forall a.
    ( Storable a
    , KnownNat (SizeOf a)
    ) => a -> [Word8]
-{-# INLINE wordBytes #-}
+{-# INLINABLE wordBytes #-}
 wordBytes x = unsafePerformIO $
    with x $ \p -> mapM (peekByteOff (castPtr p)) [0..natValue @(SizeOf a) - 1]
 
@@ -153,42 +153,42 @@ poke p v = liftIO (pokeIO p v)
 
 -- | Generalized 'sizeOf'
 sizeOf' :: (Integral b, Storable a) => a -> b
-{-# INLINE sizeOf' #-}
+{-# INLINABLE sizeOf' #-}
 sizeOf' = fromIntegral . sizeOf
 
 -- | SizeOf (for type-application)
 sizeOfT :: forall a. (Storable a) => Word
-{-# INLINE sizeOfT #-}
+{-# INLINABLE sizeOfT #-}
 sizeOfT = sizeOf (undefined :: a)
 
 -- | SizeOf' (for type-application)
 sizeOfT' :: forall a b. (Storable a, Integral b) => b
-{-# INLINE sizeOfT' #-}
+{-# INLINABLE sizeOfT' #-}
 sizeOfT' = sizeOf' (undefined :: a)
 
 -- | Generalized 'alignment'
 alignment' :: (Integral b, Storable a) => a -> b
-{-# INLINE alignment' #-}
+{-# INLINABLE alignment' #-}
 alignment' = fromIntegral . alignment
 
 -- | Alignment (for type-application)
 alignmentT :: forall a. (Storable a) => Word
-{-# INLINE alignmentT #-}
+{-# INLINABLE alignmentT #-}
 alignmentT = alignment (undefined :: a)
 
 -- | Alignment' (for type-application)
 alignmentT' :: forall a b. (Storable a, Integral b) => b
-{-# INLINE alignmentT' #-}
+{-# INLINABLE alignmentT' #-}
 alignmentT' = alignment' (undefined :: a)
 
 -- | Peek with byte offset
 peekByteOff :: (MonadIO m, Storable a) => Ptr a -> Int -> m a
-{-# INLINE peekByteOff #-}
+{-# INLINABLE peekByteOff #-}
 peekByteOff ptr off = peek (ptr `indexPtr` off)
 
 -- | Poke with byte offset
 pokeByteOff :: (MonadIO m, Storable a) => Ptr a -> Int -> a -> m ()
-{-# INLINE pokeByteOff #-}
+{-# INLINABLE pokeByteOff #-}
 pokeByteOff ptr off = poke (ptr `indexPtr` off)
 
 -- | Peek with element size offset
@@ -215,7 +215,7 @@ allocaBytesAligned sz align = liftWith (P.allocaBytesAligned (fromIntegral sz) (
 -- exception), so the pointer passed to @f@ must /not/ be used after this.
 --
 alloca :: forall a b m. (MonadInIO m, Storable a) => (Ptr a -> m b) -> m b
-{-# INLINE alloca #-}
+{-# INLINABLE alloca #-}
 alloca = allocaBytesAligned (sizeOfT' @a) (alignmentT' @a)
 
 -- | Allocate a block of memory that is sufficient to hold values of type
@@ -225,7 +225,7 @@ alloca = allocaBytesAligned (sizeOfT' @a) (alignmentT' @a)
 -- The memory may be deallocated using 'free' or 'finalizerFree' when
 -- no longer required.
 malloc :: forall a m. (MonadIO m, Storable a) => m (Ptr a)
-{-# INLINE malloc #-}
+{-# INLINABLE malloc #-}
 malloc = liftIO (mallocBytes (sizeOfT @a))
 
 -- | @'with' val f@ executes the computation @f@, passing as argument
@@ -235,7 +235,7 @@ malloc = liftIO (mallocBytes (sizeOfT @a))
 -- The memory is freed when @f@ terminates (either normally or via an
 -- exception), so the pointer passed to @f@ must /not/ be used after this.
 with :: (MonadInIO m, Storable a) => a -> (Ptr a -> m b) -> m b
-{-# INLINE with #-}
+{-# INLINABLE with #-}
 with val f =
    alloca $ \ptr -> do
       poke ptr val

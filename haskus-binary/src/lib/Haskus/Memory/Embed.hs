@@ -105,19 +105,19 @@ loadMutableSymbol sz sym = do
 
 
 toBufferE :: Ptr () -> Word# -> BufferE
-{-# INLINE toBufferE #-}
+{-# INLINABLE toBufferE #-}
 toBufferE (Ptr x) sz = BufferE x (W# sz)
 
 toBufferE' :: Addr# -> Word# -> BufferE
-{-# INLINE toBufferE' #-}
+{-# INLINABLE toBufferE' #-}
 toBufferE' x sz = BufferE x (W# sz)
 
 toBufferME :: Ptr () -> Word# -> BufferME
-{-# INLINE toBufferME #-}
+{-# INLINABLE toBufferME #-}
 toBufferME (Ptr x) sz = BufferME x (W# sz)
 
 toBufferME' :: Addr# -> Word# -> BufferME
-{-# INLINE toBufferME' #-}
+{-# INLINABLE toBufferME' #-}
 toBufferME' x sz = BufferME x (W# sz)
 
 

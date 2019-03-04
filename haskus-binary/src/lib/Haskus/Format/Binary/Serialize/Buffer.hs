@@ -78,7 +78,7 @@ putSomething
    -> (Buffer mut pin fin heap -> Word -> t -> m ())
    -> t
    -> BufferPutT (Buffer mut pin fin heap) m ()
-{-# INLINE putSomething #-}
+{-# INLINABLE putSomething #-}
 putSomething sz act v = do
    off <- getPutOffset
    b   <- getPutBuffer
@@ -94,7 +94,7 @@ putSomeThings
    => Word
    -> (Buffer mut pin fin heap -> Word -> m ())
    -> BufferPutT (Buffer mut pin fin heap) m ()
-{-# INLINE putSomeThings #-}
+{-# INLINABLE putSomeThings #-}
 putSomeThings sz act = do
    off <- getPutOffset
    b   <- getPutBuffer

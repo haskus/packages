@@ -25,19 +25,19 @@ class MonadIO m => MonadInIO m where
    liftWith2 :: (forall c. (a -> b -> IO c) -> IO c) -> (a -> b -> m e) -> m e
 
 instance MonadInIO IO where
-   {-# INLINE liftWith #-}
+   {-# INLINABLE liftWith #-}
    liftWith = id
 
-   {-# INLINE liftWith2 #-}
+   {-# INLINABLE liftWith2 #-}
    liftWith2 = id
 
 instance MonadInIO m => MonadInIO (StateT s m) where
-   {-# INLINE liftWith #-}
+   {-# INLINABLE liftWith #-}
    liftWith wth f =
       StateT $ \s -> do
          liftWith wth (\a -> runStateT (f a) s)
 
-   {-# INLINE liftWith2 #-}
+   {-# INLINABLE liftWith2 #-}
    liftWith2 wth f =
       StateT $ \s ->
          liftWith2 wth (\a b -> runStateT (f a b) s)

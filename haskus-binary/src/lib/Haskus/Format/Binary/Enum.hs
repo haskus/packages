@@ -47,12 +47,12 @@ instance
 
 -- | Read an enum field
 fromEnumField :: (CEnum a, Integral b) => EnumField b a -> a
-{-# INLINE fromEnumField #-}
+{-# INLINABLE fromEnumField #-}
 fromEnumField (EnumField b) = toCEnum b
 
 -- | Create an enum field
 toEnumField :: (CEnum a, Integral b) => a -> EnumField b a
-{-# INLINE toEnumField #-}
+{-# INLINABLE toEnumField #-}
 toEnumField = EnumField . fromCEnum
 
 
@@ -91,7 +91,7 @@ class CEnum a where
 -- @
 --
 makeEnumWithCustom :: forall a i. (Data a,Integral i) => i -> a
-{-# INLINE makeEnumWithCustom #-}
+{-# INLINABLE makeEnumWithCustom #-}
 makeEnumWithCustom x =
    if x' < maxConstrIndex t
       then fromConstr (indexConstr t x')
@@ -117,7 +117,7 @@ makeEnumWithCustom x =
 -- @
 --
 makeEnumMaybe :: forall a i. (Data a,Integral i) => i -> Maybe a
-{-# INLINE makeEnumMaybe #-}
+{-# INLINABLE makeEnumMaybe #-}
 makeEnumMaybe x =
    if x' < maxConstrIndex t
       then Just (fromConstr (indexConstr t x'))
@@ -128,7 +128,7 @@ makeEnumMaybe x =
 
 -- | Make an enum from a number (0 indexed)
 makeEnum :: forall a i. (Data a,Integral i) => i -> a
-{-# INLINE makeEnum #-}
+{-# INLINABLE makeEnum #-}
 makeEnum x =fromConstr (indexConstr t x')
    where
       x'  = fromIntegral x + 1

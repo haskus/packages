@@ -86,10 +86,10 @@ class SignedShiftableBits a where
 
 
 instance ShiftableBits Word where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (W# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` WORD_SIZE_IN_BITS##) = W# 0##
@@ -101,10 +101,10 @@ instance ShiftableBits Word where
    (W# x#) `uncheckedShiftR` (W# i#) = W# (x# `uncheckedShiftRL#` word2Int# i#)
 
 instance ShiftableBits Word8 where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (W8# x#) `shiftL` (W# i#)
       | isTrue# (i# `geWord#` 8##)    = W8# 0##
@@ -119,10 +119,10 @@ instance ShiftableBits Word8 where
    (W8# x#) `uncheckedShiftR` (W# i#) = W8# (x# `uncheckedShiftRL#` word2Int# i#)
 
 instance ShiftableBits Word16 where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (W16# x#) `shiftL` (W# i#)
       | isTrue# (i# `geWord#` 16##)    = W16# 0##
@@ -137,10 +137,10 @@ instance ShiftableBits Word16 where
    (W16# x#) `uncheckedShiftR` (W# i#) = W16# (x# `uncheckedShiftRL#` word2Int# i#)
 
 instance ShiftableBits Word32 where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (W32# x#) `shiftL` (W# i#)
       | isTrue# (i# `geWord#` 32##)    = W32# 0##
@@ -155,10 +155,10 @@ instance ShiftableBits Word32 where
    (W32# x#) `uncheckedShiftR` (W# i#) = W32# (x# `uncheckedShiftRL#` word2Int# i#)
 
 instance ShiftableBits Word64 where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (W64# x#) `shiftL` (W# i#)
       | isTrue# (i# `geWord#` 64##)    = W64# 0##
@@ -174,10 +174,10 @@ instance ShiftableBits Word64 where
 
 
 instance ShiftableBits Int where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (I# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` WORD_SIZE_IN_BITS##) = I# 0#
@@ -192,10 +192,10 @@ instance ShiftableBits Int where
    (I# x#) `uncheckedShiftR` (W# i#)               = I# (x# `uncheckedIShiftRL#` word2Int# i#)
 
 instance ShiftableBits Int8 where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (I8# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` 8##)    = I8# 0#
@@ -211,10 +211,10 @@ instance ShiftableBits Int8 where
    
 
 instance ShiftableBits Int16 where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (I16# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` 16##)    = I16# 0#
@@ -230,10 +230,10 @@ instance ShiftableBits Int16 where
 
 
 instance ShiftableBits Int32 where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (I32# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` 32##)    = I32# 0#
@@ -248,10 +248,10 @@ instance ShiftableBits Int32 where
    (I32# x#) `uncheckedShiftR` (W# i#) = I32# (word2Int# (narrow32Word# (int2Word# x#) `uncheckedShiftRL#` word2Int# i#))
 
 instance ShiftableBits Int64 where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    (I64# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` 64##)    = I64# 0#
@@ -299,10 +299,10 @@ instance SignedShiftableBits Int64 where
 
 
 instance ShiftableBits Integer where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    x `shiftL` (W# i#) = shiftLInteger x (word2Int# i#)
    x `shiftR` (W# i#) = shiftRInteger x (word2Int# i#)
@@ -311,10 +311,10 @@ instance ShiftableBits Integer where
    uncheckedShiftR = shiftR
 
 instance ShiftableBits Natural where
-   {-# INLINE shiftR #-}
-   {-# INLINE shiftL #-}
-   {-# INLINE uncheckedShiftL #-}
-   {-# INLINE uncheckedShiftR #-}
+   {-# INLINABLE shiftR #-}
+   {-# INLINABLE shiftL #-}
+   {-# INLINABLE uncheckedShiftL #-}
+   {-# INLINABLE uncheckedShiftR #-}
 
    x `shiftL` (W# i#) = shiftLNatural x (I# (word2Int# i#))
    x `shiftR` (W# i#) = shiftRNatural x (I# (word2Int# i#))

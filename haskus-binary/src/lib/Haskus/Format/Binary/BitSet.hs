@@ -95,31 +95,31 @@ null ::
    ( FiniteBits b
    , Eq b
    ) => BitSet b a -> Bool
-{-# INLINE null #-}
+{-# INLINABLE null #-}
 null (BitSet b) = b == zeroBits
 
 
 -- | Empty bitset
 empty :: (FiniteBits b) => BitSet b a
-{-# INLINE empty #-}
+{-# INLINABLE empty #-}
 empty = BitSet zeroBits
 
 
 -- | Create a BitSet from a single element
 singleton :: (IndexableBits b, CBitSet a) => a -> BitSet b a
-{-# INLINE singleton #-}
+{-# INLINABLE singleton #-}
 singleton e = BitSet $ bit (toBitOffset e)
 
 
 -- | Insert an element in the set
 insert :: (IndexableBits b, CBitSet a) => BitSet b a -> a -> BitSet b a
-{-# INLINE insert #-}
+{-# INLINABLE insert #-}
 insert (BitSet b) e = BitSet $ setBit b (toBitOffset e)
 
 
 -- | Remove an element from the set
 delete :: (IndexableBits b, CBitSet a) => BitSet b a -> a -> BitSet b a
-{-# INLINE delete #-}
+{-# INLINABLE delete #-}
 delete (BitSet b) e = BitSet $ clearBit b (toBitOffset e)
 
 
@@ -137,7 +137,7 @@ member ::
    , FiniteBits b
    , IndexableBits b
    ) => BitSet b a -> a -> Bool
-{-# INLINE member #-}
+{-# INLINABLE member #-}
 member (BitSet b) e = testBit b (toBitOffset e)
 
 
@@ -147,7 +147,7 @@ elem ::
    , FiniteBits b
    , IndexableBits b
    ) => a -> BitSet b a -> Bool
-{-# INLINE elem #-}
+{-# INLINABLE elem #-}
 elem e (BitSet b) = testBit b (toBitOffset e)
 
 
@@ -157,7 +157,7 @@ notMember ::
    , FiniteBits b
    , IndexableBits b
    ) => BitSet b a -> a -> Bool
-{-# INLINE notMember #-}
+{-# INLINABLE notMember #-}
 notMember b e = not (member b e)
 
 
@@ -179,7 +179,7 @@ intersection ::
    ( FiniteBits b
    , Bitwise b
    ) => BitSet b a -> BitSet b a -> BitSet b a
-{-# INLINE intersection #-}
+{-# INLINABLE intersection #-}
 intersection (BitSet b1) (BitSet b2) = BitSet (b1 .&. b2)
 
 
@@ -188,7 +188,7 @@ union ::
    ( FiniteBits b
    , Bitwise b
    ) => BitSet b a -> BitSet b a -> BitSet b a
-{-# INLINE union #-}
+{-# INLINABLE union #-}
 union (BitSet b1) (BitSet b2) = BitSet (b1 .|. b2)
 
 
@@ -197,7 +197,7 @@ unions ::
    ( FiniteBits b
    , Bitwise b
    ) => [BitSet b a] -> BitSet b a
-{-# INLINE unions #-}
+{-# INLINABLE unions #-}
 unions = foldl' union empty
 
 

@@ -93,7 +93,7 @@ newtype BitFields b (f :: [*]) = BitFields b deriving (Storable)
 
 -- | Get backing word
 bitFieldsBits :: BitFields b f -> b
-{-# INLINE bitFieldsBits #-}
+{-# INLINABLE bitFieldsBits #-}
 bitFieldsBits (BitFields b) = b
 
 
@@ -194,7 +194,7 @@ extractField :: forall (name :: Symbol) fields b .
    , Bits b, Integral b
    , Field (Output name fields)
    ) => BitFields b fields -> Output name fields
-{-# INLINE extractField #-}
+{-# INLINABLE extractField #-}
 extractField = extractField' @name
 
 -- | Get the value of a field (without checking sizes)
@@ -204,7 +204,7 @@ extractField' :: forall (name :: Symbol) fields b .
    , Bits b, Integral b
    , Field (Output name fields)
    ) => BitFields b fields -> Output name fields
-{-# INLINE extractField' #-}
+{-# INLINABLE extractField' #-}
 extractField' (BitFields w) = toField ((w `shiftR` off) .&. ((1 `shiftL` sz) - 1))
    where
       off = natValue @(Offset name fields)
@@ -219,7 +219,7 @@ updateField :: forall name fields b .
    , Bits b, Integral b
    , Field (Output name fields)
    ) => Output name fields -> BitFields b fields -> BitFields b fields
-{-# INLINE updateField #-}
+{-# INLINABLE updateField #-}
 updateField = updateField' @name
 
 -- | Set the value of a field (without checking sizes)
@@ -229,7 +229,7 @@ updateField' :: forall name fields b .
    , Bits b, Integral b
    , Field (Output name fields)
    ) => Output name fields -> BitFields b fields -> BitFields b fields
-{-# INLINE updateField' #-}
+{-# INLINABLE updateField' #-}
 updateField' value (BitFields w) = BitFields $ ((fromField value `shiftL` off) .&. mask') .|. (w .&. complement mask')
    where
       off   = natValue @(Offset name fields)
@@ -246,7 +246,7 @@ withField :: forall name fields b f .
    , f ~ Output name fields
    , Field f
    ) => (f -> f) -> BitFields b fields -> BitFields b fields
-{-# INLINE withField #-}
+{-# INLINABLE withField #-}
 withField = withField' @name
 
 -- | Modify the value of a field (without checking sizes)
@@ -257,7 +257,7 @@ withField' :: forall (name :: Symbol) fields b f .
    , f ~ Output name fields
    , Field f
    ) => (f -> f) -> BitFields b fields -> BitFields b fields
-{-# INLINE withField' #-}
+{-# INLINABLE withField' #-}
 withField' f bs = updateField' @name (f v) bs
    where
       v = extractField' @name bs

@@ -27,7 +27,7 @@ foreign import ccall unsafe "free"    free    :: Addr# -> IO ()
 
 -- | Allocate a new Buffer using system ``malloc``
 newBuffer :: MonadIO m => Word -> m (Maybe BufferME)
-{-# INLINE newBuffer #-}
+{-# INLINABLE newBuffer #-}
 newBuffer sz = do
    p <- liftIO (malloc_ sz)
    case p == nullPtr of
@@ -55,5 +55,5 @@ makeFinalized b = do
 
 -- | Free a malloc-ed Buffer
 freeBuffer :: MonadIO m => BufferME -> m ()
-{-# INLINE freeBuffer #-}
+{-# INLINABLE freeBuffer #-}
 freeBuffer (BufferME addr _sz) = liftIO (free addr)
