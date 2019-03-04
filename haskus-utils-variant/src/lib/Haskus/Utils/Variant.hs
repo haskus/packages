@@ -167,7 +167,7 @@ instance
    , Eq x
    ) => Eq (V (x ': xs))
    where
-      {-# INLINE (==) #-}
+      {-# INLINABLE (==) #-}
       (==) v1@(Variant t1 _) v2@(Variant t2 _)
          | t1 /= t2  = False
          | otherwise = case (popVariantHead v1, popVariantHead v2) of
@@ -193,7 +193,7 @@ class ShowVariantValue a where
    showVariantValue :: a -> ShowS
 
 instance ShowVariantValue (V '[]) where
-   {-# INLINE showVariantValue #-}
+   {-# INLINABLE showVariantValue #-}
    showVariantValue _ = showString "undefined"
 
 instance
@@ -202,7 +202,7 @@ instance
    , Typeable x
    ) => ShowVariantValue (V (x ': xs))
    where
-   {-# INLINE showVariantValue #-}
+   {-# INLINABLE showVariantValue #-}
    showVariantValue v = case popVariantHead v of
          Right x -> showString "V @"
                     . showsPrec 10 (typeOf x)
@@ -242,11 +242,11 @@ class ShowTypeList a where
    showTypeList :: a -> [ShowS]
 
 instance ShowTypeList (V '[]) where
-   {-# INLINE showTypeList #-}
+   {-# INLINABLE showTypeList #-}
    showTypeList _ = []
 
 instance (Typeable x, ShowTypeList (V xs)) => ShowTypeList (V (x ': xs)) where
-   {-# INLINE showTypeList #-}
+   {-# INLINABLE showTypeList #-}
    showTypeList _ = showsPrec 0 (typeOf (undefined :: x)) : showTypeList (undefined :: V xs)
 
 -- | Get Variant index
@@ -504,7 +504,7 @@ class PopVariant a xs where
    popVariant' :: V xs -> Either (V (Remove a xs)) a
 
 instance PopVariant a '[] where
-   {-# INLINE popVariant' #-}
+   {-# INLINABLE popVariant' #-}
    popVariant' _ = undefined
 
 instance forall a xs n xs' y ys.
@@ -516,7 +516,7 @@ instance forall a xs n xs' y ys.
       , xs ~ (y ': ys)
       ) => PopVariant a (y ': ys)
    where
-      {-# INLINE popVariant' #-}
+      {-# INLINABLE popVariant' #-}
       popVariant' (Variant t a)
          = case natValue' @n of
             0             -> Left (Variant t a) -- no 'a' left in xs
@@ -528,7 +528,7 @@ class SplitVariant as rs xs where
    splitVariant' :: V xs -> Either (V rs) (V as)
 
 instance SplitVariant as rs '[] where
-   {-# INLINE splitVariant' #-}
+   {-# INLINABLE splitVariant' #-}
    splitVariant' _ = undefined
 
 instance forall as rs xs x n m.
@@ -539,7 +539,7 @@ instance forall as rs xs x n m.
    , KnownNat n
    ) => SplitVariant as rs (x ': xs)
    where
-      {-# INLINE splitVariant' #-}
+      {-# INLINABLE splitVariant' #-}
       splitVariant' (Variant 0 v)
          = case natValue' @n of
             -- we assume that if `x` isn't in `as`, it is in `rs`
@@ -703,11 +703,11 @@ class MapVariantIndexes a b cs (is :: [Nat]) where
    mapVariant' :: (a -> b) -> V cs -> V (ReplaceNS is b cs)
 
 instance MapVariantIndexes a b '[] is where
-   {-# INLINE mapVariant' #-}
+   {-# INLINABLE mapVariant' #-}
    mapVariant' = undefined
 
 instance MapVariantIndexes a b cs '[] where
-   {-# INLINE mapVariant' #-}
+   {-# INLINABLE mapVariant' #-}
    mapVariant' _ v = v
 
 instance forall a b cs is i.
@@ -715,7 +715,7 @@ instance forall a b cs is i.
    , a ~ Index i cs
    , KnownNat i
    ) => MapVariantIndexes a b cs (i ': is) where
-   {-# INLINE mapVariant' #-}
+   {-# INLINABLE mapVariant' #-}
    mapVariant' f v = mapVariant' @a @b @(ReplaceN i b cs) @is f (mapVariantAt @i f v)
 
 type MapVariant a b cs =
@@ -870,7 +870,7 @@ class AlterVariant c (b :: [*]) where
    alterVariant' :: (forall a. c a => a -> a) -> Word -> Any -> Any
 
 instance AlterVariant c '[] where
-   {-# INLINE alterVariant' #-}
+   {-# INLINABLE alterVariant' #-}
    alterVariant' _ = undefined
 
 instance
@@ -878,7 +878,7 @@ instance
    , c x
    ) => AlterVariant c (x ': xs)
    where
-      {-# INLINE alterVariant' #-}
+      {-# INLINABLE alterVariant' #-}
       alterVariant' f t v =
          case t of
             0 -> unsafeCoerce (f (unsafeCoerce v :: x))
@@ -911,7 +911,7 @@ class TraverseVariant c (b :: [*]) m where
    traverseVariant' :: (forall a . (Monad m, c a) => a -> m a) -> Word -> Any -> m Any
 
 instance TraverseVariant c '[] m where
-   {-# INLINE traverseVariant' #-}
+   {-# INLINABLE traverseVariant' #-}
    traverseVariant' _ = undefined
 
 instance
@@ -920,7 +920,7 @@ instance
    , Monad m
    ) => TraverseVariant c (x ': xs) m
    where
-      {-# INLINE traverseVariant' #-}
+      {-# INLINABLE traverseVariant' #-}
       traverseVariant' f t v =
          case t of
             0 -> unsafeCoerce <$> f (unsafeCoerce v :: x)
@@ -955,7 +955,7 @@ class ReduceVariant c r (b :: [*]) where
    reduceVariant' :: (forall a. c a => a -> r) -> Word -> Any -> r
 
 instance ReduceVariant c r '[] where
-   {-# INLINE reduceVariant' #-}
+   {-# INLINABLE reduceVariant' #-}
    reduceVariant' _ = undefined
 
 instance
@@ -963,7 +963,7 @@ instance
    , c x
    ) => ReduceVariant c r (x ': xs)
    where
-      {-# INLINE reduceVariant' #-}
+      {-# INLINABLE reduceVariant' #-}
       reduceVariant' f t v =
          case t of
             0 -> f (unsafeCoerce v :: x)
@@ -1011,7 +1011,7 @@ class LiftVariant' xs ys where
    liftVariant' :: V xs -> V ys
 
 instance LiftVariant' '[] ys where
-   {-# INLINE liftVariant' #-}
+   {-# INLINABLE liftVariant' #-}
    liftVariant' _ = undefined
 
 instance forall xs ys x.
@@ -1019,7 +1019,7 @@ instance forall xs ys x.
       , KnownNat (IndexOf x ys)
       ) => LiftVariant' (x ': xs) ys
    where
-      {-# INLINE liftVariant' #-}
+      {-# INLINABLE liftVariant' #-}
       liftVariant' (Variant t a)
          | t == 0    = Variant (natValue' @(IndexOf x ys)) a
          | otherwise = liftVariant' @xs (Variant (t-1) a)
@@ -1056,7 +1056,7 @@ class Flattenable a rs where
    toFlattenVariant :: Word -> a -> rs
 
 instance Flattenable (V '[]) rs where
-   {-# INLINE toFlattenVariant #-}
+   {-# INLINABLE toFlattenVariant #-}
    toFlattenVariant _ _ = undefined
 
 instance forall xs ys rs.
@@ -1064,7 +1064,7 @@ instance forall xs ys rs.
    , KnownNat (Length xs)
    ) => Flattenable (V (V xs ': ys)) (V rs)
    where
-   {-# INLINE toFlattenVariant #-}
+   {-# INLINABLE toFlattenVariant #-}
    toFlattenVariant i v = case popVariantHead v of
       Right (Variant n a) -> Variant (i+n) a
       Left vys            -> toFlattenVariant (i+natValue @(Length xs)) vys
@@ -1090,7 +1090,7 @@ class JoinVariant m xs where
    joinVariant :: V xs -> m (V (ExtractM m xs))
 
 instance JoinVariant m '[] where
-   {-# INLINE joinVariant #-}
+   {-# INLINABLE joinVariant #-}
    joinVariant _ = undefined
 
 instance forall m xs a.
@@ -1098,7 +1098,7 @@ instance forall m xs a.
    , ExtractM m (m a ': xs) ~ (a ': ExtractM m xs)
    , JoinVariant m xs
    ) => JoinVariant m (m a ': xs) where
-   {-# INLINE joinVariant #-}
+   {-# INLINABLE joinVariant #-}
    joinVariant (Variant 0 a) = (Variant 0 . unsafeCoerce) <$> (unsafeCoerce a :: m a)
    joinVariant (Variant n a) = prependVariant @'[a] <$> joinVariant (Variant (n-1) a :: V xs)
 
@@ -1116,11 +1116,11 @@ joinVariantUnsafe (Variant t act) = Variant t <$> (unsafeCoerce act :: m Any)
 
 
 instance NFData (V '[]) where
-   {-# INLINE rnf #-}
+   {-# INLINABLE rnf #-}
    rnf _ = ()
 
 instance (NFData x, NFData (V xs)) => NFData (V (x ': xs)) where
-   {-# INLINE rnf #-}
+   {-# INLINABLE rnf #-}
    rnf v = case popVariantHead v of
       Right x -> rnf x
       Left xs -> rnf xs
@@ -1198,58 +1198,58 @@ class ContVariant xs where
    contToVariantM :: Monad m => ContFlow xs (m (V xs)) -> m (V xs)
 
 instance ContVariant '[a] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant _ a) = ContFlow $ \(Single f) ->
       f (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(Single f) -> do
       Variant _ a <- act
       f (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       Single (toVariantAt @0)
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       Single (return . toVariantAt @0)
 
 instance ContVariant '[a,b] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2) ->
       case t of
          0 -> f1 (unsafeCoerce a)
          _ -> f2 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2) -> do
       Variant t a <- act
       case t of
          0 -> f1 (unsafeCoerce a)
          _ -> f2 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
       )
 
 instance ContVariant '[a,b,c] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3) ->
       case t of
          0 -> f1 (unsafeCoerce a)
          1 -> f2 (unsafeCoerce a)
          _ -> f3 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3) -> do
       Variant t a <- act
       case t of
@@ -1257,14 +1257,14 @@ instance ContVariant '[a,b,c] where
          1 -> f2 (unsafeCoerce a)
          _ -> f3 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
       , toVariantAt @2
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1272,7 +1272,7 @@ instance ContVariant '[a,b,c] where
       )
 
 instance ContVariant '[a,b,c,d] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4) ->
       case t of
          0 -> f1 (unsafeCoerce a)
@@ -1280,7 +1280,7 @@ instance ContVariant '[a,b,c,d] where
          2 -> f3 (unsafeCoerce a)
          _ -> f4 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4) -> do
       Variant t a <- act
       case t of
@@ -1289,7 +1289,7 @@ instance ContVariant '[a,b,c,d] where
          2 -> f3 (unsafeCoerce a)
          _ -> f4 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1297,7 +1297,7 @@ instance ContVariant '[a,b,c,d] where
       , toVariantAt @3
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1306,7 +1306,7 @@ instance ContVariant '[a,b,c,d] where
       )
 
 instance ContVariant '[a,b,c,d,e] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4,f5) ->
       case t of
          0 -> f1 (unsafeCoerce a)
@@ -1315,7 +1315,7 @@ instance ContVariant '[a,b,c,d,e] where
          3 -> f4 (unsafeCoerce a)
          _ -> f5 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4,f5) -> do
       Variant t a <- act
       case t of
@@ -1325,7 +1325,7 @@ instance ContVariant '[a,b,c,d,e] where
          3 -> f4 (unsafeCoerce a)
          _ -> f5 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1334,7 +1334,7 @@ instance ContVariant '[a,b,c,d,e] where
       , toVariantAt @4
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1344,7 +1344,7 @@ instance ContVariant '[a,b,c,d,e] where
       )
 
 instance ContVariant '[a,b,c,d,e,f] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4,f5,f6) ->
       case t of
          0 -> f1 (unsafeCoerce a)
@@ -1354,7 +1354,7 @@ instance ContVariant '[a,b,c,d,e,f] where
          4 -> f5 (unsafeCoerce a)
          _ -> f6 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4,f5,f6) -> do
       Variant t a <- act
       case t of
@@ -1365,7 +1365,7 @@ instance ContVariant '[a,b,c,d,e,f] where
          4 -> f5 (unsafeCoerce a)
          _ -> f6 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1375,7 +1375,7 @@ instance ContVariant '[a,b,c,d,e,f] where
       , toVariantAt @5
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1386,7 +1386,7 @@ instance ContVariant '[a,b,c,d,e,f] where
       )
 
 instance ContVariant '[a,b,c,d,e,f,g] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7) ->
       case t of
          0 -> f1 (unsafeCoerce a)
@@ -1397,7 +1397,7 @@ instance ContVariant '[a,b,c,d,e,f,g] where
          5 -> f6 (unsafeCoerce a)
          _ -> f7 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7) -> do
       Variant t a <- act
       case t of
@@ -1409,7 +1409,7 @@ instance ContVariant '[a,b,c,d,e,f,g] where
          5 -> f6 (unsafeCoerce a)
          _ -> f7 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1420,7 +1420,7 @@ instance ContVariant '[a,b,c,d,e,f,g] where
       , toVariantAt @6
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1432,7 +1432,7 @@ instance ContVariant '[a,b,c,d,e,f,g] where
       )
 
 instance ContVariant '[a,b,c,d,e,f,g,h] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8) ->
       case t of
          0 -> f1 (unsafeCoerce a)
@@ -1444,7 +1444,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h] where
          6 -> f7 (unsafeCoerce a)
          _ -> f8 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8) -> do
       Variant t a <- act
       case t of
@@ -1457,7 +1457,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h] where
          6 -> f7 (unsafeCoerce a)
          _ -> f8 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1469,7 +1469,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h] where
       , toVariantAt @7
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1482,7 +1482,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h] where
       )
 
 instance ContVariant '[a,b,c,d,e,f,g,h,i] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8,f9) ->
       case t of
          0 -> f1 (unsafeCoerce a)
@@ -1495,7 +1495,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i] where
          7 -> f8 (unsafeCoerce a)
          _ -> f9 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8,f9) -> do
       Variant t a <- act
       case t of
@@ -1509,7 +1509,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i] where
          7 -> f8 (unsafeCoerce a)
          _ -> f9 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1522,7 +1522,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i] where
       , toVariantAt @8
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1536,7 +1536,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i] where
       )
 
 instance ContVariant '[a,b,c,d,e,f,g,h,i,j] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8,f9,f10) ->
       case t of
          0 -> f1  (unsafeCoerce a)
@@ -1550,7 +1550,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j] where
          8 -> f9  (unsafeCoerce a)
          _ -> f10 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8,f9,f10) -> do
       Variant t a <- act
       case t of
@@ -1565,7 +1565,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j] where
          8 -> f9  (unsafeCoerce a)
          _ -> f10 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1579,7 +1579,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j] where
       , toVariantAt @9
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1594,7 +1594,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j] where
       )
 
 instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11) ->
       case t of
          0 -> f1  (unsafeCoerce a)
@@ -1609,7 +1609,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k] where
          9 -> f10 (unsafeCoerce a)
          _ -> f11 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11) -> do
       Variant t a <- act
       case t of
@@ -1625,7 +1625,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k] where
          9 -> f10 (unsafeCoerce a)
          _ -> f11 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1640,7 +1640,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k] where
       , toVariantAt @10
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1
@@ -1656,7 +1656,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k] where
       )
 
 instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k,l] where
-   {-# INLINE variantToCont #-}
+   {-# INLINABLE variantToCont #-}
    variantToCont (Variant t a) = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12) ->
       case t of
          0  -> f1  (unsafeCoerce a)
@@ -1672,7 +1672,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k,l] where
          10 -> f11 (unsafeCoerce a)
          _  -> f12 (unsafeCoerce a)
 
-   {-# INLINE variantToContM #-}
+   {-# INLINABLE variantToContM #-}
    variantToContM act = ContFlow $ \(f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12) -> do
       Variant t a <- act
       case t of
@@ -1689,7 +1689,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k,l] where
          10 -> f11 (unsafeCoerce a)
          _  -> f12 (unsafeCoerce a)
 
-   {-# INLINE contToVariant #-}
+   {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
       ( toVariantAt @0
       , toVariantAt @1
@@ -1705,7 +1705,7 @@ instance ContVariant '[a,b,c,d,e,f,g,h,i,j,k,l] where
       , toVariantAt @11
       )
 
-   {-# INLINE contToVariantM #-}
+   {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
       ( return . toVariantAt @0
       , return . toVariantAt @1

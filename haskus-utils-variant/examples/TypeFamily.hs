@@ -24,7 +24,7 @@ instance C [Int] where
 -- boilerplate instance
 instance C (V '[]) where
    type R (V '[]) = V '[]
-   {-# INLINE foo #-}
+   {-# INLINABLE foo #-}
    foo = undefined
 
 -- Variant instance
@@ -36,7 +36,7 @@ instance
 
    type R (V (x ': xs)) = V (MapR (x ': xs))
 
-   {-# INLINE foo #-}
+   {-# INLINABLE foo #-}
    foo v = case popVariantHead v of
       Right a -> toVariantHead (foo a)
       Left as -> toVariantTail (foo as)

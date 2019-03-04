@@ -51,14 +51,14 @@ type family StripR f r where
 
 -- | Bind a flow to a tuple of continuations
 (>::>) :: ContFlow xs r -> ContListToTuple xs r -> r
-{-# INLINE (>::>) #-}
+{-# INLINABLE (>::>) #-}
 (>::>) (ContFlow f) !cs = f cs
 
 infixl 0 >::>
 
 -- | Bind a flow to a 1-tuple of continuations
 (>:-:>) :: ContFlow '[a] r -> (a -> r) -> r
-{-# INLINE (>:-:>) #-}
+{-# INLINABLE (>:-:>) #-}
 (>:-:>) (ContFlow f) c = f (Single c)
 
 infixl 0 >:-:>
@@ -68,7 +68,7 @@ infixl 0 >:-:>
 (>:%:>) :: forall ts xs r.
    ( ReorderTuple ts (ContListToTuple xs r)
    ) => ContFlow xs r -> ts -> r
-{-# INLINE (>:%:>) #-}
+{-# INLINABLE (>:%:>) #-}
 (>:%:>) (ContFlow f) !cs = f (tupleReorder cs)
 
 infixl 0 >:%:>

@@ -230,17 +230,17 @@ appendVariantF (VariantF v) = VariantF (appendVariant @(ApplyAll e ys) v)
 
 -- | Set the first value
 toVariantFHead :: forall x xs e. x e -> VariantF (x ': xs) e
-{-# INLINE toVariantFHead #-}
+{-# INLINABLE toVariantFHead #-}
 toVariantFHead v = VariantF (toVariantHead @(x e) @(ApplyAll e xs) v)
 
 -- | Set the tail
 toVariantFTail :: forall x xs e. VariantF xs e -> VariantF (x ': xs) e
-{-# INLINE toVariantFTail #-}
+{-# INLINABLE toVariantFTail #-}
 toVariantFTail (VariantF v) = VariantF (toVariantTail @(x e) @(ApplyAll e xs) v)
 
 -- | Pop VariantF head
 popVariantFHead :: forall x xs e. VariantF (x ': xs) e -> Either (VariantF xs e) (x e)
-{-# INLINE popVariantFHead #-}
+{-# INLINABLE popVariantFHead #-}
 popVariantFHead (VariantF v) = case popVariantHead v of
    Right x -> Right x
    Left xs -> Left (VariantF xs)
@@ -254,7 +254,7 @@ type PopVariantF x xs e =
 popVariantF :: forall x xs e.
    ( PopVariantF x xs e
    ) => VariantF xs e -> Either (VariantF (Remove x xs) e) (x e)
-{-# INLINE popVariantF #-}
+{-# INLINABLE popVariantF #-}
 popVariantF (VariantF v) = case popVariant v of
    Right x -> Right x
    Left xs -> Left (VariantF xs)
@@ -286,7 +286,7 @@ class AlterVariantF (c :: (* -> *) -> Constraint) e (xs :: [* -> *]) where
    alterVariantF' :: (forall (f :: * -> *). c f => f e -> f e) -> Word -> Any -> Any
 
 instance AlterVariantF c e '[] where
-   {-# INLINE alterVariantF' #-}
+   {-# INLINABLE alterVariantF' #-}
    alterVariantF' _ = undefined
 
 instance
@@ -294,7 +294,7 @@ instance
    , c x
    ) => AlterVariantF c e (x ': xs)
    where
-      {-# INLINE alterVariantF' #-}
+      {-# INLINABLE alterVariantF' #-}
       alterVariantF' f t v =
          case t of
             0 -> unsafeCoerce (f (unsafeCoerce v :: x e))
@@ -325,7 +325,7 @@ class AlgVariantF (c :: (* -> *) -> Constraint) e r (xs :: [* -> *]) where
    algVariantF' :: (forall (f :: * -> *). c f => f e -> r) -> Word -> Any -> r
 
 instance AlgVariantF c e r '[] where
-   {-# INLINE algVariantF' #-}
+   {-# INLINABLE algVariantF' #-}
    algVariantF' _ = undefined
 
 instance
@@ -333,7 +333,7 @@ instance
    , c x
    ) => AlgVariantF c e r (x ': xs)
    where
-      {-# INLINE algVariantF' #-}
+      {-# INLINABLE algVariantF' #-}
       algVariantF' f t v =
          case t of
             0 -> f (unsafeCoerce v :: x e)

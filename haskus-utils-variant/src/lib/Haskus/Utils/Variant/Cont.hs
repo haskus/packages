@@ -39,7 +39,7 @@ fret :: forall x r t n xs.
    , KnownNat n
    , CheckNub xs
    ) => t -> (x -> r)
-{-# INLINE fret #-}
+{-# INLINABLE fret #-}
 fret = tupleN @n @t @(x -> r)
 
 -- | Implicitly call the type-indexed continuation in the context
@@ -52,7 +52,7 @@ freturn :: forall x r t n xs.
    , CheckNub xs
    , ?__cs :: t
    ) => x -> r
-{-# INLINE freturn #-}
+{-# INLINABLE freturn #-}
 freturn = fret ?__cs
 
 -- | Call the indexed continuation from the tuple passed as first parameter
@@ -62,7 +62,7 @@ fretN :: forall n x r t xs.
    , x ~ Index n xs
    , KnownNat n
    ) => t -> (x -> r)
-{-# INLINE fretN #-}
+{-# INLINABLE fretN #-}
 fretN = tupleN @n @t @(x -> r)
 
 
@@ -74,7 +74,7 @@ freturnN :: forall n x r t xs.
    , KnownNat n
    , ?__cs :: t
    ) => x -> r
-{-# INLINE freturnN #-}
+{-# INLINABLE freturnN #-}
 freturnN = fretN @n ?__cs
 
 
@@ -92,7 +92,7 @@ data Then = Then
 data Else = Else
 
 fIf :: Bool -> ContFlow '[Then,Else] r
-{-# INLINE fIf #-}
+{-# INLINABLE fIf #-}
 fIf b = fdo
    case b of
       True  -> freturn Then
