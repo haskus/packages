@@ -52,12 +52,45 @@ where
 import Haskus.Utils.Variant
 import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
+import Haskus.Utils.Types.Constraint
 import Haskus.Utils.ContFlow
 
 import Unsafe.Coerce
 import Data.Bifunctor
-import GHC.Exts (Any,Constraint)
+import GHC.Exts (Any)
 import Control.DeepSeq
+import Data.Functor.Classes
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XTypeOperators
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XTypeFamilies
+-- >>> :set -XPatternSynonyms
+-- >>> :set -XDeriveFunctor
+-- >>> import Data.Functor.Classes
+-- >>>
+-- >>> data ConsF a e = ConsF a e deriving (Functor)
+-- >>> data NilF    e = NilF      deriving (Functor)
+-- >>>
+-- >>> instance Eq a => Eq1 (ConsF a) where liftEq cmp (ConsF a e1) (ConsF b e2) = a == b && cmp e1 e2
+-- >>> instance Eq1 NilF where liftEq _ _ _ = True
+-- >>>
+-- >>> instance Ord a => Ord1 (ConsF a) where liftCompare cmp (ConsF a e1) (ConsF b e2) = compare a b <> cmp e1 e2
+-- >>> instance Ord1 NilF where liftCompare _ _ _ = EQ
+-- >>>
+-- >>> instance Show a => Show1 (ConsF a) where liftShowsPrec shw _ p (ConsF a e) = showString "ConsF " . showsPrec 10 a . showString " " . shw 10 e
+-- >>> instance Show1 NilF where liftShowsPrec _ _ _ _ = showString "NilF"
+-- >>>
+-- >>> liftEq (==) NilF (NilF :: NilF Int)
+-- True
+-- >>> liftEq (==) (ConsF 10 "Test") (ConsF 10 "Test" :: ConsF Int String)
+-- True
+-- >>> liftEq (==) (ConsF 10 "Test") (ConsF 8 "Test" :: ConsF Int String)
+-- False
+-- >>> liftEq (==) (ConsF 10 "Test") (ConsF 10 "XXX" :: ConsF Int String)
+-- False
 
 -- | Recursive Functor-like Variant
 newtype VariantF (xs :: [* -> *]) e
@@ -71,10 +104,108 @@ type family ApplyAll e (xs :: [* -> k]) :: [k] where
    ApplyAll e '[]       = '[]
    ApplyAll e (f ': fs) = f e ': ApplyAll e fs
 
-instance (Show (V (ApplyAll e xs))) => Show (VariantF xs e) where
-   show (VariantF x) = show x
-deriving instance (Eq (V (ApplyAll e xs))) => Eq (VariantF xs e)
-deriving instance (Ord (V (ApplyAll e xs))) => Ord (VariantF xs e)
+-- | Eq instance for VariantF
+--
+-- >>> let a = FV (ConsF 'a' "Test") :: VariantF '[ConsF Char,NilF] String
+-- >>> let a' = FV (ConsF 'a' "XXX") :: VariantF '[ConsF Char,NilF] String
+-- >>> let b = FV (ConsF 'b' "Test") :: VariantF '[ConsF Char,NilF] String
+-- >>> a == a
+-- True
+-- >>> a == a'
+-- False
+-- >>> a == b
+-- False
+--
+-- >>> let c = FV (ConsF 'c' b) :: VariantF '[ConsF Char,NilF] (VariantF '[ConsF Char, NilF] String)
+-- >>> c == c
+-- True
+--
+-- >>> let n1 = FV (NilF :: NilF ()) :: VariantF '[ConsF Char,NilF] ()
+-- >>> let n2 = FV (NilF :: NilF ()) :: VariantF '[ConsF Char,NilF] ()
+-- >>> n1 == n2
+-- True
+--
+instance
+   ( Eq1 (VariantF xs)
+   , ConstraintAll1 Eq1 xs
+   , Eq e
+   ) => Eq (VariantF xs e)
+   where
+   (==) = eq1
+
+-- | Ord instance for VariantF
+--
+-- >>> let a = FV (ConsF 'a' "Test") :: VariantF '[ConsF Char,NilF] String
+-- >>> let a' = FV (ConsF 'a' "XXX") :: VariantF '[ConsF Char,NilF] String
+-- >>> let b = FV (ConsF 'b' "Test") :: VariantF '[ConsF Char,NilF] String
+-- >>> compare a a
+-- EQ
+-- >>> compare a a'
+-- LT
+-- >>> compare a b
+-- LT
+instance
+   ( Ord1 (VariantF xs)
+   , ConstraintAll1 Ord1 xs
+   , ConstraintAll1 Eq1 xs
+   , Ord e
+   ) => Ord (VariantF xs e)
+   where
+   compare = compare1
+
+
+instance Eq1 (VariantF '[]) where
+   liftEq = undefined
+
+instance
+   ( Eq1 f
+   , Eq1 (VariantF fs)
+   ) => Eq1 (VariantF (f:fs)) where
+   liftEq cmp x y = case (popVariantFHead x, popVariantFHead y) of
+      (Right a, Right b) -> liftEq cmp a b
+      (Left a, Left b)   -> liftEq cmp a b
+      _                  -> False
+
+instance Ord1 (VariantF '[]) where
+   liftCompare = undefined
+
+instance
+   ( Ord1 f
+   , Ord1 (VariantF fs)
+   ) => Ord1 (VariantF (f:fs)) where
+   liftCompare cmp x@(VariantF v1) y@(VariantF v2) =
+      case (popVariantFHead x, popVariantFHead y) of
+         (Right a, Right b) -> liftCompare cmp a b
+         (Left  a, Left  b) -> liftCompare cmp a b
+         _                  -> compare (variantIndex v1) (variantIndex v2)
+
+
+instance Show1 (VariantF '[]) where
+   liftShowsPrec = undefined
+
+instance
+   ( Show1 f
+   , Show1 (VariantF fs)
+   ) => Show1 (VariantF (f:fs)) where
+   liftShowsPrec shw shwl p x = case popVariantFHead x of
+         Right a -> liftShowsPrec shw shwl p a
+         Left  a -> liftShowsPrec shw shwl p a
+
+-- | Show instance for VariantF
+--
+-- >>> let a = FV (ConsF 'a' "Test") :: VariantF '[ConsF Char,NilF] String
+-- >>> let b = FV (NilF :: NilF String) :: VariantF '[ConsF Char,NilF] String
+-- >>> print a
+-- ConsF 'a' "Test"
+-- >>> print b
+-- NilF
+instance
+   ( Show1 (VariantF xs)
+   , ConstraintAll1 Show1 xs
+   , Show e
+   ) => Show (VariantF xs e)
+   where
+   showsPrec = showsPrec1
 
 instance Functor (VariantF '[]) where
    fmap _ = undefined
