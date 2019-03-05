@@ -353,7 +353,7 @@ deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
 --
 -- Typically with this type we would use a F-Algebra:
 --
--- >   Algebra ListF a = ListF a -> a
+-- >   Algebra (ListF a) b = ListF a b -> b
 --
 -- Cf https://bartoszmilewski.com/2013/06/10/understanding-f-algebras/
 --
