@@ -118,6 +118,16 @@ numbersTo 0 = FV (NilF :: NilF Int)
 numbersTo n = FV (ConsF (show n) (n-1))
 
 -------------------------------
+-- numbersToMin5 apomorphism
+-------------------------------
+
+numbersToMin5 :: RCoAlgebra (ListF String) (List String) Int
+numbersToMin5 0 = FV (NilF :: NilF (Either (List String) Int))
+numbersToMin5 n
+   | n > 5     = FV (ConsF (show n) (Right (n-1) :: Either (List String) Int))
+   | otherwise = FV (ConsF "min" (Left (Nil :: List String) :: Either (List String) Int))
+
+-------------------------------
 -- Tests
 -------------------------------
 
@@ -144,4 +154,7 @@ testsEADT = testGroup "EADT" $
 
    , testProperty "anamorphism: numbersTo" $
       ana numbersTo 5 == Cons "5" (Cons "4" (Cons "3" (Cons "2" (Cons "1" Nil))))
+
+   , testProperty "apomorphism: numbersToMin5" $
+      apo numbersToMin5 8 == Cons "8" (Cons "7" (Cons "6" (Cons "min" Nil)))
    ]
