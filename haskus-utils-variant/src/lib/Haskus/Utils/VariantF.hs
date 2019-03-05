@@ -33,16 +33,20 @@ module Haskus.Utils.VariantF
    , popVariantF
    , LiftVariantF
    , liftVariantF
-   , AlterVariantF
-   , alterVariantF
-   , AlgVariantF
-   , algVariantF
    , SplitVariantF
    , splitVariantF
    , variantFToCont
    , variantFToContM
    , contToVariantF
    , contToVariantFM
+   -- * Algebras
+   -- $algebras
+   , AlgebraC (..)
+   , FromAlgebraC
+   , fromAlgebraC
+   , Algebras (..)
+   , FromAlgebras
+   , fromAlgebras
    -- * Reexport
    , NoConstraint
    , module Haskus.Utils.Functor
@@ -54,10 +58,11 @@ import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
 import Haskus.Utils.Types.Constraint
 import Haskus.Utils.ContFlow
+import Haskus.Utils.Tuple
+import Haskus.Utils.Types
+import Haskus.Utils.HList
 
-import Unsafe.Coerce
 import Data.Bifunctor
-import GHC.Exts (Any)
 import Control.DeepSeq
 import Data.Functor.Classes
 
@@ -73,6 +78,7 @@ import Data.Functor.Classes
 -- >>>
 -- >>> data ConsF a e = ConsF a e deriving (Functor)
 -- >>> data NilF    e = NilF      deriving (Functor)
+-- >>> type ListF   a = VariantF '[NilF,ConsF a]
 -- >>>
 -- >>> instance Eq a => Eq1 (ConsF a) where liftEq cmp (ConsF a e1) (ConsF b e2) = a == b && cmp e1 e2
 -- >>> instance Eq1 NilF where liftEq _ _ _ = True
@@ -103,6 +109,8 @@ newtype VariantF (xs :: [* -> *]) e
 type family ApplyAll e (xs :: [* -> k]) :: [k] where
    ApplyAll e '[]       = '[]
    ApplyAll e (f ': fs) = f e ': ApplyAll e fs
+
+type instance Base (VariantF xs a) = VariantF xs
 
 -- | Eq instance for VariantF
 --
@@ -215,7 +223,12 @@ instance (Functor (VariantF fs), Functor f) => Functor (VariantF (f ': fs)) wher
       Right x -> toVariantFHead (fmap f x)
       Left xs -> toVariantFTail (fmap f (VariantF xs))
 
+
+
 -- | Pattern-match in a VariantF
+--
+-- >>> FV (NilF :: NilF String) :: VariantF '[ConsF Char,NilF] String
+-- NilF
 pattern FV :: forall c cs e. c :< (ApplyAll e cs) => c -> VariantF cs e
 pattern FV x = VariantF (V x)
 
@@ -282,77 +295,6 @@ liftVariantF :: forall as bs e.
    ) => VariantF as e -> VariantF bs e
 liftVariantF (VariantF v) = VariantF (liftVariant' v)
 
-class AlterVariantF (c :: (* -> *) -> Constraint) e (xs :: [* -> *]) where
-   alterVariantF' :: (forall (f :: * -> *). c f => f e -> f e) -> Word -> Any -> Any
-
-instance AlterVariantF c e '[] where
-   {-# INLINABLE alterVariantF' #-}
-   alterVariantF' _ = undefined
-
-instance
-   ( AlterVariantF c e xs
-   , c x
-   ) => AlterVariantF c e (x ': xs)
-   where
-      {-# INLINABLE alterVariantF' #-}
-      alterVariantF' f t v =
-         case t of
-            0 -> unsafeCoerce (f (unsafeCoerce v :: x e))
-            n -> alterVariantF' @c @e @xs f (n-1) v
-
--- | Alter a variant. You need to specify the constraints required by the
--- modifying function.
---
--- Usage:
---
--- >   alterVariantF @NoConstraint id         v
--- >   alterVariantF @Resizable    (resize 4) v
--- >
--- >   -- Multiple constraints:
--- >   class (Ord a, Num a) => OrdNum a
--- >   instance (Ord a, Num a) => OrdNum a
--- >   alterVariantF @OrdNum foo v
---
-alterVariantF :: forall c e (xs :: [* -> *]).
-   ( AlterVariantF c e xs
-   ) => (forall (f :: * -> *). c f => f e -> f e) -> VariantF xs e -> VariantF xs e
-{-# INLINABLE alterVariantF #-}
-alterVariantF f (VariantF (Variant t a)) =
-   VariantF (Variant t (alterVariantF' @c @e @xs f t a))
-
-
-class AlgVariantF (c :: (* -> *) -> Constraint) e r (xs :: [* -> *]) where
-   algVariantF' :: (forall (f :: * -> *). c f => f e -> r) -> Word -> Any -> r
-
-instance AlgVariantF c e r '[] where
-   {-# INLINABLE algVariantF' #-}
-   algVariantF' _ = undefined
-
-instance
-   ( AlgVariantF c e r xs
-   , c x
-   ) => AlgVariantF c e r (x ': xs)
-   where
-      {-# INLINABLE algVariantF' #-}
-      algVariantF' f t v =
-         case t of
-            0 -> f (unsafeCoerce v :: x e)
-            n -> algVariantF' @c @e @r @xs f (n-1) v
-
--- | Apply an algebra to a VariantF. You need to specify the constraints
--- required by the modifying function.
---
--- Usage:
---
--- >  algVariantF @NoConstraint id         v
--- >  algVariantF @Resizable    (resize 4) v
---
-algVariantF :: forall c e r (xs :: [* -> *]).
-   ( AlgVariantF c e r xs
-   ) => (forall (f :: * -> *). c f => f e -> r) -> VariantF xs e -> r
-{-# INLINABLE algVariantF #-}
-algVariantF f (VariantF (Variant t a)) = algVariantF' @c @e @r @xs f t a
-
 type SplitVariantF as xs e =
    ( Complement (ApplyAll e xs) (ApplyAll e as) ~ ApplyAll e (Complement xs as)
    , SplitVariant (ApplyAll e as) (ApplyAll e (Complement xs as)) (ApplyAll e xs)
@@ -398,3 +340,109 @@ instance ContVariant (ApplyAll e xs) => MultiCont (VariantF xs e) where
    toContM = variantFToContM
 
 deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
+
+----------------------------------------
+-- F-Algebras
+----------------------------------------
+
+-- $algebras
+--
+-- Consider the following example:
+--
+-- >   data ListF a b = Nil | Cons a b deriving (Functor)
+--
+-- Typically with this type we would use a F-Algebra:
+--
+-- >   Algebra ListF a = ListF a -> a
+--
+-- Cf https://bartoszmilewski.com/2013/06/10/understanding-f-algebras/
+--
+--
+--
+-- But with VariantF we have the following types:
+--
+-- >   data NilF b    = NilF       deriving Functor
+-- >   data ConsF a b = ConsF a b  deriving Functor
+-- >   type ListF a   = VariantF [NilF, ConsF a] 
+--
+-- Hence to implement the F-Algebra of ListF, we would need an F-Algebra like:
+--
+-- >   Algebras (ListF a) b = (Algebra NilF b, Algebra (ConsF a) b)
+--
+-- (Note that the size of the tuple depends on the number of constructors)
+--
+-- A more Haskell-ish approach is to use a type-class "c" to provide the
+-- f-algebras of the constructors:
+--
+-- >   AlgebraC c a = forall f. c f => f a -> a
+--
+-- We can build the following conversions functions between these algebras:
+--
+-- >   fromAlgebraC :: AlgebraC c a -> Algebras (VariantF xs) a
+-- >   fromAlgebras :: Algebras (VariantF xs) a -> Algebra (VariantF xs) a
+--
+-- By using these conversions functions we can obtain an Algebra that can be
+-- used with the standard recursion-schemes
+
+-- | An F-Algebra with a constraint
+newtype AlgebraC c a = AlgebraC (forall f. c f => f a -> a)
+
+-- | F-Algebras of a VariantF
+newtype Algebras v a = Algebras (VariantFAlgebras v a)
+
+type family VariantFAlgebras v a where
+   VariantFAlgebras v a = ListToTuple (VariantFAlgebraList v a)
+
+type family VariantFAlgebraList v a where
+   VariantFAlgebraList (VariantF fs) a = MakeAlgebras fs a
+
+type family MakeAlgebras (fs :: [Type -> Type]) a where
+   MakeAlgebras '[]      a = '[]
+   MakeAlgebras (f : fs) a = Algebra f a : MakeAlgebras fs a
+
+type FromAlgebraC xs c a =
+   ( FromAlgebraC' (VariantF xs) c a
+   , ConstraintAll1 c xs
+   , FromAlgebraC' (VariantF xs) c a
+   , HTuple (MakeAlgebras xs a)
+   )
+
+-- | Convert an AlgebraC into Algebras for the specified VariantF
+fromAlgebraC :: forall v c xs a.
+   ( FromAlgebraC xs c a
+   , v ~ VariantF xs
+   ) => AlgebraC c a -> Algebras v a
+fromAlgebraC a = Algebras (hToTuple (fromAlgebraC' @(VariantF xs) a))
+
+class FromAlgebraC' v c a where
+   fromAlgebraC' :: AlgebraC c a -> HList (VariantFAlgebraList v a)
+
+instance FromAlgebraC' (VariantF '[]) c a where
+   fromAlgebraC' _ = HNil
+
+instance (FromAlgebraC' (VariantF fs) c a, c f) => FromAlgebraC' (VariantF (f : fs)) c a where
+   fromAlgebraC' a@(AlgebraC g) = g `HCons` fromAlgebraC' @(VariantF fs) a
+
+
+type FromAlgebras fs a =
+   ( FromAlgebras' fs
+   , HTuple (MakeAlgebras fs a)
+   )
+
+-- | Create an Algebra from some VariantF algebras
+fromAlgebras :: forall fs a.
+   ( FromAlgebras fs a
+   ) => Algebras (VariantF fs) a -> Algebra (VariantF fs) a
+fromAlgebras (Algebras fs) v = fromAlgebras' @fs (hFromTuple fs) v
+
+class FromAlgebras' fs where
+   fromAlgebras' :: HList (VariantFAlgebraList (VariantF fs) a) -> VariantF fs a -> a
+
+instance FromAlgebras' '[] where
+   fromAlgebras' _ _ = undefined
+
+instance FromAlgebras' fs => FromAlgebras' (f:fs) where
+   {-# INLINABLE fromAlgebras' #-}
+   fromAlgebras' (f `HCons` fs) v = case popVariantFHead v of
+      Right x -> f x
+      Left xs -> fromAlgebras' fs xs

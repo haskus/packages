@@ -24,10 +24,6 @@ module Haskus.Utils.EADT
    , appendEADT
    , liftEADT
    , popEADT
-   , AlterEADT
-   , alterEADT
-   , AlgEADT
-   , algEADT
    , eadtToCont
    , eadtToContM
    , contToEADT
@@ -46,7 +42,6 @@ import Haskus.Utils.Types
 import Haskus.Utils.ContFlow
 
 import GHC.Exts (Constraint)
-import Control.DeepSeq
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -70,10 +65,10 @@ import Control.DeepSeq
 -- >>> pattern Cons a l = VF (ConsF a l)
 -- >>> pattern Nil :: NilF :<: xs => EADT xs
 -- >>> pattern Nil = VF NilF
--- >>> type List a = EADT '[ConsF a, NilF]
+-- >>> type ListF a = VariantF '[NilF, ConsF a]
+-- >>> type List a = EADT '[NilF, ConsF a]
 -- >>> :}
-
--- $setup
+--
 -- >>>
 -- >>> let a = Cons "Hello" (Cons "World" Nil) :: List String
 -- >>> let b = Cons "Bonjour" (Cons "Monde" Nil) :: List String
@@ -81,15 +76,35 @@ import Control.DeepSeq
 -- False
 -- >>> a == a
 -- True
+--
+-- >>> :{
+-- >>> nilHeight :: Algebra NilF Int
+-- >>> nilHeight _ = 0
+-- >>> consHeight :: Algebra (ConsF a) Int
+-- >>> consHeight (ConsF _ b) = 1 + b
+-- >>> heightAlgebras :: Algebras (ListF a) Int
+-- >>> heightAlgebras = Algebras (nilHeight,consHeight)
+-- >>> heightAlgebra :: Algebra (ListF a) Int
+-- >>> heightAlgebra = fromAlgebras heightAlgebras
+-- >>> :}
+--
+-- >>> cata heightAlgebra a
+-- 2
+--
+-- >>> :{
+-- >>> class MyShow (f :: Type -> Type) where myShow :: f String -> String
+-- >>> instance MyShow NilF where myShow _ = "[]"
+-- >>> instance Show a => MyShow (ConsF a) where myShow (ConsF a b) = show a ++ " : " ++ b
+-- >>> showAlgebra :: Show a => Algebra (ListF a) String
+-- >>> showAlgebra = fromAlgebras (fromAlgebraC (AlgebraC @MyShow myShow))
+-- >>> :}
+--
+-- >>> putStrLn (cata showAlgebra a)
+-- "Hello" : "World" : []
 
 
 -- | An extensible ADT
 type EADT xs = Fix (VariantF xs)
-
--- TODO: GHC 8.6
--- Replace EADT with a newtype isomorphic to Fix.
--- Use "DerivingVia" to derive instances from "Fix"
-deriving newtype instance NFData (VariantF xs (EADT xs)) => NFData (EADT xs)
 
 -- | Constructor `f` is in `xs`
 type family f :<: xs where
@@ -140,22 +155,6 @@ popEADT :: forall f xs e.
    , f e :< ApplyAll e xs
    ) => EADT xs -> Either (VariantF (Remove f xs) (EADT xs)) (f (EADT xs))
 popEADT (Fix v) = popVariantF v
-
-type AlterEADT c xs = AlterVariantF c (EADT xs) xs
-
--- | Alter an EADT value
-alterEADT :: forall c xs.
-   ( AlterEADT c xs
-   ) => (forall f. c f => f (EADT xs) -> f (EADT xs)) -> EADT xs -> EADT xs
-alterEADT f (Fix v) = Fix (alterVariantF @c @(EADT xs) f v)
-
-type AlgEADT c r xs = AlgVariantF c (EADT xs) r xs
-
--- | Apply an algebra to an EADT value
-algEADT :: forall c r xs.
-   ( AlgEADT c r xs
-   ) => (forall f. c f => f (EADT xs) -> r) -> EADT xs -> r
-algEADT f (Fix v) = algVariantF @c @(EADT xs) @r f v
 
 -- | Convert an EADT into a multi-continuation
 eadtToCont ::
