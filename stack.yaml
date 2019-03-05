@@ -9,6 +9,7 @@ packages:
 - haskus-binary/
 - haskus-web/
 - haskus-format-text/
+- haskus-locale/
 
 extra-deps:
 - stm-containers-1.1.0.2
