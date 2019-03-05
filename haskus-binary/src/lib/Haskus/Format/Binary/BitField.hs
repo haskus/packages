@@ -87,6 +87,7 @@ import Haskus.Format.Binary.Bits
 import Haskus.Format.Binary.Storable
 import Haskus.Utils.HList
 import Haskus.Utils.Types
+import Haskus.Utils.Tuple
 
 -- | Bit fields on a base type b
 newtype BitFields b (f :: [*]) = BitFields b deriving (Storable)
@@ -312,9 +313,10 @@ fieldNames _ = hFoldr' Name (HNil :: HList '[]) (undefined :: HList l)
 matchFields :: forall l l2 w bs t .
    ( bs ~ BitFields w l
    , HFoldr' Extract (bs, HList '[]) l (bs, HList l2)
-   , HTuple' l2 t
+   , HTuple l2
+   , t ~ ListToTuple l2
    ) => bs -> t
-matchFields = hToTuple' . fieldValues
+matchFields = hToTuple @l2 . fieldValues
 
 
 -- | Get field names and values in a tuple
@@ -323,9 +325,10 @@ matchNamedFields ::forall lt lv ln lnv w bs t .
    , HFoldr' Extract (bs, HList '[]) lt (bs, HList lv)
    , HFoldr' Name (HList '[]) lt (HList ln)
    , HZipList ln lv lnv
-   , HTuple' lnv t
+   , HTuple lnv
+   , t ~ ListToTuple lnv
    ) => bs -> t
-matchNamedFields = hToTuple' . matchNamedFields'
+matchNamedFields = hToTuple @lnv . matchNamedFields'
 
 -- | Get field names and values in a tuple
 matchNamedFields' ::forall lt lv ln lnv w bs .

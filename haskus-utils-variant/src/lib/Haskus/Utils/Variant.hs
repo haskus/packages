@@ -1174,9 +1174,10 @@ instance
 -- | Get variant possible values in a tuple of Maybe types
 variantToTuple :: forall l t.
    ( VariantToHList l
-   , HTuple' (Map Maybe l) t
+   , HTuple (Map Maybe l)
+   , t ~ ListToTuple (Map Maybe l)
    ) => V l -> t
-variantToTuple = hToTuple' . variantToHList
+variantToTuple = hToTuple . variantToHList
 
 
 instance ContVariant xs => MultiCont (V xs) where

@@ -51,11 +51,13 @@ fromTuple4 :: (a,a,a,a) -> [a]
 {-# INLINABLE fromTuple4 #-}
 fromTuple4 (a,b,c,d) = [a,b,c,d]
 
+
 -- | Singleton type
 newtype Single a = Single a deriving (Show,Eq)
 
 
 type family TupleToList (t :: k) :: [k] where
+   TupleToList ()                                                    = '[]
    TupleToList (Single a)                                            = '[a]
    TupleToList (a,b)                                                 = '[a,b]
    TupleToList (a,b,c)                                               = '[a,b,c]
@@ -84,6 +86,7 @@ type family TupleToList (t :: k) :: [k] where
    TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z) = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
 
 type family ListToTuple (t :: [k]) :: k where
+   ListToTuple '[]                                                    = ()
    ListToTuple '[a]                                                   = Single a
    ListToTuple '[a,b]                                                 = (a,b)
    ListToTuple '[a,b,c]                                               = (a,b,c)

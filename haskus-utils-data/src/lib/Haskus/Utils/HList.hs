@@ -13,7 +13,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
--- | Heterogeneous list utils
+-- | Heterogeneous list
 module Haskus.Utils.HList
    ( HList (..)
    , hHead
@@ -22,7 +22,7 @@ module Haskus.Utils.HList
    , hAppend
    , HFoldr' (..)
    , HFoldl' (..)
-   , HTuple' (..)
+   , HTuple (..)
    , Apply (..)
    , HZipList
    , hZipList
@@ -198,54 +198,86 @@ instance
 -- * Conversion to and from tuples
 
 -- | Convert between hlists and tuples
-class HTuple' v t | v -> t, t -> v where
+class HTuple v where
    -- | Convert an heterogeneous list into a tuple
-   hToTuple'   :: HList v -> t
+   hToTuple   :: HList v -> ListToTuple v
    
    -- | Convert a tuple into an heterogeneous list
-   hFromTuple' :: t -> HList v
+   hFromTuple :: ListToTuple v -> HList v
 
 
-instance HTuple' '[] () where
-    hToTuple' HNil = ()
-    hFromTuple' () = HNil
+instance HTuple '[] where
+   hToTuple HNil = ()
+   hFromTuple () = HNil
 
-instance HTuple' '[a] (Single a) where
-    hToTuple' (a `HCons` HNil) = Single a
-    hFromTuple' (Single a) = a `HCons` HNil
+instance HTuple '[a] where
+   hToTuple (a `HCons` HNil)
+      = Single a
+   hFromTuple (Single a)
+      = a `HCons` HNil
 
-instance HTuple' '[a,b] (a,b) where
-    hToTuple' (a `HCons` b `HCons` HNil) = (a,b)
-    hFromTuple' (a,b) = a `HCons` b `HCons` HNil
+instance HTuple '[a,b] where
+   hToTuple (a `HCons` b `HCons` HNil)
+      = (a,b)
+   hFromTuple (a,b)
+      = a `HCons` b `HCons` HNil
 
-instance HTuple' '[a,b,c] (a,b,c) where
-    hToTuple' (a `HCons` b `HCons` c `HCons` HNil) = (a,b,c)
-    hFromTuple' (a,b,c) = a `HCons` b `HCons` c `HCons` HNil
+instance HTuple '[a,b,c] where
+   hToTuple (a `HCons` b `HCons` c `HCons` HNil)
+      = (a,b,c)
+   hFromTuple (a,b,c)
+      = a `HCons` b `HCons` c `HCons` HNil
 
-instance HTuple' '[a,b,c,d] (a,b,c,d) where
-    hToTuple' (a `HCons` b `HCons` c `HCons` d `HCons` HNil) = (a,b,c,d)
-    hFromTuple' (a,b,c,d) = a `HCons` b `HCons` c `HCons` d `HCons` HNil
+instance HTuple '[a,b,c,d] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` HNil)
+      = (a,b,c,d)
+   hFromTuple (a,b,c,d)
+      = a `HCons` b `HCons` c `HCons` d `HCons` HNil
 
-instance HTuple' '[a,b,c,d,e] (a,b,c,d,e) where
-    hToTuple' (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil) = (a,b,c,d,e)
-    hFromTuple' (a,b,c,d,e) = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil
+instance HTuple '[a,b,c,d,e] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil)
+      = (a,b,c,d,e)
+   hFromTuple (a,b,c,d,e)
+      = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil
 
-instance HTuple' '[a,b,c,d,e,f] (a,b,c,d,e,f) where
-    hToTuple' (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil) = (a,b,c,d,e,f)
-    hFromTuple' (a,b,c,d,e,f) = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil
+instance HTuple '[a,b,c,d,e,f] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil)
+      = (a,b,c,d,e,f)
+   hFromTuple (a,b,c,d,e,f)
+      = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil
 
-instance HTuple' '[a,b,c,d,e,f,g] (a,b,c,d,e,f,g) where
-    hToTuple' (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` HNil) = (a,b,c,d,e,f,g)
-    hFromTuple' (a,b,c,d,e,f,g) = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` HNil
+instance HTuple '[a,b,c,d,e,f,g] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` HNil)
+      = (a,b,c,d,e,f,g)
+   hFromTuple (a,b,c,d,e,f,g)
+      = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` HNil
 
-instance HTuple' '[a,b,c,d,e,f,g,h] (a,b,c,d,e,f,g,h) where
-    hToTuple' (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` HNil) = (a,b,c,d,e,f,g,h)
-    hFromTuple' (a,b,c,d,e,f,g,h) = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` HNil
+instance HTuple '[a,b,c,d,e,f,g,h] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` HNil)
+      = (a,b,c,d,e,f,g,h)
+   hFromTuple (a,b,c,d,e,f,g,h)
+      = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` HNil
 
-instance HTuple' '[a,b,c,d,e,f,g,h,i] (a,b,c,d,e,f,g,h,i) where
-    hToTuple' (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` HNil) = (a,b,c,d,e,f,g,h,i)
-    hFromTuple' (a,b,c,d,e,f,g,h,i) = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` HNil
+instance HTuple '[a,b,c,d,e,f,g,h,i] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` HNil)
+      = (a,b,c,d,e,f,g,h,i)
+   hFromTuple (a,b,c,d,e,f,g,h,i)
+      = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` HNil
 
-instance HTuple' '[a,b,c,d,e,f,g,h,i,j] (a,b,c,d,e,f,g,h,i,j) where
-    hToTuple' (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` j `HCons` HNil) = (a,b,c,d,e,f,g,h,i,j)
-    hFromTuple' (a,b,c,d,e,f,g,h,i,j) = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` j `HCons` HNil
+instance HTuple '[a,b,c,d,e,f,g,h,i,j] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` j `HCons` HNil)
+      = (a,b,c,d,e,f,g,h,i,j)
+   hFromTuple (a,b,c,d,e,f,g,h,i,j)
+      = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` j `HCons` HNil
+
+instance HTuple '[a,b,c,d,e,f,g,h,i,j,k] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` j `HCons` k `HCons` HNil)
+      = (a,b,c,d,e,f,g,h,i,j,k)
+   hFromTuple (a,b,c,d,e,f,g,h,i,j,k)
+      = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` j `HCons` k `HCons` HNil
+
+instance HTuple '[a,b,c,d,e,f,g,h,i,j,k,l] where
+   hToTuple (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` j `HCons` k `HCons` l `HCons` HNil)
+      = (a,b,c,d,e,f,g,h,i,j,k,l)
+   hFromTuple (a,b,c,d,e,f,g,h,i,j,k,l)
+      = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g `HCons` h `HCons` i `HCons` j `HCons` k `HCons` l `HCons` HNil
