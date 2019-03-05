@@ -110,6 +110,14 @@ consId :: RAlgebra (ConsF a) (List a) (List a)
 consId (ConsF a (t,_)) = Cons a t
 
 -------------------------------
+-- numbersTo anamorphism
+-------------------------------
+
+numbersTo :: CoAlgebra (ListF String) Int
+numbersTo 0 = FV (NilF :: NilF Int)
+numbersTo n = FV (ConsF (show n) (n-1))
+
+-------------------------------
 -- Tests
 -------------------------------
 
@@ -133,4 +141,7 @@ testsEADT = testGroup "EADT" $
 
    , testProperty "paramorphism: id" $
       para (fromRAlgebras (RAlgebras (nilId, consId))) list0 == list0
+
+   , testProperty "anamorphism: numbersTo" $
+      ana numbersTo 5 == Cons "5" (Cons "4" (Cons "3" (Cons "2" (Cons "1" Nil))))
    ]

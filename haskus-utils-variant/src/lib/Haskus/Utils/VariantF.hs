@@ -349,7 +349,7 @@ instance ContVariant (ApplyAll e xs) => MultiCont (VariantF xs e) where
 deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
 
 ----------------------------------------
--- F-Algebras
+-- Algebras
 ----------------------------------------
 
 -- $algebras
@@ -391,10 +391,10 @@ deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
 -- By using these conversions functions we can obtain an Algebra that can be
 -- used with the standard recursion-schemes
 
--- | An F-Algebra with a constraint
+-- | Algebra with a constraint
 newtype AlgebraC c a = AlgebraC (forall f. c f => f a -> a)
 
--- | F-Algebras of a VariantF
+-- | Algebras of a VariantF
 newtype Algebras v a = Algebras (VariantFAlgebras v a)
 
 type family VariantFAlgebras v a where
@@ -442,7 +442,7 @@ fromAlgebras :: forall fs a.
 fromAlgebras (Algebras fs) v = fromAlgebras' @fs (hFromTuple fs) v
 
 class FromAlgebras' fs where
-   fromAlgebras' :: HList (VariantFAlgebraList (VariantF fs) a) -> VariantF fs a -> a
+   fromAlgebras' :: HList (VariantFAlgebraList (VariantF fs) a) -> Algebra (VariantF fs) a
 
 instance FromAlgebras' '[] where
    fromAlgebras' _ _ = undefined
