@@ -47,6 +47,13 @@ module Haskus.Utils.VariantF
    , Algebras (..)
    , FromAlgebras
    , fromAlgebras
+   -- * R-Algebras
+   , RAlgebraC (..)
+   , FromRAlgebraC
+   , fromRAlgebraC
+   , RAlgebras (..)
+   , FromRAlgebras
+   , fromRAlgebras
    -- * Reexport
    , NoConstraint
    , module Haskus.Utils.Functor
@@ -403,7 +410,6 @@ type family MakeAlgebras (fs :: [Type -> Type]) a where
 type FromAlgebraC xs c a =
    ( FromAlgebraC' (VariantF xs) c a
    , ConstraintAll1 c xs
-   , FromAlgebraC' (VariantF xs) c a
    , HTuple (MakeAlgebras xs a)
    )
 
@@ -446,3 +452,70 @@ instance FromAlgebras' fs => FromAlgebras' (f:fs) where
    fromAlgebras' (f `HCons` fs) v = case popVariantFHead v of
       Right x -> f x
       Left xs -> fromAlgebras' fs xs
+
+
+----------------------------------------
+-- R-Algebras
+----------------------------------------
+
+-- | RAlgebra with a constraint
+newtype RAlgebraC c t a = RAlgebraC (forall f. c f => f (t, a) -> a)
+
+-- | RAlgebras of a VariantF
+newtype RAlgebras v t a = RAlgebras (VariantFRAlgebras v t a)
+
+type family VariantFRAlgebras v t a where
+   VariantFRAlgebras v t a = ListToTuple (VariantFRAlgebraList v t a)
+
+type family VariantFRAlgebraList v t a where
+   VariantFRAlgebraList (VariantF fs) t a = MakeRAlgebras fs t a
+
+type family MakeRAlgebras (fs :: [Type -> Type]) t a where
+   MakeRAlgebras '[]      t a = '[]
+   MakeRAlgebras (f : fs) t a = RAlgebra f t a : MakeRAlgebras fs t a
+
+type FromRAlgebraC xs t c a =
+   ( FromRAlgebraC' (VariantF xs) t c a
+   , ConstraintAll1 c xs
+   , HTuple (MakeRAlgebras xs t a)
+   )
+
+-- | Convert an RAlgebraC into RAlgebras for the specified VariantF
+fromRAlgebraC :: forall v c t xs a.
+   ( FromRAlgebraC xs t c a
+   , v ~ VariantF xs
+   ) => RAlgebraC c t a -> RAlgebras v t a
+fromRAlgebraC a = RAlgebras (hToTuple (fromRAlgebraC' @(VariantF xs) @t a))
+
+class FromRAlgebraC' v t c a where
+   fromRAlgebraC' :: RAlgebraC c t a -> HList (VariantFRAlgebraList v t a)
+
+instance FromRAlgebraC' (VariantF '[]) t c a where
+   fromRAlgebraC' _ = HNil
+
+instance (FromRAlgebraC' (VariantF fs) t c a, c f) => FromRAlgebraC' (VariantF (f : fs)) t c a where
+   fromRAlgebraC' a@(RAlgebraC g) = g `HCons` fromRAlgebraC' @(VariantF fs) a
+
+
+type FromRAlgebras fs t a =
+   ( FromRAlgebras' fs t
+   , HTuple (MakeRAlgebras fs t a)
+   )
+
+-- | Create an RAlgebra from some VariantF algebras
+fromRAlgebras :: forall fs t a.
+   ( FromRAlgebras fs t a
+   ) => RAlgebras (VariantF fs) t a -> RAlgebra (VariantF fs) t a
+fromRAlgebras (RAlgebras fs) v = fromRAlgebras' @fs @t (hFromTuple fs) v
+
+class FromRAlgebras' fs t where
+   fromRAlgebras' :: HList (MakeRAlgebras fs t a) -> RAlgebra (VariantF fs) t a
+
+instance FromRAlgebras' '[] t where
+   fromRAlgebras' _ _ = undefined
+
+instance FromRAlgebras' fs t => FromRAlgebras' (f:fs) t where
+   {-# INLINABLE fromRAlgebras' #-}
+   fromRAlgebras' (f `HCons` fs) v = case popVariantFHead v of
+      Right x -> f x
+      Left xs -> fromRAlgebras' fs xs

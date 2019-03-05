@@ -18,9 +18,11 @@ where
 import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 
+import Haskus.Utils.Functor
 import Haskus.Utils.EADT
 import Haskus.Utils.EADT.TH
 import Haskus.Utils.Types
+import Data.Functor.Classes
 
 -------------------------------
 -- List EADT
@@ -36,6 +38,26 @@ eadtInfixPattern 'ConsF ":->"
 type ListF a = VariantF '[NilF, ConsF a]
 type List  a = EADT     '[NilF, ConsF a]
 
+instance Eq a => Eq1 (ConsF a) where
+   liftEq cmp (ConsF a e1) (ConsF b e2) = a == b && cmp e1 e2
+
+instance Eq1 NilF where
+   liftEq _ _ _ = True
+
+instance Ord a => Ord1 (ConsF a) where
+   liftCompare cmp (ConsF a e1) (ConsF b e2) = compare a b <> cmp e1 e2
+
+instance Ord1 NilF where
+   liftCompare _ _ _ = EQ
+
+instance Show a => Show1 (ConsF a) where
+   liftShowsPrec shw _ p (ConsF a e) =
+      showParen (p >= 10) (showString "ConsF " . showsPrec 10 a . showString " " . shw 10 e)
+
+instance Show1 NilF where
+   liftShowsPrec _ _ _ _ = showString "NilF"
+
+-- example values:
 list0 :: List String
 list0 = Cons "Hello" $ Cons "World" Nil
 
@@ -78,7 +100,17 @@ showAlgebra :: Show a => Algebra (ListF a) String
 showAlgebra = fromAlgebras showAlgebras
 
 -------------------------------
--- Show AlgebraC
+-- Id paramorphism
+-------------------------------
+
+nilId :: RAlgebra NilF (List a) (List a)
+nilId _ = Nil
+
+consId :: RAlgebra (ConsF a) (List a) (List a)
+consId (ConsF a (t,_)) = Cons a t
+
+-------------------------------
+-- Tests
 -------------------------------
 
 testsEADT :: TestTree
@@ -98,4 +130,7 @@ testsEADT = testGroup "EADT" $
 
    , testProperty "catamorphism: AlgebraC" $
       cata showAlgebra list0 == "\"Hello\" : \"World\" : []"
+
+   , testProperty "paramorphism: id" $
+      para (fromRAlgebras (RAlgebras (nilId, consId))) list0 == list0
    ]
