@@ -1,4 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE UnliftedFFITypes #-}
+{-# LANGUAGE MagicHash #-}
 
 -- | Memory utilities
 module Haskus.Memory.Utils
@@ -9,6 +11,7 @@ module Haskus.Memory.Utils
    , pokeArrays
    , withArrays
    , withMaybeOrNull
+   , memcpy#
    )
 where
 
@@ -16,14 +19,17 @@ import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
 import Haskus.Memory.Ptr
 import Haskus.Utils.Flow
+import GHC.Prim
 
 -- | Copy memory
 memCopy :: MonadIO m => Ptr a -> Ptr b -> Word64 -> m ()
 {-# INLINABLE memCopy #-}
-memCopy dest src size = liftIO (void (memcpy dest src size))
+memCopy (Ptr dest) (Ptr src) size = liftIO (memcpy# dest src s)
+   where
+      I# s = fromIntegral size
 
 -- | memcpy
-foreign import ccall unsafe memcpy  :: Ptr a -> Ptr b -> Word64 -> IO (Ptr c)
+foreign import ccall unsafe "memcpy" memcpy# :: Addr# -> Addr# -> Int# -> IO ()
 
 
 

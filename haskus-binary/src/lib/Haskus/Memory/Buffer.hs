@@ -85,6 +85,7 @@ import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
 import Haskus.Memory.Ptr
 import Haskus.Memory.Property
+import Haskus.Memory.Utils (memcpy#)
 import Haskus.Utils.Monad
 
 import qualified Data.Primitive.ByteArray as BA
@@ -1058,12 +1059,10 @@ copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegr
 
       addrToAddr :: Addr# -> Addr# -> m ()
       addrToAddr addr1 addr2 =
-         liftIO $ memcpy (addr1 `plusAddr#` soff)
-                         (addr2 `plusAddr#` doff)
-                         cnt
+         liftIO $ memcpy# (addr1 `plusAddr#` soff)
+                          (addr2 `plusAddr#` doff)
+                          cnt
         
-foreign import ccall unsafe "memcpy" memcpy :: Addr# -> Addr# -> Int# -> IO ()
-
 -----------------------------------------------------------------
 -- AnyBuffer
 -----------------------------------------------------------------
