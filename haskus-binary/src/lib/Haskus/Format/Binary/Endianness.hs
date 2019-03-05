@@ -34,9 +34,9 @@ import Haskus.Format.Binary.Enum
 import Haskus.Format.Binary.Storable
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Bits
-import Haskus.Memory.Ptr
 
 import System.IO.Unsafe
+import Foreign.Ptr
 
 -- | Endianness
 data Endianness 

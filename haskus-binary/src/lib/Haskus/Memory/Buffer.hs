@@ -17,7 +17,6 @@
 -- | A buffer in memory
 module Haskus.Memory.Buffer
    ( Buffer (..)
-   , TypedBuffer (..)
    , AnyBuffer (..)
    -- * Buffer taxonomy
    , Pinning (..)
@@ -83,7 +82,6 @@ where
 
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
-import Haskus.Memory.Ptr
 import Haskus.Memory.Property
 import Haskus.Memory.Utils (memcpy#)
 import Haskus.Utils.Monad
@@ -96,7 +94,7 @@ import Unsafe.Coerce
 
 import GHC.Prim
 import GHC.Weak
-import GHC.Exts (toList, IsList(..))
+import GHC.Exts (toList, IsList(..), Ptr (..))
 import GHC.Types (IO(..))
 
 -- $setup
@@ -107,6 +105,7 @@ import GHC.Types (IO(..))
 -- >>> :set -XScopedTypeVariables
 -- >>> import Haskus.Format.Binary.Bits
 
+-- | A memory buffer
 data Buffer (mut :: Mutability) (pin :: Pinning) (fin :: Finalization) (heap :: Heap) where
    Buffer    :: {-# UNPACK #-} !BA.ByteArray                                                  -> BufferI
    BufferP   :: {-# UNPACK #-} !BA.ByteArray                                                  -> BufferP
@@ -133,9 +132,6 @@ type BufferMF  = Buffer 'Mutable   'NotPinned 'Finalized    'Internal
 type BufferMPF = Buffer 'Mutable   'Pinned    'Finalized    'Internal
 type BufferMEF = Buffer 'Mutable   'Pinned    'Finalized    'External
 type BufferEF  = Buffer 'Immutable 'Pinned    'Finalized    'External
-
--- | A buffer with an additional phantom type indicating its binary format
-newtype TypedBuffer (t :: k) mut pin fin heap = TypedBuffer (Buffer mut pin fin heap)
 
 -----------------------------------------------------------------
 -- Allocation

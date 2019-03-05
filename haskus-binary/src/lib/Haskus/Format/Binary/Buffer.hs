@@ -66,6 +66,8 @@ import System.IO.Unsafe
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BS
+import Foreign.Ptr
+import Foreign.Marshal.Alloc (mallocBytes)
 
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
@@ -74,7 +76,6 @@ import Haskus.Format.Binary.Bits.Bitwise
 import Haskus.Format.Binary.Bits.Index
 import Haskus.Format.Binary.Bits.Shift
 import Haskus.Memory.Utils (memCopy,memSet)
-import Haskus.Memory.Ptr
 import Haskus.Utils.List as List
 import Haskus.Utils.Flow
 
@@ -293,7 +294,7 @@ bufferPackStorableList xs = Buffer $ unsafePerformIO $ do
 -- | Pack from a pointer (copy)
 bufferPackPtr :: MonadIO m => Word -> Ptr () -> m Buffer
 bufferPackPtr sz ptr = do
-   p <- mallocBytes (fromIntegral sz)
+   p <- liftIO (mallocBytes (fromIntegral sz))
    memCopy p ptr (fromIntegral sz)
    bufferUnsafePackPtr sz p
 

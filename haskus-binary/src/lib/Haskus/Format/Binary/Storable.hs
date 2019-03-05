@@ -13,9 +13,6 @@ module Haskus.Format.Binary.Storable
    ( StaticStorable (..)
    , staticPeek
    , staticPoke
-   , RequiredPadding
-   , Padding
-   , PaddingEx
    , staticSizeOf
    , staticAlignment
    , wordBytes
@@ -58,6 +55,7 @@ import Haskus.Memory.Ptr
 import Haskus.Utils.Types
 import Haskus.Utils.Types.Generics
 import Haskus.Utils.Flow
+import Foreign.Ptr
 
 -- | A storable data in constant space whose size is known at compile time
 class StaticStorable a where
@@ -80,19 +78,6 @@ staticPeek p = liftIO (staticPeekIO p)
 -- | Poke (write) a value at the given memory address
 staticPoke :: (StaticStorable a, MonadIO m) => Ptr a -> a -> m ()
 staticPoke p a = liftIO (staticPokeIO p a)
-
-
--- | Compute the required padding between a and b to respect b's alignment
-type family RequiredPadding a b where
-   RequiredPadding a b = Padding (SizeOf a) b
-
--- | Compute the required padding between the size sz and b to respect b's alignment
-type family Padding (sz :: Nat) b where
-   Padding sz b = PaddingEx (Mod sz (Alignment b)) (Alignment b)
-
-type family PaddingEx (m :: Nat) (a :: Nat) where
-   PaddingEx 0 a = 0
-   PaddingEx m a = a - m
 
 
 -- | Get statically known size
@@ -184,12 +169,12 @@ alignmentT' = alignment' (undefined :: a)
 -- | Peek with byte offset
 peekByteOff :: (MonadIO m, Storable a) => Ptr a -> Int -> m a
 {-# INLINABLE peekByteOff #-}
-peekByteOff ptr off = peek (ptr `indexPtr` off)
+peekByteOff ptr off = peek (ptr `plusPtr` off)
 
 -- | Poke with byte offset
 pokeByteOff :: (MonadIO m, Storable a) => Ptr a -> Int -> a -> m ()
 {-# INLINABLE pokeByteOff #-}
-pokeByteOff ptr off = poke (ptr `indexPtr` off)
+pokeByteOff ptr off = poke (ptr `plusPtr` off)
 
 -- | Peek with element size offset
 peekElemOff :: forall a m. (MonadIO m, Storable a) => Ptr a -> Int -> m a
@@ -226,7 +211,7 @@ alloca = allocaBytesAligned (sizeOfT' @a) (alignmentT' @a)
 -- no longer required.
 malloc :: forall a m. (MonadIO m, Storable a) => m (Ptr a)
 {-# INLINABLE malloc #-}
-malloc = liftIO (mallocBytes (sizeOfT @a))
+malloc = liftIO (P.mallocBytes (fromIntegral (sizeOfT @a)))
 
 -- | @'with' val f@ executes the computation @f@, passing as argument
 -- a pointer to a temporarily allocated block of memory into which
@@ -249,7 +234,7 @@ allocaArray size = liftWith (allocaBytesAligned (size * sizeOfT' @a) (alignmentT
 -- | Allocate space for the given number of elements
 -- (like 'malloc', but for multiple elements).
 mallocArray :: forall a m. (MonadIO m, Storable a) => Word -> m (Ptr a)
-mallocArray size = mallocBytes (size * sizeOfT @a)
+mallocArray size = liftIO $ P.mallocBytes (fromIntegral (size * sizeOfT @a))
 
 -- | Convert an array of given length into a Haskell list.  The implementation
 -- is tail-recursive and so uses constant stack space.
@@ -337,8 +322,8 @@ instance (GStorable a) => GStorable (M1 i c a) where
 
 instance (Storable a) => GStorable (K1 i a) where
   gcAlignment (K1 x)     = alignment x
-  gcPeek off p           = fmap K1 $ peek (castPtr p `indexPtr'` (off + gcPadding off (undefined :: K1 i a x)))
-  gcPoke off p (K1 x)    = poke (castPtr p `indexPtr'` (off + gcPadding off (undefined :: K1 i a x))) x
+  gcPeek off p           = fmap K1 $ peek (castPtr p `plusPtr` fromIntegral (off + gcPadding off (undefined :: K1 i a x)))
+  gcPoke off p (K1 x)    = poke (castPtr p `plusPtr` fromIntegral (off + gcPadding off (undefined :: K1 i a x))) x
   gcSizeOf off (K1 x)    = gcPadding off (undefined :: K1 i a x) + sizeOf x
 
 

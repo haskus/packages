@@ -48,7 +48,9 @@ import Haskus.Utils.Flow
 import Haskus.Format.Binary.Storable
 import Haskus.Format.Binary.Buffer
 import Haskus.Format.Binary.Bits
-import Haskus.Memory.Ptr
+
+import Foreign.Ptr
+import Foreign.Marshal.Alloc (mallocBytes)
 
 -- | Vector with type-checked size
 data Vector (n :: Nat) a = Vector Buffer
@@ -186,7 +188,7 @@ instance forall n v a r.
          p <- getP
          let
             vsz = natValue @n
-            p'  = p `indexPtr'` (-1 * vsz * sizeOfT @a)
+            p'  = p `plusPtr` (-1 * vsz * fromIntegral (sizeOfT @a))
          poke (castPtr p') v 
          return p'
 
@@ -206,7 +208,7 @@ concat :: forall l (n :: Nat) a .
 concat vs = unsafePerformIO $ do
    let sz = sizeOfT @a * natValue @n
    p <- mallocBytes (fromIntegral sz) :: IO (Ptr ())
-   _ <- hFoldr StoreVector (return (castPtr p `indexPtr'` sz) :: IO (Ptr a)) vs :: IO (Ptr a)
+   _ <- hFoldr StoreVector (return (castPtr p `plusPtr` fromIntegral sz) :: IO (Ptr a)) vs :: IO (Ptr a)
    Vector <$> bufferUnsafePackPtr (fromIntegral sz) p
 
 

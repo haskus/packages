@@ -25,12 +25,12 @@ module Haskus.Memory.Embed
 where
 
 import Haskus.Memory.Buffer
-import Haskus.Memory.Ptr
 import Haskus.Format.Binary.Word
 import Haskus.Utils.List (intersperse)
 import Haskus.Utils.Maybe
 import Haskus.Utils.Monad
 
+import Foreign.Ptr
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 import System.Directory (getFileSize)
@@ -244,7 +244,7 @@ embedPinnedBuffer buf mut malign moffset msize = do
 
    liftIO $ unsafeWithBufferPtr buf $ \ptr -> do
       withBinaryFile tmp WriteMode $ \hdl -> do
-         hPutBuf hdl (ptr `indexPtr` fromIntegral off) (fromIntegral sz)
+         hPutBuf hdl (ptr `plusPtr` fromIntegral off) (fromIntegral sz)
    embedFile' True tmp mut malign Nothing Nothing
 
 -- | Embed a unpinned buffer in the executable. Return either a BufferE or a

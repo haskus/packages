@@ -35,8 +35,9 @@ where
 import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad.State
 import Control.Monad.Identity
+import Foreign.Marshal.Alloc (mallocBytes)
+import Foreign.Ptr
 
-import Haskus.Memory.Ptr
 import Haskus.Format.Binary.Buffer
 import Haskus.Format.Binary.Bits.Order
 import Haskus.Format.Binary.Bits
@@ -139,7 +140,7 @@ getBitsBuffer n (BitGetState bs o bo) =
                         w  = bufferUnsafeIndex bs (len-i)
                         w' = (w `shiftL` fromIntegral o) .|. r
                         r' = w `shiftR` (8-fromIntegral o)
-                     poke (castPtr ptr `indexPtr` fromIntegral (len-i)) w'
+                     poke (castPtr ptr `plusPtr` fromIntegral (len-i)) w'
                      return r'
                foldM_ f 0 [1..len]
                bufferUnsafeInit <$> bufferPackPtr len ptr

@@ -30,9 +30,11 @@ module Haskus.Format.Binary.Record
 where
 
 import System.IO.Unsafe
+import Foreign.ForeignPtr
+import Foreign.Ptr
 
-import Haskus.Memory.Ptr
 import Haskus.Memory.Utils
+import Haskus.Memory.Layout
 import Haskus.Format.Binary.Storable
 import Haskus.Utils.HList
 import Haskus.Utils.Types
@@ -125,7 +127,7 @@ recordField :: forall (name :: Symbol) a fs.
    ) => Record fs -> a
 recordField r@(Record fp) = unsafePerformIO $
    withForeignPtr fp $ \ptr ->do
-      let ptr' = ptr `indexPtr` recordFieldOffset @name r
+      let ptr' = ptr `plusPtr` recordFieldOffset @name r
       staticPeek (castPtr ptr')
 
 data Path (fs :: [Symbol])
@@ -147,7 +149,7 @@ recordFieldPath :: forall path a fs o.
 recordFieldPath _ (Record fp) = unsafePerformIO $
    withForeignPtr fp $ \ptr -> do
       let
-         ptr' = ptr `indexPtr` natValue @o
+         ptr' = ptr `plusPtr` natValue @o
       staticPeek (castPtr ptr')
 
 
@@ -162,7 +164,7 @@ instance forall fs s.
 
       staticPeekIO ptr = do
          let sz = recordSize (undefined :: Record fs)
-         fp <- mallocForeignPtrBytes sz
+         fp <- mallocForeignPtrBytes (fromIntegral sz)
          withForeignPtr fp $ \p ->
             memCopy p ptr (fromIntegral sz)
          return (Record fp)

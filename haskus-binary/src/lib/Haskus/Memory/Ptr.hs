@@ -2,8 +2,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE LambdaCase #-}
 
 -- | Pointers
 --
@@ -25,162 +29,159 @@
 -- Hence we use the `FinalizedPtr a` pointer type, which has an additional
 -- offset field.
 module Haskus.Memory.Ptr
-   ( PtrLike (..)
-   , indexPtr'
-   -- * Pointer
-   , Ptr (..)
-   , free
-   -- * Finalized pointer
-   , FinalizedPtr (..)
+   ( Pointer (..)
+   , AnyPointer (..)
+   , RawPtr
+   , FinPtr
+   , PtrI
+   , PtrM
+   , PtrIF
+   , PtrMF
+   , isNullPtr
+   , nullPtrI
+   , nullPtrM
+   , indexPtr
+   , distancePtr
+   , withPtr
    , withFinalizedPtr
-   -- * Foreign pointer
-   , ForeignPtr
-   , withForeignPtr
-   , mallocForeignPtrBytes
-   , nullForeignPtr
+   , allocFinalizedPtr
+   , allocPtr
+   , freePtr
+
    -- * Function pointer
-   , Ptr.FunPtr
-   , Ptr.nullFunPtr
-   , Ptr.castPtrToFunPtr
-   , Ptr.castFunPtrToPtr
+   , P.FunPtr
+   , P.nullFunPtr
+   , P.castPtrToFunPtr
+   , P.castFunPtrToPtr
    -- * Pointer as a Word
-   , Ptr.WordPtr
-   , Ptr.wordPtrToPtr
-   , Ptr.ptrToWordPtr
+   , P.WordPtr
+   , P.wordPtrToPtr
+   , P.ptrToWordPtr
    )
 where
 
-import qualified Foreign.Ptr               as Ptr
-import qualified Foreign.Marshal.Alloc     as Ptr
+import qualified Foreign.Ptr               as P
+import qualified Foreign.Marshal.Alloc     as P
 import qualified Foreign.ForeignPtr        as FP
 import qualified Foreign.ForeignPtr.Unsafe as FP
--- we import GHC.Ptr instead of Foreign.Ptr to have access to Ptr constructors
-import GHC.Ptr (Ptr (..))
-import Foreign.ForeignPtr (ForeignPtr)
-import Data.Coerce
-import System.IO.Unsafe
 
-import Haskus.Format.Binary.Layout
-import Haskus.Utils.Types
+import Haskus.Memory.Property
 import Haskus.Utils.Monad
+import Haskus.Utils.Flow
 
+-- | A pointer in memory
+data Pointer (mut :: Mutability) (fin :: Finalization) where
+   PtrI  :: {-# UNPACK #-} !RawPtr                        -> PtrI
+   PtrM  :: {-# UNPACK #-} !RawPtr                        -> PtrM
+   PtrIF :: {-# UNPACK #-} !FinPtr -> {-# UNPACK #-} !Int -> PtrIF
+   PtrMF :: {-# UNPACK #-} !FinPtr -> {-# UNPACK #-} !Int -> PtrMF
 
--- | A finalized pointer
---
--- We use an offset because we can't modify the pointer directly (it is
--- passed to the foreign pointer destructors)
-data FinalizedPtr l = FinalizedPtr {-# UNPACK #-} !(ForeignPtr l)
-                                   {-# UNPACK #-} !Word  -- offset
+type RawPtr = P.Ptr ()
+type FinPtr = FP.ForeignPtr ()
 
-type role FinalizedPtr phantom
+type PtrI   = Pointer 'Immutable 'NotFinalized
+type PtrM   = Pointer 'Mutable   'NotFinalized
+type PtrIF  = Pointer 'Immutable 'Finalized
+type PtrMF  = Pointer 'Mutable   'Finalized
 
-instance Show (FinalizedPtr l) where
-   show (FinalizedPtr fp o) = show (FP.unsafeForeignPtrToPtr fp 
-                                    `indexPtr` fromIntegral o)
+-- | Wrapper containing any kind of buffer
+newtype AnyPointer = AnyPointer (forall mut fin . Pointer mut fin)
 
--- | Null foreign pointer
-nullForeignPtr :: ForeignPtr a
-{-# NOINLINE nullForeignPtr #-}
-nullForeignPtr = unsafePerformIO $ FP.newForeignPtr_ nullPtr
+instance Show (Pointer mut fin) where
+   show = \case
+      PtrI p    -> show p
+      PtrM p    -> show p
+      PtrIF p o -> show (fToR p `P.plusPtr` o)
+      PtrMF p o -> show (fToR p `P.plusPtr` o)
 
--- | Null finalized pointer
-nullFinalizedPtr :: FinalizedPtr a
-nullFinalizedPtr = FinalizedPtr nullForeignPtr 0
+-- | Unsafe Finalized to Raw pointer
+fToR :: FinPtr -> RawPtr
+fToR = FP.unsafeForeignPtrToPtr
 
--- | Use a finalized pointer
-withFinalizedPtr :: FinalizedPtr a -> (Ptr a -> IO b) -> IO b
+-- | Test if a pointer is Null
+{-# SPECIALIZE INLINE isNullPtr :: PtrI  -> Bool #-}
+{-# SPECIALIZE INLINE isNullPtr :: PtrM  -> Bool #-}
+{-# SPECIALIZE INLINE isNullPtr :: PtrIF -> Bool #-}
+{-# SPECIALIZE INLINE isNullPtr :: PtrMF -> Bool #-}
+isNullPtr :: Pointer mut fin -> Bool
+isNullPtr = \case
+   PtrI  p   -> p == P.nullPtr
+   PtrM  p   -> p == P.nullPtr
+   PtrIF p 0 -> fToR p == P.nullPtr
+   PtrIF _ _ -> False
+   PtrMF p 0 -> fToR p == P.nullPtr
+   PtrMF _ _ -> False
+
+-- | Null pointer
+nullPtrI :: PtrI
+nullPtrI = PtrI P.nullPtr
+
+-- | Null pointer
+nullPtrM :: PtrM
+nullPtrM = PtrM P.nullPtr
+
+-- | Index a pointer
+{-# SPECIALIZE INLINE indexPtr :: PtrI  -> Int -> PtrI  #-}
+{-# SPECIALIZE INLINE indexPtr :: PtrM  -> Int -> PtrM  #-}
+{-# SPECIALIZE INLINE indexPtr :: PtrIF -> Int -> PtrIF #-}
+{-# SPECIALIZE INLINE indexPtr :: PtrMF -> Int -> PtrMF #-}
+indexPtr :: Pointer mut fin -> Int -> Pointer mut fin
+indexPtr ptr i = case ptr of
+   PtrI  p   -> PtrI (p `P.plusPtr` i)
+   PtrM  p   -> PtrM (p `P.plusPtr` i)
+   PtrIF p o -> PtrIF p (o+i)
+   PtrMF p o -> PtrMF p (o+i)
+
+-- | Distance between two pointers
+{-# SPECIALIZE INLINE distancePtr :: PtrI  -> PtrI -> Int  #-}
+{-# SPECIALIZE INLINE distancePtr :: PtrM  -> PtrM -> Int  #-}
+{-# SPECIALIZE INLINE distancePtr :: PtrI  -> PtrM -> Int  #-}
+{-# SPECIALIZE INLINE distancePtr :: PtrM  -> PtrI -> Int  #-}
+distancePtr :: Pointer mut0 fin0 -> Pointer mut1 fin1 -> Int
+distancePtr p1 p2 = P.minusPtr p1' p2' + o2 - o1
+   where
+      dec :: Pointer mut fin -> (RawPtr,Int)
+      dec = \case
+         PtrI p    -> (p,0)
+         PtrM p    -> (p,0)
+         PtrIF p o -> (fToR p,o)
+         PtrMF p o -> (fToR p,o)
+      (p1',o1) = dec p1
+      (p2',o2) = dec p2
+
+-- | Use a finalized pointer as a non finalized pointer
 {-# INLINABLE withFinalizedPtr #-}
-withFinalizedPtr (FinalizedPtr fp o) f =
-   FP.withForeignPtr fp (f . (`indexPtr` fromIntegral o))
+withFinalizedPtr :: (MonadInIO m) => Pointer mut Finalized -> (Pointer mut NotFinalized -> m b) -> m b
+withFinalizedPtr ptr f = case ptr of
+   PtrIF p o -> liftWith (FP.withForeignPtr p) <| \r ->
+                  f (PtrI (r `P.plusPtr` o))
+   PtrMF p o -> liftWith (FP.withForeignPtr p) <| \r ->
+                  f (PtrM (r `P.plusPtr` o))
 
--- | Pointer operations
-class PtrLike (p :: * -> *) where
-   -- | Cast a pointer from one type to another
-   castPtr :: p a -> p b
+-- | Use a pointer (finalized or not) as a non finalized pointer
+{-# INLINABLE withPtr #-}
+withPtr :: (MonadInIO m) => Pointer mut fin -> (Pointer mut NotFinalized -> m b) -> m b
+withPtr ptr f = case ptr of
+   PtrI _    -> f ptr
+   PtrM _    -> f ptr
+   PtrIF p o -> liftWith (FP.withForeignPtr p) <| \r ->
+                  f (PtrI (r `P.plusPtr` o))
+   PtrMF p o -> liftWith (FP.withForeignPtr p) <| \r ->
+                  f (PtrM (r `P.plusPtr` o))
 
-   -- | Null pointer (offset is 0)
-   nullPtr :: forall a. p a
+-- | Alloc mutable finalized memory
+allocFinalizedPtr :: MonadIO m => Word -> m PtrMF
+allocFinalizedPtr = liftIO . fmap (`PtrMF` 0) . FP.mallocForeignPtrBytes . fromIntegral
 
-   -- | Advance a pointer by the given amount of bytes (may be negative)
-   indexPtr :: p a -> Int -> p a
-
-   -- | Distance between two pointers in bytes (p2 - p1)
-   ptrDistance :: p a -> p b -> Int
-
-   -- | Use the pointer
-   withPtr :: p a -> (Ptr a -> IO b) -> IO b
-
-   -- | Malloc the given number of bytes
-   mallocBytes :: MonadIO m => Word -> m (p a)
-
-   -- | Add offset to the given layout field
-   (-->) :: forall path l.
-      ( KnownNat (LPathOffset path l)
-      ) => p l -> path -> p (LPathType path l)
-   {-# INLINABLE (-->) #-}
-   (-->) p _ = castPtr (p `indexPtr` natValue @(LPathOffset path l))
-
--- | Generalized version of 'indexPtr'
-indexPtr' :: Integral b => Ptr a -> b -> Ptr a
-indexPtr' p a = indexPtr p (fromIntegral a)
+-- | Alloc mutable non-finalized memory
+allocPtr :: MonadIO m => Word -> m PtrM
+allocPtr = liftIO . fmap PtrM . P.mallocBytes . fromIntegral
 
 
-instance PtrLike Ptr where
-   {-# INLINABLE castPtr #-}
-   castPtr = coerce
-
-   {-# INLINABLE nullPtr #-}
-   nullPtr = Ptr.nullPtr
-
-   {-# INLINABLE indexPtr #-}
-   indexPtr = Ptr.plusPtr
-
-   {-# INLINABLE ptrDistance #-}
-   ptrDistance = Ptr.minusPtr
-
-   {-# INLINABLE withPtr #-}
-   withPtr p f = f p
-
-   {-# INLINABLE mallocBytes #-}
-   mallocBytes = liftIO . Ptr.mallocBytes . fromIntegral
-
-
-instance PtrLike FinalizedPtr where
-   {-# INLINABLE castPtr #-}
-   castPtr = coerce
-
-   {-# INLINABLE nullPtr #-}
-   nullPtr = nullFinalizedPtr
-
-   {-# INLINABLE indexPtr #-}
-   indexPtr (FinalizedPtr fp o) n
-      | n >= 0    = FinalizedPtr fp (o+fromIntegral n)
-      | otherwise = FinalizedPtr fp (o-fromIntegral (abs n))
-
-   {-# INLINABLE ptrDistance #-}
-   ptrDistance (FinalizedPtr fp1 o1) (FinalizedPtr fp2 o2)
-      | o2 > o1   = d + fromIntegral (o2 - o1)
-      | otherwise = d - fromIntegral (o1 - o2)
-      where
-         d = ptrDistance (FP.unsafeForeignPtrToPtr fp1)
-                         (FP.unsafeForeignPtrToPtr fp2)
-
-   {-# INLINABLE withPtr #-}
-   withPtr = withFinalizedPtr
-
-   {-# INLINABLE mallocBytes #-}
-   mallocBytes n = do
-      fp <- mallocForeignPtrBytes (fromIntegral n)
-      return (FinalizedPtr fp 0)
-
--- | Malloc a foreign pointer
-mallocForeignPtrBytes :: MonadIO m => Word -> m (ForeignPtr a)
-mallocForeignPtrBytes = liftIO . FP.mallocForeignPtrBytes . fromIntegral
-
--- | Use a foreign pointer
-withForeignPtr :: (MonadInIO m) => ForeignPtr a -> (Ptr a -> m b) -> m b
-withForeignPtr p = liftWith (FP.withForeignPtr p)
-
--- | Free a malloced memory
-free :: MonadIO m => Ptr a -> m ()
-free = liftIO . Ptr.free
+-- | Free a non-finalized memory
+{-# SPECIALIZE INLINE freePtr :: MonadIO m => PtrI -> m () #-}
+{-# SPECIALIZE INLINE freePtr :: MonadIO m => PtrM -> m () #-}
+freePtr :: MonadIO m => Pointer mut NotFinalized -> m ()
+freePtr = \case
+   PtrI p -> liftIO (P.free p)
+   PtrM p -> liftIO (P.free p)

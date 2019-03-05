@@ -54,10 +54,11 @@ import Haskus.Utils.HList
 import Haskus.Utils.Flow (when)
 import Haskus.Format.Binary.Storable
 import Haskus.Memory.Utils (memCopy, memSet)
-import Haskus.Memory.Ptr
 
 import System.IO.Unsafe (unsafePerformIO)
 
+import Foreign.ForeignPtr
+import Foreign.Ptr
 import qualified Foreign.Storable as FS
 
 
@@ -98,7 +99,7 @@ toUnion' zero v = unsafePerformIO $ do
       -- set bytes after the object to 0
       when zero $ do
          let psz = sizeOfT @a
-         memSet (p `indexPtr'` psz) (fromIntegral (sz - psz)) 0
+         memSet (p `plusPtr` fromIntegral psz) (fromIntegral (sz - psz)) 0
       poke (castPtr p) v
    return $ Union fp
 
