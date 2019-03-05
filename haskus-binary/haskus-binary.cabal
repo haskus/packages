@@ -69,6 +69,7 @@ library
     Haskus.Memory.Embed
     Haskus.Memory.View
     Haskus.Memory.Ptr
+    Haskus.Memory.Property
 
   other-modules:
 

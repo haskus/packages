@@ -84,6 +84,7 @@ where
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Storable
 import Haskus.Memory.Ptr
+import Haskus.Memory.Property
 import Haskus.Utils.Monad
 
 import qualified Data.Primitive.ByteArray as BA
@@ -104,34 +105,6 @@ import GHC.Types (IO(..))
 -- >>> :set -XTypeFamilies
 -- >>> :set -XScopedTypeVariables
 -- >>> import Haskus.Format.Binary.Bits
-
--- | Is the buffer pinned into memory?
-data Pinning
-   = Pinned    -- ^ The buffer has a fixed associated memory address
-   | NotPinned -- ^ The buffer contents can be freely moved to another address
-   deriving (Show,Eq)
-
--- | Is the buffer automatically garbage collected?
-data Finalization
-   = Collected    -- ^ Automatically collected by the garbage-collector
-   | Finalized    -- ^ Finalizers are run just before the garbage collector
-                  -- collects the buffer entity. The memory used by the buffer
-                  -- may be collected too (Internal heap), explicitly freed by a
-                  -- finalizer or not freed at all.
-   | NotFinalized -- ^ The buffer contents is not automatically freed and we
-                  -- can't attach finalizers to the buffer.
-   deriving (Show,Eq)
-
--- | Allocation heap
-data Heap
-   = Internal -- ^ GHC heap
-   | External -- ^ External heap
-
--- | Is the buffer mutable or not?
-data Mutability
-   = Mutable   -- ^ Memory cells are mutable
-   | Immutable -- ^ Memory cells are immutable
-   deriving (Show,Eq)
 
 data Buffer (mut :: Mutability) (pin :: Pinning) (fin :: Finalization) (heap :: Heap) where
    Buffer    :: {-# UNPACK #-} !BA.ByteArray                                                  -> BufferI
