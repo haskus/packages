@@ -60,6 +60,7 @@ test-suite tests
    build-depends:
          base
       ,  haskus-utils-variant
+      ,  haskus-utils-types
       ,  tasty                   >= 0.11
       ,  tasty-quickcheck        >= 0.8
       ,  doctest                 >= 0.16
