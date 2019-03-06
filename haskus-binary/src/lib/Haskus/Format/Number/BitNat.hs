@@ -24,9 +24,9 @@ module Haskus.Format.Number.BitNat
    , narrow
    , BitNat
    , pattern BitNat
-   , nat
    , unsafeMakeW
    , safeMakeW
+   , bitNat
    , bitNatZero
    , bitNatOne
    , extractW
@@ -74,22 +74,22 @@ pattern BitNat x <- (toNaturalW -> x)
 -- | Create a natural number with the minimal number of bits required to store
 -- it
 --
--- >>> nat @5
+-- >>> bitNat @5
 -- BitNat @3 5
 --
--- >>> nat @0
+-- >>> bitNat @0
 -- BitNat @1 0
 --
--- >>> nat @158748521123465897456465
+-- >>> bitNat @158748521123465897456465
 -- BitNat @78 158748521123465897456465
 --
-nat :: forall (v :: Nat) (n :: Nat).
+bitNat :: forall (v :: Nat) (n :: Nat).
    ( n ~ NatBitCount v
    , Integral (BitNatWord n)
    , MakeW n
    , KnownNat v
    ) => BitNat n
-nat = BitNat @n (natValue @v)
+bitNat = BitNat @n (natValue @v)
 
 mapW :: (BitNatWord a -> BitNatWord a) -> BitNat a -> BitNat a
 mapW f (BitNat' x) = BitNat' (f x)
