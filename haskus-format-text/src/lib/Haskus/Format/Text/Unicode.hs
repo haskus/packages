@@ -27,7 +27,6 @@ where
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Bits
 import Haskus.Utils.Types
-import Data.Kind
 import Haskus.Format.Text.Unicode.CodePoint
 
 --------------------------------------------------
