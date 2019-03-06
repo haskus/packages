@@ -24,8 +24,8 @@ module Haskus.Format.Number.BitNat
    , narrow
    , BitNat
    , pattern BitNat
-   , unsafeMakeW
-   , safeMakeW
+   , unsafeMakeBitNat
+   , safeMakeBitNat
    , bitNat
    , bitNatZero
    , bitNatOne
@@ -43,7 +43,7 @@ module Haskus.Format.Number.BitNat
    , bitNatOr
    -- * Internal
    , BitNatWord
-   , MakeW
+   , MakeBitNat
    , toNaturalW
    )
 where
@@ -64,7 +64,7 @@ import Numeric.Natural
 newtype BitNat (b :: Nat)
    = BitNat' (BitNatWord b)
 
-pattern BitNat :: forall (n :: Nat). (Integral (BitNatWord n), MakeW n) => Natural -> BitNat n
+pattern BitNat :: forall (n :: Nat). (Integral (BitNatWord n), MakeBitNat n) => Natural -> BitNat n
 {-# COMPLETE BitNat #-}
 pattern BitNat x <- (toNaturalW -> x)
    where
@@ -86,7 +86,7 @@ pattern BitNat x <- (toNaturalW -> x)
 bitNat :: forall (v :: Nat) (n :: Nat).
    ( n ~ NatBitCount v
    , Integral (BitNatWord n)
-   , MakeW n
+   , MakeBitNat n
    , KnownNat v
    ) => BitNat n
 bitNat = BitNat @n (natValue @v)
@@ -134,10 +134,10 @@ toNaturalW :: Integral (BitNatWord a) => BitNat a -> Natural
 toNaturalW (BitNat' x) = fromIntegral x
 
 -- | Create a natural
-unsafeMakeW :: forall a. (Maskable a (BitNatWord a)) => BitNatWord a -> BitNat a
-unsafeMakeW x = BitNat' (mask @a x)
+unsafeMakeBitNat :: forall a. (Maskable a (BitNatWord a)) => BitNatWord a -> BitNat a
+unsafeMakeBitNat x = BitNat' (mask @a x)
 
-type MakeW a =
+type MakeBitNat a =
    ( Maskable a (BitNatWord a)
    , ShiftableBits (BitNatWord a)
    , Show (BitNatWord a)
@@ -146,17 +146,17 @@ type MakeW a =
    )
 
 -- | Create a natural (check overflow)
-safeMakeW :: forall a. MakeW a => Natural -> Maybe (BitNat a)
-safeMakeW x = 
+safeMakeBitNat :: forall a. MakeBitNat a => Natural -> Maybe (BitNat a)
+safeMakeBitNat x =
    let
       x' = fromIntegral x :: BitNatWord a
    in case x' `uncheckedShiftR` natValue' @a of
-      0 -> Just (unsafeMakeW x')
+      0 -> Just (unsafeMakeBitNat x')
       _ -> Nothing
 
 -- | Create a natural (check overflow and throw on error)
-makeW :: forall a. MakeW a => Natural -> BitNat a
-makeW x = case safeMakeW x of
+makeW :: forall a. MakeBitNat a => Natural -> BitNat a
+makeW x = case safeMakeBitNat x of
    Just y  -> y
    Nothing -> error $
                "`" ++ show x
@@ -200,7 +200,7 @@ type Widen a b =
 -- BitNat @3 1
 --
 narrow :: forall b a. Narrow a b => BitNat a -> BitNat b
-narrow (BitNat' a) = unsafeMakeW (fromIntegral a)
+narrow (BitNat' a) = unsafeMakeBitNat (fromIntegral a)
 
 type Narrow a b =
    ( Assert (b <=? a) (() :: Constraint)

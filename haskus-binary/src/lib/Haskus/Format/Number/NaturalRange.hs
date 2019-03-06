@@ -82,7 +82,7 @@ type NatRangeBitCount f t = NatBitCount (t-f+1)
 
 type MakeNatRange f t =
    ( Integral (BitNatWord (NatRangeBitCount f t))
-   , MakeW (NatRangeBitCount f t)
+   , MakeBitNat (NatRangeBitCount f t)
    , KnownNat f
    , KnownNat t
    , Assert (f <=? t) (() :: Constraint)
