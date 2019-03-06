@@ -13,6 +13,8 @@ import Haskus.Format.Binary.Bits.Bitwise
 import Haskus.Format.Binary.Bits.Finite
 import Haskus.Format.Binary.Word
 import GHC.Exts
+import qualified Data.Bits as BaseBits
+import Numeric.Natural
 
 -- | Type whose bits are indexable
 class IndexableBits a where
@@ -80,3 +82,17 @@ instance IndexableBits Int32 where
 instance IndexableBits Int64 where
    popCount (I64# x#) = W# (popCnt64# (int2Word# x#))
 
+instance IndexableBits Integer where
+   -- we don't have access to Integer primitive (we would have to conditionally
+   -- import integer-gmp or integer-simple like `base` does) so we use Data.Bits
+   -- from `base` instead.
+   testBit x i  = BaseBits.testBit x (fromIntegral i)
+   bit i        = BaseBits.bit (fromIntegral i)
+   popCount x   = fromIntegral (BaseBits.popCount x)
+   clearBit x i = BaseBits.clearBit x (fromIntegral i)
+
+instance IndexableBits Natural where
+   testBit x i  = BaseBits.testBit x (fromIntegral i)
+   bit i        = BaseBits.bit (fromIntegral i)
+   popCount x   = fromIntegral (BaseBits.popCount x)
+   clearBit x i = BaseBits.clearBit x (fromIntegral i)
