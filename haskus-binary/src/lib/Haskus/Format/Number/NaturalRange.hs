@@ -134,7 +134,7 @@ toNaturalNatRange :: forall f t.
    ( KnownNat f
    , Integral (BitNatWord (NatBitCount (t-f+1)))
    ) => NatRange f t -> Natural
-toNaturalNatRange (NatRange' x) = natValue @f + toNaturalW x
+toNaturalNatRange (NatRange' x) = natValue @f + bitNatToNatural x
 
 -- | Natural range pattern
 --

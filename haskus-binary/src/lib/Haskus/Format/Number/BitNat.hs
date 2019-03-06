@@ -44,7 +44,7 @@ module Haskus.Format.Number.BitNat
    -- * Internal
    , BitNatWord
    , MakeBitNat
-   , toNaturalW
+   , bitNatToNatural
    )
 where
 
@@ -66,7 +66,7 @@ newtype BitNat (b :: Nat)
 
 pattern BitNat :: forall (n :: Nat). (Integral (BitNatWord n), MakeBitNat n) => Natural -> BitNat n
 {-# COMPLETE BitNat #-}
-pattern BitNat x <- (toNaturalW -> x)
+pattern BitNat x <- (bitNatToNatural -> x)
    where
       BitNat x = makeW @n x
 
@@ -97,13 +97,13 @@ mapW f (BitNat' x) = BitNat' (f x)
 zipWithW :: (BitNatWord a -> BitNatWord a -> BitNatWord b) -> BitNat a -> BitNat a -> BitNat b
 zipWithW f (BitNat' x) (BitNat' y) = BitNat' (f x y)
 
--- | Show instance for naturals
+-- | Show instance for BitNat
 instance (KnownNat b, Integral (BitNatWord b)) => Show (BitNat b) where
    showsPrec d x = showParen (d /= 0)
       $ showString "BitNat @"
       . showsPrec 0 (natValue' @b)
       . showString " "
-      . showsPrec 0 (toNaturalW x)
+      . showsPrec 0 (bitNatToNatural x)
 
 -- | BitNat backing type
 type family BitNatWord b where
@@ -130,8 +130,8 @@ bitNatOne :: Num (BitNatWord a) => BitNat a
 bitNatOne = BitNat' 1
 
 -- | Convert a BitNat into a Natural
-toNaturalW :: Integral (BitNatWord a) => BitNat a -> Natural
-toNaturalW (BitNat' x) = fromIntegral x
+bitNatToNatural :: Integral (BitNatWord a) => BitNat a -> Natural
+bitNatToNatural (BitNat' x) = fromIntegral x
 
 -- | Create a natural
 unsafeMakeBitNat :: forall a. (Maskable a (BitNatWord a)) => BitNatWord a -> BitNat a
