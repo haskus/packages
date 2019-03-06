@@ -27,8 +27,8 @@ module Haskus.Format.Number.BitNat
    , nat
    , unsafeMakeW
    , safeMakeW
-   , zeroW
-   , oneW
+   , bitNatZero
+   , bitNatOne
    , extractW
    , compareW
    , (.+.)
@@ -119,12 +119,12 @@ type family BitNatWord' b8 b16 b32 b64 where
 -------------------------------------------------
 
 -- | Zero natural
-zeroW :: Num (BitNatWord a) => BitNat a
-zeroW = BitNat' 0
+bitNatZero :: Num (BitNatWord a) => BitNat a
+bitNatZero = BitNat' 0
 
 -- | One natural
-oneW :: Num (BitNatWord a) => BitNat a
-oneW = BitNat' 1
+bitNatOne :: Num (BitNatWord a) => BitNat a
+bitNatOne = BitNat' 1
 
 -- | Convert a BitNat into a Natural
 toNaturalW :: Integral (BitNatWord a) => BitNat a -> Natural
@@ -266,7 +266,7 @@ instance Ord (BitNatWord a) => Ord (BitNat a) where
    ) => BitNat a -> BitNat b -> Maybe (BitNat m)
 (.-.) (widen @m -> x) (widen @m -> y) = case compare x y of
    LT -> Nothing
-   EQ -> Just zeroW
+   EQ -> Just bitNatZero
    GT -> Just (zipWithW (-) x y)
 
 -- | Multiply two Naturals
@@ -300,7 +300,7 @@ instance Ord (BitNatWord a) => Ord (BitNat a) where
    , Num (BitNatWord (Min a b))
    ) => BitNat a -> BitNat b -> Maybe (BitNat a,BitNat (Min a b))
 (./.) x y
-   | y == zeroW = Nothing
+   | y == bitNatZero = Nothing
    | otherwise  = Just (BitNat' (fromIntegral q), BitNat' (fromIntegral r))
    where
       (q,r) = quotRem x' y'
