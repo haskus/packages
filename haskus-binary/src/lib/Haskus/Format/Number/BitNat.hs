@@ -38,6 +38,9 @@ module Haskus.Format.Number.BitNat
    , (.<<.)
    , (.>>.)
    , bitNatTestBit
+   , bitNatXor
+   , bitNatAnd
+   , bitNatOr
    -- * Internal
    , BitNatWord
    , MakeW
@@ -344,5 +347,25 @@ instance Ord (BitNatWord a) => Ord (BitNat a) where
 
 
 -- | Test a bit
-bitNatTestBit :: (IndexableBits (BitNatWord a)) => BitNat a -> Word -> Bool
+bitNatTestBit ::
+   ( IndexableBits (BitNatWord a)
+   ) => BitNat a -> Word -> Bool
 bitNatTestBit (BitNat' b) i = testBit b i
+
+-- | Xor
+bitNatXor ::
+   ( Bitwise (BitNatWord a)
+   ) => BitNat a -> BitNat a -> BitNat a
+bitNatXor (BitNat' a) (BitNat' b) = BitNat' (a `xor` b)
+
+-- | And
+bitNatAnd ::
+   ( Bitwise (BitNatWord a)
+   ) => BitNat a -> BitNat a -> BitNat a
+bitNatAnd (BitNat' a) (BitNat' b) = BitNat' (a .&. b)
+
+-- | Or
+bitNatOr ::
+   ( Bitwise (BitNatWord a)
+   ) => BitNat a -> BitNat a -> BitNat a
+bitNatOr (BitNat' a) (BitNat' b) = BitNat' (a .|. b)
