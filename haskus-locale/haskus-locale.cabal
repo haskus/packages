@@ -31,7 +31,7 @@ library
       ,  bytestring
       ,  vector
       ,  template-haskell
-      ,  haskus-utils
+      ,  haskus-utils-compat
 
   build-tools: 
   ghc-options:          -Wall

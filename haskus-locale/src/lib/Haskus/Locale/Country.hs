@@ -14,12 +14,12 @@ import Data.Text
 import Data.Vector (Vector)
 import GHC.Generics
 import qualified Data.ByteString.Lazy as LBS
-import Haskus.Utils.Embed
+import Haskus.Utils.Embed.ByteString
 
 -- | Raw country data taken from https://github.com/datasets/country-codes/
 -- (see https://datahub.io/core/country-codes)
 countryData :: LBS.ByteString
-countryData = LBS.fromStrict $(embedFile "src/data/country-codes.csv")
+countryData = LBS.fromStrict $(embedBSFile "src/data/country-codes.csv")
 
 -- | Country data
 countries :: Vector Country

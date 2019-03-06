@@ -1,7 +1,6 @@
 -- | Embed data into the executable binary
 module Haskus.Utils.Embed
    ( embedBytes
-   , module Data.FileEmbed
    -- | Raw text quasiquoter
    , raw
    , rawQ
@@ -10,7 +9,6 @@ where
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
-import Data.FileEmbed
 import Data.Word
 
 -- | Embed bytes in a C array, return an Addr#

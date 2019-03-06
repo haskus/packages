@@ -50,7 +50,6 @@ library
       ,  transformers              >= 0.4
       ,  mtl                       >= 2.2
       ,  template-haskell          >= 2.10
-      ,  file-embed                >= 0.0.10
       ,  extra                     >= 1.4
       ,  hashable                  >= 1.2
 
