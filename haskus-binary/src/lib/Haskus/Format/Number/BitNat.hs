@@ -37,6 +37,7 @@ module Haskus.Format.Number.BitNat
    , (./.)
    , (.<<.)
    , (.>>.)
+   , bitNatTestBit
    -- * Internal
    , BitNatWord
    , MakeW
@@ -340,3 +341,8 @@ instance Ord (BitNatWord a) => Ord (BitNat a) where
    , Narrow a (a-s)
    ) => BitNat a -> NatVal s -> BitNat (a - s)
 (.>>.) x _ = narrow @(a-s) (mapW (`uncheckedShiftR` natValue @s) x)
+
+
+-- | Test a bit
+bitNatTestBit :: (IndexableBits (BitNatWord a)) => BitNat a -> Word -> Bool
+bitNatTestBit (BitNat' b) i = testBit b i
