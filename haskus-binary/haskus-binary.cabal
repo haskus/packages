@@ -61,6 +61,7 @@ library
     Haskus.Format.Number
     Haskus.Format.Number.BitNat
     Haskus.Format.Number.Signed
+    Haskus.Format.Number.SignedSafe
     Haskus.Format.Number.NaturalRange
 
     Haskus.Memory.Utils

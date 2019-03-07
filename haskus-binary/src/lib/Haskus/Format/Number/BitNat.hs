@@ -22,6 +22,7 @@ module Haskus.Format.Number.BitNat
    , widen
    , Narrow
    , narrow
+   , IsBitNat
    , BitNat
    , pattern BitNat
    , unsafeMakeBitNat
@@ -35,6 +36,8 @@ module Haskus.Format.Number.BitNat
    , (.-.)
    , (.*.)
    , (./.)
+   , BitNatShiftLeft
+   , BitNatShiftRight
    , (.<<.)
    , (.>>.)
    , bitNatTestBit
@@ -120,6 +123,13 @@ type family BitNatWord' b8 b16 b32 b64 where
 -------------------------------------------------
 -- Creation
 -------------------------------------------------
+
+type IsBitNat b =
+   ( Num (BitNatWord b)
+   , Integral (BitNatWord b)
+   , Bitwise (BitNatWord b)
+   , IndexableBits (BitNatWord b)
+   )
 
 -- | Zero natural
 bitNatZero :: Num (BitNatWord a) => BitNat a
@@ -314,6 +324,18 @@ instance Ord (BitNatWord a) => Ord (BitNat a) where
 -- Shift
 -------------------------------------------------
 
+type BitNatShiftRight a s =
+   ( ShiftableBits (BitNatWord a)
+   , KnownNat s
+   , Narrow a (a-s)
+   )
+
+type BitNatShiftLeft a s =
+   ( ShiftableBits (BitNatWord (a+s))
+   , KnownNat s
+   , Widen a (a+s)
+   )
+
 -- | Shift-left naturals
 --
 -- >>> let x = BitNat @5 25
@@ -327,9 +349,7 @@ instance Ord (BitNatWord a) => Ord (BitNat a) where
 -- True
 --
 (.<<.) :: forall (s :: Nat) a.
-   ( ShiftableBits (BitNatWord (a + s))
-   , KnownNat s
-   , Widen a (a+s)
+   ( BitNatShiftLeft a s
    ) => BitNat a -> NatVal s -> BitNat (a + s)
 (.<<.) x _ = mapW (`uncheckedShiftL` natValue @s) (widen @(a+s) x)
 
@@ -339,9 +359,7 @@ instance Ord (BitNatWord a) => Ord (BitNat a) where
 -- BitNat @3 6
 --
 (.>>.) :: forall (s :: Nat) a.
-   ( ShiftableBits (BitNatWord a)
-   , KnownNat s
-   , Narrow a (a-s)
+   ( BitNatShiftRight a s
    ) => BitNat a -> NatVal s -> BitNat (a - s)
 (.>>.) x _ = narrow @(a-s) (mapW (`uncheckedShiftR` natValue @s) x)
 
@@ -353,19 +371,19 @@ bitNatTestBit ::
 bitNatTestBit (BitNat' b) i = testBit b i
 
 -- | Xor
-bitNatXor ::
-   ( Bitwise (BitNatWord a)
+bitNatXor :: forall a.
+   ( IsBitNat a
    ) => BitNat a -> BitNat a -> BitNat a
 bitNatXor (BitNat' a) (BitNat' b) = BitNat' (a `xor` b)
 
 -- | And
-bitNatAnd ::
-   ( Bitwise (BitNatWord a)
+bitNatAnd :: forall a.
+   ( IsBitNat a
    ) => BitNat a -> BitNat a -> BitNat a
 bitNatAnd (BitNat' a) (BitNat' b) = BitNat' (a .&. b)
 
 -- | Or
-bitNatOr ::
-   ( Bitwise (BitNatWord a)
+bitNatOr :: forall a.
+   ( IsBitNat a
    ) => BitNat a -> BitNat a -> BitNat a
 bitNatOr (BitNat' a) (BitNat' b) = BitNat' (a .|. b)

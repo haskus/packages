@@ -7,20 +7,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ConstraintKinds #-}
 
--- | Signed numbers
-module Haskus.Format.Number.Signed
+-- | Signed safe numbers
+module Haskus.Format.Number.SignedSafe
    ( Signed (..)
-   , SignedIsZero
    , signedIsZero
-   , SignedFromBitNat
+   , signedIsNaN
    , signedFromBitNat
-   , SignedNegate
    , signedNegate
-   , SignedPos
    , signedPos
-   , SignedNeg
    , signedNeg
    )
 where
@@ -28,12 +23,13 @@ where
 import Haskus.Format.Number.BitNat
 import Haskus.Format.Binary.Bits
 import Haskus.Utils.Types
+import Prelude hiding (isNaN)
 
 -- | A signed number (not in two-complement form)
 --
 -- * Bits: ddd..ddds where "s" is the sign bit
 -- * Allows symetric positive and negative numbers
--- * Positive and negative zeros are zero
+-- * Negative zero is NaN
 --
 newtype Signed (b :: Nat)
    = Signed (BitNat (b+1))
@@ -51,20 +47,13 @@ instance
    ) => Show (Signed b)
    where
    showsPrec d x@(Signed b)
-      | signedIsZero x = showString "0"
-      | otherwise      =
+      | signedIsNaN x = showString "NaN"
+      | otherwise     =
             showParen (d /= 0)
             $ showString (if signedIsPositive x
                   then ""
                   else "-")
             . showsPrec 0 (bitNatToNatural (b .>>. NatVal @1))
-
-type SignedPos b v =
-   ( b ~ NatBitCount v
-   , MakeBitNat b
-   , KnownNat v
-   , BitNatShiftLeft b 1
-   )
 
 -- | Positive signed literal
 --
@@ -74,15 +63,15 @@ type SignedPos b v =
 -- 0
 --
 signedPos :: forall (v :: Nat) b.
-   ( SignedPos b v
+   ( b ~ NatBitCount v
+   , MakeBitNat b
+   , Bitwise (BitNatWord b)
+   , Integral (BitNatWord (b+1))
+   , KnownNat v
+   , ShiftableBits (BitNatWord (b+1))
+   , Widen b (b+1)
    ) => Signed b
 signedPos = Signed @b (bitNat @v .<<. NatVal @1)
-
-
-type SignedNeg b v =
-   ( SignedPos b v 
-   , SignedNegate b
-   )
 
 -- | Negative signed literal
 --
@@ -92,14 +81,17 @@ type SignedNeg b v =
 -- 0
 --
 signedNeg :: forall (v :: Nat) b.
-   ( SignedNeg b v 
+   ( b ~ NatBitCount v
+   , MakeBitNat b
+   , Bitwise (BitNatWord b)
+   , KnownNat v
+   , Widen b (b+1)
+   , ShiftableBits (BitNatWord (b+1))
+   , IsBitNat (b+1)
    ) => Signed b
-signedNeg = signedNegate (signedPos @v @b)
-
-
-type SignedIsZero b =
-   ( BitNatShiftRight (b+1) 1
-   )
+signedNeg = if signedIsZero k then k else signedNegate k
+   where
+      k = signedPos @v @b
 
 
 -- | Test for zero
@@ -109,14 +101,24 @@ type SignedIsZero b =
 -- >>> signedIsZero (signedNeg @0)
 -- True
 --
-signedIsZero :: forall b.
-   ( SignedIsZero b
+signedIsZero ::
+   ( Num (BitNatWord (b+1))
+   , Eq (BitNatWord (b+1))
    ) => Signed b -> Bool
-signedIsZero (Signed b) = (b .>>. NatVal @1 == bitNatZero)
+signedIsZero (Signed b) = b == bitNatZero
 
-type SignedIsPositive b =
-   ( IndexableBits (BitNatWord (b+1))
-   )
+-- | Test for NaN
+--
+-- >>> signedIsNaN (signedPos @5)
+-- False
+-- >>> signedIsNaN (signedPos @0)
+-- False
+--
+signedIsNaN ::
+   ( Num (BitNatWord (b+1))
+   , Eq (BitNatWord (b+1))
+   ) => Signed b -> Bool
+signedIsNaN (Signed b) = b == bitNatOne
 
 -- | Test if positive
 --
@@ -127,31 +129,22 @@ type SignedIsPositive b =
 -- >>> signedIsPositive (signedNeg @5)
 -- False
 --
-signedIsPositive :: forall b.
-   ( SignedIsPositive b
+signedIsPositive ::
+   ( IndexableBits (BitNatWord (b+1))
    ) => Signed b -> Bool
 signedIsPositive (Signed b) = not (bitNatTestBit b 0)
 
-
-type SignedFromBitNat b =
-   ( ShiftableBits (BitNatWord (b+1))
-   , Widen b (b+1)
-   )
 
 -- | Create from a BitNat
 --
 -- >>> signedFromBitNat (bitNat @18)
 -- 18
 --
-signedFromBitNat :: forall b.
-   ( SignedFromBitNat b
+signedFromBitNat ::
+   ( ShiftableBits (BitNatWord (b+1))
+   , Widen b (b+1)
    ) => BitNat b -> Signed b
 signedFromBitNat b = Signed (b .<<. NatVal @1)
-
-
-type SignedNegate b =
-   ( IsBitNat (b+1)
-   )
 
 -- | Negate a signed number
 --
@@ -161,6 +154,9 @@ type SignedNegate b =
 -- 5
 --
 signedNegate ::
-   ( SignedNegate b
+   ( IsBitNat (b+1)
    ) => Signed b -> Signed b
-signedNegate (Signed b)= Signed (b `bitNatXor` bitNatOne)
+signedNegate s
+   | signedIsNaN s = s
+   | otherwise     = case s of 
+      Signed b -> Signed (b `bitNatXor` bitNatOne)
