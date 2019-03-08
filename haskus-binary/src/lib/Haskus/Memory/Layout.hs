@@ -25,6 +25,7 @@ module Haskus.Memory.Layout
    , CArray (..)
    , CUArray (..)
    , CStruct (..)
+   , CUnion (..)
    )
 where
 
@@ -123,8 +124,8 @@ type instance CAlignment (CUArray a) = CAlignment a
 -- CAlignment S :: Nat
 -- = 4
 data CStruct (fs :: [Field])           = CStruct
-type instance CSizeOf (CStruct fs)     = CStructSize fs (CStructAlignment fs 1) 0
-type instance CAlignment (CStruct fs)  = CStructAlignment fs 1
+type instance CSizeOf (CStruct fs)     = CStructSize fs (CMaxAlignment fs 1) 0
+type instance CAlignment (CStruct fs)  = CMaxAlignment fs 1
 
 type family CStructSize (xs :: [Field]) al sz where
    CStructSize '[] al sz               =
@@ -132,10 +133,24 @@ type family CStructSize (xs :: [Field]) al sz where
    CStructSize ('Field s t : fs) al sz = CStructSize fs al
       (sz + CSizeOf t + PaddingEx (sz `Mod` CAlignment t) (CAlignment t))
 
-type family CStructAlignment (xs :: [Field]) al where
-   CStructAlignment '[] al               = al
-   CStructAlignment ('Field s t : fs) al =
-      CStructAlignment fs (Max al (CAlignment t))
+-- | Union
+--
+-- >>> type S = CUnion ['Field "i8" (CPrimitive 1 1), 'Field "i32" (CPrimitive 4 4)]
+-- >>> :kind! CSizeOf S
+-- CSizeOf S :: Nat
+-- = 4
+--
+-- >>> :kind! CAlignment S
+-- CAlignment S :: Nat
+-- = 4
+data CUnion (fs :: [Field])           = CUnion
+type instance CSizeOf (CUnion fs)     = CUnionSize fs (CMaxAlignment fs 1) 0
+type instance CAlignment (CUnion fs)  = CMaxAlignment fs 1
+
+type family CUnionSize (xs :: [Field]) al sz where
+   CUnionSize '[] al sz               =
+      sz + PaddingEx (sz `Mod` al) al
+   CUnionSize ('Field s t : fs) al sz = CUnionSize fs al (Max (CSizeOf t) sz)
 
 -- | Structure field
 data Field = Field Symbol Type
@@ -143,3 +158,9 @@ data Field = Field Symbol Type
 type family PaddingEx (m :: Nat) (a :: Nat) where
    PaddingEx 0 a = 0
    PaddingEx m a = a - m
+
+type family CMaxAlignment (xs :: [Field]) al where
+   CMaxAlignment '[] al               = al
+   CMaxAlignment ('Field s t : fs) al =
+      CMaxAlignment fs (Max al (CAlignment t))
+
