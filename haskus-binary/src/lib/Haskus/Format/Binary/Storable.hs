@@ -42,6 +42,10 @@ module Haskus.Format.Binary.Storable
    , withArrayLen
    , peekArray
    , pokeArray
+   -- * Padding
+   , RequiredPadding
+   , Padding
+   , PaddingEx
    )
 where
 
@@ -521,3 +525,19 @@ instance Storable WordPtr where
    alignment   = fromIntegral . FS.alignment
    peekIO      = fsPeek
    pokeIO      = fsPoke
+
+---------------------------
+-- Padding
+---------------------------
+
+-- | Compute the required padding between a and b to respect b's alignment
+type family RequiredPadding a b where
+   RequiredPadding a b = Padding (SizeOf a) b
+
+-- | Compute the required padding between the size sz and b to respect b's alignment
+type family Padding (sz :: Nat) b where
+   Padding sz b = PaddingEx (Mod sz (Alignment b)) (Alignment b)
+
+type family PaddingEx (m :: Nat) (a :: Nat) where
+   PaddingEx 0 a = 0
+   PaddingEx m a = a - m

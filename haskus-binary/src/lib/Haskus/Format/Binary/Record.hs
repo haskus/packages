@@ -34,7 +34,6 @@ import Foreign.ForeignPtr
 import Foreign.Ptr
 
 import Haskus.Memory.Utils
-import Haskus.Memory.Layout
 import Haskus.Format.Binary.Storable
 import Haskus.Utils.HList
 import Haskus.Utils.Types
