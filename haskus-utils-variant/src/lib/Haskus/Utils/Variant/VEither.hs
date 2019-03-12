@@ -15,6 +15,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 
 -- | Variant biased towards one type
 --
@@ -31,6 +32,7 @@ module Haskus.Utils.Variant.VEither
    , VEitherLift
    , veitherLift
    , veitherCont
+   , veitherToEither
    , module Haskus.Utils.Variant
    )
 where
@@ -75,7 +77,6 @@ pattern VRight x <- ((popVariantHead . veitherToVariant) -> Right x)
 
 {-# COMPLETE VLeft,VRight #-}
 
-
 ----------------------
 -- Show instance
 ----------------------
@@ -108,6 +109,17 @@ veitherFromVariant = VEither
 --
 veitherToVariant :: VEither es a -> V (a ': es)
 veitherToVariant (VEither x) = x
+
+-- | Convert a VEither into an Either
+--
+-- >>> let x = VRight True :: VEither '[Int,Float] Bool
+-- >>> veitherToEither x
+-- Right True
+--
+veitherToEither :: VEither es a -> Either (V es) a
+veitherToEither = \case
+   VLeft xs -> Left xs
+   VRight x -> Right x
 
 -- | Functor instance for VEither
 --
