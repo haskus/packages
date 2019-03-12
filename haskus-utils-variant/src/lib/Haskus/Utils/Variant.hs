@@ -211,8 +211,7 @@ instance
          Left xs -> showVariantValue xs
 
 instance
-   ( Show (V xs)
-   , Typeable xs
+   ( Typeable xs
    , ShowTypeList (V xs)
    , ShowVariantValue (V xs)
    ) => Show (V xs)

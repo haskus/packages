@@ -23,6 +23,7 @@ library
   exposed-modules:
     Haskus.Utils.ContFlow
     Haskus.Utils.Variant
+    Haskus.Utils.Variant.VEither
     Haskus.Utils.Variant.OldFlow
     Haskus.Utils.Variant.Flow
     Haskus.Utils.Variant.Cont
