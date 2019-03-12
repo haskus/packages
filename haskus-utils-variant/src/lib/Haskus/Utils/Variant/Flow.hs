@@ -186,12 +186,12 @@ success :: Monad m => a -> FlowT '[] m a
 success = pure
 
 -- | Signal an exception value @e@.
-throwE :: (Monad m, e :< es) => e -> FlowT es m a
+throwE :: forall e es a m. (Monad m, e :< es) => e -> FlowT es m a
 {-# INLINABLE throwE #-}
 throwE = FlowT . pure . VLeft . V
 
 -- | Signal an exception value @e@.
-failure :: Monad m => e -> FlowT '[e] m a
+failure :: forall e a m. Monad m => e -> FlowT '[e] m a
 {-# INLINABLE failure #-}
 failure = throwE
 
