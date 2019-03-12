@@ -29,6 +29,7 @@ library
     Haskus.Web.Html
     Haskus.Web.Response
     Haskus.Web.JQuery
+    Haskus.Web.Files
 
   other-modules:
 
@@ -41,6 +42,7 @@ library
    ,  lucid
    ,  happstack-server
    ,  happstack-server-tls
+   ,  containers
 
   build-tools: 
   ghc-options:          -Wall
