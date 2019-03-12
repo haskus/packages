@@ -62,15 +62,18 @@ newtype FlowT es m a = FlowT (m (V (a ': es)))
 
 deriving instance Show (m (V (a ': es))) => Show (FlowT es m a)
 
-runFlowT :: FlowT es m a -> m (V (a ': es))
+runFlowT :: forall es a m.
+   FlowT es m a -> m (V (a ': es))
 {-# INLINABLE runFlowT #-}
 runFlowT (FlowT m) = m
 
-runFlowT_ :: Functor m => FlowT es m a -> m ()
+runFlowT_ :: forall es a m.
+   Functor m => FlowT es m a -> m ()
 {-# INLINABLE runFlowT_ #-}
 runFlowT_ m = void (runFlowT m)
 
-injectFlowT :: Monad m => FlowT es m a -> FlowT es m (V (a ': es))
+injectFlowT :: forall es a m.
+   Monad m => FlowT es m a -> FlowT es m (V (a ': es))
 {-# INLINABLE injectFlowT #-}
 injectFlowT (FlowT m) = return =<< lift m
 
@@ -84,7 +87,10 @@ mapFlowT :: (m (V (a ': es)) -> n (V (b ': es'))) -> FlowT es m a -> FlowT es' n
 mapFlowT f m = FlowT $ f (runFlowT m)
 
 -- | Lift a FlowT into another
-liftFlowT :: (Monad m, LiftVariant es es') => FlowT es m a -> FlowT es' m a
+liftFlowT :: forall es' es a m.
+   ( Monad m
+   , LiftVariant es es'
+   ) => FlowT es m a -> FlowT es' m a
 {-# INLINABLE liftFlowT #-}
 liftFlowT (FlowT m) = FlowT $ do
    a <- m
