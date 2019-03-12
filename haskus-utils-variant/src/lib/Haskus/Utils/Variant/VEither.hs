@@ -26,10 +26,17 @@ module Haskus.Utils.Variant.VEither
    , pattern VRight
    , veitherFromVariant
    , veitherToVariant
+   , veitherToValue
+   , veitherBimap
+   , VEitherLift
+   , veitherLift
+   , veitherCont
+   , module Haskus.Utils.Variant
    )
 where
 
 import Haskus.Utils.Variant
+import Data.Coerce
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -111,3 +118,51 @@ veitherToVariant (VEither x) = x
 instance Functor (VEither es) where
    {-# INLINABLE fmap #-}
    fmap f (VEither v) = VEither (mapVariantAt @0 f v)
+
+
+-- | Extract from a VEither without left types
+--
+-- >>> let x = VRight True :: VEither '[] Bool
+-- >>> veitherToValue x
+-- True
+veitherToValue :: forall a. VEither '[] a -> a
+veitherToValue = coerce (variantToValue @a)
+
+-- | Bimap for VEither
+--
+-- >>> let x = VRight True :: VEither '[Int,Float] Bool
+-- >>> veitherBimap id not x
+-- VRight False
+--
+veitherBimap :: (V es -> V fs) -> (a -> b) ->  VEither es a -> VEither fs b
+veitherBimap f g v = case v of
+   VLeft xs -> VLeft (f xs)
+   VRight x -> VRight (g x)
+
+
+type VEitherLift es es' =
+   ( LiftVariant es es'
+   )
+
+-- | Lift a VEither into another
+veitherLift :: forall es' es a.
+   ( VEitherLift es es'
+   ) => VEither es a -> VEither es' a
+veitherLift = veitherBimap liftVariant id
+
+-- | VEither continuations
+veitherCont :: (V es -> u) -> (a -> u) -> VEither es a -> u
+veitherCont f g v = case v of
+   VLeft xs -> f xs
+   VRight x -> g x
+
+instance Applicative (VEither es) where
+   pure = VRight
+
+   VRight f <*> VRight a = VRight (f a)
+   VLeft v  <*> _        = VLeft v
+   _        <*> VLeft v  = VLeft v
+
+instance Monad (VEither es) where
+   VRight a >>= f = f a
+   VLeft v  >>= _ = VLeft v
