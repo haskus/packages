@@ -10,15 +10,15 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Haskus.Utils.Variant.Flow
-   ( FlowT
-   , runFlowT
-   , runFlowT_
-   , evalFlowT
-   , evalCatchFlowT
-   , injectFlowT
-   , mapFlowT
-   , liftFlowT
-   , variantToFlowT
+   ( Flow
+   , runFlow
+   , runFlow_
+   , evalFlow
+   , evalCatchFlow
+   , injectFlow
+   , mapFlow
+   , liftFlow
+   , variantToFlow
    , success
    , failure
    , throwE
@@ -44,63 +44,63 @@ import Haskus.Utils.Variant.VEither
 import Control.Monad.Catch
 
 ------------------------------------------------------------------------------
--- FlowT
+-- Flow
 ------------------------------------------------------------------------------
-newtype FlowT es m a = FlowT (m (VEither es a))
+newtype Flow es m a = Flow (m (VEither es a))
 
-deriving instance Show (m (VEither es a)) => Show (FlowT es m a)
+deriving instance Show (m (VEither es a)) => Show (Flow es m a)
 
-runFlowT :: forall es a m.
-   FlowT es m a -> m (VEither es a)
-{-# INLINABLE runFlowT #-}
-runFlowT (FlowT m) = m
+runFlow :: forall es a m.
+   Flow es m a -> m (VEither es a)
+{-# INLINABLE runFlow #-}
+runFlow (Flow m) = m
 
-runFlowT_ :: forall es a m.
-   Functor m => FlowT es m a -> m ()
-{-# INLINABLE runFlowT_ #-}
-runFlowT_ m = void (runFlowT m)
+runFlow_ :: forall es a m.
+   Functor m => Flow es m a -> m ()
+{-# INLINABLE runFlow_ #-}
+runFlow_ m = void (runFlow m)
 
-injectFlowT :: forall es a m.
-   Monad m => FlowT es m a -> FlowT es m (VEither es a)
-{-# INLINABLE injectFlowT #-}
-injectFlowT (FlowT m) = return =<< lift m
+injectFlow :: forall es a m.
+   Monad m => Flow es m a -> Flow es m (VEither es a)
+{-# INLINABLE injectFlow #-}
+injectFlow (Flow m) = return =<< lift m
 
 -- | Convert a flow without error into a value
-evalFlowT :: Monad m => FlowT '[] m a -> m a
-{-# INLINABLE evalFlowT #-}
-evalFlowT v = veitherToValue <$> runFlowT v
+evalFlow :: Monad m => Flow '[] m a -> m a
+{-# INLINABLE evalFlow #-}
+evalFlow v = veitherToValue <$> runFlow v
 
-mapFlowT :: (m (VEither es a) -> n (VEither es' b)) -> FlowT es m a -> FlowT es' n b
-{-# INLINABLE mapFlowT #-}
-mapFlowT f = FlowT . f . runFlowT
+mapFlow :: (m (VEither es a) -> n (VEither es' b)) -> Flow es m a -> Flow es' n b
+{-# INLINABLE mapFlow #-}
+mapFlow f = Flow . f . runFlow
 
--- | Lift a FlowT into another
-liftFlowT :: forall es' es a m.
+-- | Lift a Flow into another
+liftFlow :: forall es' es a m.
    ( Monad m
    , VEitherLift es es'
-   ) => FlowT es m a -> FlowT es' m a
-{-# INLINABLE liftFlowT #-}
-liftFlowT = mapFlowT (liftM veitherLift)
+   ) => Flow es m a -> Flow es' m a
+{-# INLINABLE liftFlow #-}
+liftFlow = mapFlow (liftM veitherLift)
 
-instance Functor m => Functor (FlowT es m) where
+instance Functor m => Functor (Flow es m) where
    {-# INLINABLE fmap #-}
-   fmap f = mapFlowT (fmap (fmap f))
+   fmap f = mapFlow (fmap (fmap f))
 
-instance Foldable m => Foldable (FlowT es m) where
+instance Foldable m => Foldable (Flow es m) where
    {-# INLINABLE foldMap #-}
-   foldMap f (FlowT m) = foldMap (veitherCont (const mempty) f) m
+   foldMap f (Flow m) = foldMap (veitherCont (const mempty) f) m
 
-instance Traversable m => Traversable (FlowT es m) where
+instance Traversable m => Traversable (Flow es m) where
    {-# INLINABLE traverse #-}
-   traverse f (FlowT m) =
-      FlowT <$> traverse (veitherCont (pure . VLeft) (fmap VRight . f)) m
+   traverse f (Flow m) =
+      Flow <$> traverse (veitherCont (pure . VLeft) (fmap VRight . f)) m
 
-instance (Functor m, Monad m) => Applicative (FlowT es m) where
+instance (Functor m, Monad m) => Applicative (Flow es m) where
     {-# INLINABLE pure #-}
-    pure a = FlowT $ return (VRight a)
+    pure a = Flow $ return (VRight a)
 
     {-# INLINABLE (<*>) #-}
-    FlowT mf <*> FlowT ma = FlowT $ do
+    Flow mf <*> Flow ma = Flow $ do
       f <- mf
       a <- ma
       pure (f <*> a)
@@ -108,77 +108,77 @@ instance (Functor m, Monad m) => Applicative (FlowT es m) where
     {-# INLINABLE (*>) #-}
     m *> k = m >>= \_ -> k
 
-instance (Monad m) => Monad (FlowT es m) where
+instance (Monad m) => Monad (Flow es m) where
     {-# INLINABLE (>>=) #-}
-    m >>= k = FlowT $ do
-        a <- runFlowT m
+    m >>= k = Flow $ do
+        a <- runFlow m
         case a of
             VLeft es -> return (VLeft es)
-            VRight x -> runFlowT (k x)
+            VRight x -> runFlow (k x)
 
     {-# INLINABLE fail #-}
-    fail = FlowT . fail
+    fail = Flow . fail
 
-instance MonadTrans (FlowT e) where
+instance MonadTrans (Flow e) where
     {-# INLINABLE lift #-}
-    lift = FlowT . liftM VRight
+    lift = Flow . liftM VRight
 
-instance (MonadIO m) => MonadIO (FlowT es m) where
+instance (MonadIO m) => MonadIO (Flow es m) where
     {-# INLINABLE liftIO #-}
     liftIO = lift . liftIO
 
 
 -- | Throws exceptions into the base monad.
-instance MonadThrow m => MonadThrow (FlowT e m) where
+instance MonadThrow m => MonadThrow (Flow e m) where
    {-# INLINABLE throwM #-}
    throwM = lift . throwM
 
 -- | Catches exceptions from the base monad.
-instance MonadCatch m => MonadCatch (FlowT e m) where
-   catch (FlowT m) f = FlowT $ catch m (runFlowT . f)
+instance MonadCatch m => MonadCatch (Flow e m) where
+   catch (Flow m) f = Flow $ catch m (runFlow . f)
 
-instance MonadMask m => MonadMask (FlowT e m) where
-   mask f = FlowT $ mask $ \u -> runFlowT $ f (q u)
+instance MonadMask m => MonadMask (Flow e m) where
+   mask f = Flow $ mask $ \u -> runFlow $ f (q u)
       where
-         q :: (m (VEither e a) -> m (VEither e a)) -> FlowT e m a -> FlowT e m a
-         q u (FlowT b) = FlowT (u b)
+         q :: (m (VEither e a) -> m (VEither e a)) -> Flow e m a -> Flow e m a
+         q u (Flow b) = Flow (u b)
 
-   uninterruptibleMask f = FlowT $ uninterruptibleMask $ \u -> runFlowT $ f (q u)
+   uninterruptibleMask f = Flow $ uninterruptibleMask $ \u -> runFlow $ f (q u)
       where
-         q :: (m (VEither e a) -> m (VEither e a)) -> FlowT e m a -> FlowT e m a
-         q u (FlowT b) = FlowT (u b)
+         q :: (m (VEither e a) -> m (VEither e a)) -> Flow e m a -> Flow e m a
+         q u (Flow b) = Flow (u b)
 
-   generalBracket acquire release use = FlowT $ do
+   generalBracket acquire release use = Flow $ do
       (eb, ec) <- generalBracket
-         (runFlowT acquire)
+         (runFlow acquire)
          (\eresource exitCase -> case eresource of
             VLeft e -> return (VLeft e) -- nothing to release, acquire didn't succeed
             VRight resource -> case exitCase of
-               ExitCaseSuccess (VRight b) -> runFlowT (release resource (ExitCaseSuccess b))
-               ExitCaseException e        -> runFlowT (release resource (ExitCaseException e))
-               _                          -> runFlowT (release resource ExitCaseAbort))
-         (veitherCont (return . VLeft) (runFlowT . use))
-      runFlowT $ do
-         -- The order in which we perform those two 'FlowT' effects determines
+               ExitCaseSuccess (VRight b) -> runFlow (release resource (ExitCaseSuccess b))
+               ExitCaseException e        -> runFlow (release resource (ExitCaseException e))
+               _                          -> runFlow (release resource ExitCaseAbort))
+         (veitherCont (return . VLeft) (runFlow . use))
+      runFlow $ do
+         -- The order in which we perform those two 'Flow' effects determines
          -- which error will win if they are both erroring. We want the error from
          -- 'release' to win.
-         c <- FlowT (return ec)
-         b <- FlowT (return eb)
+         c <- Flow (return ec)
+         b <- Flow (return eb)
          return (b, c)
 
 
 
 -- | Success value
-success :: Monad m => a -> FlowT '[] m a
+success :: Monad m => a -> Flow '[] m a
 success = pure
 
 -- | Signal an exception value @e@.
-throwE :: forall e es a m. (Monad m, e :< es) => e -> FlowT es m a
+throwE :: forall e es a m. (Monad m, e :< es) => e -> Flow es m a
 {-# INLINABLE throwE #-}
-throwE = FlowT . pure . VLeft . V
+throwE = Flow . pure . VLeft . V
 
 -- | Signal an exception value @e@.
-failure :: forall e a m. Monad m => e -> FlowT '[e] m a
+failure :: forall e a m. Monad m => e -> Flow '[e] m a
 {-# INLINABLE failure #-}
 failure = throwE
 
@@ -190,7 +190,7 @@ catchE :: forall e es' es'' es a m.
    , LiftVariant (Remove e es) es'
    , LiftVariant es'' es'
    ) =>
-    FlowT es m a -> (e -> FlowT es'' m a) -> FlowT es' m a
+    Flow es m a -> (e -> Flow es'' m a) -> Flow es' m a
 {-# INLINABLE catchE #-}
 m `catchE` h = m `catchLiftBoth` h
 
@@ -202,28 +202,28 @@ catchLiftBoth :: forall e es' es'' es a m.
    , LiftVariant (Remove e es) es'
    , LiftVariant es'' es'
    ) =>
-    FlowT es m a -> (e -> FlowT es'' m a) -> FlowT es' m a
+    Flow es m a -> (e -> Flow es'' m a) -> Flow es' m a
 {-# INLINABLE catchLiftBoth #-}
-m `catchLiftBoth` h = FlowT $ do
-   a <- runFlowT m
+m `catchLiftBoth` h = Flow $ do
+   a <- runFlow m
    case a of
       VRight r -> return (VRight r)
       VLeft  ls -> case popVariant ls of
-         Right l -> runFlowT (liftFlowT (h l))
+         Right l -> runFlow (liftFlow (h l))
          Left rs -> return (VLeft (liftVariant rs))
 
 -- | Handle an exception. Assume it is in the first position
 catchRemove :: forall e es a m.
    ( Monad m
    ) =>
-    FlowT (e ': es) m a -> (e -> FlowT es m a) -> FlowT es m a
+    Flow (e ': es) m a -> (e -> Flow es m a) -> Flow es m a
 {-# INLINABLE catchRemove #-}
-m `catchRemove` h = FlowT $ do
-   a <- runFlowT m
+m `catchRemove` h = Flow $ do
+   a <- runFlow m
    case a of
       VRight r -> return (VRight r)
       VLeft  ls -> case popVariantHead ls of
-         Right l -> runFlowT (h l)
+         Right l -> runFlow (h l)
          Left rs -> return (VLeft rs)
 
 -- | Handle an exception. Lift the remaining errors into the resulting flow
@@ -232,14 +232,14 @@ catchLiftLeft :: forall e es es' a m.
    , e :< es
    , LiftVariant (Remove e es) es'
    ) =>
-    FlowT es m a -> (e -> FlowT es' m a) -> FlowT es' m a
+    Flow es m a -> (e -> Flow es' m a) -> Flow es' m a
 {-# INLINABLE catchLiftLeft #-}
-m `catchLiftLeft` h = FlowT $ do
-   a <- runFlowT m
+m `catchLiftLeft` h = Flow $ do
+   a <- runFlow m
    case a of
       VRight r -> return (VRight r)
       VLeft  ls -> case popVariant ls of
-         Right l -> runFlowT (h l)
+         Right l -> runFlow (h l)
          Left rs -> return (VLeft (liftVariant rs))
 
 -- | Handle an exception. Lift the handler into the resulting flow
@@ -248,44 +248,44 @@ catchLiftRight :: forall e es es' a m.
    , e :< es
    , LiftVariant es' (Remove e es)
    ) =>
-    FlowT es m a -> (e -> FlowT es' m a) -> FlowT (Remove e es) m a
+    Flow es m a -> (e -> Flow es' m a) -> Flow (Remove e es) m a
 {-# INLINABLE catchLiftRight #-}
-m `catchLiftRight` h = FlowT $ do
-   a <- runFlowT m
+m `catchLiftRight` h = Flow $ do
+   a <- runFlow m
    case a of
       VRight r -> return (VRight r)
       VLeft  ls -> case popVariant ls of
-         Right l -> runFlowT (liftFlowT (h l))
+         Right l -> runFlow (liftFlow (h l))
          Left rs -> return (VLeft rs)
 
 -- | Do something in case of error
-catchAllE :: Monad m => FlowT es m a -> (V es -> FlowT es' m a) -> FlowT es' m a
+catchAllE :: Monad m => Flow es m a -> (V es -> Flow es' m a) -> Flow es' m a
 {-# INLINABLE catchAllE #-}
-m `catchAllE` h = FlowT $ do
-   a <- runFlowT m
+m `catchAllE` h = Flow $ do
+   a <- runFlow m
    case a of
       VRight x  -> return (VRight x)
-      VLeft xs  -> runFlowT (h xs)
+      VLeft xs  -> runFlow (h xs)
 
--- | Evaluate a FlowT. Use the provided function to handle error cases.
-evalCatchFlowT :: Monad m => (V es -> m a) -> FlowT es m a -> m a
-{-# INLINABLE evalCatchFlowT #-}
-evalCatchFlowT h m = do
-   a <- runFlowT m
+-- | Evaluate a Flow. Use the provided function to handle error cases.
+evalCatchFlow :: Monad m => (V es -> m a) -> Flow es m a -> m a
+{-# INLINABLE evalCatchFlow #-}
+evalCatchFlow h m = do
+   a <- runFlow m
    case a of
       VRight x  -> return x
       VLeft xs  -> h xs
 
--- | Evaluate a FlowT. Use the provided function to handle error cases.
-catchDieAll :: Monad m => FlowT es m a -> (V es -> m a) -> m a
+-- | Evaluate a Flow. Use the provided function to handle error cases.
+catchDieAll :: Monad m => Flow es m a -> (V es -> m a) -> m a
 {-# INLINABLE catchDieAll #-}
-catchDieAll m h = evalCatchFlowT h m
+catchDieAll m h = evalCatchFlow h m
 
 -- | Catch and die in case of error
-catchDie :: (e :< es, Monad m) => FlowT es m a -> (e -> m ()) -> FlowT (Remove e es) m a
+catchDie :: (e :< es, Monad m) => Flow es m a -> (e -> m ()) -> Flow (Remove e es) m a
 {-# INLINABLE catchDie #-}
-m `catchDie` h = FlowT $ do
-   a <- runFlowT m
+m `catchDie` h = Flow $ do
+   a <- runFlow m
    case a of
       VRight r -> return (VRight r)
       VLeft  ls -> case popVariant ls of
@@ -293,41 +293,41 @@ m `catchDie` h = FlowT $ do
          Left rs -> return (VLeft rs)
 
 -- | Do something in case of error
-onFlowError_ :: Monad m => FlowT es m a -> m () -> FlowT es m a
+onFlowError_ :: Monad m => Flow es m a -> m () -> Flow es m a
 {-# INLINABLE onFlowError_ #-}
-m `onFlowError_` h = FlowT $ do
-   a <- runFlowT m
+m `onFlowError_` h = Flow $ do
+   a <- runFlow m
    case a of
       VRight _ -> return a
       VLeft _  -> h >> return a
 
 -- | Do something in case of error
-onFlowError :: Monad m => FlowT es m a -> (V es -> m ()) -> FlowT es m a
+onFlowError :: Monad m => Flow es m a -> (V es -> m ()) -> Flow es m a
 {-# INLINABLE onFlowError #-}
-m `onFlowError` h = FlowT $ do
-   a <- runFlowT m
+m `onFlowError` h = Flow $ do
+   a <- runFlow m
    case a of
       VRight _  -> return a
       VLeft es  -> h es >> return a
 
--- | Finally for FlowT
-finallyFlow :: Monad m => FlowT es m a -> m () -> FlowT es m a
+-- | Finally for Flow
+finallyFlow :: Monad m => Flow es m a -> m () -> Flow es m a
 {-# INLINABLE finallyFlow #-}
-m `finallyFlow` h = FlowT $ do
-   a <- runFlowT m
+m `finallyFlow` h = Flow $ do
+   a <- runFlow m
    h
    return a
 
--- | Convert a Variant into a FlowT
-variantToFlowT :: Monad m => V (a ': es) -> FlowT es m a
-{-# INLINABLE variantToFlowT #-}
-variantToFlowT v = FlowT (return (veitherFromVariant v))
+-- | Convert a Variant into a Flow
+variantToFlow :: Monad m => V (a ': es) -> Flow es m a
+{-# INLINABLE variantToFlow #-}
+variantToFlow v = Flow (return (veitherFromVariant v))
 
-instance MonadInIO m => MonadInIO (FlowT es m) where
+instance MonadInIO m => MonadInIO (Flow es m) where
    {-# INLINABLE liftWith #-}
    liftWith wth f =
-      FlowT $ liftWith wth (\a -> runFlowT (f a))
+      Flow $ liftWith wth (\a -> runFlow (f a))
 
    {-# INLINABLE liftWith2 #-}
    liftWith2 wth f =
-      FlowT $ liftWith2 wth (\a b -> runFlowT (f a b))
+      Flow $ liftWith2 wth (\a b -> runFlow (f a b))
