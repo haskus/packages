@@ -185,3 +185,11 @@ instance Applicative (VEither es) where
 instance Monad (VEither es) where
    VRight a >>= f = f a
    VLeft v  >>= _ = VLeft v
+
+instance Foldable (VEither es) where
+   foldMap f (VRight a) = f a
+   foldMap _ (VLeft _)  = mempty
+
+instance Traversable (VEither es) where
+   traverse f (VRight a) = VRight <$> f a
+   traverse _ (VLeft xs) = pure (VLeft xs)
