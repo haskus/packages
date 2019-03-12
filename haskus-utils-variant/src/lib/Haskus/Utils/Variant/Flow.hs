@@ -10,10 +10,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Haskus.Utils.Variant.Flow
-   ( Flow
-   , runFlow
-   -- * FlowT
-   , FlowT
+   ( FlowT
    , runFlowT
    , runFlowT_
    , evalFlowT
@@ -43,18 +40,8 @@ where
 
 import Haskus.Utils.Monad
 import Haskus.Utils.Variant.VEither
-import Data.Functor.Identity
 
 import Control.Monad.Catch
-
-------------------------------------------------------------------------------
--- Flow
-------------------------------------------------------------------------------
-type Flow es     = FlowT es Identity
-
-runFlow :: Flow es a -> VEither es a
-{-# INLINABLE runFlow #-}
-runFlow (FlowT m) = runIdentity m
 
 ------------------------------------------------------------------------------
 -- FlowT
@@ -171,7 +158,7 @@ instance MonadMask m => MonadMask (FlowT e m) where
                ExitCaseException e        -> runFlowT (release resource (ExitCaseException e))
                _                          -> runFlowT (release resource ExitCaseAbort))
          (veitherCont (return . VLeft) (runFlowT . use))
-      return $ runFlow $ do
+      runFlowT $ do
          -- The order in which we perform those two 'FlowT' effects determines
          -- which error will win if they are both erroring. We want the error from
          -- 'release' to win.
