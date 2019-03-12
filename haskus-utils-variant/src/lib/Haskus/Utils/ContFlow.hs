@@ -11,6 +11,7 @@
 -- | Continuation based control-flow
 module Haskus.Utils.ContFlow
    ( ContFlow (..)
+   , (>:>)
    , (>::>)
    , (>:-:>)
    , (>:%:>)
@@ -49,6 +50,13 @@ type family StripR f r where
                   ':<>: 'ShowType w ':<>: 'Text "', expecting `"
                   ':<>: 'ShowType r ':<>: 'Text "'")
 
+-- | Bind a multi-continuable type to a tuple of continuations
+(>:>) :: MultiCont a => a -> ContListToTuple (MultiContTypes a) r -> r
+{-# INLINABLE (>:>) #-}
+(>:>) a !cs = toCont a >::> cs
+
+infixl 0 >:>
+
 -- | Bind a flow to a tuple of continuations
 (>::>) :: ContFlow xs r -> ContListToTuple xs r -> r
 {-# INLINABLE (>::>) #-}
@@ -74,6 +82,7 @@ infixl 0 >:-:>
 infixl 0 >:%:>
 
 
+-- | A multi-continuable type
 class MultiCont a where
    type MultiContTypes a :: [*]
 
