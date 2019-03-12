@@ -99,6 +99,7 @@ instance
 -- VLeft (V @[Char] "Test" :: V '[[Char], Double])
 --
 veitherFromVariant :: V (a ': es) -> VEither es a
+{-# INLINABLE veitherFromVariant #-}
 veitherFromVariant = VEither
 
 -- | Convert a VEither into a Variant
@@ -108,6 +109,7 @@ veitherFromVariant = VEither
 -- V @Bool True :: V '[Bool, Int, Float]
 --
 veitherToVariant :: VEither es a -> V (a ': es)
+{-# INLINABLE veitherToVariant #-}
 veitherToVariant (VEither x) = x
 
 -- | Convert a VEither into an Either
@@ -117,6 +119,7 @@ veitherToVariant (VEither x) = x
 -- Right True
 --
 veitherToEither :: VEither es a -> Either (V es) a
+{-# INLINABLE veitherToEither #-}
 veitherToEither = \case
    VLeft xs -> Left xs
    VRight x -> Right x
@@ -138,6 +141,7 @@ instance Functor (VEither es) where
 -- >>> veitherToValue x
 -- True
 veitherToValue :: forall a. VEither '[] a -> a
+{-# INLINABLE veitherToValue #-}
 veitherToValue = coerce (variantToValue @a)
 
 -- | Bimap for VEither
@@ -147,6 +151,7 @@ veitherToValue = coerce (variantToValue @a)
 -- VRight False
 --
 veitherBimap :: (V es -> V fs) -> (a -> b) ->  VEither es a -> VEither fs b
+{-# INLINABLE veitherBimap #-}
 veitherBimap f g v = case v of
    VLeft xs -> VLeft (f xs)
    VRight x -> VRight (g x)
@@ -160,10 +165,12 @@ type VEitherLift es es' =
 veitherLift :: forall es' es a.
    ( VEitherLift es es'
    ) => VEither es a -> VEither es' a
+{-# INLINABLE veitherLift #-}
 veitherLift = veitherBimap liftVariant id
 
 -- | VEither continuations
 veitherCont :: (V es -> u) -> (a -> u) -> VEither es a -> u
+{-# INLINABLE veitherCont #-}
 veitherCont f g v = case v of
    VLeft xs -> f xs
    VRight x -> g x
