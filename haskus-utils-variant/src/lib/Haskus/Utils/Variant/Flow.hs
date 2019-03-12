@@ -333,6 +333,7 @@ m `finallyFlow` h = FlowT $ do
 
 -- | Convert a Variant into a FlowT
 variantToFlowT :: Monad m => V (a ': es) -> FlowT es m a
+{-# INLINABLE variantToFlowT #-}
 variantToFlowT v = FlowT (return (veitherFromVariant v))
 
 instance MonadInIO m => MonadInIO (FlowT es m) where
