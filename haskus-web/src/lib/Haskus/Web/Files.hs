@@ -42,6 +42,8 @@ scriptFiles = Map.fromList
    ,("jquery-ui-block.js"    ,$(embedBSFilePrefix "haskus-web" "src/scripts/jquery.blockUI.js"))
    ,("jquery-imgload.min.js" ,$(embedBSFilePrefix "haskus-web" "src/scripts/imagesloaded.pkgd.min.js"))
    ,("jquery-imgload.js"     ,$(embedBSFilePrefix "haskus-web" "src/scripts/imagesloaded.pkgd.js"))
+   ,("d3.js"                 ,$(embedBSFilePrefix "haskus-web" "src/scripts/d3.v5.js"))
+   ,("d3.min.js"             ,$(embedBSFilePrefix "haskus-web" "src/scripts/d3.v5.min.js"))
    ]
 
 -- | Map (FileName,Contents)
