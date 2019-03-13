@@ -3,7 +3,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Haskus.Calculus.Lambda
+module Haskus.Calculus.Concept.Lambda
    ( LambdaF (..)
    , pattern Lambda
    )

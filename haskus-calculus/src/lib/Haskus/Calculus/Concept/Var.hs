@@ -3,7 +3,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Haskus.Calculus.Var
+module Haskus.Calculus.Concept.Var
    ( VarF (..)
    , pattern Var
    )

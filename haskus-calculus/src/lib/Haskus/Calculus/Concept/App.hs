@@ -3,7 +3,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Haskus.Calculus.App
+module Haskus.Calculus.Concept.App
    ( AppF (..)
    , pattern App
    )

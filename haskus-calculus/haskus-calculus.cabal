@@ -20,9 +20,11 @@ source-repository head
 
 library
   exposed-modules:
-    Haskus.Calculus.App
-    Haskus.Calculus.Var
-    Haskus.Calculus.Lambda
+    Haskus.Calculus.Concept.App
+    Haskus.Calculus.Concept.Var
+    Haskus.Calculus.Concept.Lambda
+    Haskus.Calculus.Concept.Bind
+    Haskus.Calculus.Concept.Literal
     Haskus.Calculus.PrettyPrint
     Haskus.Calculus.Lang.LC
 
