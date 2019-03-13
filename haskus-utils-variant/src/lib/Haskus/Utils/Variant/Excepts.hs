@@ -14,16 +14,18 @@ module Haskus.Utils.Variant.Excepts
    , runE
    , runE_
    , liftE
+   , failureE
    , throwE
    , catchE
-   , evalExcepts
-   , evalCatchExcepts
+   , catchEvalE
+   , evalE
+   , onE_
+   , onE
+   , finallyE
    , injectExcepts
    , mapExcepts
    , variantToExcepts
    , veitherToExcepts
-   , success
-   , failure
    , catchLiftBoth
    , catchLiftLeft
    , catchLiftRight
@@ -31,9 +33,6 @@ module Haskus.Utils.Variant.Excepts
    , catchDie
    , catchDieAll
    , catchRemove
-   , onExceptsError_
-   , onExceptsError
-   , finallyExcepts
    -- * Reexport
    , module Haskus.Utils.Variant.VEither
    )
@@ -66,9 +65,9 @@ injectExcepts :: forall es a m.
 injectExcepts (Excepts m) = return =<< lift m
 
 -- | Convert a flow without error into a value
-evalExcepts :: Monad m => Excepts '[] m a -> m a
-{-# INLINABLE evalExcepts #-}
-evalExcepts v = veitherToValue <$> runE v
+evalE :: Monad m => Excepts '[] m a -> m a
+{-# INLINABLE evalE #-}
+evalE v = veitherToValue <$> runE v
 
 mapExcepts :: (m (VEither es a) -> n (VEither es' b)) -> Excepts es m a -> Excepts es' n b
 {-# INLINABLE mapExcepts #-}
@@ -168,19 +167,15 @@ instance MonadMask m => MonadMask (Excepts e m) where
 
 
 
--- | Success value
-success :: Monad m => a -> Excepts '[] m a
-success = pure
-
 -- | Signal an exception value @e@.
 throwE :: forall e es a m. (Monad m, e :< es) => e -> Excepts es m a
 {-# INLINABLE throwE #-}
 throwE = Excepts . pure . VLeft . V
 
 -- | Signal an exception value @e@.
-failure :: forall e a m. Monad m => e -> Excepts '[e] m a
-{-# INLINABLE failure #-}
-failure = throwE
+failureE :: forall e a m. Monad m => e -> Excepts '[e] m a
+{-# INLINABLE failureE #-}
+failureE = throwE
 
 -- | Handle an exception. Lift both normal and exceptional flows into the result
 -- flow
@@ -268,9 +263,9 @@ m `catchAllE` h = Excepts $ do
       VLeft xs  -> runE (h xs)
 
 -- | Evaluate a Excepts. Use the provided function to handle error cases.
-evalCatchExcepts :: Monad m => (V es -> m a) -> Excepts es m a -> m a
-{-# INLINABLE evalCatchExcepts #-}
-evalCatchExcepts h m = do
+catchEvalE :: Monad m => (V es -> m a) -> Excepts es m a -> m a
+{-# INLINABLE catchEvalE #-}
+catchEvalE h m = do
    a <- runE m
    case a of
       VRight x  -> return x
@@ -279,7 +274,7 @@ evalCatchExcepts h m = do
 -- | Evaluate a Excepts. Use the provided function to handle error cases.
 catchDieAll :: Monad m => Excepts es m a -> (V es -> m a) -> m a
 {-# INLINABLE catchDieAll #-}
-catchDieAll m h = evalCatchExcepts h m
+catchDieAll m h = catchEvalE h m
 
 -- | Catch and die in case of error
 catchDie :: (e :< es, Monad m) => Excepts es m a -> (e -> m ()) -> Excepts (Remove e es) m a
@@ -293,27 +288,27 @@ m `catchDie` h = Excepts $ do
          Left rs -> return (VLeft rs)
 
 -- | Do something in case of error
-onExceptsError_ :: Monad m => Excepts es m a -> m () -> Excepts es m a
-{-# INLINABLE onExceptsError_ #-}
-m `onExceptsError_` h = Excepts $ do
+onE_ :: Monad m => Excepts es m a -> m () -> Excepts es m a
+{-# INLINABLE onE_ #-}
+m `onE_` h = Excepts $ do
    a <- runE m
    case a of
       VRight _ -> return a
       VLeft _  -> h >> return a
 
 -- | Do something in case of error
-onExceptsError :: Monad m => Excepts es m a -> (V es -> m ()) -> Excepts es m a
-{-# INLINABLE onExceptsError #-}
-m `onExceptsError` h = Excepts $ do
+onE :: Monad m => Excepts es m a -> (V es -> m ()) -> Excepts es m a
+{-# INLINABLE onE #-}
+m `onE` h = Excepts $ do
    a <- runE m
    case a of
       VRight _  -> return a
       VLeft es  -> h es >> return a
 
 -- | Finally for Excepts
-finallyExcepts :: Monad m => Excepts es m a -> m () -> Excepts es m a
-{-# INLINABLE finallyExcepts #-}
-m `finallyExcepts` h = Excepts $ do
+finallyE :: Monad m => Excepts es m a -> m () -> Excepts es m a
+{-# INLINABLE finallyE #-}
+m `finallyE` h = Excepts $ do
    a <- runE m
    h
    return a
