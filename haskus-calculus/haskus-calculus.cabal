@@ -1,0 +1,39 @@
+cabal-version:       2.4
+name:                haskus-calculus
+version:             1.1
+synopsis:            Haskus calculus
+license:             BSD-3-Clause
+license-file:        LICENSE
+author:              Sylvain Henry
+maintainer:          sylvain@haskus.fr
+homepage:            http://www.haskus.org
+copyright:           Sylvain Henry 2019
+category:            System
+build-type:          Simple
+
+description:
+   Haskus calculus (lambda calculus, etc.)
+
+source-repository head
+  type: git
+  location: git://github.com/haskus/packages.git
+
+library
+  exposed-modules:
+    Haskus.Calculus.App
+    Haskus.Calculus.Var
+    Haskus.Calculus.Lambda
+    Haskus.Calculus.PrettyPrint
+    Haskus.Calculus.Lang.LC
+
+  other-modules:
+
+  build-depends:       
+      base                      >= 4.9 && < 5
+   ,  haskus-utils-variant
+   ,  haskus-utils-types
+
+  build-tools: 
+  ghc-options:          -Wall
+  default-language:     Haskell2010
+  hs-source-dirs:       src/lib

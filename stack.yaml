@@ -10,6 +10,7 @@ packages:
 - haskus-web/
 - haskus-format-text/
 - haskus-locale/
+- haskus-calculus/
 
 extra-deps:
 - stm-containers-1.1.0.2
