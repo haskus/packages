@@ -45,6 +45,7 @@ import Data.Coerce
 -- >>> :set -XTypeApplications
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
+-- >>> import Data.Foldable
 
 
 -- | Variant biased towards one type
@@ -124,17 +125,6 @@ veitherToEither = \case
    VLeft xs -> Left xs
    VRight x -> Right x
 
--- | Functor instance for VEither
---
--- >>> let x = VRight True :: VEither '[Int,Float] Bool
--- >>> fmap (\b -> if b then "Success" else "Failure") x
--- VRight "Success"
---
-instance Functor (VEither es) where
-   {-# INLINABLE fmap #-}
-   fmap f (VEither v) = VEither (mapVariantAt @0 f v)
-
-
 -- | Extract from a VEither without left types
 --
 -- >>> let x = VRight True :: VEither '[] Bool
@@ -175,6 +165,25 @@ veitherCont f g v = case v of
    VLeft xs -> f xs
    VRight x -> g x
 
+-- | Functor instance for VEither
+--
+-- >>> let x = VRight True :: VEither '[Int,Float] Bool
+-- >>> fmap (\b -> if b then "Success" else "Failure") x
+-- VRight "Success"
+--
+instance Functor (VEither es) where
+   {-# INLINABLE fmap #-}
+   fmap f (VEither v) = VEither (mapVariantAt @0 f v)
+
+-- | Applicative instance for VEither
+--
+-- >>> let x = VRight True  :: VEither '[Int,Float] Bool
+-- >>> let y = VRight False :: VEither '[Int,Float] Bool
+-- >>> (&&) <$> x <*> y
+-- VRight False
+-- >>> (||) <$> x <*> y
+-- VRight True
+--
 instance Applicative (VEither es) where
    pure = VRight
 
@@ -182,10 +191,25 @@ instance Applicative (VEither es) where
    VLeft v  <*> _        = VLeft v
    _        <*> VLeft v  = VLeft v
 
+-- | Monad instance for VEither
+--
+-- >>> let x   = VRight True    :: VEither '[Int,Float] Bool
+-- >>> let f v = VRight (not v) :: VEither '[Int,Float] Bool
+-- >>> x >>= f
+-- VRight False
+--
 instance Monad (VEither es) where
    VRight a >>= f = f a
    VLeft v  >>= _ = VLeft v
 
+-- | Foldable instance for VEither
+--
+-- >>> let x   = VRight True    :: VEither '[Int,Float] Bool
+-- >>> let y   = VLeft (V "failed" :: V '[String,Int]) :: VEither '[String,Int] Bool
+-- >>> forM_ x print
+-- True
+-- >>> forM_ y print
+--
 instance Foldable (VEither es) where
    foldMap f (VRight a) = f a
    foldMap _ (VLeft _)  = mempty
