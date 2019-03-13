@@ -21,6 +21,7 @@ module Haskus.Utils.Variant.Excepts
    , injectExcepts
    , mapExcepts
    , variantToExcepts
+   , veitherToExcepts
    , success
    , failure
    , catchLiftBoth
@@ -321,6 +322,11 @@ m `finallyExcepts` h = Excepts $ do
 variantToExcepts :: Monad m => V (a ': es) -> Excepts es m a
 {-# INLINABLE variantToExcepts #-}
 variantToExcepts v = Excepts (return (veitherFromVariant v))
+
+-- | Convert a VEither into a Excepts
+veitherToExcepts :: Monad m => VEither es a -> Excepts es m a
+{-# INLINABLE veitherToExcepts #-}
+veitherToExcepts v = Excepts (return v)
 
 instance MonadInIO m => MonadInIO (Excepts es m) where
    {-# INLINABLE liftWith #-}
