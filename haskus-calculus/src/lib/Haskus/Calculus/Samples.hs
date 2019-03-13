@@ -13,6 +13,7 @@ import Haskus.Calculus.Lang.LC
 -- >>> :set -XTypeFamilies
 -- >>> :set -XScopedTypeVariables
 -- >>> import Haskus.Calculus.FreeVars
+-- >>> import Haskus.Calculus.PrettyPrint
 
 sampleLC1 :: LC String
 sampleLC1 = Var "inc" `App` Var "1"
@@ -38,6 +39,14 @@ sampleLC4 = Lambda "x" $
    Var "*" `App` Var "x" `App` Var "y"
 
 
+-- | Untyped lambda calculus with literals - Sample 1
+--
+-- >>> freeVars @String sampleLCL1
+-- fromList ["+"]
+--
+-- >>> putStrLn (prettyPrint sampleLCL1)
+-- ("+" 1) 10
+--
 sampleLCL1 :: LCL String
 sampleLCL1 = Var "+" `App` LitInt 1 `App` LitInt 10
 
