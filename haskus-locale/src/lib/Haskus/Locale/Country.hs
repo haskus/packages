@@ -19,7 +19,7 @@ import Haskus.Utils.Embed.ByteString
 -- | Raw country data taken from https://github.com/datasets/country-codes/
 -- (see https://datahub.io/core/country-codes)
 countryData :: LBS.ByteString
-countryData = LBS.fromStrict $(embedBSFile "src/data/country-codes.csv")
+countryData = LBS.fromStrict $(embedBSFilePrefix "haskus-locale" "src/data/country-codes.csv")
 
 -- | Country data
 countries :: Vector Country
