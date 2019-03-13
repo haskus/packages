@@ -15,6 +15,7 @@ module Haskus.Utils.Variant.Excepts
    , runE_
    , liftE
    , failureE
+   , successE
    , throwE
    , catchE
    , catchEvalE
@@ -176,6 +177,11 @@ throwE = Excepts . pure . VLeft . V
 failureE :: forall e a m. Monad m => e -> Excepts '[e] m a
 {-# INLINABLE failureE #-}
 failureE = throwE
+
+-- | Signal a success
+successE :: forall a m. Monad m => a -> Excepts '[] m a
+{-# INLINABLE successE #-}
+successE = pure
 
 -- | Handle an exception. Lift both normal and exceptional flows into the result
 -- flow
