@@ -43,18 +43,17 @@ import Haskus.Utils.Variant.VEither
 
 import Control.Monad.Catch
 
-------------------------------------------------------------------------------
--- Excepts
-------------------------------------------------------------------------------
 newtype Excepts es m a = Excepts (m (VEither es a))
 
 deriving instance Show (m (VEither es a)) => Show (Excepts es m a)
 
+-- | Run an Excepts
 runE :: forall es a m.
    Excepts es m a -> m (VEither es a)
 {-# INLINABLE runE #-}
 runE (Excepts m) = m
 
+-- | Run an Excepts, discard the result value
 runE_ :: forall es a m.
    Functor m => Excepts es m a -> m ()
 {-# INLINABLE runE_ #-}
