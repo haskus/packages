@@ -31,8 +31,7 @@ module Haskus.Utils.Variant.Excepts
    , catchLiftLeft
    , catchLiftRight
    , catchAllE
-   , catchDie
-   , catchDieAll
+   , catchDieE
    , catchRemove
    -- * Reexport
    , module Haskus.Utils.Variant.VEither
@@ -190,10 +189,9 @@ catchE :: forall e es' es'' es a m.
    , e :< es
    , LiftVariant (Remove e es) es'
    , LiftVariant es'' es'
-   ) =>
-    Excepts es m a -> (e -> Excepts es'' m a) -> Excepts es' m a
+   ) => (e -> Excepts es'' m a) -> Excepts es m a -> Excepts es' m a
 {-# INLINABLE catchE #-}
-m `catchE` h = m `catchLiftBoth` h
+catchE = catchLiftBoth
 
 -- | Handle an exception. Lift both normal and exceptional flows into the result
 -- flow
@@ -202,10 +200,9 @@ catchLiftBoth :: forall e es' es'' es a m.
    , e :< es
    , LiftVariant (Remove e es) es'
    , LiftVariant es'' es'
-   ) =>
-    Excepts es m a -> (e -> Excepts es'' m a) -> Excepts es' m a
+   ) => (e -> Excepts es'' m a) -> Excepts es m a -> Excepts es' m a
 {-# INLINABLE catchLiftBoth #-}
-m `catchLiftBoth` h = Excepts $ do
+catchLiftBoth h m = Excepts $ do
    a <- runE m
    case a of
       VRight r -> return (VRight r)
@@ -216,10 +213,9 @@ m `catchLiftBoth` h = Excepts $ do
 -- | Handle an exception. Assume it is in the first position
 catchRemove :: forall e es a m.
    ( Monad m
-   ) =>
-    Excepts (e ': es) m a -> (e -> Excepts es m a) -> Excepts es m a
+   ) => (e -> Excepts es m a) -> Excepts (e ': es) m a -> Excepts es m a
 {-# INLINABLE catchRemove #-}
-m `catchRemove` h = Excepts $ do
+catchRemove h m = Excepts $ do
    a <- runE m
    case a of
       VRight r -> return (VRight r)
@@ -232,10 +228,9 @@ catchLiftLeft :: forall e es es' a m.
    ( Monad m
    , e :< es
    , LiftVariant (Remove e es) es'
-   ) =>
-    Excepts es m a -> (e -> Excepts es' m a) -> Excepts es' m a
+   ) => (e -> Excepts es' m a) -> Excepts es m a -> Excepts es' m a
 {-# INLINABLE catchLiftLeft #-}
-m `catchLiftLeft` h = Excepts $ do
+catchLiftLeft h m = Excepts $ do
    a <- runE m
    case a of
       VRight r -> return (VRight r)
@@ -248,10 +243,9 @@ catchLiftRight :: forall e es es' a m.
    ( Monad m
    , e :< es
    , LiftVariant es' (Remove e es)
-   ) =>
-    Excepts es m a -> (e -> Excepts es' m a) -> Excepts (Remove e es) m a
+   ) => (e -> Excepts es' m a) -> Excepts es m a -> Excepts (Remove e es) m a
 {-# INLINABLE catchLiftRight #-}
-m `catchLiftRight` h = Excepts $ do
+catchLiftRight h m = Excepts $ do
    a <- runE m
    case a of
       VRight r -> return (VRight r)
@@ -260,9 +254,9 @@ m `catchLiftRight` h = Excepts $ do
          Left rs -> return (VLeft rs)
 
 -- | Do something in case of error
-catchAllE :: Monad m => Excepts es m a -> (V es -> Excepts es' m a) -> Excepts es' m a
+catchAllE :: Monad m => (V es -> Excepts es' m a) -> Excepts es m a -> Excepts es' m a
 {-# INLINABLE catchAllE #-}
-m `catchAllE` h = Excepts $ do
+catchAllE h m = Excepts $ do
    a <- runE m
    case a of
       VRight x  -> return (VRight x)
@@ -277,44 +271,39 @@ catchEvalE h m = do
       VRight x  -> return x
       VLeft xs  -> h xs
 
--- | Evaluate a Excepts. Use the provided function to handle error cases.
-catchDieAll :: Monad m => Excepts es m a -> (V es -> m a) -> m a
-{-# INLINABLE catchDieAll #-}
-catchDieAll m h = catchEvalE h m
-
 -- | Catch and die in case of error
-catchDie :: (e :< es, Monad m) => Excepts es m a -> (e -> m ()) -> Excepts (Remove e es) m a
-{-# INLINABLE catchDie #-}
-m `catchDie` h = Excepts $ do
+catchDieE :: (e :< es, Monad m) => (e -> m ()) -> Excepts es m a -> Excepts (Remove e es) m a
+{-# INLINABLE catchDieE #-}
+catchDieE h m = Excepts $ do
    a <- runE m
    case a of
       VRight r -> return (VRight r)
       VLeft  ls -> case popVariant ls of
-         Right l -> h l >> error "catchDie"
+         Right l -> h l >> error "catchDieE"
          Left rs -> return (VLeft rs)
 
 -- | Do something in case of error
-onE_ :: Monad m => Excepts es m a -> m () -> Excepts es m a
+onE_ :: Monad m => m () -> Excepts es m a -> Excepts es m a
 {-# INLINABLE onE_ #-}
-m `onE_` h = Excepts $ do
+onE_ h m = Excepts $ do
    a <- runE m
    case a of
       VRight _ -> return a
       VLeft _  -> h >> return a
 
 -- | Do something in case of error
-onE :: Monad m => Excepts es m a -> (V es -> m ()) -> Excepts es m a
+onE :: Monad m => (V es -> m ()) -> Excepts es m a -> Excepts es m a
 {-# INLINABLE onE #-}
-m `onE` h = Excepts $ do
+onE h m = Excepts $ do
    a <- runE m
    case a of
       VRight _  -> return a
       VLeft es  -> h es >> return a
 
 -- | Finally for Excepts
-finallyE :: Monad m => Excepts es m a -> m () -> Excepts es m a
+finallyE :: Monad m => m () -> Excepts es m a -> Excepts es m a
 {-# INLINABLE finallyE #-}
-m `finallyE` h = Excepts $ do
+finallyE h m = Excepts $ do
    a <- runE m
    h
    return a
