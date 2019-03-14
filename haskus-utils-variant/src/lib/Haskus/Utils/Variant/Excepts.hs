@@ -24,6 +24,8 @@ module Haskus.Utils.Variant.Excepts
    , onE
    , finallyE
    , injectExcepts
+   , withExcepts
+   , withExcepts_
    , mapExcepts
    , variantToExcepts
    , veitherToExcepts
@@ -62,7 +64,20 @@ runE_ m = void (runE m)
 injectExcepts :: forall es a m.
    Monad m => Excepts es m a -> Excepts es m (VEither es a)
 {-# INLINABLE injectExcepts #-}
-injectExcepts (Excepts m) = return =<< lift m
+injectExcepts (Excepts m) = lift m
+
+withExcepts_ :: Monad m => (VEither es a -> m ()) -> Excepts es m a -> Excepts es m a
+{-# INLINABLE withExcepts_ #-}
+withExcepts_ f (Excepts m) = Excepts $ do
+   v <- m
+   f v
+   return v
+
+withExcepts :: Monad m => (VEither es a -> m b) -> Excepts es m a -> Excepts es m b
+{-# INLINABLE withExcepts #-}
+withExcepts f (Excepts m) = Excepts $ do
+   v <- m
+   VRight <$> f v
 
 -- | Convert a flow without error into a value
 evalE :: Monad m => Excepts '[] m a -> m a
