@@ -41,6 +41,7 @@ import Haskus.Utils.Types.List
 import Haskus.Utils.Types
 import Haskus.Utils.ContFlow
 
+import Data.Functor.Classes
 import GHC.Exts (Constraint)
 
 -- $setup
@@ -104,7 +105,26 @@ import GHC.Exts (Constraint)
 
 
 -- | An extensible ADT
-type EADT xs = Fix (VariantF xs)
+newtype EADT fs
+   = EADT (VariantF fs (EADT fs))
+
+type instance Base (EADT fs) = VariantF fs
+instance Functor (VariantF fs) => Recursive (EADT fs) where
+  project (EADT a) = a
+instance Functor (VariantF fs) => Corecursive (EADT fs) where
+  embed = EADT
+
+instance Eq1 (VariantF fs) => Eq (EADT fs) where
+  EADT a == EADT b = eq1 a b
+
+instance Ord1 (VariantF fs) => Ord (EADT fs) where
+  compare (EADT a) (EADT b) = compare1 a b
+
+instance Show1 (VariantF fs) => Show (EADT fs) where
+  showsPrec d (EADT a) =
+    showParen (d >= 11)
+      $ showString "EADT "
+      . showsPrec1 11 a
 
 -- | Constructor `f` is in `xs`
 type family f :<: xs where
@@ -128,7 +148,7 @@ pattern VF :: forall e f cs.
    ( e ~ EADT cs  -- allow easy use of TypeApplication to set the EADT type
    , f :<: cs     -- constraint synonym ensuring `f` is in `cs`
    ) => f (EADT cs) -> EADT cs
-pattern VF x = Fix (VariantF (VSilent x))
+pattern VF x = EADT (VariantF (VSilent x))
    -- `VSilent` matches a variant value without checking the membership: we
    -- already do it with :<:
 
@@ -138,15 +158,15 @@ appendEADT :: forall ys xs zs.
    , ApplyAll (EADT zs) zs ~ Concat (ApplyAll (EADT zs) xs) (ApplyAll (EADT zs) ys)
    , Functor (VariantF xs)
    ) => EADT xs -> EADT zs
-appendEADT (Fix v) = Fix (appendVariantF @ys (fmap (appendEADT @ys) v))
+appendEADT (EADT v) = EADT (appendVariantF @ys (fmap (appendEADT @ys) v))
 
 -- | Lift an EADT into another
 liftEADT :: forall e as bs.
-   ( e ~ Fix (VariantF bs)
+   ( e ~ EADT bs
    , LiftVariantF as bs e
    , Functor (VariantF as)
    ) => EADT as -> EADT bs
-liftEADT = cata (Fix . liftVariantF)
+liftEADT = cata (EADT . liftVariantF)
 
 -- | Pop an EADT value
 popEADT :: forall f xs e.
@@ -154,21 +174,22 @@ popEADT :: forall f xs e.
    , e ~ EADT xs
    , f e :< ApplyAll e xs
    ) => EADT xs -> Either (VariantF (Remove f xs) (EADT xs)) (f (EADT xs))
-popEADT (Fix v) = popVariantF v
+popEADT (EADT v) = popVariantF v
 
 -- | Convert an EADT into a multi-continuation
 eadtToCont ::
-   ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
-   ) => Fix (VariantF xs) -> ContFlow (ApplyAll (Fix (VariantF xs)) xs) r
-eadtToCont (Fix v) = variantFToCont v
+   ( ContVariant (ApplyAll (EADT xs) xs)
+   ) => EADT xs -> ContFlow (ApplyAll (EADT xs) xs) r
+eadtToCont (EADT v) = variantFToCont v
 
 -- | Convert an EADT into a multi-continuation
 eadtToContM ::
-   ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
+   ( ContVariant (ApplyAll (EADT xs) xs)
    , Monad m
-   ) => m (Fix (VariantF xs))
-     -> ContFlow (ApplyAll (Fix (VariantF xs)) xs) (m r)
-eadtToContM f = variantFToContM (unfix <$> f)
+   , Functor (VariantF xs)
+   ) => m (EADT xs)
+     -> ContFlow (ApplyAll (EADT xs) xs) (m r)
+eadtToContM f = variantFToContM (project <$> f)
 
 -- Orphan instance...
 -- instance ContVariant (ApplyAll (EADT xs) xs) => MultiCont (EADT xs) where
@@ -178,17 +199,17 @@ eadtToContM f = variantFToContM (unfix <$> f)
 
 -- | Convert a multi-continuation into an EADT
 contToEADT ::
-   ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
-   ) => ContFlow (ApplyAll (Fix (VariantF xs)) xs)
-                 (V (ApplyAll (Fix (VariantF xs)) xs))
-     -> Fix (VariantF xs)
-contToEADT c = Fix (contToVariantF c)
+   ( ContVariant (ApplyAll (EADT xs) xs)
+   ) => ContFlow (ApplyAll (EADT xs) xs)
+                 (V (ApplyAll (EADT xs) xs))
+     -> EADT xs
+contToEADT c = EADT (contToVariantF c)
 
 -- | Convert a multi-continuation into an EADT
 contToEADTM ::
-   ( ContVariant (ApplyAll (Fix (VariantF xs)) xs)
+   ( ContVariant (ApplyAll (EADT xs) xs)
    , Monad f
-   ) => ContFlow (ApplyAll (Fix (VariantF xs)) xs)
-                 (f (V (ApplyAll (Fix (VariantF xs)) xs)))
-     -> f (Fix (VariantF xs))
-contToEADTM f = Fix <$> contToVariantFM f
+   ) => ContFlow (ApplyAll (EADT xs) xs)
+                 (f (V (ApplyAll (EADT xs) xs)))
+     -> f (EADT xs)
+contToEADTM f = EADT <$> contToVariantFM f
