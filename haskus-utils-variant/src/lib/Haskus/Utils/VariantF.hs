@@ -23,6 +23,7 @@ module Haskus.Utils.VariantF
    , ApplyAll
    , pattern FV
    , appendVariantF
+   , prependVariantF
    , toVariantFHead
    , toVariantFTail
    , popVariantFHead
@@ -54,6 +55,13 @@ module Haskus.Utils.VariantF
    , RAlgebras (..)
    , FromRAlgebras
    , fromRAlgebras
+   -- * TopDownStop
+   , TopDownStopC (..)
+   , FromTopDownStopC
+   , fromTopDownStopC
+   , TopDownStops (..)
+   , FromTopDownStops
+   , fromTopDownStops
    -- * Reexport
    , NoConstraint
    , module Haskus.Utils.Functor
@@ -248,6 +256,13 @@ appendVariantF :: forall (ys :: [* -> *]) (xs :: [* -> *]) e.
    ) => VariantF xs e -> VariantF (Concat xs ys) e
 appendVariantF (VariantF v) = VariantF (appendVariant @(ApplyAll e ys) v)
 
+prependVariantF :: forall (xs :: [* -> *]) (ys :: [* -> *]) e.
+   ( ApplyAll e (Concat xs ys) ~ Concat (ApplyAll e xs) (ApplyAll e ys)
+   , KnownNat (Length (ApplyAll e xs))
+   ) => VariantF ys e -> VariantF (Concat xs ys) e
+prependVariantF (VariantF v) = VariantF (prependVariant @(ApplyAll e xs) v)
+
+
 -- | Set the first value
 toVariantFHead :: forall x xs e. x e -> VariantF (x ': xs) e
 {-# INLINABLE toVariantFHead #-}
@@ -391,8 +406,10 @@ deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
 -- By using these conversions functions we can obtain an Algebra that can be
 -- used with the standard recursion-schemes
 
+-------------------
+
 -- | Algebra with a constraint
-newtype AlgebraC c a = AlgebraC (forall f. c f => f a -> a)
+newtype AlgebraC c a = AlgebraC (forall f. c f => Algebra f a)
 
 -- | Algebras of a VariantF
 newtype Algebras v a = Algebras (VariantFAlgebras v a)
@@ -459,7 +476,7 @@ instance FromAlgebras' fs => FromAlgebras' (f:fs) where
 ----------------------------------------
 
 -- | RAlgebra with a constraint
-newtype RAlgebraC c t a = RAlgebraC (forall f. c f => f (t, a) -> a)
+newtype RAlgebraC c t a = RAlgebraC (forall f. c f => RAlgebra f t a)
 
 -- | RAlgebras of a VariantF
 newtype RAlgebras v t a = RAlgebras (VariantFRAlgebras v t a)
@@ -519,3 +536,69 @@ instance FromRAlgebras' fs t => FromRAlgebras' (f:fs) t where
    fromRAlgebras' (f `HCons` fs) v = case popVariantFHead v of
       Right x -> f x
       Left xs -> fromRAlgebras' fs xs
+
+----------------------------------------
+-- TopDownStop
+----------------------------------------
+
+newtype TopDownStopC c a = TopDownStopC (forall f. c f => TopDownStop a f)
+
+newtype TopDownStops v a = TopDownStops (VariantFTopDownStops v a)
+
+type family VariantFTopDownStops v a where
+   VariantFTopDownStops v a = ListToTuple (VariantFTopDownStopList v a)
+
+type family VariantFTopDownStopList v a where
+   VariantFTopDownStopList (VariantF fs) a = MakeTopDownStops fs a
+
+type family MakeTopDownStops (fs :: [Type -> Type]) a where
+   MakeTopDownStops '[]      a = '[]
+   MakeTopDownStops (f : fs) a = TopDownStop a f : MakeTopDownStops fs a
+
+type FromTopDownStopC xs c a =
+   ( FromTopDownStopC' (VariantF xs) c a
+   , ConstraintAll1 c xs
+   , HTuple (MakeTopDownStops xs a)
+   )
+
+-- | Convert an TopDownStopC into TopDownStops for the specified VariantF
+fromTopDownStopC :: forall v c xs a.
+   ( FromTopDownStopC xs c a
+   , v ~ VariantF xs
+   ) => TopDownStopC c a -> TopDownStops v a
+fromTopDownStopC a = TopDownStops (hToTuple (fromTopDownStopC' @(VariantF xs) a))
+
+class FromTopDownStopC' v c a where
+   fromTopDownStopC' :: TopDownStopC c a -> HList (VariantFTopDownStopList v a)
+
+instance FromTopDownStopC' (VariantF '[]) c a where
+   fromTopDownStopC' _ = HNil
+
+instance (FromTopDownStopC' (VariantF fs) c a, c f) => FromTopDownStopC' (VariantF (f : fs)) c a where
+   fromTopDownStopC' a@(TopDownStopC g) = g `HCons` fromTopDownStopC' @(VariantF fs) a
+
+
+type FromTopDownStops fs a =
+   ( FromTopDownStops' fs
+   , HTuple (MakeTopDownStops fs a)
+   )
+
+-- | Create an TopDownStop from some VariantF algebras
+fromTopDownStops :: forall fs a.
+   ( FromTopDownStops fs a
+   ) => TopDownStops (VariantF fs) a -> TopDownStop a (VariantF fs)
+fromTopDownStops (TopDownStops fs) v = fromTopDownStops' @fs (hFromTuple fs) v
+
+class FromTopDownStops' fs where
+   fromTopDownStops' :: HList (MakeTopDownStops fs a) -> TopDownStop a (VariantF fs)
+
+instance FromTopDownStops' '[] where
+   fromTopDownStops' _ _ = undefined
+
+instance
+   ( FromTopDownStops' fs
+   ) => FromTopDownStops' (f:fs) where
+   {-# INLINABLE fromTopDownStops' #-}
+   fromTopDownStops' (f `HCons` fs) v = case popVariantFHead v of
+      Right x -> first toVariantFHead (f x)
+      Left xs -> first (prependVariantF @'[f]) (fromTopDownStops' fs xs)
