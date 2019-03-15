@@ -27,6 +27,7 @@ library
     Haskus.Calculus.Concept.Literal
     Haskus.Calculus.PrettyPrint
     Haskus.Calculus.FreeVars
+    Haskus.Calculus.ReplaceVar
     Haskus.Calculus.Lang.LC
 
     Haskus.Calculus.Samples

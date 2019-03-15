@@ -14,6 +14,7 @@ import Haskus.Calculus.Lang.LC
 -- >>> :set -XScopedTypeVariables
 -- >>> import Haskus.Calculus.FreeVars
 -- >>> import Haskus.Calculus.PrettyPrint
+-- >>> import Haskus.Calculus.ReplaceVar
 
 sampleLC1 :: LC String
 sampleLC1 = Var "inc" `App` Var "1"
@@ -46,6 +47,9 @@ sampleLC4 = Lambda "x" $
 --
 -- >>> putStrLn (prettyPrint sampleLCL1)
 -- ("+" 1) 10
+--
+-- >>> putStrLn (prettyPrint (replaceVar @String "+" (Var "plusInt") sampleLCL1))
+-- ("plusInt" 1) 10
 --
 sampleLCL1 :: LCL String
 sampleLCL1 = Var "+" `App` LitInt 1 `App` LitInt 10
