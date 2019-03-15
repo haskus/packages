@@ -109,10 +109,12 @@ newtype EADT fs
    = EADT (VariantF fs (EADT fs))
 
 type instance Base (EADT fs) = VariantF fs
+
 instance Functor (VariantF fs) => Recursive (EADT fs) where
-  project (EADT a) = a
+   project (EADT a) = a
+
 instance Functor (VariantF fs) => Corecursive (EADT fs) where
-  embed = EADT
+   embed = EADT
 
 instance Eq1 (VariantF fs) => Eq (EADT fs) where
   EADT a == EADT b = eq1 a b
