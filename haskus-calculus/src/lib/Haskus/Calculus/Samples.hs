@@ -39,6 +39,16 @@ sampleLC4 :: LC String
 sampleLC4 = Lambda "x" $
    Var "*" `App` Var "x" `App` Var "y"
 
+-- | Untyped lambda calculus - Sample 5
+--
+-- >>> putStrLn (prettyPrint (replaceVar @String "x" (Var "w") sampleLC5))
+-- ("+" "w") (\"x".(("*" "x") "y"))
+--
+-- >>> freeVars @String sampleLC5
+-- fromList ["*","+","x","y"]
+--
+sampleLC5 :: LC String
+sampleLC5 = Var "+" `App` Var "x" `App` sampleLC4
 
 -- | Untyped lambda calculus with literals - Sample 1
 --
@@ -53,4 +63,3 @@ sampleLC4 = Lambda "x" $
 --
 sampleLCL1 :: LCL String
 sampleLCL1 = Var "+" `App` LitInt 1 `App` LitInt 10
-
