@@ -1,12 +1,24 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
+
 -- | Functor helpers
 module Haskus.Utils.Functor
    ( module Data.Functor.Foldable
+   , BottomUpT
+   , bottomUp
+   , bottomUpOrig
+   , TopDownStopT
+   , topDownStop
+   -- * Others
    , Algebra
    , CoAlgebra
    , RAlgebra
    , RCoAlgebra
-   , TopDownStop
-   , topDownStop
    )
 where
 
@@ -17,13 +29,22 @@ type CoAlgebra  f a   = a -> f a
 type RAlgebra   f t a = f (t, a) -> a
 type RCoAlgebra f t a = a -> f (Either t a)
 
+type BottomUpT    a f = f a -> a
+type TopDownStopT a f = f a -> Either (f a) a
+
+-- | Bottom-up traversal (catamorphism)
+bottomUp :: (Recursive t) => (Base t a -> a) -> t -> a
+bottomUp f t = cata f t
+
+-- | Bottom-up traversal with original value (paramorphism)
+bottomUpOrig :: (Recursive t) => (Base t (t,a) -> a) -> t -> a
+bottomUpOrig f t = para f t
+
 -- | Perform a top-down traversal
 --
 -- Right: stop the traversal ("right" value obtained)
 -- Left: continue the traversal recursively on the new value
-type TopDownStop a f = f a -> Either (f a) a
-
-topDownStop :: (Recursive t, Corecursive t) => TopDownStop t (Base t) -> t -> t
+topDownStop :: (Recursive t, Corecursive t) => (Base t t -> Either (Base t t) t) -> t -> t
 topDownStop f t = go t
    where
       go w = case f (project w) of

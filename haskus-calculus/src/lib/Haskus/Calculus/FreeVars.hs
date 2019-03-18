@@ -22,11 +22,6 @@ class FreeVarsF n (f :: Type -> Type) where
 freeVars :: forall n t xs.
    ( Base t ~ VariantF xs
    , Recursive t
-   , FromAlgebras xs t
-   , FromAlgebraC xs (FreeVarsF n) (Set n)
+   , BottomUp (FreeVarsF n) xs (Set n) (Set n)
    ) => t -> Set n
-freeVars x = cata alg x
-   where
-      alg :: Algebra (Base t) (Set n)
-      alg = fromAlgebras (fromAlgebraC (AlgebraC @(FreeVarsF n) freeVarsF))
-
+freeVars x = bottomUp (toBottomUp @(FreeVarsF n) freeVarsF) x

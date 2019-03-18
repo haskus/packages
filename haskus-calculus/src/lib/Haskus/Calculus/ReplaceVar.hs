@@ -18,7 +18,7 @@ import Haskus.Utils.Types
 import Haskus.Utils.EADT
 
 class ReplaceVarF n fs (f :: Type -> Type) where
-   replaceVarF :: n -> EADT fs -> TopDownStop (EADT fs) f
+   replaceVarF :: n -> EADT fs -> TopDownStopT (EADT fs) f
 
 -- | Default instance just traverse
 instance
@@ -33,11 +33,6 @@ replaceVar :: forall n t fs.
    , t ~ EADT fs
    , Recursive t
    , Corecursive t
-   , FromTopDownStops fs t
-   , FromTopDownStopC fs (ReplaceVarF n fs) t
+   , TopDownStop (ReplaceVarF n fs) fs t
    ) => n -> t -> t -> t
-replaceVar n e x = topDownStop alg x
-   where
-      alg :: TopDownStop t (Base t)
-      alg = fromTopDownStops (fromTopDownStopC (TopDownStopC @(ReplaceVarF n fs) (replaceVarF n e)))
-
+replaceVar n e x = topDownStop (toTopDownStop @(ReplaceVarF n fs) (replaceVarF n e)) x

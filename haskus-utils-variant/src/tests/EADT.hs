@@ -62,22 +62,6 @@ list0 :: List String
 list0 = Cons "Hello" $ Cons "World" Nil
 
 -------------------------------
--- List Height Algebra
--------------------------------
-
-nilHeight :: Algebra NilF Int
-nilHeight _ = 0
-
-consHeight :: Algebra (ConsF a) Int
-consHeight (ConsF _ b) = 1 + b
-
-heightAlgebras :: Algebras (ListF a) Int
-heightAlgebras = Algebras (nilHeight,consHeight)
-
-heightAlgebra :: Algebra (ListF a) Int
-heightAlgebra = fromAlgebras heightAlgebras
-
--------------------------------
 -- Show AlgebraC
 -------------------------------
 
@@ -90,14 +74,8 @@ instance MyShow NilF where
 instance Show a => MyShow (ConsF a) where
    myShow (ConsF a b) = show a ++ " : " ++ b
 
-showAlgebraC :: AlgebraC MyShow String
-showAlgebraC = AlgebraC @MyShow myShow
-
-showAlgebras :: Show a => Algebras (ListF a) String
-showAlgebras = fromAlgebraC showAlgebraC
-
-showAlgebra :: Show a => Algebra (ListF a) String
-showAlgebra = fromAlgebras showAlgebras
+showBottomUp :: Show a => BottomUpT String (ListF a)
+showBottomUp = toBottomUp @MyShow myShow
 
 -------------------------------
 -- Id paramorphism
@@ -143,11 +121,8 @@ testsEADT = testGroup "EADT" $
          (x :: String) :-> _ -> x == "Hello"
          _                   -> False
 
-   , testProperty "catamorphism: Algebras" $
-      cata heightAlgebra list0 == 2
-
-   , testProperty "catamorphism: AlgebraC" $
-      cata showAlgebra list0 == "\"Hello\" : \"World\" : []"
+   , testProperty "catamorphism: constraint" $
+      cata showBottomUp list0 == "\"Hello\" : \"World\" : []"
 
    , testProperty "paramorphism: id" $
       para (fromRAlgebras (RAlgebras (nilId, consId))) list0 == list0

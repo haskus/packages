@@ -26,10 +26,6 @@ class PrettyPrintF (f :: Type -> Type) where
 prettyPrint :: forall t xs.
    ( Base t ~ VariantF xs
    , Recursive t
-   , FromAlgebras xs t
-   , FromAlgebraC xs PrettyPrintF (Bool,String)
+   , BottomUp PrettyPrintF xs (Bool,String) (Bool,String)
    ) => t -> String
-prettyPrint x = snd (cata alg x)
-   where
-      alg :: Algebra (Base t) (Bool,String)
-      alg = fromAlgebras (fromAlgebraC (AlgebraC @PrettyPrintF prettyPrintF))
+prettyPrint x = snd (bottomUp (toBottomUp @(PrettyPrintF) prettyPrintF) x)
