@@ -42,15 +42,8 @@ module Haskus.Utils.VariantF
    , contToVariantFM
    -- * Algebras
    , BottomUp (..)
+   , BottomUpOrig (..)
    , TopDownStop (..)
-   -- $algebras
-   -- * R-Algebras
-   , RAlgebraC (..)
-   , FromRAlgebraC
-   , fromRAlgebraC
-   , RAlgebras (..)
-   , FromRAlgebras
-   , fromRAlgebras
    -- * Reexport
    , NoConstraint
    , module Haskus.Utils.Functor
@@ -62,9 +55,7 @@ import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
 import Haskus.Utils.Types.Constraint
 import Haskus.Utils.ContFlow
-import Haskus.Utils.Tuple
 import Haskus.Utils.Types
-import Haskus.Utils.HList
 
 import Data.Bifunctor
 import Control.DeepSeq
@@ -353,69 +344,45 @@ instance ContVariant (ApplyAll e xs) => MultiCont (VariantF xs e) where
 deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
 
 ----------------------------------------
--- Algebras
-----------------------------------------
-
--- $algebras
---
--- Consider the following example:
---
--- >   data ListF a b = Nil | Cons a b deriving (Functor)
---
--- Typically with this type we would use a F-Algebra:
---
--- >   Algebra (ListF a) b = ListF a b -> b
---
--- Cf https://bartoszmilewski.com/2013/06/10/understanding-f-algebras/
---
---
---
--- But with VariantF we have the following types:
---
--- >   data NilF b    = NilF       deriving Functor
--- >   data ConsF a b = ConsF a b  deriving Functor
--- >   type ListF a   = VariantF [NilF, ConsF a] 
---
--- Hence to implement the F-Algebra of ListF, we would need an F-Algebra like:
---
--- >   Algebras (ListF a) b = (Algebra NilF b, Algebra (ConsF a) b)
---
--- (Note that the size of the tuple depends on the number of constructors)
---
--- A more Haskell-ish approach is to use a type-class "c" to provide the
--- f-algebras of the constructors:
---
--- >   AlgebraC c a = forall f. c f => f a -> a
---
--- We can build the following conversions functions between these algebras:
---
--- >   fromAlgebraC :: AlgebraC c a -> Algebras (VariantF xs) a
--- >   fromAlgebras :: Algebras (VariantF xs) a -> Algebra (VariantF xs) a
---
--- By using these conversions functions we can obtain an Algebra that can be
--- used with the standard recursion-schemes
-
--------------------
-
-----------------------------------------
 -- BottomUp
 ----------------------------------------
 
-class BottomUp c fs a b where
-   toBottomUp :: (forall f. c f => f a -> b) -> (VariantF fs a -> b)
+class BottomUp c fs a where
+   toBottomUp :: (forall f. c f => f a -> a) -> (VariantF fs a -> a)
 
-instance BottomUp c '[] a b where
+instance BottomUp c '[] a where
    {-# INLINABLE toBottomUp #-}
    toBottomUp _f = undefined
 
-instance forall c a b fs f.
-   ( BottomUp c fs a b
+instance forall c a fs f.
+   ( BottomUp c fs a
    , c f
-   ) => BottomUp c (f ':fs) a b where
+   ) => BottomUp c (f ':fs) a where
    {-# INLINABLE toBottomUp #-}
    toBottomUp f v = case popVariantFHead v of
       Right x -> f x
       Left xs -> toBottomUp @c f xs
+
+----------------------------------------
+-- BottomUpOrig
+----------------------------------------
+
+class BottomUpOrig c fs t a where
+   toBottomUpOrig :: (forall f. c f => f (t,a) -> a) -> (VariantF fs (t,a) -> a)
+
+instance BottomUpOrig c '[] t a where
+   {-# INLINABLE toBottomUpOrig #-}
+   toBottomUpOrig _f = undefined
+
+instance forall c a fs f t.
+   ( BottomUpOrig c fs t a
+   , c f
+   ) => BottomUpOrig c (f ':fs) t a where
+   {-# INLINABLE toBottomUpOrig #-}
+   toBottomUpOrig f v = case popVariantFHead v of
+      Right x -> f x
+      Left xs -> toBottomUpOrig @c f xs
+
 
 ----------------------------------------
 -- TopDownStop
@@ -436,69 +403,3 @@ instance forall c a fs f.
    toTopDownStop f v = case popVariantFHead v of
       Right x -> first toVariantFHead (f x)
       Left xs -> first (prependVariantF @'[f]) (toTopDownStop @c f xs)
-
-----------------------------------------
--- R-Algebras
-----------------------------------------
-
--- | RAlgebra with a constraint
-newtype RAlgebraC c t a = RAlgebraC (forall f. c f => RAlgebra f t a)
-
--- | RAlgebras of a VariantF
-newtype RAlgebras v t a = RAlgebras (VariantFRAlgebras v t a)
-
-type family VariantFRAlgebras v t a where
-   VariantFRAlgebras v t a = ListToTuple (VariantFRAlgebraList v t a)
-
-type family VariantFRAlgebraList v t a where
-   VariantFRAlgebraList (VariantF fs) t a = MakeRAlgebras fs t a
-
-type family MakeRAlgebras (fs :: [Type -> Type]) t a where
-   MakeRAlgebras '[]      t a = '[]
-   MakeRAlgebras (f : fs) t a = RAlgebra f t a : MakeRAlgebras fs t a
-
-type FromRAlgebraC xs t c a =
-   ( FromRAlgebraC' (VariantF xs) t c a
-   , ConstraintAll1 c xs
-   , HTuple (MakeRAlgebras xs t a)
-   )
-
--- | Convert an RAlgebraC into RAlgebras for the specified VariantF
-fromRAlgebraC :: forall v c t xs a.
-   ( FromRAlgebraC xs t c a
-   , v ~ VariantF xs
-   ) => RAlgebraC c t a -> RAlgebras v t a
-fromRAlgebraC a = RAlgebras (hToTuple (fromRAlgebraC' @(VariantF xs) @t a))
-
-class FromRAlgebraC' v t c a where
-   fromRAlgebraC' :: RAlgebraC c t a -> HList (VariantFRAlgebraList v t a)
-
-instance FromRAlgebraC' (VariantF '[]) t c a where
-   fromRAlgebraC' _ = HNil
-
-instance (FromRAlgebraC' (VariantF fs) t c a, c f) => FromRAlgebraC' (VariantF (f : fs)) t c a where
-   fromRAlgebraC' a@(RAlgebraC g) = g `HCons` fromRAlgebraC' @(VariantF fs) a
-
-
-type FromRAlgebras fs t a =
-   ( FromRAlgebras' fs t
-   , HTuple (MakeRAlgebras fs t a)
-   )
-
--- | Create an RAlgebra from some VariantF algebras
-fromRAlgebras :: forall fs t a.
-   ( FromRAlgebras fs t a
-   ) => RAlgebras (VariantF fs) t a -> RAlgebra (VariantF fs) t a
-fromRAlgebras (RAlgebras fs) v = fromRAlgebras' @fs @t (hFromTuple fs) v
-
-class FromRAlgebras' fs t where
-   fromRAlgebras' :: HList (MakeRAlgebras fs t a) -> RAlgebra (VariantF fs) t a
-
-instance FromRAlgebras' '[] t where
-   fromRAlgebras' _ _ = undefined
-
-instance FromRAlgebras' fs t => FromRAlgebras' (f:fs) t where
-   {-# INLINABLE fromRAlgebras' #-}
-   fromRAlgebras' (f `HCons` fs) v = case popVariantFHead v of
-      Right x -> f x
-      Left xs -> fromRAlgebras' fs xs

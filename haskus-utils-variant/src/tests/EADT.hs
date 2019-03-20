@@ -78,16 +78,6 @@ showBottomUp :: Show a => BottomUpT String (ListF a)
 showBottomUp = toBottomUp @MyShow myShow
 
 -------------------------------
--- Id paramorphism
--------------------------------
-
-nilId :: RAlgebra NilF (List a) (List a)
-nilId _ = Nil
-
-consId :: RAlgebra (ConsF a) (List a) (List a)
-consId (ConsF a (t,_)) = Cons a t
-
--------------------------------
 -- numbersTo anamorphism
 -------------------------------
 
@@ -123,9 +113,6 @@ testsEADT = testGroup "EADT" $
 
    , testProperty "catamorphism: constraint" $
       cata showBottomUp list0 == "\"Hello\" : \"World\" : []"
-
-   , testProperty "paramorphism: id" $
-      para (fromRAlgebras (RAlgebras (nilId, consId))) list0 == list0
 
    , testProperty "anamorphism: numbersTo" $
       ana numbersTo 5 == Cons "5" (Cons "4" (Cons "3" (Cons "2" (Cons "1" Nil))))

@@ -11,6 +11,7 @@ module Haskus.Utils.Functor
    ( module Data.Functor.Foldable
    , BottomUpT
    , bottomUp
+   , BottomUpOrigT
    , bottomUpOrig
    , TopDownStopT
    , topDownStop
@@ -29,8 +30,9 @@ type CoAlgebra  f a   = a -> f a
 type RAlgebra   f t a = f (t, a) -> a
 type RCoAlgebra f t a = a -> f (Either t a)
 
-type BottomUpT    a f = f a -> a
-type TopDownStopT a f = f a -> Either (f a) a
+type BottomUpT       a f = f a -> a
+type BottomUpOrigT t a f = f (t,a) -> a
+type TopDownStopT    a f = f a -> Either (f a) a
 
 -- | Bottom-up traversal (catamorphism)
 bottomUp :: (Recursive t) => (Base t a -> a) -> t -> a
