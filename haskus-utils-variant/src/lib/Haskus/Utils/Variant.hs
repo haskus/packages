@@ -103,6 +103,7 @@ module Haskus.Utils.Variant
    , toVariant'
    , LiftVariant'
    , PopVariant
+   , showsVariant
    )
 where
 
@@ -210,20 +211,41 @@ instance
                     . showsPrec 11 x
          Left xs -> showVariantValue xs
 
-instance
+-- | Haskell code corresponding to a Variant
+--
+-- >>> showsVariant 0 (V @Double 5.0 :: V '[Int,String,Double]) ""
+-- "V @Double 5.0 :: V '[Int, [Char], Double]"
+showsVariant ::
    ( Typeable xs
    , ShowTypeList (V xs)
    , ShowVariantValue (V xs)
-   ) => Show (V xs)
+   ) => Int -> V xs -> ShowS
+showsVariant d v = showParen (d /= 0) $
+   showVariantValue v
+   . showString " :: "
+   -- disabled until GHC fixes #14341
+   -- . showsPrec 0 (typeOf v)
+   -- workaround:
+   . showString "V "
+   . showList__ (showTypeList v)
+
+instance Show (V '[]) where
+   {-# INLINABLE showsPrec #-}
+   showsPrec _ _ = undefined
+
+
+-- | Show instance
+--
+-- >>> show (V @Int 10  :: V '[Int,String,Double])
+-- "10"
+instance
+   ( Show x
+   , Show (V xs)
+   ) => Show (V (x ': xs))
    where
-      showsPrec d v = showParen (d /= 0) $
-         showVariantValue v
-         . showString " :: "
-         -- disabled until GHC fixes #14341
-         -- . showsPrec 0 (typeOf v)
-         -- workaround:
-         . showString "V "
-         . showList__ (showTypeList v)
+      showsPrec d v = case popVariantHead v of
+         Right x -> showsPrec d x
+         Left xs -> showsPrec d xs
 
 -- | Show a list of ShowS
 showList__ :: [ShowS] -> ShowS
@@ -278,7 +300,7 @@ variantSize _ = natValue @(Length xs)
 -- | Set the value with the given indexed type
 --
 -- >>> toVariantAt @1 10 :: V '[Word,Int,Double]
--- V @Int 10 :: V '[Word, Int, Double]
+-- 10
 --
 toVariantAt :: forall (n :: Nat) (l :: [*]).
    ( KnownNat n
@@ -289,7 +311,7 @@ toVariantAt a = Variant (natValue' @n) (unsafeCoerce a)
 -- | Set the first value
 --
 -- >>> toVariantHead 10 :: V '[Int,Float,Word]
--- V @Int 10 :: V '[Int, Float, Word]
+-- 10
 --
 toVariantHead :: forall x xs. x -> V (x ': xs)
 {-# INLINABLE toVariantHead #-}
@@ -299,8 +321,8 @@ toVariantHead a = Variant 0 (unsafeCoerce a)
 --
 -- >>> let x = V @Int 10 :: V '[Int,String,Float]
 -- >>> let y = toVariantTail @Double x
--- >>> y
--- V @Int 10 :: V '[Double, Int, [Char], Float]
+-- >>> :t y
+-- y :: V '[Double, Int, String, Float]
 --
 toVariantTail :: forall x xs. V xs -> V (x ': xs)
 {-# INLINABLE toVariantTail #-}
@@ -342,11 +364,11 @@ fromVariantHead v = fromVariantAt @0 v
 --
 -- >>> let x = V @Word 10 :: V '[Int,Word,Float]
 -- >>> popVariantAt @0 x
--- Left (V @Word 10 :: V '[Word, Float])
+-- Left 10
 -- >>> popVariantAt @1 x
 -- Right 10
 -- >>> popVariantAt @2 x
--- Left (V @Word 10 :: V '[Int, Word])
+-- Left 10
 --
 popVariantAt :: forall (n :: Nat) l. 
    ( KnownNat n
@@ -362,7 +384,7 @@ popVariantAt v@(Variant t a) = case fromVariantAt @n v of
 --
 -- >>> let x = V @Word 10 :: V '[Int,Word,Float]
 -- >>> popVariantHead x
--- Left (V @Word 10 :: V '[Word, Float])
+-- Left 10
 --
 -- >>> let y = V @Int 10 :: V '[Int,Word,Float]
 -- >>> popVariantHead y
@@ -379,10 +401,10 @@ popVariantHead v@(Variant t a) = case fromVariantAt @0 v of
 -- >>> import Data.Char (toUpper)
 -- >>> let x = V @String "Test" :: V '[Int,String,Float]
 -- >>> mapVariantAt @1 (fmap toUpper) x
--- V @[Char] "TEST" :: V '[Int, [Char], Float]
+-- "TEST"
 --
 -- >>> mapVariantAt @0 (+1) x
--- V @[Char] "Test" :: V '[Int, [Char], Float]
+-- "Test"
 mapVariantAt :: forall (n :: Nat) a b l.
    ( KnownNat n
    , a ~ Index n l
@@ -400,7 +422,7 @@ mapVariantAt f v@(Variant t a) =
 -- >>> let f s = if s == "Test" then Just (42 :: Word) else Nothing
 -- >>> let x = V @String "Test" :: V '[Int,String,Float]
 -- >>> mapVariantAtM @1 f x
--- Just (V @Word 42 :: V '[Int, Word, Float])
+-- Just 42
 --
 -- >>> let y = V @String "NotTest" :: V '[Int,String,Float]
 -- >>> mapVariantAtM @1 f y
@@ -408,15 +430,21 @@ mapVariantAt f v@(Variant t a) =
 --
 -- Example with `IO`:
 --
--- >>> mapVariantAtM @0 print x
--- V @[Char] "Test" :: V '[(), [Char], Float]
+-- >>> v <- mapVariantAtM @0 print x
 --
--- >>> mapVariantAtM @1 print x
+-- >>> :t v
+-- v :: V '[(), String, Float]
+--
+-- >>> v <- mapVariantAtM @1 print x
 -- "Test"
--- V @() () :: V '[Int, (), Float]
 --
--- >>> mapVariantAtM @2 print x
--- V @[Char] "Test" :: V '[Int, [Char], ()]
+-- >>> :t v
+-- v :: V '[Int, (), Float]
+--
+-- >>> v <- mapVariantAtM @2 print x
+-- 
+-- >>> :t v
+-- v :: V '[Int, [Char], ()]
 --
 mapVariantAtM :: forall (n :: Nat) a b l m .
    ( KnownNat n
@@ -465,10 +493,10 @@ variantHeadTail fh ft x = case popVariantHead x of
 --
 -- >>> let f = mapVariantHeadTail (+5) (appendVariant @'[Double,Char])
 -- >>> f (V @Int 10 :: V '[Int,Word,Float])
--- V @Int 15 :: V '[Int, Word, Float, Double, Char]
+-- 15
 --
 -- >>> f (V @Word 20 :: V '[Int,Word,Float])
--- V @Word 20 :: V '[Int, Word, Float, Double, Char]
+-- 20
 --
 mapVariantHeadTail :: (x -> y) -> (V xs -> V ys) -> V (x ': xs) -> V (y ': ys)
 {-# INLINABLE mapVariantHeadTail #-}
@@ -651,11 +679,11 @@ fromVariantMaybe v = case popVariantMaybe v of
 --
 -- >>> let x = toVariantAt @0 10 :: V '[Int,String,Int]
 -- >>> mapVariantFirst @Int (+32) x
--- V @Int 42 :: V '[Int, [Char], Int]
+-- 42
 --
 -- >>> let y = toVariantAt @2 10 :: V '[Int,String,Int]
 -- >>> mapVariantFirst @Int (+32) y
--- V @Int 10 :: V '[Int, [Char], Int]
+-- 10
 --
 mapVariantFirst :: forall a b n l.
    ( Member a l
@@ -670,25 +698,25 @@ mapVariantFirst f v = mapVariantAt @n f v
 --
 -- >>> let f s = if s == (42 :: Int) then Just "Yeah!" else Nothing
 -- >>> mapVariantFirstM f (toVariantAt @0 42 :: V '[Int,Float,Int])
--- Just (V @[Char] "Yeah!" :: V '[[Char], Float, Int])
+-- Just "Yeah!"
 --
 -- >>> mapVariantFirstM f (toVariantAt @2 42 :: V '[Int,Float,Int])
--- Just (V @Int 42 :: V '[[Char], Float, Int])
+-- Just 42
 --
 -- >>> mapVariantFirstM f (toVariantAt @0 10 :: V '[Int,Float,Int])
 -- Nothing
 --
 -- >>> mapVariantFirstM f (toVariantAt @2 10 :: V '[Int,Float,Int])
--- Just (V @Int 10 :: V '[[Char], Float, Int])
+-- Just 10
 --
 -- Example with `IO`:
 --
 -- >>> mapVariantFirstM @Int print (toVariantAt @0 42 :: V '[Int,Float,Int])
 -- 42
--- V @() () :: V '[(), Float, Int]
+-- ()
 --
 -- >>> mapVariantFirstM @Int print (toVariantAt @2 42 :: V '[Int,Float,Int])
--- V @Int 42 :: V '[(), Float, Int]
+-- 42
 --
 mapVariantFirstM :: forall a b n l m.
    ( Member a l
@@ -728,10 +756,10 @@ type ReplaceAll a b cs = ReplaceNS (IndexesOf a cs) b cs
 --
 -- >>> let add1 = mapVariant @Int (+1)
 -- >>> add1 (toVariantAt @0 10 :: V '[Int,Float,Int,Double])
--- V @Int 11 :: V '[Int, Float, Int, Double]
+-- 11
 --
 -- >>> add1 (toVariantAt @2 10 :: V '[Int,Float,Int, Double])
--- V @Int 11 :: V '[Int, Float, Int, Double]
+-- 11
 --
 mapVariant :: forall a b cs.
    ( MapVariant a b cs
@@ -743,10 +771,10 @@ mapVariant = mapVariant' @a @b @cs @(IndexesOf a cs)
 --
 -- >>> let add1 = mapNubVariant @Int (+1)
 -- >>> add1 (toVariantAt @0 10 :: V '[Int,Float,Int,Double])
--- V @Int 11 :: V '[Int, Float, Double]
+-- 11
 --
 -- >>> add1 (toVariantAt @2 10 :: V '[Int,Float,Int, Double])
--- V @Int 11 :: V '[Int, Float, Double]
+-- 11
 --
 mapNubVariant :: forall a b cs ds rs.
    ( MapVariant a b cs
@@ -764,10 +792,10 @@ mapNubVariant f = nubVariant . mapVariant f
 -- >>> newtype Even = Even Int deriving (Show)
 -- >>> let f x = if even x then V (Even x) else V (Odd x) :: V '[Odd, Even]
 -- >>> foldMapVariantAt @1 f (V @Int 10 :: V '[Float,Int,Double])
--- V @Even (Even 10) :: V '[Float, Odd, Even, Double]
+-- Even 10
 --
 -- >>> foldMapVariantAt @1 f (V @Float 0.5 :: V '[Float,Int,Double])
--- V @Float 0.5 :: V '[Float, Odd, Even, Double]
+-- 0.5
 --
 foldMapVariantAt :: forall (n :: Nat) l l2 .
    ( KnownNat n
@@ -836,10 +864,10 @@ foldMapVariantFirstM f v = foldMapVariantAtM @n f v
 -- >>> newtype Even = Even Int deriving (Show)
 -- >>> let f x = if even x then V (Even x) else V (Odd x) :: V '[Odd, Even]
 -- >>> foldMapVariant @Int f (V @Int 10 :: V '[Float,Int,Double])
--- V @Even (Even 10) :: V '[Float, Odd, Even, Double]
+-- Even 10
 --
 -- >>> foldMapVariant @Int f (V @Float 0.5 :: V '[Float,Int,Double])
--- V @Float 0.5 :: V '[Float, Odd, Even, Double]
+-- 0.5
 --
 foldMapVariant :: forall a cs ds i.
    ( i ~ IndexOf a cs

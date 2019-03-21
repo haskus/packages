@@ -60,7 +60,7 @@ newtype VEither es a
 -- | Left value
 --
 -- >>> VLeft (V "failed" :: V '[String,Int]) :: VEither '[String,Int] Bool
--- VLeft (V @[Char] "failed" :: V '[[Char], Int])
+-- VLeft "failed"
 --
 pattern VLeft :: forall x xs. V xs -> VEither xs x
 pattern VLeft xs <- ((popVariantHead . veitherToVariant) -> Left xs)
@@ -97,7 +97,7 @@ instance
 --
 -- >>> let x = V "Test" :: V '[Int,String,Double]
 -- >>> veitherFromVariant x
--- VLeft (V @[Char] "Test" :: V '[[Char], Double])
+-- VLeft "Test"
 --
 veitherFromVariant :: V (a ': es) -> VEither es a
 {-# INLINABLE veitherFromVariant #-}
@@ -107,7 +107,7 @@ veitherFromVariant = VEither
 --
 -- >>> let x = VRight True :: VEither '[Int,Float] Bool
 -- >>> veitherToVariant x
--- V @Bool True :: V '[Bool, Int, Float]
+-- True
 --
 veitherToVariant :: VEither es a -> V (a ': es)
 {-# INLINABLE veitherToVariant #-}
