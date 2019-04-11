@@ -40,8 +40,7 @@ data BufferPutState b = BufferPutState
 -- | A Put monad than fails when there is not enough space in the target buffer
 newtype BufferPutT b m a
    = BufferPutT (StateT (BufferPutState b) m a) 
-   deriving newtype
-      (Functor, Applicative, Monad, MonadFail, MonadFix, MonadIO, MonadTrans)
+   deriving newtype (Functor, Applicative, Monad, MonadFail, MonadFix, MonadIO, MonadTrans)
 
 type BufferPut b a    = BufferPutT b Identity a
 
