@@ -1,4 +1,4 @@
-resolver: lts-13.6
+resolver: lts-13.16
 
 packages:
 - haskus-utils-compat/
@@ -18,10 +18,9 @@ extra-deps:
 - primitive-extras-0.7.1
 - happstack-server-tls-7.1.6.7
 - happstack-server-7.5.1.3
-- focus-1.0.1.3
 
 ghc-options:
-   "$everything": -fhide-source-paths -freverse-errors
+   "$locals": -fhide-source-paths -freverse-errors
 
 build:
    interleaved-output: true
