@@ -151,7 +151,7 @@ distancePtr p1 p2 = P.minusPtr p1' p2' + o2 - o1
 
 -- | Use a finalized pointer as a non finalized pointer
 {-# INLINABLE withFinalizedPtr #-}
-withFinalizedPtr :: (MonadInIO m) => Pointer mut Finalized -> (Pointer mut NotFinalized -> m b) -> m b
+withFinalizedPtr :: (MonadInIO m) => Pointer mut 'Finalized -> (Pointer mut 'NotFinalized -> m b) -> m b
 withFinalizedPtr ptr f = case ptr of
    PtrIF p o -> liftWith (FP.withForeignPtr p) <| \r ->
                   f (PtrI (r `P.plusPtr` o))
@@ -160,7 +160,7 @@ withFinalizedPtr ptr f = case ptr of
 
 -- | Use a pointer (finalized or not) as a non finalized pointer
 {-# INLINABLE withPtr #-}
-withPtr :: (MonadInIO m) => Pointer mut fin -> (Pointer mut NotFinalized -> m b) -> m b
+withPtr :: (MonadInIO m) => Pointer mut fin -> (Pointer mut 'NotFinalized -> m b) -> m b
 withPtr ptr f = case ptr of
    PtrI _    -> f ptr
    PtrM _    -> f ptr
@@ -181,7 +181,7 @@ allocPtr = liftIO . fmap PtrM . P.mallocBytes . fromIntegral
 -- | Free a non-finalized memory
 {-# SPECIALIZE INLINE freePtr :: MonadIO m => PtrI -> m () #-}
 {-# SPECIALIZE INLINE freePtr :: MonadIO m => PtrM -> m () #-}
-freePtr :: MonadIO m => Pointer mut NotFinalized -> m ()
+freePtr :: MonadIO m => Pointer mut 'NotFinalized -> m ()
 freePtr = \case
    PtrI p -> liftIO (P.free p)
    PtrM p -> liftIO (P.free p)
