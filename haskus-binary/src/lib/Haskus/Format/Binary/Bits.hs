@@ -31,6 +31,7 @@ module Haskus.Format.Binary.Bits
    -- * Various
    , bitOffset
    , byteOffset
+   , isPowerOfTwo
    )
 where
 
@@ -56,6 +57,12 @@ type Bits a =
    , KnownNat (BitSize a)
    , MaskBits a
    )
+
+-- | Check if a number is a power of two (2^n) and return `n`
+isPowerOfTwo :: (IndexableBits a, FiniteBits a) => a -> Maybe Word
+isPowerOfTwo x
+   | popCount x == 1 = Just (countTrailingZeros x)
+   | otherwise       = Nothing
 
 -- | Reverse the @n@ least important bits of the given value. The higher bits
 -- are set to 0.
