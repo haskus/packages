@@ -59,6 +59,12 @@ type Bits a =
    )
 
 -- | Check if a number is a power of two (2^n) and return `n`
+--
+-- >>> isPowerOfTwo (10 :: Word)
+-- Nothing
+-- >>> isPowerOfTwo (16 :: Word)
+-- Just 4
+--
 isPowerOfTwo :: (IndexableBits a, FiniteBits a) => a -> Maybe Word
 isPowerOfTwo x
    | popCount x == 1 = Just (countTrailingZeros x)
