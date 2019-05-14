@@ -33,11 +33,14 @@ module Haskus.Format.Binary.Bits
    , byteOffset
    , isPowerOfTwo
    , isPowerOfFour
+   , getPowerOfTwo
+   , getPowerOfFour
    )
 where
 
 import Haskus.Utils.List (foldl')
 import Haskus.Utils.Types
+import Haskus.Utils.Maybe
 import Haskus.Format.Binary.Bits.Finite
 import Haskus.Format.Binary.Bits.Index
 import Haskus.Format.Binary.Bits.Reverse
@@ -59,25 +62,43 @@ type Bits a =
    , MaskBits a
    )
 
--- | Check if a number is a power of two (2^n) and return `n`
+-- | Check if a number is a power of two (2^n)
 --
 -- >>> isPowerOfTwo (10 :: Word)
--- Nothing
+-- False
 -- >>> isPowerOfTwo (16 :: Word)
+-- True
+isPowerOfTwo :: IndexableBits a => a -> Bool
+isPowerOfTwo x = popCount x == 1
+
+-- | Check if a number is a power of two (2^n) and return `n`
+--
+-- >>> getPowerOfTwo (10 :: Word)
+-- Nothing
+-- >>> getPowerOfTwo (16 :: Word)
 -- Just 4
-isPowerOfTwo :: (IndexableBits a, FiniteBits a) => a -> Maybe Word
-isPowerOfTwo x
-   | popCount x == 1 = Just (countTrailingZeros x)
-   | otherwise       = Nothing
+getPowerOfTwo :: (IndexableBits a, FiniteBits a) => a -> Maybe Word
+getPowerOfTwo x
+   | isPowerOfTwo x = Just (countTrailingZeros x)
+   | otherwise      = Nothing
+
+-- | Check if a number is a power of four (4^n)
+--
+-- >>> isPowerOfFour (10 :: Word)
+-- False
+-- >>> isPowerOfFour (16 :: Word)
+-- True
+isPowerOfFour :: (IndexableBits a, FiniteBits a) => a -> Bool
+isPowerOfFour x = isJust (getPowerOfFour x)
 
 -- | Check if a number is a power of four (4^n) and return `n`
 --
--- >>> isPowerOfFour (10 :: Word)
+-- >>> getPowerOfFour (10 :: Word)
 -- Nothing
--- >>> isPowerOfFour (16 :: Word)
+-- >>> getPowerOfFour (16 :: Word)
 -- Just 2
-isPowerOfFour :: (IndexableBits a, FiniteBits a) => a -> Maybe Word
-isPowerOfFour x
+getPowerOfFour :: (IndexableBits a, FiniteBits a) => a -> Maybe Word
+getPowerOfFour x
    | popCount x == 1                -- test that a single bit is set to 1
    , let c = countTrailingZeros x   -- and that it is followed by an even
    , testBit c 0 == False           -- number of zeros
