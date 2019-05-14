@@ -32,6 +32,7 @@ module Haskus.Format.Binary.Bits
    , bitOffset
    , byteOffset
    , isPowerOfTwo
+   , isPowerOfFour
    )
 where
 
@@ -64,10 +65,23 @@ type Bits a =
 -- Nothing
 -- >>> isPowerOfTwo (16 :: Word)
 -- Just 4
---
 isPowerOfTwo :: (IndexableBits a, FiniteBits a) => a -> Maybe Word
 isPowerOfTwo x
    | popCount x == 1 = Just (countTrailingZeros x)
+   | otherwise       = Nothing
+
+-- | Check if a number is a power of four (4^n) and return `n`
+--
+-- >>> isPowerOfFour (10 :: Word)
+-- Nothing
+-- >>> isPowerOfFour (16 :: Word)
+-- Just 2
+isPowerOfFour :: (IndexableBits a, FiniteBits a) => a -> Maybe Word
+isPowerOfFour x
+   | popCount x == 1                -- test that a single bit is set to 1
+   , let c = countTrailingZeros x   -- and that it is followed by an even
+   , testBit c 0 == False           -- number of zeros
+   = Just (c `shiftR` 1)
    | otherwise       = Nothing
 
 -- | Reverse the @n@ least important bits of the given value. The higher bits
