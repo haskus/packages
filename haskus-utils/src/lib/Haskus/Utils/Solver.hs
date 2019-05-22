@@ -48,7 +48,7 @@ import qualified Haskus.Utils.Map.Strict as Map
 import Data.Bits
 import Control.Arrow (first,second)
 
-import Prelude hiding (pred)
+import Prelude hiding (pred,length)
 
 -------------------------------------------------------
 -- Constraint

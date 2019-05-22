@@ -62,6 +62,8 @@ module Haskus.Format.Binary.Buffer
    )
 where
 
+import Prelude hiding (length)
+
 import System.IO.Unsafe
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -286,10 +288,10 @@ bufferPackStorable x = Buffer $ unsafePerformIO $ do
 bufferPackStorableList :: forall a. Storable a => [a] -> Buffer
 bufferPackStorableList xs = Buffer $ unsafePerformIO $ do
    let lxs = length xs
-   p <- mallocArray (fromIntegral lxs)
+   p <- mallocArray lxs
    forM_ (xs `zip` [0..]) $ \(x,o) ->
       pokeElemOff p o x
-   BS.unsafePackMallocCStringLen (castPtr p, sizeOfT' @a * lxs)
+   BS.unsafePackMallocCStringLen (castPtr p, sizeOfT' @a * fromIntegral lxs)
 
 -- | Pack from a pointer (copy)
 bufferPackPtr :: MonadIO m => Word -> Ptr () -> m Buffer
