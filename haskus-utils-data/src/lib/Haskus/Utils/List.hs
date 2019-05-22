@@ -17,6 +17,7 @@ module Haskus.Utils.List
    , L.repeat
    , L.nubOn
    , L.sortOn
+   , L.splitOn
    )
 where
 
