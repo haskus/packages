@@ -5,6 +5,7 @@ module Haskus.Utils.List
    , drop
    , length
    , take
+   , chunksOf
    , L.partition
    , L.nub
    , L.sort
@@ -45,3 +46,8 @@ length = fromIntegral . L.length
 -- | Drop
 drop :: Word -> [a] -> [a]
 drop n = L.drop (fromIntegral n)
+
+-- | Split a list into chunks of a given size. The last chunk may contain fewer
+-- than n elements.
+chunksOf :: Word -> [a] -> [[a]]
+chunksOf n = L.chunksOf (fromIntegral n)
