@@ -16,6 +16,7 @@ module Haskus.Utils.List
    , L.zipWith
    , L.repeat
    , L.nubOn
+   , L.sortOn
    )
 where
 
