@@ -21,6 +21,7 @@ source-repository head
 library
   exposed-modules:
     Haskus.Utils.Monad
+    Haskus.Utils.InfList
     Haskus.Utils.HList
     Haskus.Utils.Functor
     Haskus.Utils.List
