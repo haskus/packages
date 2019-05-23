@@ -21,6 +21,7 @@ module Haskus.Utils.List
    , L.sortBy
    , L.splitOn
    , L.transpose
+   , (L.\\)
    )
 where
 
