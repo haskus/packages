@@ -23,6 +23,7 @@ module Haskus.Utils.List
    , L.transpose
    , (L.\\)
    , L.intersect
+   , L.find
    )
 where
 
