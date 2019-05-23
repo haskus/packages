@@ -26,6 +26,7 @@ library
     Haskus.Utils.MultiState
     Haskus.Utils.Embed
     Haskus.Utils.Flow
+    Haskus.Utils.Maths
     Haskus.Utils.STM
     Haskus.Utils.STM.TEq
     Haskus.Utils.STM.TMap
