@@ -22,6 +22,7 @@ module Haskus.Utils.List
    , L.splitOn
    , L.transpose
    , (L.\\)
+   , L.intersect
    )
 where
 
