@@ -24,6 +24,8 @@ module Haskus.Utils.List
    , (L.\\)
    , L.intersect
    , L.find
+   , L.zip3
+   , L.zip4
    )
 where
 
