@@ -28,6 +28,7 @@ module Haskus.Utils.List
    , L.zip4
    , L.stripPrefix
    , L.isPrefixOf
+   , L.deleteBy
    )
 where
 
