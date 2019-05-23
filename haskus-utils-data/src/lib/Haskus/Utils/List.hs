@@ -19,7 +19,10 @@ module Haskus.Utils.List
    , L.nubBy
    , L.sortOn
    , L.sortBy
+   , L.split
    , L.splitOn
+   , L.groupOn
+   , L.groupBy
    , L.transpose
    , (L.\\)
    , L.intersect
@@ -29,6 +32,7 @@ module Haskus.Utils.List
    , L.stripPrefix
    , L.isPrefixOf
    , L.deleteBy
+   , L.isSuffixOf
    )
 where
 
