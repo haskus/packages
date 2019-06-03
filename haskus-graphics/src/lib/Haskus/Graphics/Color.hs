@@ -14,6 +14,7 @@ import Data.Ratio
 --
 --  Source:
 --    * https://en.wikipedia.org/wiki/CIE_1931_color_space
+--    * https://en.wikipedia.org/wiki/Standard_illuminant
 --    * http://www.handprint.com/HP/WCL/color1.html
 --
 -- Visible spectrum
