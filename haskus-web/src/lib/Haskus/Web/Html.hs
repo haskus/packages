@@ -12,6 +12,8 @@ module Haskus.Web.Html
    , lightTripleDashVert
    , property_
    , prefix_
+   , uls_
+   , ols_
    )
 where
 
@@ -40,3 +42,9 @@ nbsp_ = toHtmlRaw ("&nbsp;" :: Text)
 
 lightTripleDashVert :: Html ()
 lightTripleDashVert = toHtmlRaw ("&#9478;" :: Text)
+
+uls_ :: [Html ()] -> Html ()
+uls_ as = ul_ (mapM_ li_ as)
+
+ols_ :: [Html ()] -> Html ()
+ols_ as = ol_ (mapM_ li_ as)
