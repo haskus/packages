@@ -30,11 +30,13 @@ library
     Haskus.Web.Response
     Haskus.Web.JQuery
     Haskus.Web.Files
+    Haskus.Web.Page
 
   other-modules:
 
   build-depends:       
       base                      >= 4.9 && < 5
+   ,  haskus-utils
    ,  haskus-utils-compat
    ,  bytestring
    ,  text
