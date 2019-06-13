@@ -55,7 +55,7 @@
 --
 -- data A = A0 | A1 | A2 | A3 deriving (Enum,CEnum)
 --
--- data B = B0 | B1 deriving (Enum,CBitSet)
+-- data B = B0 | B1 deriving (Enum,BitOffset)
 --
 -- w :: BitFields Word16 '[ BitField 5 "X" (EnumField Word8 A)
 --                        , BitField 9 "Y" Word16
@@ -179,7 +179,7 @@ instance Field Int64 where
    fromField = fromIntegral
    toField   = fromIntegral
 
-instance (FiniteBits b, Integral b, CBitSet a) => Field (BitSet b a) where
+instance (FiniteBits b, Integral b, BitOffset a) => Field (BitSet b a) where
    fromField = fromIntegral . BitSet.toBits
    toField   = BitSet.fromBits . fromIntegral
 
