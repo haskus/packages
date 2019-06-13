@@ -504,7 +504,7 @@ stdIlluminantD65 =
    , 60.312500
    ]
 
--- | Daylight components (S0,S1,S2) from 300nm to 830nm
+-- | Daylight components (S0,S1,S2) from 300nm to 830nm (5nm step)
 daylightComponents :: [(Ratio Int, Ratio Int, Ratio Int)]
 daylightComponents =
    [ (0.04  ,  0.02  , 0.00 )
