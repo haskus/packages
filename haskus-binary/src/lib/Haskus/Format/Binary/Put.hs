@@ -25,6 +25,7 @@ where
 import qualified Data.ByteString as BS
 import qualified Data.Serialize.Put as BP
 import Data.Serialize.Put (Put,PutM)
+import Data.Bifunctor
 
 import Haskus.Utils.Flow (replicateM_)
 import Haskus.Format.Binary.Buffer
@@ -33,6 +34,11 @@ import Haskus.Format.Binary.Word
 -- | Execute Put
 runPut :: Put -> Buffer
 runPut = Buffer . BP.runPut
+
+-- | Execute PutM
+runPutM :: PutM a -> (a,Buffer)
+runPutM = second Buffer . BP.runPutM
+
 
 -- | Put a buffer
 putBuffer :: Buffer -> Put
