@@ -1,7 +1,12 @@
 -- | Put monad
+--
+-- FIXME: PutM uses slow ByteString builder... We need to replace it with a
+-- fast one
 module Haskus.Format.Binary.Put
    ( Put
+   , PutM
    , runPut
+   , runPutM
    -- * Put
    , putBuffer
    , putByteString
@@ -19,7 +24,7 @@ where
 
 import qualified Data.ByteString as BS
 import qualified Data.Serialize.Put as BP
-import Data.Serialize.Put (Put)
+import Data.Serialize.Put (Put,PutM)
 
 import Haskus.Utils.Flow (replicateM_)
 import Haskus.Format.Binary.Buffer
