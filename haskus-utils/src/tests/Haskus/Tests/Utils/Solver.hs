@@ -77,45 +77,45 @@ instance Predicated (PD NT) where
 testsSolver :: TestTree
 testsSolver = testGroup "Solver" $
    [ testProperty "Constraint reduce: CBool True"
-         (constraintReduce oracleAll (CBool True) == (CBool True :: C))
+         (constraintSimplify oracleAll (CBool True) == (CBool True :: C))
    , testProperty "Constraint reduce: CBool False"
-         (constraintReduce oracleAll (CBool False) == (CBool False :: C))
+         (constraintSimplify oracleAll (CBool False) == (CBool False :: C))
    , testProperty "Constraint reduce: Not False"
-         (constraintReduce oracleAll (Not (CBool False)) == (CBool True :: C))
+         (constraintSimplify oracleAll (Not (CBool False)) == (CBool True :: C))
    , testProperty "Constraint reduce: Not True"
-         (constraintReduce oracleAll (Not (CBool True)) == (CBool False :: C))
+         (constraintSimplify oracleAll (Not (CBool True)) == (CBool False :: C))
    , testProperty "Constraint reduce: And [True,True]"
-         (constraintReduce oracleAll (And [CBool True,CBool True]) == (CBool True :: C))
+         (constraintSimplify oracleAll (And [CBool True,CBool True]) == (CBool True :: C))
    , testProperty "Constraint reduce: And [True,False]"
-         (constraintReduce oracleAll (And [CBool True,CBool False]) == (CBool False :: C))
+         (constraintSimplify oracleAll (And [CBool True,CBool False]) == (CBool False :: C))
    , testProperty "Constraint reduce: Or [True,True]"
-         (constraintReduce oracleAll (Or [CBool True,CBool True]) == (CBool True :: C))
+         (constraintSimplify oracleAll (Or [CBool True,CBool True]) == (CBool True :: C))
    , testProperty "Constraint reduce: Or [True,False]"
-         (constraintReduce oracleAll (Or [CBool True,CBool False]) == (CBool True :: C))
+         (constraintSimplify oracleAll (Or [CBool True,CBool False]) == (CBool True :: C))
    , testProperty "Constraint reduce: Or [False,False]"
-         (constraintReduce oracleAll (Or [CBool False,CBool False]) == (CBool False :: C))
+         (constraintSimplify oracleAll (Or [CBool False,CBool False]) == (CBool False :: C))
 
    , testProperty "Constraint reduce: Xor [True,False,True]"
-         (constraintReduce oracleAll (Xor [CBool True,CBool False,CBool True]) == (CBool False :: C))
+         (constraintSimplify oracleAll (Xor [CBool True,CBool False,CBool True]) == (CBool False :: C))
    , testProperty "Constraint reduce: Xor [True,False,False]"
-         (constraintReduce oracleAll (Xor [CBool True,CBool False,CBool False]) == (CBool True :: C))
+         (constraintSimplify oracleAll (Xor [CBool True,CBool False,CBool False]) == (CBool True :: C))
 
    , testProperty "Constraint reduce: Not (Xor [True,False,False])"
-         (constraintReduce oracleAll (Not (Xor [CBool True,CBool False,CBool False])) == (CBool False :: C))
+         (constraintSimplify oracleAll (Not (Xor [CBool True,CBool False,CBool False])) == (CBool False :: C))
    , testProperty "Constraint reduce: Not (Xor [False,False,False])"
-         (constraintReduce oracleAll (Not (Xor [CBool False,CBool False,CBool False])) == (CBool True :: C))
+         (constraintSimplify oracleAll (Not (Xor [CBool False,CBool False,CBool False])) == (CBool True :: C))
 
    , testProperty "Constraint reduce: matching oracle"
-         (constraintReduce oracleA (Predicate PredA) == (CBool True :: C))
+         (constraintSimplify oracleA (Predicate PredA) == (CBool True :: C))
    , testProperty "Constraint reduce: non matching oracle"
-         (constraintReduce oracleB (Predicate PredA) == (CBool False :: C))
+         (constraintSimplify oracleB (Predicate PredA) == (CBool False :: C))
 
    , testProperty "Constraint reduce: evalsTo 0"
-         (constraintReduce oracleAll (simpleRule `evalsTo` 0) == (CBool False :: C))
+         (constraintSimplify oracleAll (simpleRule `evalsTo` 0) == (CBool False :: C))
    , testProperty "Constraint reduce: evalsTo 1"
-         (constraintReduce oracleAll (simpleRule `evalsTo` 1) == (CBool True :: C))
+         (constraintSimplify oracleAll (simpleRule `evalsTo` 1) == (CBool True :: C))
    , testProperty "Constraint reduce: evals to D"
-         (constraintReduce oracleA (d1 `evalsTo` PD 0 "Test") == (CBool True :: C))
+         (constraintSimplify oracleA (d1 `evalsTo` PD 0 "Test") == (CBool True :: C))
 
    , testProperty "Evals to: Terminal 0"
          (((Terminal 0 :: R Int NT) `evalsTo` 0) == (CBool True :: C))

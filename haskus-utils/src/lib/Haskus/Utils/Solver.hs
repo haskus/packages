@@ -22,10 +22,11 @@ module Haskus.Utils.Solver
    , predState
    -- * Constraint
    , Constraint (..)
-   , simplifyConstraint
-   , constraintReduce
+   , constraintOptimize
+   , constraintSimplify
    -- * Rule
    , Rule (..)
+   , ruleSimplify
    , orderedNonTerminal
    , mergeRules
    , evalsTo
@@ -102,6 +103,9 @@ emptyOracle = Map.empty
 -- Constraint
 -------------------------------------------------------
 
+-- | A constraint is a boolean expression
+--
+-- `p` is the predicate type
 data Constraint e p
    = Predicate p
    | Not (Constraint e p)
@@ -120,32 +124,32 @@ instance Functor (Constraint e) where
    fmap f (Xor cs)       = Xor (fmap (fmap f) cs)
 
 -- | Reduce a constraint
-constraintReduce :: (Ord p, Eq p, Eq e) => PredOracle p -> Constraint e p -> Constraint e p
-constraintReduce oracle c = case simplifyConstraint c of
+constraintSimplify :: (Ord p, Eq p, Eq e) => PredOracle p -> Constraint e p -> Constraint e p
+constraintSimplify oracle c = case constraintOptimize c of
    Predicate p  -> case predState oracle p of
                       UndefPred -> Predicate p
                       SetPred   -> CBool True
                       UnsetPred -> CBool False
-   Not c'       -> case constraintReduce oracle c' of
+   Not c'       -> case constraintSimplify oracle c' of
                       CBool v -> CBool (not v)
                       c''     -> Not c''
-   And cs       -> case fmap (constraintReduce oracle) cs of
+   And cs       -> case fmap (constraintSimplify oracle) cs of
                       []                                     -> error "Empty And constraint"
                       cs' | all (constraintIsBool True)  cs' -> CBool True
                       cs' | any (constraintIsBool False) cs' -> CBool False
                       cs' -> case filter (not . constraintIsBool True) cs' of
                         [c'] -> c'
                         cs'' -> And cs''
-   Or cs        -> case fmap (constraintReduce oracle) cs of
+   Or cs        -> case fmap (constraintSimplify oracle) cs of
                       []                                      -> error "Empty Or constraint"
                       cs' | all (constraintIsBool False)  cs' -> CBool False
                       cs' | any (constraintIsBool True)   cs' -> CBool True
                       cs' -> case filter (not . constraintIsBool False) cs' of
                         [c'] -> c'
                         cs'' -> Or cs''
-   Xor cs       -> case fmap (constraintReduce oracle) cs of
+   Xor cs       -> case fmap (constraintSimplify oracle) cs of
                       []  -> error "Empty Xor constraint"
-                      cs' -> simplifyConstraint (Xor cs')
+                      cs' -> constraintOptimize (Xor cs')
    c'@(CBool _) -> c'
 
 -- | Check that a constraint is evaluated to a given boolean value
@@ -194,11 +198,49 @@ getConstraintTerminals = \case
       sing v [v'] = v == v'
       sing _ _    = False
 
+-- | Optimize/simplify a constraint
+constraintOptimize :: Constraint e p -> Constraint e p
+constraintOptimize x = case x of
+   Predicate _       -> x
+   CBool _           -> x
+   Not (Predicate _) -> x
+   Not (CBool v)     -> CBool (not v)
+   Not (Not c)       -> constraintOptimize c
+   Not (Or cs)       -> constraintOptimize (And (fmap Not cs))
+   Not (And cs)      -> constraintOptimize (Or (fmap Not cs))
+   Not (Xor cs)      -> case constraintOptimize (Xor cs) of
+                           Xor cs' -> Not (Xor cs')
+                           r       -> constraintOptimize (Not r)
+   And [c]           -> constraintOptimize c
+   Or  [c]           -> constraintOptimize c
+   Xor [c]           -> let c' = constraintOptimize c
+                        in if | constraintIsBool True c'  -> CBool True
+                              | constraintIsBool False c' -> CBool False
+                              | otherwise                 -> c'
+   And cs            -> let cs' = fmap constraintOptimize cs
+                        in if | any (constraintIsBool False) cs' -> CBool False
+                              | all (constraintIsBool True)  cs' -> CBool True
+                              | otherwise                        -> And cs'
+   Or cs             -> let cs' = fmap constraintOptimize cs
+                        in if | any (constraintIsBool True) cs'  -> CBool True
+                              | all (constraintIsBool False) cs' -> CBool False
+                              | otherwise                        -> Or cs'
+   Xor cs            -> let cs'        = fmap constraintOptimize cs
+                            countTrue  = length (filter (constraintIsBool True) cs')
+                            countFalse = length (filter (constraintIsBool False) cs')
+                            countAll   = length cs'
+                        in if | countTrue > 1                                        -> CBool False
+                              | countTrue == 1 && countTrue + countFalse == countAll -> CBool True
+                              | countAll == countFalse                               -> CBool False
+                              | otherwise                                            -> Xor cs'
+
 
 -------------------------------------------------------
 -- Rule
 -------------------------------------------------------
 
+-- | A rule can produce some "a"s (one or more if it diverges), depending on the
+-- constraints.
 data Rule e p a
    = Terminal a
    | NonTerminal [(Constraint e p, Rule e p a)]
@@ -218,44 +260,8 @@ orderedNonTerminal :: [(Constraint e p, Rule e p a)] -> Rule e p a
 orderedNonTerminal = NonTerminal . go []
    where
       go _  []          = []
-      go [] ((c,r):xs)  = (simplifyConstraint c,r) : go [c] xs
-      go cs ((c,r):xs)  = (simplifyConstraint (And (c:fmap Not cs)),r) : go (c:cs) xs
-
--- | Simplify a constraint
-simplifyConstraint :: Constraint e p -> Constraint e p
-simplifyConstraint x = case x of
-   Predicate _       -> x
-   CBool _           -> x
-   Not (Predicate _) -> x
-   Not (CBool v)     -> CBool (not v)
-   Not (Not c)       -> simplifyConstraint c
-   Not (Or cs)       -> simplifyConstraint (And (fmap Not cs))
-   Not (And cs)      -> simplifyConstraint (Or (fmap Not cs))
-   Not (Xor cs)      -> case simplifyConstraint (Xor cs) of
-                           Xor cs' -> Not (Xor cs')
-                           r       -> simplifyConstraint (Not r)
-   And [c]           -> simplifyConstraint c
-   Or  [c]           -> simplifyConstraint c
-   Xor [c]           -> let c' = simplifyConstraint c
-                        in if | constraintIsBool True c'  -> CBool True
-                              | constraintIsBool False c' -> CBool False
-                              | otherwise                 -> c'
-   And cs            -> let cs' = fmap simplifyConstraint cs
-                        in if | any (constraintIsBool False) cs' -> CBool False
-                              | all (constraintIsBool True)  cs' -> CBool True
-                              | otherwise                        -> And cs'
-   Or cs             -> let cs' = fmap simplifyConstraint cs
-                        in if | any (constraintIsBool True) cs'  -> CBool True
-                              | all (constraintIsBool False) cs' -> CBool False
-                              | otherwise                        -> Or cs'
-   Xor cs            -> let cs'        = fmap simplifyConstraint cs
-                            countTrue  = length (filter (constraintIsBool True) cs')
-                            countFalse = length (filter (constraintIsBool False) cs')
-                            countAll   = length cs'
-                        in if | countTrue > 1                                        -> CBool False
-                              | countTrue == 1 && countTrue + countFalse == countAll -> CBool True
-                              | countAll == countFalse                               -> CBool False
-                              | otherwise                                            -> Xor cs'
+      go [] ((c,r):xs)  = (constraintOptimize c,r) : go [c] xs
+      go cs ((c,r):xs)  = (constraintOptimize (And (c:fmap Not cs)),r) : go (c:cs) xs
 
 -- | Merge two rules together
 mergeRules :: Rule e p a -> Rule e p b -> Rule e p (a,b)
@@ -271,23 +277,35 @@ mergeRules = go
       fl x = fmap (second (x `mergeRules`))
       fr x = fmap (second (`mergeRules` x))
 
+-- | Simplify a rule given an oracle
+ruleSimplify ::
+   ( Ord p, Eq e
+   ) => PredOracle p -> Rule e p a -> Rule e p a
+ruleSimplify oracle r = case r of
+   Terminal a     -> Terminal a
+   Fail e         -> Fail e
+   NonTerminal rs -> -- Simplify rule constraints. Remove rules whose constraint is False
+                     rs
+                     -- reduce constraints
+                     |> fmap (first (constraintSimplify oracle))
+                     -- recursively simplify nested rules
+                     |> fmap (second (ruleSimplify oracle))
+                     -- filter non matching rules
+                     |> filter (not . constraintIsBool False . fst)
+                     -- return a new NonTerminal
+                     |> NonTerminal
+
+
 
 -- | Reduce a rule
 ruleReduce :: forall e p a.
    ( Ord p, Eq e, Eq p, Eq a) => PredOracle p -> Rule e p a -> MatchResult e (Rule e p a) a
-ruleReduce oracle r = case r of
+ruleReduce oracle r = case ruleSimplify oracle r of
    Terminal a     -> Match a
    Fail e         -> MatchFail [e]
    NonTerminal rs -> 
       let
-         rs' :: [(Constraint e p, Rule e p a)]
-         rs' = rs
-               -- reduce constraints
-               |> fmap (first (constraintReduce oracle))
-               -- filter non matching rules
-               |> filter (not . constraintIsBool False . fst)
-
-         (matchingRules,mayMatchRules) = partition (constraintIsBool True . fst) rs'
+         (matchingRules,mayMatchRules) = partition (constraintIsBool True . fst) rs
          matchingResults               = nub $ fmap snd $ matchingRules
 
 
@@ -304,7 +322,7 @@ ruleReduce oracle r = case r of
             (_:_:_) -> True
             _       -> False
       in
-      case rs' of
+      case rs of
          []                                 -> NoMatch
          _  | not (null failingResults)     -> MatchFail failingResults
             | divergence                    -> MatchDiverge (fmap Terminal terminalResults)
@@ -319,7 +337,7 @@ ruleReduce oracle r = case r of
             | otherwise                     ->
                case (matchingResults,mayMatchRules) of
                   ([Terminal a], [])    -> Match a
-                  _                     -> DontMatch (NonTerminal rs')
+                  _                     -> DontMatch (NonTerminal rs)
 
 
 -- | Get possible resulting terminals
@@ -426,6 +444,9 @@ class Predicated a where
    -- | Reduce predicates
    reducePredicates :: PredOracle (Pred a) -> a -> MatchResult (PredErr a) a (PredTerm a)
 
+   -- | Simplify predicates
+   simplifyPredicates :: PredOracle (Pred a) -> a -> a
+
    -- | Get possible resulting terminals
    getTerminals :: a -> [PredTerm a]
 
@@ -438,7 +459,8 @@ instance (Ord p, Eq e, Eq a, Eq p) => Predicated (Rule e p a) where
    type Pred     (Rule e p a) = p
    type PredTerm (Rule e p a) = a
 
-   reducePredicates = ruleReduce
+   reducePredicates   = ruleReduce
+   simplifyPredicates = ruleSimplify
    liftTerminal     = Terminal
    getTerminals     = getRuleTerminals
    getPredicates    = getRulePredicates
@@ -448,9 +470,11 @@ instance (Ord p, Eq e, Eq p) => Predicated (Constraint e p) where
    type Pred     (Constraint e p) = p
    type PredTerm (Constraint e p) = Bool
 
-   reducePredicates oracle c = case constraintReduce oracle c of
+   reducePredicates oracle c = case constraintSimplify oracle c of
       CBool v -> Match v
       c'      -> DontMatch c'
+
+   simplifyPredicates oracle c = constraintSimplify oracle c
 
    liftTerminal     = CBool
    getTerminals     = getConstraintTerminals
