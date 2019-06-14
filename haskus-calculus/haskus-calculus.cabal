@@ -55,4 +55,5 @@ test-suite tests
    build-depends:
          base
       ,  haskus-calculus
+      ,  haskus-utils-types
       ,  doctest                 >= 0.16
