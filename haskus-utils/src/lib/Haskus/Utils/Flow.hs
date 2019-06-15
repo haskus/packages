@@ -36,6 +36,7 @@ module Haskus.Utils.Flow
    , (>=>)
    , loopM
    , whileM
+   , intersperseM_
    -- * Variant based operators
    , module Haskus.Utils.Variant.Excepts
    -- * Monad transformers
@@ -145,3 +146,14 @@ infixr 0 <|||
 -- [4,5]
 forMaybeM :: Monad m => [a] -> (a -> m (Maybe b)) -> m [b]
 forMaybeM xs f = catMaybes <|| forM xs f
+
+-- | forM_ with interspersed action
+--
+-- >>> intersperseM_ (putStr ", ") ["1","2","3","4"] putStr
+-- 1, 2, 3, 4
+intersperseM_ :: Monad m => m () -> [a] -> (a -> m ()) -> m ()
+intersperseM_ f as g = go as
+   where
+      go []     = pure ()
+      go [x]    = g x
+      go (x:xs) = g x >> f >> go xs
