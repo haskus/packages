@@ -292,8 +292,6 @@ ruleSimplify oracle r = case r of
                      |> fmap (second (ruleSimplify oracle))
                      -- filter non matching rules
                      |> filter (not . constraintIsBool False . fst)
-                     -- filter rules not returning terminals
-                     |> filter (not . null . getRuleTerminals . snd)
                      -- return a new NonTerminal
                      |> NonTerminal
 

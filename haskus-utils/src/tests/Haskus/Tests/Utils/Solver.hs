@@ -65,6 +65,10 @@ instance Predicated (PD NT) where
          |> (`applyP` reducePredicates oracle b)
          |> resultP
 
+   simplifyPredicates oracle (PD a b) =
+      PD (simplifyPredicates oracle a)
+         (simplifyPredicates oracle b)
+
    getTerminals (PD as bs) = [ PD a b | a <- getTerminals as
                                       , b <- getTerminals bs
                              ]
