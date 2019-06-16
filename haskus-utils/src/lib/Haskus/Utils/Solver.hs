@@ -19,6 +19,7 @@ module Haskus.Utils.Solver
    , predIsSet
    , predIsUnset
    , predIsUndef
+   , predIsInvalid
    , predIs
    , predState
    , predAdd
@@ -62,6 +63,7 @@ data PredState
    = SetPred       -- ^ Set predicate
    | UnsetPred     -- ^ Unset predicate
    | UndefPred     -- ^ Undefined predicate
+   | InvalidPred   -- ^ Invalid predicate (can't be used)
    deriving (Show,Eq,Ord)
 
 -- | Predicate oracle
@@ -79,6 +81,10 @@ predIsUnset oracle p = predIs oracle p UnsetPred
 predIsUndef :: Ord p => PredOracle p -> p -> Bool
 predIsUndef oracle p = predIs oracle p UndefPred
 
+-- | Ask an oracle if a predicate is invalid
+predIsInvalid :: Ord p => PredOracle p -> p -> Bool
+predIsInvalid oracle p = predIs oracle p InvalidPred
+
 -- | Check the state of a predicate
 predIs :: Ord p => PredOracle p -> p -> PredState -> Bool
 predIs oracle p s = predState oracle p == s
@@ -93,9 +99,9 @@ predState oracle p = case p `Map.lookup` oracle of
 makeOracle :: Ord p => [(p,PredState)] -> PredOracle p
 makeOracle = Map.fromList
 
--- | Get a list of predicates from an oracle
+-- | Get a list of valid and defined predicates from an oracle
 oraclePredicates :: Ord p => PredOracle p -> [(p,PredState)]
-oraclePredicates = filter (\(_,s) -> s /= UndefPred) . Map.toList
+oraclePredicates = filter (\(_,s) -> s /= UndefPred && s /= InvalidPred) . Map.toList
 
 -- | Combine two oracles
 -- TODO: check that there is no contradiction
@@ -120,16 +126,18 @@ emptyOracle = Map.empty
 --
 -- `p` is the predicate type
 data Constraint e p
-   = Predicate p
-   | Not (Constraint e p)
-   | And [Constraint e p]
-   | Or  [Constraint e p]
-   | Xor [Constraint e p]
-   | CBool Bool
+   = Predicate p           -- ^ Predicate value
+   | IsValid p             -- ^ Is the predicate valid
+   | Not (Constraint e p)  -- ^ Logic not
+   | And [Constraint e p]  -- ^ Logic and
+   | Or  [Constraint e p]  -- ^ Logic or
+   | Xor [Constraint e p]  -- ^ Logic xor
+   | CBool Bool            -- ^ Constant
    deriving (Show,Eq,Ord)
 
 instance Functor (Constraint e) where
    fmap f (Predicate p)  = Predicate (f p)
+   fmap f (IsValid   p)  = IsValid (f p)
    fmap _ (CBool b)      = CBool b
    fmap f (Not c)        = Not (fmap f c)
    fmap f (And cs)       = And (fmap (fmap f) cs)
@@ -139,10 +147,16 @@ instance Functor (Constraint e) where
 -- | Reduce a constraint
 constraintSimplify :: (Ord p, Eq p, Eq e) => PredOracle p -> Constraint e p -> Constraint e p
 constraintSimplify oracle c = case constraintOptimize c of
+   IsValid p    -> case predState oracle p of
+                     UndefPred   -> IsValid p
+                     InvalidPred -> CBool False
+                     SetPred     -> CBool True
+                     UnsetPred   -> CBool True
    Predicate p  -> case predState oracle p of
-                      UndefPred -> Predicate p
-                      SetPred   -> CBool True
-                      UnsetPred -> CBool False
+                      UndefPred   -> Predicate p
+                      InvalidPred -> Predicate p
+                      SetPred     -> CBool True
+                      UnsetPred   -> CBool False
    Not c'       -> case constraintSimplify oracle c' of
                       CBool v -> CBool (not v)
                       c''     -> Not c''
@@ -173,6 +187,7 @@ constraintIsBool _ _          = False
 -- | Get predicates used in a constraint
 getConstraintPredicates :: Constraint e p -> [p]
 getConstraintPredicates = \case
+   IsValid   p  -> [p]
    Predicate p  -> [p]
    Not c        -> getConstraintPredicates c
    And cs       -> concatMap getConstraintPredicates cs
@@ -183,6 +198,7 @@ getConstraintPredicates = \case
 -- | Get constraint terminals
 getConstraintTerminals :: Constraint e p -> [Bool]
 getConstraintTerminals = \case
+   IsValid   _  -> [True,False]
    Predicate _  -> [True,False]
    CBool v      -> [v]
    Not c        -> fmap not (getConstraintTerminals c)
@@ -214,8 +230,10 @@ getConstraintTerminals = \case
 -- | Optimize/simplify a constraint
 constraintOptimize :: Constraint e p -> Constraint e p
 constraintOptimize x = case x of
+   IsValid _         -> x
    Predicate _       -> x
    CBool _           -> x
+   Not (IsValid _)   -> x
    Not (Predicate _) -> x
    Not (CBool v)     -> CBool (not v)
    Not (Not c)       -> constraintOptimize c
@@ -384,10 +402,10 @@ evalsTo s a = case createPredicateTable s (const True) True of
       orConstraints [x] = x
       orConstraints xs  = Or xs
 
-      makePred (p, UnsetPred) = Not (Predicate p)
-      makePred (p, SetPred)   = Predicate p
-      makePred (_, UndefPred) = undefined -- shouldn't be possible given we use
-                                          -- get the predicates from the oracle itself
+      makePred (p, UnsetPred)   = Not (Predicate p)
+      makePred (p, SetPred)     = Predicate p
+      makePred (_, InvalidPred) = undefined -- shouldn't be possible given we use
+      makePred (_, UndefPred)   = undefined -- get the predicates from the oracle itself
 
 
 -------------------------------------------------------
