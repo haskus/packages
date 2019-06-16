@@ -15,11 +15,13 @@ module Haskus.Utils.Solver
    , makeOracle
    , oraclePredicates
    , emptyOracle
+   , oracleUnion
    , predIsSet
    , predIsUnset
    , predIsUndef
    , predIs
    , predState
+   , predAdd
    -- * Constraint
    , Constraint (..)
    , constraintOptimize
@@ -94,6 +96,17 @@ makeOracle = Map.fromList
 -- | Get a list of predicates from an oracle
 oraclePredicates :: Ord p => PredOracle p -> [(p,PredState)]
 oraclePredicates = filter (\(_,s) -> s /= UndefPred) . Map.toList
+
+-- | Combine two oracles
+-- TODO: check that there is no contradiction
+oracleUnion :: Ord p => PredOracle p -> PredOracle p -> PredOracle p
+oracleUnion = Map.union
+
+-- | Add predicates to an oracle
+-- TODO: check that there is no contradiction
+predAdd :: Ord p => [(p,PredState)] -> PredOracle p -> PredOracle p
+predAdd cs = oracleUnion (makeOracle cs)
+
 
 -- | Oracle that always answer Undef
 emptyOracle :: PredOracle p
