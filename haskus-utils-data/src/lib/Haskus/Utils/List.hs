@@ -1,3 +1,6 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | List utils
 module Haskus.Utils.List
    ( checkLength
    , (++)
@@ -7,6 +10,7 @@ module Haskus.Utils.List
    , take
    , chunksOf
    , pick1
+   , enumList
    , L.partition
    , L.nub
    , L.sort
@@ -80,3 +84,12 @@ pick1 = go []
    where
       go _  []     = []
       go ys (x:xs) = (x,reverse ys++xs) : go (x:ys) xs
+
+-- | Get members of a bounded enum in a list
+--
+-- >>> :set -XTypeApplications
+-- >>> data Letters = A | B | C | D deriving (Bounded,Enum,Show)
+-- >>> enumList @Letters
+-- [A,B,C,D]
+enumList :: forall a. (Bounded a,Enum a) => [a]
+enumList = enumFrom minBound
