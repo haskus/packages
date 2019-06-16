@@ -54,6 +54,12 @@ import Control.Arrow (first,second)
 
 import Prelude hiding (pred,length)
 
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XTypeFamilies
+
 -------------------------------------------------------
 -- Constraint
 -------------------------------------------------------
@@ -145,6 +151,17 @@ instance Functor (Constraint e) where
    fmap f (Xor cs)       = Xor (fmap (fmap f) cs)
 
 -- | Reduce a constraint
+--
+-- >>> data PredA = PredA deriving (Show,Eq,Ord)
+-- >>> let oracleInvalidA = makeOracle [(PredA,InvalidPred)]
+-- >>> let c = And [IsValid PredA, Predicate PredA]
+-- >>> constraintSimplify oracleInvalidA c
+-- CBool False
+--
+-- >>> let oracleValidA = makeOracle [(PredA,SetPred)]
+-- >>> let c = And [IsValid PredA, Predicate PredA]
+-- >>> constraintSimplify oracleValidA c
+-- CBool True
 constraintSimplify :: (Ord p, Eq p, Eq e) => PredOracle p -> Constraint e p -> Constraint e p
 constraintSimplify oracle c = case constraintOptimize c of
    IsValid p    -> case predState oracle p of
@@ -586,7 +603,7 @@ createPredicateTable s oracleChecker fullTable =
 
       oracles = filter oracleChecker (fmap makeOracle predSets)
 
-      preds        = sort (getPredicates s)
+      preds        = sort (getPredicates (simplifyPredicates emptyOracle s))
 
       predSets
          | fullTable = makeFullSets preds
