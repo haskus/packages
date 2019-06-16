@@ -6,6 +6,7 @@ module Haskus.Utils.List
    , length
    , take
    , chunksOf
+   , pick1
    , L.partition
    , L.nub
    , L.sort
@@ -68,3 +69,14 @@ drop n = L.drop (fromIntegral n)
 -- than n elements.
 chunksOf :: Word -> [a] -> [[a]]
 chunksOf n = L.chunksOf (fromIntegral n)
+
+
+-- | Pick each element and return the element and the rest of the list
+--
+-- >>> pick1 [1,2,3,4]
+-- [(1,[2,3,4]),(2,[1,3,4]),(3,[1,2,4]),(4,[1,2,3])]
+pick1 :: [a] -> [(a,[a])]
+pick1 = go []
+   where
+      go _  []     = []
+      go ys (x:xs) = (x,reverse ys++xs) : go (x:ys) xs
