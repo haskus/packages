@@ -17,7 +17,6 @@ import Data.List
 import Haskus.Utils.Solver
 import Haskus.Utils.Flow
 
-
 data Predi
    = PredA
    | PredB
@@ -150,14 +149,14 @@ testsSolver = testGroup "Solver" $
          )
 
    , testProperty "Ordered non terminal 0"
-         (case reducePredicates oracleAB (orderedNonTerminal [(Predicate PredA, Terminal 0 :: R Int NT)
+         (case reducePredicates oracleAB (OrderedNonTerminal [(Predicate PredA, Terminal 0 :: R Int NT)
                                                              ,(Predicate PredB, Terminal 1)
                                                              ]) of
             Match 0 -> True
             _       -> False
          )
    , testProperty "Ordered non terminal 1"
-         (case reducePredicates oracleAB (orderedNonTerminal [(Predicate PredB, Terminal 1 :: R Int NT)
+         (case reducePredicates oracleAB (OrderedNonTerminal [(Predicate PredB, Terminal 1 :: R Int NT)
                                                              ,(Predicate PredA, Terminal 0)
                                                              ]) of
             Match 1 -> True

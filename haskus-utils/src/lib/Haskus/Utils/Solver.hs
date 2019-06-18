@@ -30,8 +30,6 @@ module Haskus.Utils.Solver
    -- * Rule
    , Rule (..)
    , ruleSimplify
-   , orderedNonTerminal
-   , mergeRules
    , evalsTo
    , MatchResult (..)
    -- * Predicated data
@@ -310,78 +308,69 @@ constraintOptimize x = case x of
 -- constraints.
 data Rule e p a
    = Terminal a
+   | OrderedNonTerminal [(Constraint e p, Rule e p a)]
    | NonTerminal [(Constraint e p, Rule e p a)]
    | Fail e
    deriving (Show,Eq,Ord)
 
 instance Functor (Rule e p) where
-   fmap f (Terminal a)     = Terminal (f a)
-   fmap f (NonTerminal xs) = NonTerminal (fmap (second (fmap f)) xs)
-   fmap _ (Fail e)         = Fail e
+   fmap f (Terminal a)            = Terminal (f a)
+   fmap f (NonTerminal xs)        = NonTerminal (fmap (second (fmap f)) xs)
+   fmap f (OrderedNonTerminal xs) = OrderedNonTerminal (fmap (second (fmap f)) xs)
+   fmap _ (Fail e)                = Fail e
 
-
--- | NonTerminal whose constraints are evaluated in order
---
--- Earlier constraints must be proven false for the next ones to be considered
-orderedNonTerminal :: [(Constraint e p, Rule e p a)] -> Rule e p a
-orderedNonTerminal = NonTerminal . go []
-   where
-      go _  []          = []
-      go [] ((c,r):xs)  = (constraintOptimize c,r) : go [c] xs
-      go cs ((c,r):xs)  = (constraintOptimize (And (c:fmap Not cs)),r) : go (c:cs) xs
-
--- | Merge two rules together
-mergeRules :: Rule e p a -> Rule e p b -> Rule e p (a,b)
-mergeRules = go
-   where
-      go (Fail e)           _                = Fail e
-      go _                  (Fail e)         = Fail e
-      go (Terminal a)       (Terminal b)     = Terminal (a,b)
-      go (Terminal a)       (NonTerminal bs) = NonTerminal (fl (Terminal a) bs)
-      go (NonTerminal as)   (Terminal b)     = NonTerminal (fr (Terminal b) as)
-      go (NonTerminal as)   b                = NonTerminal (fr b            as)
-
-      fl x = fmap (second (x `mergeRules`))
-      fr x = fmap (second (`mergeRules` x))
 
 -- | Simplify a rule given an oracle
 ruleSimplify ::
    ( Ord p, Eq e
    ) => PredOracle p -> Rule e p a -> Rule e p a
 ruleSimplify oracle r = case r of
-   Terminal a     -> Terminal a
-   Fail e         -> Fail e
-   NonTerminal rs -> -- Simplify rule constraints. Remove rules whose constraint is False
-                     rs
-                     -- reduce constraints
-                     |> fmap (first (constraintSimplify oracle))
-                     -- recursively simplify nested rules
-                     |> fmap (second (ruleSimplify oracle))
-                     -- filter non matching rules
-                     |> filter (not . constraintIsBool False . fst)
-                     -- return a new NonTerminal
-                     |> NonTerminal
+   Terminal a            -> Terminal a
+   Fail e                -> Fail e
+   OrderedNonTerminal rs -> OrderedNonTerminal (simplifyNonTerminal rs)
+   NonTerminal rs        -> NonTerminal (concatMap foldNonTerminal (simplifyNonTerminal rs))
+   where
+      -- Simplify non-terminal rule constraints. Remove rules whose constraint is False
+      simplifyNonTerminal xs = xs
+         -- reduce constraints
+         |> fmap (first (constraintSimplify oracle))
+         -- recursively simplify nested rules
+         |> fmap (second (ruleSimplify oracle))
+         -- filter non matching rules
+         |> filter (not . constraintIsBool False . fst)
 
+      -- non terminal sub-rules whose constraints are True can be folded into the
+      -- upper non-terminal rule. We rely on this to perform rule reduction.
+      foldNonTerminal (c, NonTerminal rs)
+         | constraintIsBool True c = rs
+      foldNonTerminal x = [x]
 
 
 -- | Reduce a rule
 ruleReduce :: forall e p a.
    ( Ord p, Eq e, Eq p, Eq a) => PredOracle p -> Rule e p a -> MatchResult e (Rule e p a) a
 ruleReduce oracle r = case ruleSimplify oracle r of
-   Terminal a     -> Match a
-   Fail e         -> MatchFail [e]
+   Terminal a            -> Match a
+   Fail e                -> MatchFail [e]
+   NonTerminal []        -> NoMatch
+   OrderedNonTerminal [] -> NoMatch
+   OrderedNonTerminal ((c,x):xs)
+      | constraintIsBool True c  -> ruleReduce oracle x
+      | constraintIsBool False c -> ruleReduce oracle (OrderedNonTerminal xs)
+      | otherwise                -> DontMatch (OrderedNonTerminal ((c,x):xs))
    NonTerminal rs -> 
       let
          (matchingRules,mayMatchRules) = partition (constraintIsBool True . fst) rs
          matchingResults               = nub $ fmap snd $ matchingRules
 
 
-         (failingResults,terminalResults,nonTerminalResults) = go [] [] [] matchingResults
+         (failingResults,terminalResults,hasNonTerminalResults) = go [] [] False matchingResults
          go fr tr ntr = \case
-            []                 -> (fr,tr,ntr)
-            (Fail x:xs)        -> go (x:fr) tr ntr xs
-            (Terminal x:xs)    -> go fr (x:tr) ntr xs
-            (NonTerminal x:xs) -> go fr tr (x:ntr) xs
+            []                        -> (fr,tr,ntr)
+            (Fail x:xs)               -> go (x:fr) tr ntr  xs
+            (Terminal x:xs)           -> go fr (x:tr) ntr  xs
+            (NonTerminal _:xs)        -> go fr tr     True xs
+            (OrderedNonTerminal _:xs) -> go fr tr     True xs
 
          divergence = case terminalResults of
             -- results are already "nub"ed.
@@ -389,35 +378,28 @@ ruleReduce oracle r = case ruleSimplify oracle r of
             (_:_:_) -> True
             _       -> False
       in
-      case rs of
-         []                                 -> NoMatch
-         _  | not (null failingResults)     -> MatchFail failingResults
-            | divergence                    -> MatchDiverge (fmap Terminal terminalResults)
-            | not (null nonTerminalResults) ->
-               -- fold matching nested NonTerminals
-               ruleReduce oracle
-                  <| NonTerminal 
-                  <| (fmap (\x -> (CBool True, Terminal x)) terminalResults
-                      ++ mayMatchRules
-                      ++ concat nonTerminalResults)
-
-            | otherwise                     ->
-               case (matchingResults,mayMatchRules) of
-                  ([Terminal a], [])    -> Match a
-                  _                     -> DontMatch (NonTerminal rs)
+      if | not (null failingResults)     -> MatchFail failingResults
+         | divergence                    -> MatchDiverge (fmap Terminal terminalResults)
+         | hasNonTerminalResults         -> DontMatch (NonTerminal rs)
+         | otherwise                     ->
+            case (terminalResults,mayMatchRules) of
+               ([a], []) -> Match a
+               _         -> DontMatch (NonTerminal rs)
 
 
 -- | Get possible resulting terminals
 getRuleTerminals :: Rule e p a -> [a]
-getRuleTerminals (Fail _)         = []
-getRuleTerminals (Terminal a)     = [a]
-getRuleTerminals (NonTerminal xs) = concatMap (getRuleTerminals . snd) xs
+getRuleTerminals (Fail _)                = []
+getRuleTerminals (Terminal a)            = [a]
+getRuleTerminals (NonTerminal xs)        = concatMap (getRuleTerminals . snd) xs
+getRuleTerminals (OrderedNonTerminal xs) = concatMap (getRuleTerminals . snd) xs
 
 -- | Get predicates used in a rule
 getRulePredicates :: Eq p => Rule e p a -> [p]
-getRulePredicates (Fail _)         = []
-getRulePredicates (Terminal _)     = []
-getRulePredicates (NonTerminal xs) = nub $ concatMap (\(x,y) -> getConstraintPredicates x ++ getRulePredicates y) xs
+getRulePredicates (Fail _)                = []
+getRulePredicates (Terminal _)            = []
+getRulePredicates (NonTerminal xs)        = nub $ concatMap (\(x,y) -> getConstraintPredicates x ++ getRulePredicates y) xs
+getRulePredicates (OrderedNonTerminal xs) = nub $ concatMap (\(x,y) -> getConstraintPredicates x ++ getRulePredicates y) xs
 
 -- | Constraint checking that a predicated value evaluates to some terminal
 evalsTo :: (Ord (Pred a), Eq a, Eq (PredTerm a), Eq (Pred a), Predicated a) => a -> PredTerm a -> Constraint e (Pred a)
