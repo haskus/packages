@@ -47,7 +47,6 @@ import Haskus.Utils.List
 import Haskus.Utils.Map.Strict (Map)
 import qualified Haskus.Utils.Map.Strict as Map
 
-import Data.Bits
 import Control.Arrow (first,second)
 
 import Prelude hiding (pred,length)
@@ -105,7 +104,7 @@ makeOracle = Map.fromList
 
 -- | Get a list of valid and defined predicates from an oracle
 oraclePredicates :: Ord p => PredOracle p -> [(p,PredState)]
-oraclePredicates = filter (\(_,s) -> s /= UndefPred && s /= InvalidPred) . Map.toList
+oraclePredicates = filter (\(_,s) -> s /= UndefPred) . Map.toList
 
 -- | Combine two oracles
 -- TODO: check that there is no contradiction
@@ -413,17 +412,18 @@ evalsTo s a = case createPredicateTable s (const True) True of
    where
 
       andPredicates []  = CBool True
-      andPredicates [x] = makePred x
-      andPredicates xs  = And (fmap (IsValid . fst) xs ++ fmap makePred xs)
+      andPredicates xs  = And (concatMap makePred xs)
 
       orConstraints []  = CBool True
       orConstraints [x] = x
       orConstraints xs  = Or xs
 
-      makePred (p, UnsetPred)   = Not (Predicate p)
-      makePred (p, SetPred)     = Predicate p
-      makePred (_, InvalidPred) = undefined -- shouldn't be possible given we use
-      makePred (_, UndefPred)   = undefined -- get the predicates from the oracle itself
+      makePred (p, UnsetPred)   = [IsValid p, Not (Predicate p)]
+      makePred (p, SetPred)     = [IsValid p, Predicate p]
+      makePred (p, InvalidPred) = [Not (IsValid p)]
+
+      makePred (_, UndefPred)   = undefined -- shouldn't be possible given we use
+                                            -- get the predicates from the oracle itself
 
 
 -------------------------------------------------------
@@ -604,24 +604,26 @@ createPredicateTable s oracleChecker fullTable =
 
       oracles = filter oracleChecker (fmap makeOracle predSets)
 
-      preds        = sort (getPredicates (simplifyPredicates emptyOracle s))
+      preds = sort (getPredicates (simplifyPredicates emptyOracle s))
 
       predSets
-         | fullTable = makeFullSets preds
+         | fullTable = makeFullSets preds [[]]
          | otherwise = makeSets     preds [] 
 
-      makeFullSets ps  = fmap (makeFullSet ps) ([0..2^(length ps)-1] :: [Word])
-      makeFullSet ps n = fmap (setB n) (ps `zip` [0..])
-      setB n (p,i)     = if testBit n i
-         then (p,SetPred)
-         else (p,UnsetPred)
+      -- only make complete set (each predicate is either Set, Unset or Invalid)
+      makeFullSets []     os  = os
+      makeFullSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred),(p,InvalidPred)]
+                               in makeFullSets ps [(n:o) | o <- os, n <- ns]
 
+
+      -- even make sets that are not complete (some predicates may not be
+      -- present)
       makeSets []     os  = os
-      makeSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred)]
+      makeSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred),(p,InvalidPred)]
                            in makeSets ps $ concat
-                                 [ [ [n] | n <- ns ]
-                                 , [(n:o) | o <- os, n <- ns]
-                                 , os
+                                 [ [ [n] | n <- ns ]          -- just this predicate
+                                 , [(n:o) | o <- os, n <- ns] -- this predicate plus the previous ones
+                                 , os                         -- the previous predicates without this one
                                  ]
 
 
