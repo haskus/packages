@@ -132,13 +132,14 @@ emptyOracle = Map.empty
 --
 -- `p` is the predicate type
 data Constraint e p
-   = Predicate p           -- ^ Predicate value
-   | IsValid p             -- ^ Is the predicate valid
-   | Not (Constraint e p)  -- ^ Logic not
-   | And [Constraint e p]  -- ^ Logic and
-   | Or  [Constraint e p]  -- ^ Logic or
-   | Xor [Constraint e p]  -- ^ Logic xor
-   | CBool Bool            -- ^ Constant
+   = Predicate p            -- ^ Predicate value
+   | IsValid p              -- ^ Is the predicate valid
+   | Not (Constraint e p)   -- ^ Logic not
+   | And [Constraint e p]   -- ^ Logic and
+   | Or  [Constraint e p]   -- ^ Logic or
+   | Xor [Constraint e p]   -- ^ Logic xor
+   | CBool Bool             -- ^ Constant
+   | CErr (Either String e) -- ^ Error
    deriving (Show,Eq,Ord)
 
 instance Functor (Constraint e) where
@@ -149,21 +150,27 @@ instance Functor (Constraint e) where
    fmap f (And cs)       = And (fmap (fmap f) cs)
    fmap f (Or cs)        = Or (fmap (fmap f) cs)
    fmap f (Xor cs)       = Xor (fmap (fmap f) cs)
+   fmap _ (CErr e)       = CErr e
 
 -- | Reduce a constraint
 --
--- >>> data PredA = PredA deriving (Show,Eq,Ord)
--- >>> let oracleInvalidA = makeOracle [(PredA,InvalidPred)]
--- >>> let c = And [IsValid PredA, Predicate PredA]
--- >>> constraintSimplify oracleInvalidA c
+-- >>> data P = A | B deriving (Show,Eq,Ord)
+-- >>> let c = And [IsValid A, Predicate B]
+--
+-- >>> let oracle = makeOracle [(A,InvalidPred),(B,SetPred)]
+-- >>> constraintSimplify oracle c
 -- CBool False
 --
--- >>> let oracleValidA = makeOracle [(PredA,SetPred)]
--- >>> let c = And [IsValid PredA, Predicate PredA]
--- >>> constraintSimplify oracleValidA c
+-- >>> let oracle = makeOracle [(A,SetPred),(B,SetPred)]
+-- >>> constraintSimplify oracle c
 -- CBool True
+--
+-- >>> let oracle = makeOracle [(A,SetPred),(B,UnsetPred)]
+-- >>> constraintSimplify oracle c
+-- CBool False
 constraintSimplify :: (Ord p, Eq p, Eq e) => PredOracle p -> Constraint e p -> Constraint e p
 constraintSimplify oracle c = case constraintOptimize c of
+   CErr e       -> CErr e
    IsValid p    -> case predState oracle p of
                      UndefPred   -> IsValid p
                      InvalidPred -> CBool False
@@ -171,7 +178,7 @@ constraintSimplify oracle c = case constraintOptimize c of
                      UnsetPred   -> CBool True
    Predicate p  -> case predState oracle p of
                       UndefPred   -> Predicate p
-                      InvalidPred -> Predicate p
+                      InvalidPred -> CErr (Left "Invalid predicate")
                       SetPred     -> CBool True
                       UnsetPred   -> CBool False
    Not c'       -> case constraintSimplify oracle c' of
@@ -204,6 +211,7 @@ constraintIsBool _ _          = False
 -- | Get predicates used in a constraint
 getConstraintPredicates :: Constraint e p -> [p]
 getConstraintPredicates = \case
+   CErr _       -> []
    IsValid   p  -> [p]
    Predicate p  -> [p]
    Not c        -> getConstraintPredicates c
@@ -215,6 +223,7 @@ getConstraintPredicates = \case
 -- | Get constraint terminals
 getConstraintTerminals :: Constraint e p -> [Bool]
 getConstraintTerminals = \case
+   CErr _       -> []
    IsValid   _  -> [True,False]
    Predicate _  -> [True,False]
    CBool v      -> [v]
@@ -247,6 +256,8 @@ getConstraintTerminals = \case
 -- | Optimize/simplify a constraint
 constraintOptimize :: Constraint e p -> Constraint e p
 constraintOptimize x = case x of
+   CErr _            -> x
+   Not (CErr e)      -> CErr e
    IsValid _         -> x
    Predicate _       -> x
    CBool _           -> x
