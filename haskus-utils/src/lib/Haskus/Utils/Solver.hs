@@ -186,10 +186,10 @@ constraintSimplify oracle c = case constraintOptimize c of
                       CErr e  -> CErr e
                       c''     -> Not c''
    And cs       -> case fmap (constraintSimplify oracle) cs of
-                      cs' | any constraintIsError cs'        -> CErr (Left "And expression contains Error constraint")
                       []                                     -> CErr (Left "Empty And constraint")
                       cs' | all (constraintIsBool True)  cs' -> CBool True
                       cs' | any (constraintIsBool False) cs' -> CBool False
+                      cs' | all constraintIsError cs'        -> CErr (Left "And expression only contains Error constraints")
                       cs' -> case filter (not . constraintIsBool True) cs' of
                         [c'] -> c'
                         cs'' -> And cs''
