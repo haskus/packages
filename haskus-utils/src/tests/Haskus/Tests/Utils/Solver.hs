@@ -169,7 +169,7 @@ testsSolver = testGroup "Solver" $
          (sort (getPredicates d2) == sort [PredA,PredB,PredC,PredD])
 
    , testProperty "Create predicate table: flat non terminal"
-         (case createPredicateTable d1 (const True) False of
+         (case createPredicateTable d1 (const True) of
             Left _   -> False
             Right xs -> sort (fmap (oraclePredicates . fst) xs) == sort
                            [ [(PredA, SetPred)  , (PredC, UnsetPred), (PredD, UnsetPred), (PredE, UnsetPred)]
@@ -178,7 +178,7 @@ testsSolver = testGroup "Solver" $
                            ]
          )
    , testProperty "Create predicate table: nested non terminal"
-         (case createPredicateTable d2 (const True) False of
+         (case createPredicateTable d2 (const True) of
             Left _   -> False
             Right xs -> sort (fmap (oraclePredicates . fst) xs) == sort
                   [[(PredA,SetPred),(PredB,SetPred),(PredC,UnsetPred),(PredD,UnsetPred)]
@@ -186,41 +186,16 @@ testsSolver = testGroup "Solver" $
                   ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred)]
                   ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred),(PredD,SetPred)]
                   ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred),(PredD,UnsetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred),(PredD,InvalidPred)]
                   ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred)]
                   ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred),(PredD,SetPred)]
                   ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred),(PredD,UnsetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred),(PredD,InvalidPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,InvalidPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,InvalidPred),(PredD,SetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,InvalidPred),(PredD,UnsetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,InvalidPred),(PredD,InvalidPred)]
                   ,[(PredA,SetPred),(PredB,UnsetPred),(PredD,SetPred)]
                   ,[(PredA,SetPred),(PredB,UnsetPred),(PredD,UnsetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredD,InvalidPred)]
                   ,[(PredA,UnsetPred),(PredB,SetPred),(PredC,SetPred),(PredD,UnsetPred)]
                   ,[(PredA,UnsetPred),(PredB,SetPred),(PredC,UnsetPred),(PredD,SetPred)]
                   ]
          )
 
-   , testProperty "Create full predicate table: nested non terminal"
-         (case createPredicateTable d2 (const True) True of
-            Left _   -> False
-            Right xs -> sort (fmap (oraclePredicates . fst) xs) == sort
-                  [[(PredA,SetPred),(PredB,SetPred),(PredC,UnsetPred),(PredD,UnsetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred),(PredD,SetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred),(PredD,UnsetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,SetPred),(PredD,InvalidPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred),(PredD,SetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred),(PredD,UnsetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,UnsetPred),(PredD,InvalidPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,InvalidPred),(PredD,SetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,InvalidPred),(PredD,UnsetPred)]
-                  ,[(PredA,SetPred),(PredB,UnsetPred),(PredC,InvalidPred),(PredD,InvalidPred)]
-                  ,[(PredA,UnsetPred),(PredB,SetPred),(PredC,SetPred),(PredD,UnsetPred)]
-                  ,[(PredA,UnsetPred),(PredB,SetPred),(PredC,UnsetPred),(PredD,SetPred)]
-                  ]
-         )
    ]
 
    where

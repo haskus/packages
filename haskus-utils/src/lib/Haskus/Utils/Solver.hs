@@ -402,7 +402,7 @@ getRulePredicates (OrderedNonTerminal xs) = nub $ concatMap (\(x,y) -> getConstr
 
 -- | Constraint checking that a predicated value evaluates to some terminal
 evalsTo :: (Ord (Pred a), Eq a, Eq (PredTerm a), Eq (Pred a), Predicated a) => a -> PredTerm a -> Constraint e (Pred a)
-evalsTo s a = case createPredicateTable s (const True) True of
+evalsTo s a = case createPredicateTable s (const True) of
    Left x   -> CBool (x == a)
    Right xs -> orConstraints <| fmap andPredicates
                              <| fmap oraclePredicates
@@ -421,7 +421,6 @@ evalsTo s a = case createPredicateTable s (const True) True of
       makePred (p, UnsetPred)   = [IsValid p, Not (Predicate p)]
       makePred (p, SetPred)     = [IsValid p, Predicate p]
       makePred (p, InvalidPred) = [Not (IsValid p)]
-
       makePred (_, UndefPred)   = undefined -- shouldn't be possible given we use
                                             -- get the predicates from the oracle itself
 
@@ -590,8 +589,8 @@ createPredicateTable ::
    , Predicated a
    , Predicated a
    , Pred a ~ Pred a
-   ) => a -> (PredOracle (Pred a) -> Bool) -> Bool -> Either (PredTerm a) [(PredOracle (Pred a),PredTerm a)]
-createPredicateTable s oracleChecker fullTable =
+   ) => a -> (PredOracle (Pred a) -> Bool) -> Either (PredTerm a) [(PredOracle (Pred a),PredTerm a)]
+createPredicateTable s oracleChecker =
    -- we first check if the predicated value reduces to a terminal without any
    -- additional oracle
    case reducePredicates emptyOracle s of
@@ -606,25 +605,9 @@ createPredicateTable s oracleChecker fullTable =
 
       preds = sort (getPredicates (simplifyPredicates emptyOracle s))
 
-      predSets
-         | fullTable = makeFullSets preds [[]]
-         | otherwise = makeSets     preds [] 
+      predSets = makeSets preds [[]] 
 
-      -- only make complete set (each predicate is either Set, Unset or Invalid)
-      makeFullSets []     os  = os
-      makeFullSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred),(p,InvalidPred)]
-                               in makeFullSets ps [(n:o) | o <- os, n <- ns]
-
-
-      -- even make sets that are not complete (some predicates may not be
-      -- present)
+      -- make predicate sets (each predicate is either Set, Unset or Undef)
       makeSets []     os  = os
-      makeSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred),(p,InvalidPred)]
-                           in makeSets ps $ concat
-                                 [ [ [n] | n <- ns ]          -- just this predicate
-                                 , [(n:o) | o <- os, n <- ns] -- this predicate plus the previous ones
-                                 , os                         -- the previous predicates without this one
-                                 ]
-
-
-
+      makeSets (p:ps) os = let ns = [(p,SetPred),(p,UnsetPred),(p,UndefPred)]
+                           in makeSets ps [(n:o) | o <- os, n <- ns]
