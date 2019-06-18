@@ -528,6 +528,30 @@ instance (Ord p, Eq e, Eq p) => Predicated (Constraint e p) where
    getTerminals     = getConstraintTerminals
    getPredicates    = getConstraintPredicates
 
+instance forall x y.
+   ( Predicated x
+   , Predicated y
+   , PredErr x ~ PredErr y
+   , Pred x ~ Pred y
+   ) => Predicated (x,y)
+   where
+   type PredErr  (x,y) = PredErr x
+   type Pred     (x,y) = Pred x
+   type PredTerm (x,y) = (PredTerm x, PredTerm y)
+
+   reducePredicates oracle (x,y) =
+      initP (,) (,)
+         |> (`applyP` reducePredicates oracle x)
+         |> (`applyP` reducePredicates oracle y)
+         |> resultP
+
+   simplifyPredicates oracle (x,y) = (simplifyPredicates oracle x, simplifyPredicates oracle y)
+
+   liftTerminal (x,y)  = (liftTerminal x, liftTerminal y)
+   getTerminals (x,y)  = [ (x',y') | x' <- getTerminals x
+                                   , y' <- getTerminals y
+                         ]
+   getPredicates (x,y) = getPredicates x ++ getPredicates y
 
 -- | Reduction result
 data MatchResult e nt t
