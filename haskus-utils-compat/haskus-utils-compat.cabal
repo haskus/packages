@@ -16,11 +16,12 @@ description:
 
 source-repository head
   type: git
-  location: git://github.com/haskus/haskus-utils.git
+  location: git://github.com/haskus/haskus-packages.git
 
 library
   exposed-modules:
     Haskus.Utils.Embed.ByteString
+    Haskus.Utils.Text
 
   other-modules:
 
@@ -32,6 +33,8 @@ library
       ,  directory
       ,  filepath
       ,  bytestring
+      ,  text
+      ,  formatting
 
   build-tools: 
   ghc-options:          -Wall
