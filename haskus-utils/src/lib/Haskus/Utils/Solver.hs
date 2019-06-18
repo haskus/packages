@@ -183,30 +183,38 @@ constraintSimplify oracle c = case constraintOptimize c of
                       UnsetPred   -> CBool False
    Not c'       -> case constraintSimplify oracle c' of
                       CBool v -> CBool (not v)
+                      CErr e  -> CErr e
                       c''     -> Not c''
    And cs       -> case fmap (constraintSimplify oracle) cs of
-                      []                                     -> error "Empty And constraint"
+                      cs' | any constraintIsError cs'        -> CErr (Left "And expression contains Error constraint")
+                      []                                     -> CErr (Left "Empty And constraint")
                       cs' | all (constraintIsBool True)  cs' -> CBool True
                       cs' | any (constraintIsBool False) cs' -> CBool False
                       cs' -> case filter (not . constraintIsBool True) cs' of
                         [c'] -> c'
                         cs'' -> And cs''
-   Or cs        -> case fmap (constraintSimplify oracle) cs of
-                      []                                      -> error "Empty Or constraint"
+   Or cs        -> case filter (not . constraintIsError) <| fmap (constraintSimplify oracle) cs of
+                      []                                      -> CErr (Left "Empty Or constraint")
                       cs' | all (constraintIsBool False)  cs' -> CBool False
                       cs' | any (constraintIsBool True)   cs' -> CBool True
                       cs' -> case filter (not . constraintIsBool False) cs' of
                         [c'] -> c'
                         cs'' -> Or cs''
    Xor cs       -> case fmap (constraintSimplify oracle) cs of
-                      []  -> error "Empty Xor constraint"
-                      cs' -> constraintOptimize (Xor cs')
+                      cs' | any constraintIsError cs' -> CErr (Left "Xor expression contains Error constraint")
+                      []                              -> CErr (Left "Empty Xor constraint")
+                      cs'                             -> constraintOptimize (Xor cs')
    c'@(CBool _) -> c'
 
 -- | Check that a constraint is evaluated to a given boolean value
 constraintIsBool :: Bool -> Constraint e p -> Bool
 constraintIsBool v (CBool v') = v == v'
 constraintIsBool _ _          = False
+
+-- | Check that a constraint is evaluated to an error
+constraintIsError :: Constraint e p -> Bool
+constraintIsError (CErr _) = True
+constraintIsError _        = False
 
 -- | Get predicates used in a constraint
 getConstraintPredicates :: Constraint e p -> [p]
