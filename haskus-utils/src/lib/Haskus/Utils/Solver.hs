@@ -627,7 +627,7 @@ createPredicateTable s oracleChecker =
 
       oracles = filter oracleChecker (fmap makeOracle predSets)
 
-      preds = sort (nub (getPredicates (simplifyPredicates emptyOracle s)))
+      preds = nub (sort (getPredicates (simplifyPredicates emptyOracle s)))
 
       predSets = makeSets preds [[]] 
 
