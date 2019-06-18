@@ -414,7 +414,7 @@ evalsTo s a = case createPredicateTable s (const True) True of
 
       andPredicates []  = CBool True
       andPredicates [x] = makePred x
-      andPredicates xs  = And (fmap makePred xs)
+      andPredicates xs  = And (fmap (IsValid . fst) xs ++ fmap makePred xs)
 
       orConstraints []  = CBool True
       orConstraints [x] = x
