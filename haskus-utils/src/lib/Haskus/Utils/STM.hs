@@ -32,6 +32,7 @@ module Haskus.Utils.STM
    , S.newBroadcastTChan
    , S.writeTChan
    , S.dupTChan
+   , S.cloneTChan
    , S.readTChan
    )
 where
