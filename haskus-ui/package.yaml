@@ -41,6 +41,7 @@ library:
       - Haskus.UI.Ray
       - Haskus.UI.RayTracer
       - Haskus.UI.Sampler
+      - Haskus.UI.Canvas
    dependencies:
       - base >= 4.8 && < 5
       - haskus-utils

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 36b1c22478ea4778eb531c8de065b590cf2775a143abcc50a27f024295b74305
+-- hash: f3127a054e204077684858f72ca370a736a24b65affd184b7eb2d972f1c0408b
 
 name:           haskus-ui
 version:        0.1
@@ -39,6 +39,7 @@ library
       Haskus.UI.Ray
       Haskus.UI.RayTracer
       Haskus.UI.Sampler
+      Haskus.UI.Canvas
   other-modules:
       Paths_haskus_ui
   hs-source-dirs:
