@@ -17,7 +17,7 @@
 
 -- | Extensible ADT
 module Haskus.Utils.EADT
-   ( EADT
+   ( EADT (..)
    , (:<:)
    , (:<<:)
    , pattern VF
