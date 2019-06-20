@@ -1,0 +1,67 @@
+name:                haskus-ui
+version:             0.1
+github:              "haskus/haskus-ui"
+license:             BSD3
+author:              "Sylvain HENRY"
+maintainer:          "sylvain@haskus.fr"
+copyright:           "Sylvain HENRY 2018"
+
+# Metadata used when publishing your package
+synopsis:            User interface
+category:            UI
+
+description:         Please see the README on Github at <https://github.com/haskus/haskus-packages/#readme>
+
+dependencies:
+- base >= 4.8 && < 5
+- haskus-utils
+- haskus-utils-variant
+- haskus-utils-data
+- haskus-binary
+- containers
+- bytestring
+- vector
+- transformers
+
+ghc-options: -Wall -O
+
+library:
+   source-dirs: src/lib
+   exposed-modules:
+      - Haskus.UI.World
+      - Haskus.UI.Object
+      - Haskus.UI.Object.Plane
+      - Haskus.UI.Object.Sphere
+      - Haskus.UI.Object.Colored
+      - Haskus.UI.Common
+      - Haskus.UI.Maths.Linear
+      - Haskus.UI.Renderer
+      - Haskus.UI.Picture
+      - Haskus.UI.Color
+      - Haskus.UI.Ray
+      - Haskus.UI.RayTracer
+      - Haskus.UI.Sampler
+   dependencies:
+      - base >= 4.8 && < 5
+      - haskus-utils
+      - haskus-utils-variant
+      - haskus-utils-data
+      - haskus-binary
+      - containers
+      - bytestring
+      - vector
+      - transformers
+      - linear
+      - colour
+      - JuicyPixels
+      - async
+      - tf-random
+      - random-shuffle
+
+executables:
+   haskus-ui-test:
+      source-dirs: src/apps
+      main: Haskus/UI/Test.hs
+      dependencies:
+         haskus-ui
+

@@ -12,6 +12,7 @@ packages:
 - haskus-locale/
 - haskus-calculus/
 - haskus-graphics/
+- haskus-ui/
 
 extra-deps:
 - stm-containers-1.1.0.2
