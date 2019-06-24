@@ -42,6 +42,7 @@ import Haskus.Utils.EADT.TH
 
 data RenderObject d c
    = Rectangle d d -- ^ Rectangle (width,height,1) with top-left at current (x,y,z)
+   | Disc d    -- ^ Disc (radius)
    deriving (Show)
 
 data Transform d
@@ -85,11 +86,15 @@ colorsAt atx aty g = go Nothing 0 atx aty (rootNode g)
                | x < 0 || y < 0   -> []
                | x < w && y < h   -> maybeToList (fmap (z,) currentColor)
                | otherwise        -> []
+            Disc r
+               | x*x+y*y > r*r    -> []
+               | otherwise        -> maybeToList (fmap (z,) currentColor)
+
          NodeGroup xs          -> join (fmap (go currentColor z x y) xs)
          NodeTransform t g' -> case t of
             Translate mx my mz -> go currentColor (z+mz) (x-mx) (y-my) g'
          Colorize c g'         -> go (Just c) z x y g'
-         NodeClip g' cg
+         NodeClip cg g'
             -- we check that the clipper graph returns a color
             | null (go currentColor z x y cg) -> []
             | otherwise                       -> go currentColor z x y g'

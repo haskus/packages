@@ -89,10 +89,16 @@ demo76_79 = do
    let
       sceneGraph :: SceneGraph Dist Color NodeName
       sceneGraph = defaultSceneGraph
+         |> sceneInsertNode (NodeName "Clipper")
+               (Colorize yellow <| NodeObject (Disc 8))
          |> sceneInsertNode RootNode
                (NodeGroup
-                  [ Colorize red  <| NodeObject (Rectangle 10 5)
+                  [NodeClip (NodeRef (NodeName "Clipper"))
+                     <| Colorize red  <| NodeObject (Rectangle 10 5)
                   , Colorize blue <| NodeTransform (Translate (-5) (-2) 1) <| NodeObject (Rectangle 10 5)
+                  , Colorize yellow
+                     -- <| NodeTransform (Translate 10 10 2)
+                     <| NodeRef (NodeName "Clipper")
                   ])
 
       rectWorld :: World PixelRGB8 (EADT '[CanvasF Dist Color NodeName, ColoredF, PlaneF, SphereF])
