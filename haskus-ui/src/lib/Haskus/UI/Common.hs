@@ -5,6 +5,7 @@ module Haskus.UI.Common
    , Normal
    , Color
    , ColorUnit
+   , V3 (..)
    )
 where
 

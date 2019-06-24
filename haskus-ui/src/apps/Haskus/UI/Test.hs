@@ -4,7 +4,7 @@
 import Haskus.UI.RayTracer
 import Haskus.UI.Color
 import Haskus.UI.Picture
-import Haskus.UI.Maths.Linear
+import Haskus.UI.Canvas
 
 import Haskus.Utils.EADT
 import Haskus.Utils.Flow
@@ -82,3 +82,27 @@ demo76_79 = do
                { rendererSquareSampler = hammersleySquareSampler 4
                }
    void <| renderScene hammersley4 world viewport  "suffern_76_hammersley4.png"
+
+   -----------------------------------------
+   -- Rendering scene graphs
+
+   let
+      sceneGraph :: SceneGraph Dist Color NodeName
+      sceneGraph = defaultSceneGraph
+         |> sceneInsertNode RootNode
+               (NodeGroup
+                  [ Colorize red  <| NodeObject (Rectangle 10 5)
+                  , Colorize blue <| NodeTransform (Translate (-5) (-2) 1) <| NodeObject (Rectangle 10 5)
+                  ])
+
+      rectWorld :: World PixelRGB8 (EADT '[CanvasF Dist Color NodeName, ColoredF, PlaneF, SphereF])
+      rectWorld = defaultWorld
+         { worldObjects         = [Canvas sceneGraph]
+         , worldBackgroundColor = toPixelRGB8 black
+         }
+
+      sceneRenderer = defaultRenderer
+               { rendererSquareSampler = hammersleySquareSampler 4
+               }
+
+   void <| renderScene sceneRenderer rectWorld viewport  "scene_rects.png"

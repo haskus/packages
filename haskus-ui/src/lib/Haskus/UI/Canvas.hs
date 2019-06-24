@@ -1,20 +1,30 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Scene graph and canvas inspired by
 -- * EFL Evas
 -- * Qt QML: https://doc.qt.io/qt-5/qtquick-visualcanvas-scenegraph.html
 module Haskus.UI.Canvas
    ( SceneGraph(..)
+   , SceneNode (..)
+   , sceneInsertNode
    , RenderObject (..)
    , Transform (..)
    , colorsAt
-   , Color (..)
-   , Name (..)
-   , Canvas (..)
+   , NodeName (..)
+   , defaultSceneGraph
    , nodeModifyByName
    , nodeByName
    , rootNode
+   , CanvasF (..)
+   , pattern Canvas
    )
 where
 
@@ -22,27 +32,47 @@ import Haskus.Utils.Monad
 import Haskus.Utils.Maybe
 import qualified Haskus.Utils.Map as Map
 import Haskus.Utils.Map (Map)
+import Haskus.UI.Object
+import Haskus.UI.Object.Plane
+import Haskus.UI.Common
+import Haskus.Utils.Flow
+import Haskus.Utils.EADT
+import Haskus.Utils.EADT.TH
+
 
 data RenderObject d c
    = Rectangle d d -- ^ Rectangle (width,height,1) with top-left at current (x,y,z)
+   deriving (Show)
 
-data Transform d g
-   = Translate d d d g -- ^ Translate (x,y,z) the sub-graph in the space
+data Transform d
+   = Translate d d d -- ^ Translate (x,y,z) the sub-graph in the space
    -- TODO: use a 4x4 matrix
+   deriving (Show)
 
 data SceneGraph d c n = SceneGraph
    { sceneGraphs   :: Map n (SceneNode d c n)
    , sceneRootName :: n
    }
+   deriving (Show)
+
+defaultSceneGraph :: SceneGraph d c NodeName
+defaultSceneGraph = SceneGraph
+   { sceneRootName = RootNode
+   , sceneGraphs   = Map.empty
+   }
+
+sceneInsertNode :: Ord n => n -> SceneNode d c n -> SceneGraph d c n -> SceneGraph d c n
+sceneInsertNode name node sg = sg { sceneGraphs = Map.insert name node (sceneGraphs sg) }
 
 data SceneNode d c n
    = NodeObject (RenderObject d c)                 -- ^ Renderable objects
    | NodeGroup [SceneNode d c n]                   -- ^ NodeGroup of nodes
-   | NodeTransform (Transform d (SceneNode d c n)) -- ^ Transformations
+   | NodeTransform (Transform d) (SceneNode d c n) -- ^ Transformations
    | Colorize c (SceneNode d c n)                  -- ^ Set the default color for the sub-graph
    | NodeClip (SceneNode d c n) (SceneNode d c n)  -- ^ Object clipping
    | NodeDisable (SceneNode d c n)                 -- ^ Disable the sub-graph (won't be rendered)
    | NodeRef n                                     -- ^ Reference a sub-graph by its name
+   deriving (Show)
 
 
 -- | Return a color and a Z-order
@@ -56,8 +86,8 @@ colorsAt atx aty g = go Nothing 0 atx aty (rootNode g)
                | x < w && y < h   -> maybeToList (fmap (z,) currentColor)
                | otherwise        -> []
          NodeGroup xs          -> join (fmap (go currentColor z x y) xs)
-         NodeTransform t -> case t of
-            Translate mx my mz g' -> go currentColor (z+mz) (x-mx) (y-my) g'
+         NodeTransform t g' -> case t of
+            Translate mx my mz -> go currentColor (z+mz) (x-mx) (y-my) g'
          Colorize c g'         -> go (Just c) z x y g'
          NodeClip g' cg
             -- we check that the clipper graph returns a color
@@ -80,12 +110,24 @@ nodeByName n g = Map.lookup n (sceneGraphs g)
 rootNode :: (Ord n) => SceneGraph d c n -> SceneNode d c n
 rootNode g = fromMaybe (NodeGroup []) (nodeByName (sceneRootName g) g)
 
-data Color = Color Float Float Float
+data NodeName
+   = RootNode
+   | NodeName String
+   deriving (Show,Eq,Ord)
 
-data Name
-   = Root
-   | CustomName String
-
-data Canvas = Canvas
-   { canvasGraph :: SceneGraph Float Color Name
-   }
+instance (Ord n) => Object (CanvasF Dist Color n e) where
+   hit r (CanvasF sceneGraph) = do
+      let canvasPlane = PlaneF (V3 0.0 0.0 0.0)
+                               (V3 0.0 0.0 (-1.0))
+      planeHit <- hit r canvasPlane
+      let (V3 x y _) = hitPoint planeHit
+      Just <| planeHit
+         -- TODO: blend colors if necessary
+         { hitColor =
+            colorsAt x y sceneGraph
+            |> headMaybe
+            ||> snd
+         }
+      
+data CanvasF d c n e = CanvasF (SceneGraph d c n) deriving (Show,Functor)
+eadtPattern 'CanvasF "Canvas"
