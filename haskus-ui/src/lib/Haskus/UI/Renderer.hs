@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE BlockArguments #-}
 
 module Haskus.UI.Renderer
    ( Tracer
@@ -70,8 +71,8 @@ renderScene :: forall px obj.
    ( Pixel px
    , Storable (PixelBaseComponent px)
    , PngSavable px
-   ) => Renderer px obj -> World px obj -> Viewport -> FilePath -> IO (Image px)
-renderScene Renderer{..} world@World{..} Viewport{..} path = do
+   ) => Renderer px obj -> World px obj -> Viewport -> Maybe FilePath -> IO (Image px)
+renderScene Renderer{..} world@World{..} Viewport{..} mpath = do
    mutImg <- createMutableImage
                (fromIntegral viewportResolutionX)
                (fromIntegral viewportResolutionY)
@@ -114,5 +115,5 @@ renderScene Renderer{..} world@World{..} Viewport{..} path = do
 
    img <- unsafeFreezeImage mutImg
 
-   writePng path img
+   forM_ mpath \path -> writePng path img
    return img

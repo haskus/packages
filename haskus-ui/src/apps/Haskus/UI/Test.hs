@@ -43,45 +43,45 @@ demo76_79 = do
          , viewportResolutionY = 300
          }
 
-   void <| renderScene defaultRenderer world viewport  "suffern_76.png"
-   void <| renderScene defaultRenderer world viewport2 "suffern_79.png"
+   void <| renderScene defaultRenderer world viewport  (Just "suffern_76.png")
+   void <| renderScene defaultRenderer world viewport2 (Just "suffern_79.png")
 
    let reg4 = defaultRenderer
                { rendererSquareSampler = regularSquareSampler 4
                }
-   void <| renderScene reg4 world viewport  "suffern_76_regular4constant.png"
+   void <| renderScene reg4 world viewport  (Just "suffern_76_regular4constant.png")
 
    let reg4lin = defaultRenderer
                { rendererSquareSampler = regularSquareSampler 4
                , rendererBlender       = linearBlender
                }
-   void <| renderScene reg4lin world viewport  "suffern_76_regular4linear.png"
+   void <| renderScene reg4lin world viewport  (Just "suffern_76_regular4linear.png")
 
 
    let rand4 = defaultRenderer
                { rendererSquareSampler = randomSquareSampler 4
                }
-   void <| renderScene rand4 world viewport  "suffern_76_rand4.png"
+   void <| renderScene rand4 world viewport  (Just "suffern_76_rand4.png")
 
    let jittered4 = defaultRenderer
                { rendererSquareSampler = jitteredSquareSampler 4
                }
-   void <| renderScene jittered4 world viewport  "suffern_76_jittered4.png"
+   void <| renderScene jittered4 world viewport  (Just "suffern_76_jittered4.png")
 
    let nRooks16 = defaultRenderer
                { rendererSquareSampler = nRooksSquareSampler 16
                }
-   void <| renderScene nRooks16 world viewport  "suffern_76_nrooks16.png"
+   void <| renderScene nRooks16 world viewport  (Just "suffern_76_nrooks16.png")
 
    let multijittered4 = defaultRenderer
                { rendererSquareSampler = multiJitteredSquareSampler 4
                }
-   void <| renderScene multijittered4 world viewport  "suffern_76_multijittered4.png"
+   void <| renderScene multijittered4 world viewport  (Just "suffern_76_multijittered4.png")
 
    let hammersley4 = defaultRenderer
                { rendererSquareSampler = hammersleySquareSampler 4
                }
-   void <| renderScene hammersley4 world viewport  "suffern_76_hammersley4.png"
+   void <| renderScene hammersley4 world viewport  (Just "suffern_76_hammersley4.png")
 
    -----------------------------------------
    -- Rendering scene graphs
@@ -111,4 +111,4 @@ demo76_79 = do
                { rendererSquareSampler = hammersleySquareSampler 4
                }
 
-   void <| renderScene sceneRenderer rectWorld viewport  "scene_rects.png"
+   void <| renderScene sceneRenderer rectWorld viewport  (Just "scene_rects.png")
