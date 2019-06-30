@@ -11,6 +11,8 @@ module Haskus.Utils.List
    , chunksOf
    , pick1
    , enumList
+   , zipLeftWith
+   , zipRightWith
    , L.partition
    , L.nub
    , L.sort
@@ -93,3 +95,17 @@ pick1 = go []
 -- [A,B,C,D]
 enumList :: forall a. (Bounded a,Enum a) => [a]
 enumList = enumFrom minBound
+
+-- | Zip left with something extracted from each value
+--
+-- >>> zipLeftWith odd [0..5]
+-- [(False,0),(True,1),(False,2),(True,3),(False,4),(True,5)]
+zipLeftWith :: (a -> b) -> [a] -> [(b,a)]
+zipLeftWith f xs = fmap f xs `zip` xs
+
+-- | Zip right with something extracted from each value
+--
+-- >>> zipRightWith odd [0..5]
+-- [(0,False),(1,True),(2,False),(3,True),(4,False),(5,True)]
+zipRightWith :: (a -> b) -> [a] -> [(a,b)]
+zipRightWith f xs = xs `zip` fmap f xs
