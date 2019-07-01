@@ -36,6 +36,9 @@ module Haskus.Utils.List
    , L.find
    , L.zip3
    , L.zip4
+   , L.zip5
+   , L.zip6
+   , L.zip7
    , L.stripPrefix
    , L.isPrefixOf
    , L.deleteBy

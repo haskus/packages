@@ -11,6 +11,9 @@
 module Haskus.Utils.Tuple
    ( uncurry3
    , uncurry4
+   , uncurry5
+   , uncurry6
+   , uncurry7
    , take4
    , fromTuple4
    , module Data.Tuple
@@ -28,15 +31,30 @@ where
 import Data.Tuple
 import Haskus.Utils.Types
 
--- | Uncurry specialised for triple
-uncurry3 :: (a -> b -> c -> e) -> (a,b,c) -> e
+-- | Uncurry3
+uncurry3 :: (a -> b -> c -> r) -> (a,b,c) -> r
 {-# INLINABLE uncurry3 #-}
-uncurry3 f (a,b,c) = f a b c
+uncurry3 fn (a,b,c) = fn a b c
 
--- | Uncurry specialised for quadruple
-uncurry4 :: (a -> b -> c -> d -> e) -> (a,b,c,d) -> e
+-- | Uncurry4
+uncurry4 :: (a -> b -> c -> d -> r) -> (a,b,c,d) -> r
 {-# INLINABLE uncurry4 #-}
-uncurry4 f (a,b,c,d) = f a b c d
+uncurry4 fn (a,b,c,d) = fn a b c d
+
+-- | Uncurry5
+uncurry5 :: (a -> b -> c -> d -> e -> r) -> (a,b,c,d,e) -> r
+{-# INLINABLE uncurry5 #-}
+uncurry5 fn (a,b,c,d,e) = fn a b c d e
+
+-- | Uncurry6
+uncurry6 :: (a -> b -> c -> d -> e -> f -> r) -> (a,b,c,d,e,f) -> r
+{-# INLINABLE uncurry6 #-}
+uncurry6 fn (a,b,c,d,e,f) = fn a b c d e f
+
+-- | Uncurry7
+uncurry7 :: (a -> b -> c -> d -> e -> f -> g -> r) -> (a,b,c,d,e,f,g) -> r
+{-# INLINABLE uncurry7 #-}
+uncurry7 fn (a,b,c,d,e,f,g) = fn a b c d e f g
 
 
 -- | Take specialised for quadruple
