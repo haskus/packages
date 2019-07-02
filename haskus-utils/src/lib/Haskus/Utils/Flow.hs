@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 -- | Control-flow
 module Haskus.Utils.Flow
    ( MonadIO (..)
@@ -37,6 +39,8 @@ module Haskus.Utils.Flow
    , loopM
    , whileM
    , intersperseM_
+   , forLoopM_
+   , forLoop
    -- * Variant based operators
    , module Haskus.Utils.Variant.Excepts
    -- * Monad transformers
@@ -157,3 +161,30 @@ intersperseM_ f as g = go as
       go []     = pure ()
       go [x]    = g x
       go (x:xs) = g x >> f >> go xs
+
+-- | Fast for-loop in a Monad (more efficient than forM_ [0..n] for instance).
+--
+-- >>> forLoopM_ (0::Word) (<5) (+1) print
+-- 0
+-- 1
+-- 2
+-- 3
+-- 4
+forLoopM_ :: (Monad m) => a -> (a -> Bool) -> (a -> a) -> (a -> m ()) -> m ()
+forLoopM_ start cond inc f = go start
+   where
+      go !x | cond x    = f x >> go (inc x)
+            | otherwise = return ()
+
+-- | Fast fort-loop with an accumulated result
+--
+-- >>> let f acc n = acc ++ (if n == 0 then "" else ", ") ++ show n
+-- >>> forLoop (0::Word) (<5) (+1) "" f
+-- "0, 1, 2, 3, 4"
+forLoop :: a -> (a -> Bool) -> (a -> a) -> acc -> (acc -> a -> acc) -> acc
+forLoop start cond inc acc0 f = go acc0 start
+   where
+      go acc !x
+         | cond x    = let acc' = f acc x
+                       in acc' `seq` go acc' (inc x)
+         | otherwise = acc
