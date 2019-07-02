@@ -4,6 +4,7 @@
 -- | List utils
 module Haskus.Utils.List
    ( at
+   , unsafeAt
    , checkLength
    , (++)
    , replicate
@@ -61,10 +62,23 @@ import qualified Data.List.Extra as L
 -- >>> [0,1,2,3] `at` 2
 -- Just 2
 at :: [a] -> Word -> Maybe a
+{-# INLINABLE at #-}
 at = go
    where
       go []       _ = Nothing
       go (x:_xs)  0 = Just x
+      go (_x:xs) !n = go xs (n-1)
+
+-- | Unsafe `a`
+--
+-- >>> [0,1,2,3] `unsafeAt` 2
+-- 2
+unsafeAt :: [a] -> Word -> a
+{-# INLINABLE unsafeAt #-}
+unsafeAt vs k = go vs k
+   where
+      go []       _ = error ("Unsafe list index too large: " ++ show k)
+      go (x:_xs)  0 = x
       go (_x:xs) !n = go xs (n-1)
 
 -- | Check that a list has the given length (support infinite lists)
