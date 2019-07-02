@@ -171,12 +171,12 @@ intersperseM_ f as g = go as
 -- 3
 -- 4
 forLoopM_ :: (Monad m) => a -> (a -> Bool) -> (a -> a) -> (a -> m ()) -> m ()
+{-# INLINABLE forLoopM_ #-}
 forLoopM_ start cond inc f = go start
    where
       go !x | cond x    = f x >> go (inc x)
             | otherwise = return ()
 
-{-# INLINABLE forLoopM_ #-}
 
 -- | Fast fort-loop with an accumulated result
 --
@@ -184,11 +184,10 @@ forLoopM_ start cond inc f = go start
 -- >>> forLoop (0::Word) (<5) (+1) "" f
 -- "0, 1, 2, 3, 4"
 forLoop :: a -> (a -> Bool) -> (a -> a) -> acc -> (acc -> a -> acc) -> acc
+{-# INLINABLE forLoop #-}
 forLoop start cond inc acc0 f = go acc0 start
    where
       go acc !x
          | cond x    = let acc' = f acc x
                        in acc' `seq` go acc' (inc x)
          | otherwise = acc
-
-{-# INLINABLE forLoop #-}
