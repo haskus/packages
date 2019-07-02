@@ -176,6 +176,8 @@ forLoopM_ start cond inc f = go start
       go !x | cond x    = f x >> go (inc x)
             | otherwise = return ()
 
+{-# INLINABLE forLoopM_ #-}
+
 -- | Fast fort-loop with an accumulated result
 --
 -- >>> let f acc n = acc ++ (if n == 0 then "" else ", ") ++ show n
@@ -188,3 +190,5 @@ forLoop start cond inc acc0 f = go acc0 start
          | cond x    = let acc' = f acc x
                        in acc' `seq` go acc' (inc x)
          | otherwise = acc
+
+{-# INLINABLE forLoop #-}
