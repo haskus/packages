@@ -1,8 +1,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns #-}
 
 -- | List utils
 module Haskus.Utils.List
-   ( checkLength
+   ( at
+   , checkLength
    , (++)
    , replicate
    , drop
@@ -50,6 +52,20 @@ import Prelude hiding (replicate, length, drop, take)
 
 import qualified Data.List as L
 import qualified Data.List.Extra as L
+
+-- | Safely index into a list
+--
+-- >>> [0,1,2,3] `at` 10
+-- Nothing
+--
+-- >>> [0,1,2,3] `at` 2
+-- Just 2
+at :: [a] -> Word -> Maybe a
+at = go
+   where
+      go []       _ = Nothing
+      go (x:_xs)  0 = Just x
+      go (_x:xs) !n = go xs (n-1)
 
 -- | Check that a list has the given length (support infinite lists)
 checkLength :: Word -> [a] -> Bool
