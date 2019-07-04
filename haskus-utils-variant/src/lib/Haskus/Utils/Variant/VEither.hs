@@ -31,6 +31,8 @@ module Haskus.Utils.Variant.VEither
    , veitherBimap
    , VEitherLift
    , veitherLift
+   , veitherAppend
+   , veitherPrepend
    , veitherCont
    , veitherToEither
    , module Haskus.Utils.Variant
@@ -38,6 +40,7 @@ module Haskus.Utils.Variant.VEither
 where
 
 import Haskus.Utils.Variant
+import Haskus.Utils.Types
 import Data.Coerce
 
 -- $setup
@@ -157,6 +160,19 @@ veitherLift :: forall es' es a.
    ) => VEither es a -> VEither es' a
 {-# INLINABLE veitherLift #-}
 veitherLift = veitherBimap liftVariant id
+
+-- | Prepend errors to VEither
+veitherPrepend :: forall ns es a.
+   ( KnownNat (Length ns)
+   ) => VEither es a -> VEither (Concat ns es) a
+{-# INLINABLE veitherPrepend #-}
+veitherPrepend = veitherBimap (prependVariant @ns) id
+
+-- | Append errors to VEither
+veitherAppend :: forall ns es a.
+   VEither es a -> VEither (Concat es ns) a
+{-# INLINABLE veitherAppend #-}
+veitherAppend = veitherBimap (appendVariant @ns) id
 
 -- | VEither continuations
 veitherCont :: (V es -> u) -> (a -> u) -> VEither es a -> u

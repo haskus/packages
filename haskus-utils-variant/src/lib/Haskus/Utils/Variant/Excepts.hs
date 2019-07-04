@@ -8,12 +8,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Haskus.Utils.Variant.Excepts
    ( Excepts
    , runE
    , runE_
    , liftE
+   , appendE
+   , prependE
    , failureE
    , successE
    , throwE
@@ -41,6 +44,7 @@ module Haskus.Utils.Variant.Excepts
 where
 
 import Haskus.Utils.Monad
+import Haskus.Utils.Types
 import Haskus.Utils.Variant.VEither
 
 import Control.Monad.Catch
@@ -95,6 +99,21 @@ liftE :: forall es' es a m.
    ) => Excepts es m a -> Excepts es' m a
 {-# INLINABLE liftE #-}
 liftE = mapExcepts (liftM veitherLift)
+
+-- | Append errors to an Excepts
+appendE :: forall ns es a m.
+   ( Monad m
+   ) => Excepts es m a -> Excepts (Concat es ns) m a
+{-# INLINABLE appendE #-}
+appendE = mapExcepts (liftM (veitherAppend @ns))
+
+-- | Prepend errors to an Excepts
+prependE :: forall ns es a m.
+   ( Monad m
+   , KnownNat (Length ns)
+   ) => Excepts es m a -> Excepts (Concat ns es) m a
+{-# INLINABLE prependE #-}
+prependE = mapExcepts (liftM (veitherPrepend @ns))
 
 instance Functor m => Functor (Excepts es m) where
    {-# INLINABLE fmap #-}
