@@ -12,7 +12,7 @@
 
 -- | Fixed-point numbers
 module Haskus.Format.Binary.FixedPoint
-   ( FixedPoint
+   ( FixedPoint (..)
    , toFixedPoint
    , fromFixedPoint
    )
