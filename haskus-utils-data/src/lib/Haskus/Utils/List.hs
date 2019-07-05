@@ -46,6 +46,8 @@ module Haskus.Utils.List
    , L.isPrefixOf
    , L.deleteBy
    , L.isSuffixOf
+   , L.elem
+   , L.notElem
    )
 where
 
