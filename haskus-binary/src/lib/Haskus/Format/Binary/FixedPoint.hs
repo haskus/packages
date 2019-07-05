@@ -13,6 +13,8 @@
 -- | Fixed-point numbers
 module Haskus.Format.Binary.FixedPoint
    ( FixedPoint (..)
+   , getFixedPointBase
+   , toFixedPointBase
    , toFixedPoint
    , fromFixedPoint
    )
@@ -32,6 +34,14 @@ newtype FixedPoint w (i :: Nat) (f :: Nat) = FixedPoint (BitFields w
     , BitField f "fractional" w
     ])
    deriving (Storable)
+
+-- | Get base value
+getFixedPointBase :: FixedPoint w i f -> w
+getFixedPointBase (FixedPoint (BitFields w)) = w
+
+-- | Set base value
+toFixedPointBase :: forall w i f. w -> FixedPoint w i f
+toFixedPointBase w = FixedPoint @w @i @f (BitFields w)
 
 deriving instance forall w n d.
    ( Integral w
