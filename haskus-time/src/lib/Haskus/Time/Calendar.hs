@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Haskus.Time.Calendar
    ( Year
@@ -14,6 +15,18 @@ module Haskus.Time.Calendar
    , monthLength
    , nextDay
    , previousDay
+   , pattern January
+   , pattern February
+   , pattern March
+   , pattern April
+   , pattern May
+   , pattern June
+   , pattern July
+   , pattern August
+   , pattern September
+   , pattern October
+   , pattern November
+   , pattern December
    )
 where
 
@@ -40,6 +53,25 @@ data YearMonthDay = YearMonthDay
    , ymdDay   :: {-# UNPACK #-} !DayOfMonth
    }
    deriving (Show,Eq,Ord)
+
+-- | Month pattern synonyms
+--
+-- >>> showYearMonthDay (YearMonthDay 2016 February 29)
+-- "2016-2-29"
+pattern January, February, March, April, May, June, July, August, September, October, November, December :: Month
+{-# COMPLETE January, February, March, April, May, June, July, August, September, October, November, December #-}
+pattern January   = 1
+pattern February  = 2
+pattern March     = 3
+pattern April     = 4
+pattern May       = 5
+pattern June      = 6
+pattern July      = 7
+pattern August    = 8
+pattern September = 9
+pattern October   = 10
+pattern November  = 11
+pattern December  = 12
 
 -- | Date error
 data InvalidDate
