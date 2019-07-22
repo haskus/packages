@@ -1,0 +1,30 @@
+name:                haskus-time
+version:             0.1
+github:              "haskus/haskus-packages"
+license:             BSD3
+author:              "Sylvain HENRY"
+maintainer:          "sylvain@haskus.fr"
+copyright:           "Sylvain HENRY 2019"
+
+synopsis:            Time manipulation functions
+category:            Time
+
+description:         Please see the README on Github at <https://github.com/haskus/haskus-packages/#readme>
+
+dependencies:
+- base >= 4.8 && < 5
+- haskus-binary
+
+ghc-options: -Wall -O
+
+library:
+   source-dirs: src/lib
+   exposed-modules:
+      - Haskus.Time.Calendar
+
+tests:
+   main-tests:
+      main: Main.hs
+      source-dirs: src/tests
+      dependencies:
+         - doctest

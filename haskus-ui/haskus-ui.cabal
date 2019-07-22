@@ -4,15 +4,15 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f3127a054e204077684858f72ca370a736a24b65affd184b7eb2d972f1c0408b
+-- hash: 15d21eec97a19df6e7399eea480aed8c32a9061cba850b312d8682c54743e112
 
 name:           haskus-ui
 version:        0.1
 synopsis:       User interface
 description:    Please see the README on Github at <https://github.com/haskus/haskus-packages/#readme>
 category:       UI
-homepage:       https://github.com/haskus/haskus-ui#readme
-bug-reports:    https://github.com/haskus/haskus-ui/issues
+homepage:       https://github.com/haskus/haskus-packages#readme
+bug-reports:    https://github.com/haskus/haskus-packages/issues
 author:         Sylvain HENRY
 maintainer:     sylvain@haskus.fr
 copyright:      Sylvain HENRY 2018
@@ -22,7 +22,7 @@ build-type:     Simple
 
 source-repository head
   type: git
-  location: https://github.com/haskus/haskus-ui
+  location: https://github.com/haskus/haskus-packages
 
 library
   exposed-modules:

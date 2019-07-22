@@ -1,6 +1,6 @@
 name:                haskus-ui
 version:             0.1
-github:              "haskus/haskus-ui"
+github:              "haskus/haskus-packages"
 license:             BSD3
 author:              "Sylvain HENRY"
 maintainer:          "sylvain@haskus.fr"
