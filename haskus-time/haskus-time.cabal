@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f4359c1d05440d93f20c3a0b94836e3e6162f1f4cc01f15839b4f18559229fa1
+-- hash: 42557acddf76373fd264ed60c7956145191ddadd02eca3785a3b589c7c55e7a7
 
 name:           haskus-time
 version:        0.1
@@ -35,6 +35,7 @@ library
   build-depends:
       base >=4.8 && <5
     , haskus-binary
+    , haskus-utils
   default-language: Haskell2010
 
 test-suite main-tests
@@ -49,4 +50,5 @@ test-suite main-tests
       base >=4.8 && <5
     , doctest
     , haskus-binary
+    , haskus-utils
   default-language: Haskell2010

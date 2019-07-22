@@ -7,10 +7,13 @@ module Haskus.Time.Calendar
    , Month
    , DayOfMonth
    , YearMonthDay (..)
+   , makeYearMonthDay
+   , InvalidDate (..)
    , showYearMonthDay
    , isLeapYear
    , monthLength
    , nextDay
+   , previousDay
    )
 where
 
@@ -18,6 +21,9 @@ import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Bits
 import Haskus.Memory.Embed
 import Haskus.Memory.Buffer
+
+-- $setup
+-- >>> import Haskus.Utils.Flow
 
 type Year       = Word
 
@@ -34,6 +40,26 @@ data YearMonthDay = YearMonthDay
    , ymdDay   :: {-# UNPACK #-} !DayOfMonth
    }
    deriving (Show,Eq,Ord)
+
+-- | Date error
+data InvalidDate
+   = InvalidMonth -- ^ Invalid month (not in [1,12])
+   | InvalidDay   -- ^ Invalid day (not in [1,month length])
+   deriving (Show,Eq,Ord)
+
+-- | Make a date. Check that the numbers are valid
+--
+-- >>> showYearMonthDay <|| makeYearMonthDay 2016 2 29
+-- Right "2016-2-29"
+-- >>> showYearMonthDay <|| makeYearMonthDay 2019 2 29
+-- Left InvalidDay
+-- >>> showYearMonthDay <|| makeYearMonthDay 2019 13 1
+-- Left InvalidMonth
+makeYearMonthDay :: Year -> Month -> DayOfMonth -> Either InvalidDate YearMonthDay
+makeYearMonthDay y m d
+   | m > 12 || m == 0              = Left InvalidMonth
+   | d > monthLength y m || d == 0 = Left InvalidDay
+   | otherwise                     = Right (YearMonthDay y m d)
 
 -- | Show a date as YEAR-MONTH-DAY
 --
@@ -96,3 +122,17 @@ nextDay YearMonthDay{..}
    | ymdDay < monthLength ymdYear ymdMonth = YearMonthDay ymdYear ymdMonth (ymdDay+1)
    | ymdMonth == 12                        = YearMonthDay (ymdYear+1) 1 1
    | otherwise                             = YearMonthDay ymdYear (ymdMonth+1) 1
+
+-- | Get the previous day
+--
+-- >>> showYearMonthDay (previousDay (YearMonthDay 2019 1 1))
+-- "2018-12-31"
+-- >>> showYearMonthDay (previousDay (YearMonthDay 2019 3 1))
+-- "2019-2-28"
+-- >>> showYearMonthDay (previousDay (YearMonthDay 2016 3 1))
+-- "2016-2-29"
+previousDay :: YearMonthDay -> YearMonthDay
+previousDay YearMonthDay{..}
+   | ymdDay > 1   = YearMonthDay ymdYear ymdMonth (ymdDay-1)
+   | ymdMonth > 1 = YearMonthDay ymdYear (ymdMonth-1) (monthLength ymdYear (ymdMonth-1))
+   | otherwise    = YearMonthDay (ymdYear-1) 12 31
