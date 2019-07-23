@@ -8,9 +8,11 @@ module Haskus.Utils.STM
    , newTVarIO
    , readTVarIO
    , S.writeTVar
+   , writeTVarIO
    , S.readTVar
    , S.newTVar
    , S.swapTVar
+   , swapTVarIO
    , S.modifyTVar
    , S.modifyTVar'
    -- ** TMVar
@@ -48,6 +50,14 @@ atomically = liftIO . S.atomically
 -- | Read a TVar in an IO monad
 readTVarIO :: MonadIO m => TVar a -> m a
 readTVarIO = liftIO . S.readTVarIO
+
+-- | Write a TVar in an IO monad
+writeTVarIO :: MonadIO m => TVar a -> a -> m ()
+writeTVarIO v a = atomically (S.writeTVar v a)
+
+-- | Swap a TVar in an IO monad
+swapTVarIO :: MonadIO m => TVar a -> a -> m a
+swapTVarIO v a = atomically (S.swapTVar v a)
 
 -- | Create a broadcast channel
 newBroadcastTChanIO :: MonadIO m => m (TChan a)

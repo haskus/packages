@@ -35,6 +35,7 @@ library
     Haskus.Utils.STM.TTree
     Haskus.Utils.STM.Future
     Haskus.Utils.STM.TGraph
+    Haskus.Utils.STM.SnapVar
 
   other-modules:
 
