@@ -30,7 +30,9 @@ newFuture = do
 
 -- | `newFuture` in `IO`
 newFutureIO :: MonadIO m => m (Future a, FutureSource a)
-newFutureIO = atomically newFuture
+newFutureIO = do
+   m <- liftIO newEmptyTMVarIO
+   return (Future m, FutureSource m)
 
 -- | Set a future
 setFuture :: a -> FutureSource a -> STM ()
