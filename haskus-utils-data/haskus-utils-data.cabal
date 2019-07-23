@@ -28,6 +28,7 @@ library
     Haskus.Utils.Map
     Haskus.Utils.Map.Strict
     Haskus.Utils.Maybe
+    Haskus.Utils.Either
     Haskus.Utils.Tuple
 
   other-modules:
