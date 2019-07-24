@@ -103,8 +103,8 @@ updateCachedMonadFlow (CachedMonadFlow trees withCtx) = do
 
 monadFlowToMonadTree :: MonadFlow m a r -> [MonadTree m a]
 monadFlowToMonadTree = \case
-   Free (MonadRead io f)   -> [ MonadBranch (MonadVar io (monadFlowToMonadTree . f)) ]
-   Free (MonadWith io f c) -> MonadBranch (MonadVar io (monadFlowToMonadTree . f)):monadFlowToMonadTree c
+   Free (MonadRead io f)   -> [ MonadBranch (MonadVarNE [] Nothing io (monadFlowToMonadTree . f)) ]
+   Free (MonadWith io f c) -> MonadBranch (MonadVarNE [] Nothing io (monadFlowToMonadTree . f)):monadFlowToMonadTree c
    Free (MonadEdmit a t)   -> StaticBranch a []:monadFlowToMonadTree t
    Pure _                  -> []
 

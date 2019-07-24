@@ -19,8 +19,8 @@ import Haskus.Utils.MonadVar
 --
 -- Both the tree values and the tree nodes may be monadically dependent.
 data MonadTree m a
-   = StaticBranch a [MonadTree m a]                               -- ^ Static node
-   | forall s. Eq s => MonadBranch (MonadVar m s [MonadTree m a]) -- ^ Monad dependent nodes
+   = StaticBranch a [MonadTree m a]                                 -- ^ Static node
+   | forall s. Eq s => MonadBranch (MonadVarNE m s [MonadTree m a]) -- ^ Monad dependent nodes
 
 deriving instance Functor (MonadTree m)
 
@@ -31,18 +31,12 @@ showMonadTree = go 0
       indent n c      = replicate (2*n) ' ' <> c
       showNode n a ts = indent n "- " <> show a <> "\n" <> concatMap (go (n+1)) ts
       go n = \case
-         StaticBranch a ts                     -> showNode n a ts
-         MonadBranch (MonadVar {})             -> indent n "{...}\n"
-         MonadBranch (CachedMonadVar ts _ _ _) -> indent n "{\n" <> concatMap (go (n+1)) ts <> indent n "}\n"
+         StaticBranch a ts                 -> showNode n a ts
+         MonadBranch (MonadVarNE ts _ _ _) -> indent n "{\n" <> concatMap (go (n+1)) ts <> indent n "}\n"
 
 -- | Pretty-show some MonadTrees
 showMonadTrees :: Show a => [MonadTree m a] -> String
 showMonadTrees = concatMap showMonadTree
-
-data Diff a
-   = Same a    -- ^ Has not changed
-   | Updated a -- ^ May have changed
-   deriving (Show,Eq,Ord)
 
 -- | Update a MonadTree recursively. Reuse cached values when possible
 --
@@ -53,17 +47,12 @@ updateMonadTree = go
    where
       go node = case node of
             StaticBranch a ts -> StaticBranch a <$> forM ts go
-            MonadBranch dv -> case dv of
-               MonadVar io f -> do
-                  ~(CachedMonadVar ts s _ _) <- updateMonadVarForce dv
-                  ts' <- forM ts go
-                  pure (MonadBranch (CachedMonadVar ts' s io f))
-               CachedMonadVar ts s io f -> do
-                  mcdv <- updateMonadVarMaybe dv
-                  case mcdv of
-                     Nothing -> do
-                        ts' <- forM ts go
-                        pure (MonadBranch (CachedMonadVar ts' s io f))
-                     Just ~(CachedMonadVar ts' s' _ _) -> do
-                        ts'' <- forM ts' go
-                        pure (MonadBranch (CachedMonadVar ts'' s' io f))
+            MonadBranch dv@(MonadVarNE ts ms io f) -> do
+               mcdv <- updateMonadVarNEMaybe dv
+               case mcdv of
+                  Nothing -> do
+                     ts' <- forM ts go
+                     pure (MonadBranch (MonadVarNE ts' ms io f))
+                  Just ~(MonadVarNE ts' ms' _ _) -> do
+                     ts'' <- forM ts' go
+                     pure (MonadBranch (MonadVarNE ts'' ms' io f))

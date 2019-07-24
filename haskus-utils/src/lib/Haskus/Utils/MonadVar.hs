@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE BlockArguments #-}
 
 -- | Monadic variable with cache
 module Haskus.Utils.MonadVar
@@ -69,17 +70,19 @@ updateMonadVarForce (MonadVar io f) = do
 
 
 -- Non-empty MonadVar
+--
+-- The value may be set purely if the source is Nothing
 data MonadVarNE m s a
-   = MonadVarNE a !s !(m s) (s -> a) -- ^ Additional cached transformed and read values.
+   = MonadVarNE a !(Maybe s) !(m s) (s -> a) -- ^ Additional cached transformed and read values.
    deriving (Functor)
 
 -- | Check if the MonadVarNE cache needs to be updated.
 updateMonadVarNEMaybe :: (Monad m, Eq s) => MonadVarNE m s a -> m (Maybe (MonadVarNE m s a))
-updateMonadVarNEMaybe (MonadVarNE _ s io f) = do
+updateMonadVarNEMaybe (MonadVarNE _ ms io f) = do
    s' <- io
-   if s == s'
-      then pure Nothing
-      else pure <| Just <| MonadVarNE (f s') s' io f
+   pure case ms of
+      Just s | s == s' -> Nothing
+      _                -> Just <| MonadVarNE (f s') (Just s') io f
 
 -- | Check if the MonadVarNE cache needs to be updated. Return the updated
 -- MonadVarNE
