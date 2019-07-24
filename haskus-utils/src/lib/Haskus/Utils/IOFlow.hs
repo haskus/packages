@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 -- | IO control-flow with cache
 module Haskus.Utils.IOFlow
@@ -93,6 +94,7 @@ data CachedIOFlow a = CachedIOFlow
    { cachedTree    :: [IOTree a]             -- ^ Cached control-flow as an IOTree
    , cachedContext :: forall b. IO b -> IO b -- ^ IO context when performing an update (e.g. withSnapshot ctx)
    }
+   deriving (Functor)
 
 -- | Create a cache from an IOFlow.
 --
