@@ -33,7 +33,7 @@ showMonadTree = go 0
       go n = \case
          StaticBranch a ts                     -> showNode n a ts
          MonadBranch (MonadVar {})             -> indent n "{...}\n"
-         MonadBranch (CachedMonadVar ts _ _ _) -> indent n "{" <> concatMap (go (n+1)) ts <> indent n "}\n"
+         MonadBranch (CachedMonadVar ts _ _ _) -> indent n "{\n" <> concatMap (go (n+1)) ts <> indent n "}\n"
 
 -- | Pretty-show some MonadTrees
 showMonadTrees :: Show a => [MonadTree m a] -> String
