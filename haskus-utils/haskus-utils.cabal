@@ -27,8 +27,8 @@ library
     Haskus.Utils.Embed
     Haskus.Utils.Flow
     Haskus.Utils.Maths
-    Haskus.Utils.IOVar
-    Haskus.Utils.IOFlow
+    Haskus.Utils.MonadVar
+    Haskus.Utils.MonadFlow
     Haskus.Utils.TimedValue
     Haskus.Utils.STM
     Haskus.Utils.STM.TEq
