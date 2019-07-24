@@ -27,6 +27,7 @@ import Haskus.Utils.Either
 import Haskus.Utils.Maybe
 import Haskus.Utils.Flow
 import Haskus.Utils.MonadVar
+import Haskus.Utils.MonadTree
 import Control.Monad.Free
 
 -- | MonadFlow Functor
