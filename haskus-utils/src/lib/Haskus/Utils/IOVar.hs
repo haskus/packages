@@ -13,6 +13,7 @@ module Haskus.Utils.IOVar
    , IOTree (..)
    , Node (..)
    , showIOTree
+   , showIOTrees
    , updateIOTree
    )
 where
@@ -81,18 +82,22 @@ deriving instance Functor IOTree
 data Node a = Node (Maybe a) [IOTree a]
    deriving (Functor)
 
--- | Pretty-show an IO tree
+-- | Pretty-show an IOTree
 showIOTree :: Show a => IOTree a -> String
 showIOTree = go 0
    where
-      indent b n = replicate (2*n) ' ' ++ if b then "+ " else "- "
-      showNode b n = \case
-         Node Nothing ts  -> indent b n <> "()\n" <> concatMap (go (n+1)) ts
-         Node (Just a) ts -> indent b n <> show a <> "\n" <> concatMap (go (n+1)) ts
+      indent isIO b n = replicate (2*n) ' ' ++ if b then "+ " else (if isIO then "* " else "- ")
+      showNode isIO b n = \case
+         Node Nothing ts  -> indent isIO b n <> "()\n" <> concatMap (go (n+1)) ts
+         Node (Just a) ts -> indent isIO b n <> show a <> "\n" <> concatMap (go (n+1)) ts
       go n = \case
-         StaticBranch nd                 -> showNode False n nd
-         IOBranch (IOVar {})             -> indent True n <> "...\n"
-         IOBranch (CachedIOVar nd _ _ _) -> showNode False n nd
+         StaticBranch nd                 -> showNode False False n nd
+         IOBranch (IOVar {})             -> indent True True n <> "...\n"
+         IOBranch (CachedIOVar nd _ _ _) -> showNode True False n nd
+
+-- | Pretty-show some IOTrees
+showIOTrees :: Show a => [IOTree a] -> String
+showIOTrees = concatMap showIOTree
 
 -- | Update a IOTree recursively. Reuse cached values when possible
 --
