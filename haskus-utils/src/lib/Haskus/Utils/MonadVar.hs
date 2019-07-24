@@ -9,6 +9,10 @@ module Haskus.Utils.MonadVar
    , updateMonadVarForce
    , updateMonadVarMaybe
    , updateMonadVar
+   -- * Non-empty
+   , MonadVarNE (..)
+   , updateMonadVarNEMaybe
+   , updateMonadVarNE
    )
 where
 
@@ -56,3 +60,28 @@ updateMonadVarForce (CachedMonadVar _ _ io f) = do
 updateMonadVarForce (MonadVar io f) = do
    s <- io
    pure (CachedMonadVar (f s) s io f)
+
+
+
+----------------------------------
+-- Non-empty MonadVar
+----------------------------------
+
+
+-- Non-empty MonadVar
+data MonadVarNE m s a
+   = MonadVarNE a !s !(m s) (s -> a) -- ^ Additional cached transformed and read values.
+   deriving (Functor)
+
+-- | Check if the MonadVarNE cache needs to be updated.
+updateMonadVarNEMaybe :: (Monad m, Eq s) => MonadVarNE m s a -> m (Maybe (MonadVarNE m s a))
+updateMonadVarNEMaybe (MonadVarNE _ s io f) = do
+   s' <- io
+   if s == s'
+      then pure Nothing
+      else pure <| Just <| MonadVarNE (f s') s' io f
+
+-- | Check if the MonadVarNE cache needs to be updated. Return the updated
+-- MonadVarNE
+updateMonadVarNE :: (Monad m, Eq s) => MonadVarNE m s a -> m (MonadVarNE m s a)
+updateMonadVarNE dv = fromMaybe dv <|| updateMonadVarNEMaybe dv
