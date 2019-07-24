@@ -1,6 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | IO control-flow with cache
 module Haskus.Utils.IOFlow
@@ -88,19 +89,22 @@ withIO f g = liftF (IOWith f g ())
 ------------------------------------------------
 
 -- | Cached control-flow
-newtype CachedIOFlow a = CachedIOFlow [IOTree a]
+data CachedIOFlow a = CachedIOFlow
+   { cachedTree    :: [IOTree a]             -- ^ Cached control-flow as an IOTree
+   , cachedContext :: forall b. IO b -> IO b -- ^ IO context when performing an update (e.g. withSnapshot ctx)
+   }
 
 -- | Create a cache from an IOFlow.
 --
 -- Execute the IOFlow once to get cached values
-cacheIOFlow :: MonadIO m => IOFlow a r -> m (CachedIOFlow a)
-cacheIOFlow cflow = updateCachedIOFlow (cacheIOFlowPure cflow)
+cacheIOFlow :: MonadIO m => (forall b. IO b -> IO b) -> IOFlow a r -> m (CachedIOFlow a)
+cacheIOFlow ctx cflow = updateCachedIOFlow (cacheIOFlowPure ctx cflow)
 
 -- | Create a cache from an IOFlow.
 --
 -- This is the pure version: IO dependent nodes may not have any cached value
-cacheIOFlowPure :: IOFlow a r -> CachedIOFlow a
-cacheIOFlowPure f = (CachedIOFlow (ioFlowToIOTree f))
+cacheIOFlowPure :: (forall b. IO b -> IO b) -> IOFlow a r -> CachedIOFlow a
+cacheIOFlowPure ctx f = (CachedIOFlow (ioFlowToIOTree f) ctx)
 
 -- | Update a cached IOFlow
 updateCachedIOFlow :: MonadIO m => CachedIOFlow a -> m (CachedIOFlow a)
@@ -112,14 +116,14 @@ updateCachedIOFlow cflow = do
 --
 -- Return Nothing if nothing changed
 updateCachedIOFlowMaybe :: MonadIO m => CachedIOFlow a -> m (Maybe (CachedIOFlow a))
-updateCachedIOFlowMaybe (CachedIOFlow trees) = do
-   trees' <- forM trees updateIOTree
+updateCachedIOFlowMaybe (CachedIOFlow trees withCtx) = do
+   trees' <- liftIO (withCtx (forM trees updateIOTree))
    if all isLeft trees'
       then pure Nothing
       else do
          let rOrL (Right x) = x
              rOrL (Left x)  = x
-         pure (Just (CachedIOFlow (rOrL <|| trees')))
+         pure (Just (CachedIOFlow (rOrL <|| trees') withCtx))
 
 ioFlowToIOTree :: IOFlow a r -> [IOTree a]
 ioFlowToIOTree = \case
