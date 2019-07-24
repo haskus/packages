@@ -17,6 +17,7 @@ module Haskus.Utils.MonadFlow
    , cacheMonadFlow
    , cacheMonadFlowPure
    , updateCachedMonadFlow
+   , updateCachedMonadFlowMaybe
    , monadFlowToMonadTree
    )
 where
@@ -68,7 +69,7 @@ emitM a = liftF (MonadEdmit a ())
 runM :: forall m v a. (Eq v) => m v -> MonadFlow m a v
 runM f = liftF (MonadRead f id)
 
--- | Read and use a UI variable in a delimited scope
+-- | Read and use an IO variable in a delimited scope
 withM :: Eq v => m v -> (v -> MonadFlow m a ()) -> MonadFlow m a ()
 withM f g = liftF (MonadWith f g ())
 
@@ -100,6 +101,12 @@ updateCachedMonadFlow :: Monad m => CachedMonadFlow m a -> m (CachedMonadFlow m 
 updateCachedMonadFlow (CachedMonadFlow trees withCtx) = do
    trees' <- withCtx (forM trees updateMonadTree)
    pure (CachedMonadFlow trees' withCtx)
+
+-- | Update a cached MonadFlow
+updateCachedMonadFlowMaybe :: Monad m => CachedMonadFlow m a -> m (Maybe (CachedMonadFlow m a))
+updateCachedMonadFlowMaybe (CachedMonadFlow trees withCtx) =
+   withCtx (updateMonadTreesMaybe trees)
+   |||> (\ts -> CachedMonadFlow ts withCtx)
 
 monadFlowToMonadTree :: MonadFlow m a r -> [MonadTree m a]
 monadFlowToMonadTree = \case

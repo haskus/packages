@@ -9,11 +9,16 @@ module Haskus.Utils.MonadTree
    , showMonadTree
    , showMonadTrees
    , updateMonadTree
+   , updateMonadTreeMaybe
+   , updateMonadTreesMaybe
+   , updateMonadTrees
    )
 where
 
 import Haskus.Utils.Monad
 import Haskus.Utils.MonadVar
+import Haskus.Utils.Flow
+import Haskus.Utils.Maybe
 
 -- | Monad dependent rose tree
 --
@@ -39,20 +44,38 @@ showMonadTrees :: Show a => [MonadTree m a] -> String
 showMonadTrees = concatMap showMonadTree
 
 -- | Update a MonadTree recursively. Reuse cached values when possible
---
--- Left return: nothing has changed in the tree
--- Right return: the tree has changed
 updateMonadTree :: Monad m => MonadTree m a -> m (MonadTree m a)
-updateMonadTree = go
+updateMonadTree t = updateMonadTreeMaybe t
+   ||> fromMaybe t
+
+-- | Update a MonadTree recursively. Reuse cached values when possible
+updateMonadTreeMaybe :: Monad m => MonadTree m a -> m (Maybe (MonadTree m a))
+updateMonadTreeMaybe = go False
    where
-      go node = case node of
-            StaticBranch a ts -> StaticBranch a <$> forM ts go
-            MonadBranch dv@(MonadVarNE ts ms io f) -> do
-               mcdv <- updateMonadVarNEMaybe dv
-               case mcdv of
-                  Nothing -> do
-                     ts' <- forM ts go
-                     pure (MonadBranch (MonadVarNE ts' ms io f))
-                  Just ~(MonadVarNE ts' ms' _ _) -> do
-                     ts'' <- forM ts' go
-                     pure (MonadBranch (MonadVarNE ts'' ms' io f))
+      go False (StaticBranch a ts) = StaticBranch a <||| updateMonadTreesMaybe ts
+      go True  (StaticBranch a ts) = Just <|| StaticBranch a <|| updateMonadTrees ts
+      go True (MonadBranch dv) = do
+            (MonadVarNE ts' ms' io f) <- updateMonadVarNE dv
+            ts'' <- updateMonadTrees ts'
+            pure (Just (MonadBranch (MonadVarNE ts'' ms' io f)))
+      go False (MonadBranch dv@(MonadVarNE ts ms io f)) = do
+            mcdv <- updateMonadVarNEMaybe dv
+            case mcdv of
+               Nothing -> updateMonadTreesMaybe ts
+                          |||> (\ts' -> MonadBranch (MonadVarNE ts' ms io f))
+               Just (MonadVarNE ts' ms' _ _) -> do
+                  ts'' <- updateMonadTrees ts'
+                  pure (Just (MonadBranch (MonadVarNE ts'' ms' io f)))
+
+-- | Update a MonadTree forest recursively. Reuse cached values when possible
+updateMonadTreesMaybe :: Monad m => [MonadTree m a] -> m (Maybe [MonadTree m a])
+updateMonadTreesMaybe ns = do
+   ns' <- forM ns updateMonadTreeMaybe
+   if all isNothing ns'
+      then pure Nothing
+      else pure (Just (zipWith fromMaybe ns ns'))
+
+-- | Update a MonadTree forest recursively
+updateMonadTrees :: Monad m => [MonadTree m a] -> m [MonadTree m a]
+updateMonadTrees ns = updateMonadTreesMaybe ns
+   ||> fromMaybe ns
