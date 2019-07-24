@@ -27,6 +27,7 @@ library
     Haskus.Utils.Embed
     Haskus.Utils.Flow
     Haskus.Utils.Maths
+    Haskus.Utils.IOVar
     Haskus.Utils.STM
     Haskus.Utils.STM.TEq
     Haskus.Utils.STM.TMap
