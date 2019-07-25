@@ -24,6 +24,7 @@ library
     Haskus.Utils.Parser
     Haskus.Utils.HArray
     Haskus.Utils.MultiState
+    Haskus.Utils.Dynamic
     Haskus.Utils.Embed
     Haskus.Utils.Flow
     Haskus.Utils.Maths
