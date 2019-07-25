@@ -29,7 +29,7 @@ import Control.Monad.Free
 
 -- | MonadFlow Functor
 data MonadFlowF m a e
-   = MonadEdmit a e                                               -- emit a pure value
+   = MonadEmit a e                                               -- emit a pure value
    | forall v. Eq v => MonadRead (m v) (v -> e)                  -- read a monadic value and put it in the current scope
    | forall v. Eq v => MonadWith (m v) (v -> MonadFlow m a ()) e -- open a new scope and read a monadic value in it
 
@@ -37,7 +37,7 @@ type MonadFlow m a r = Free (MonadFlowF m a) r
 
 instance Functor (MonadFlowF m a) where
    fmap f = \case
-      MonadEdmit a e  -> MonadEdmit a (f e)
+      MonadEmit a e   -> MonadEmit a (f e)
       MonadRead v g   -> MonadRead v (f . g)
       MonadWith v k e -> MonadWith v k (f e)
 
@@ -52,7 +52,7 @@ runMonadFlow = \case
    Free (MonadRead io f)  -> do
       val <- io
       runMonadFlow (f val)
-   Free (MonadEdmit a t)   -> do
+   Free (MonadEmit a t)   -> do
       (k,as) <- runMonadFlow t
       pure (k,a:as)
    Pure k              ->
@@ -61,7 +61,7 @@ runMonadFlow = \case
 
 -- | Emit a pure value
 emitM :: a -> MonadFlow m a ()
-emitM a = liftF (MonadEdmit a ())
+emitM a = liftF (MonadEmit a ())
 
 -- | Get a variable in IO
 --
@@ -112,6 +112,6 @@ monadFlowToMonadTree :: MonadFlow m a r -> [MonadTree m a]
 monadFlowToMonadTree = \case
    Free (MonadRead io f)   -> [ MonadBranch (MonadVarNE [] Nothing io (monadFlowToMonadTree . f)) ]
    Free (MonadWith io f c) -> MonadBranch (MonadVarNE [] Nothing io (monadFlowToMonadTree . f)):monadFlowToMonadTree c
-   Free (MonadEdmit a t)   -> StaticBranch a []:monadFlowToMonadTree t
+   Free (MonadEmit a t)    -> StaticBranch a []:monadFlowToMonadTree t
    Pure _                  -> []
 
