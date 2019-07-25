@@ -24,7 +24,7 @@ where
 
 import Haskus.Utils.Flow
 import Haskus.Utils.MonadVar
-import Haskus.Utils.MonadTree
+import Haskus.Utils.MonadStream
 import Control.Monad.Free
 
 -- | MonadFlow Functor
@@ -99,19 +99,19 @@ cacheMonadFlowPure ctx f = (CachedMonadFlow (monadFlowToMonadTree f) ctx)
 -- | Update a cached MonadFlow
 updateCachedMonadFlow :: Monad m => CachedMonadFlow m a -> m (CachedMonadFlow m a)
 updateCachedMonadFlow (CachedMonadFlow trees withCtx) = do
-   trees' <- withCtx (forM trees updateMonadTree)
+   trees' <- withCtx (forM trees updateMonadStream)
    pure (CachedMonadFlow trees' withCtx)
 
 -- | Update a cached MonadFlow
 updateCachedMonadFlowMaybe :: Monad m => CachedMonadFlow m a -> m (Maybe (CachedMonadFlow m a))
 updateCachedMonadFlowMaybe (CachedMonadFlow trees withCtx) =
-   withCtx (updateMonadTreesMaybe trees)
+   withCtx (updateMonadStreamsMaybe trees)
    |||> (\ts -> CachedMonadFlow ts withCtx)
 
 monadFlowToMonadTree :: MonadFlow m a r -> [MonadTree m a]
 monadFlowToMonadTree = \case
-   Free (MonadRead io f)   -> [ MonadBranch (MonadVarNE [] Nothing io (monadFlowToMonadTree . f)) ]
-   Free (MonadWith io f c) -> MonadBranch (MonadVarNE [] Nothing io (monadFlowToMonadTree . f)):monadFlowToMonadTree c
-   Free (MonadEmit a t)    -> StaticBranch a []:monadFlowToMonadTree t
+   Free (MonadRead io f)   -> [ MonadStream (MonadVarNE [] Nothing io (monadFlowToMonadTree . f)) ]
+   Free (MonadWith io f c) -> MonadStream (MonadVarNE [] Nothing io (monadFlowToMonadTree . f)):monadFlowToMonadTree c
+   Free (MonadEmit a t)    -> PureStream a []:monadFlowToMonadTree t
    Pure _                  -> []
 

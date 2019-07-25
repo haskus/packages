@@ -29,7 +29,7 @@ library
     Haskus.Utils.Maths
     Haskus.Utils.MonadVar
     Haskus.Utils.MonadFlow
-    Haskus.Utils.MonadTree
+    Haskus.Utils.MonadStream
     Haskus.Utils.TimedValue
     Haskus.Utils.STM
     Haskus.Utils.STM.TEq
