@@ -24,8 +24,6 @@ module Haskus.Utils.EADT
    , appendEADT
    , liftEADT
    , popEADT
-   , eadtToCont
-   , eadtToContM
    , contToEADT
    , contToEADTM
    -- * Reexport
@@ -153,26 +151,15 @@ popEADT :: forall f xs e.
    ) => EADT xs -> Either (VariantF (Remove f xs) (EADT xs)) (f (EADT xs))
 popEADT (EADT v) = popVariantF v
 
--- | Convert an EADT into a multi-continuation
-eadtToCont ::
-   ( ContVariant (ApplyAll (EADT xs) xs)
-   ) => EADT xs -> ContFlow (ApplyAll (EADT xs) xs) r
-eadtToCont (EADT v) = variantFToCont v
-
--- | Convert an EADT into a multi-continuation
-eadtToContM ::
-   ( ContVariant (ApplyAll (EADT xs) xs)
-   , Monad m
-   , Functor (VariantF xs)
-   ) => m (EADT xs)
-     -> ContFlow (ApplyAll (EADT xs) xs) (m r)
-eadtToContM f = variantFToContM (project <$> f)
-
--- Orphan instance...
--- instance ContVariant (ApplyAll (EADT xs) xs) => MultiCont (EADT xs) where
---    type MultiContTypes (EADT xs) = ApplyAll (EADT xs) xs
---    toCont  = eadtToCont
---    toContM = eadtToContM
+-- | MultiCont instance
+--
+-- >>> let f x = toCont x >::> (const "[]", \(ConsF u us) -> u ++ ":" ++ f us)
+-- >>> f a
+-- "Hello:World:[]"
+instance (Functor (VariantF xs), ContVariant (ApplyAll (EADT xs) xs)) => MultiCont (EADT xs) where
+   type MultiContTypes (EADT xs) = ApplyAll (EADT xs) xs
+   toCont  (EADT v) = variantFToCont v
+   toContM f        = variantFToContM (project <$> f)
 
 -- | Convert a multi-continuation into an EADT
 contToEADT ::
