@@ -1,0 +1,54 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: f47939402d1fcadef2c9c19726ac305a10d38404f70afe5d6766faff8bbb870e
+
+name:           haskus-maths
+version:        0.1
+synopsis:       Maths related functions
+description:    Please see the README on Github at <https://github.com/haskus/haskus-packages/#readme>
+category:       Maths
+homepage:       https://github.com/haskus/haskus-packages#readme
+bug-reports:    https://github.com/haskus/haskus-packages/issues
+author:         Sylvain HENRY
+maintainer:     sylvain@haskus.fr
+copyright:      Sylvain HENRY 2019
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/haskus/haskus-packages
+
+library
+  exposed-modules:
+      Haskus.Maths.Polygon
+  other-modules:
+      Paths_haskus_maths
+  hs-source-dirs:
+      src/lib
+  ghc-options: -Wall -O
+  build-depends:
+      base >=4.8 && <5
+    , haskus-utils
+    , linear
+  default-language: Haskell2010
+
+test-suite main-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_haskus_maths
+  hs-source-dirs:
+      src/tests
+  ghc-options: -Wall -O
+  build-depends:
+      base >=4.8 && <5
+    , doctest
+    , haskus-utils
+    , linear
+  default-language: Haskell2010
