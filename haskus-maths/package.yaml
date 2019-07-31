@@ -21,7 +21,7 @@ ghc-options: -Wall -O
 library:
    source-dirs: src/lib
    exposed-modules:
-      - Haskus.Maths.Polygon
+      - Haskus.Maths.Geometry.Polygon
 
 tests:
    main-tests:

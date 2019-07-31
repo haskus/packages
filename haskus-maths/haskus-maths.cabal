@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f47939402d1fcadef2c9c19726ac305a10d38404f70afe5d6766faff8bbb870e
+-- hash: 61dc35983e6b2ce03867a6fb88359fea9bfa12bf822099900a962610c0535822
 
 name:           haskus-maths
 version:        0.1
@@ -26,7 +26,7 @@ source-repository head
 
 library
   exposed-modules:
-      Haskus.Maths.Polygon
+      Haskus.Maths.Geometry.Polygon
   other-modules:
       Paths_haskus_maths
   hs-source-dirs:

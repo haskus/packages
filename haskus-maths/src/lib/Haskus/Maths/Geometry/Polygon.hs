@@ -1,4 +1,4 @@
-module Haskus.Maths.Polygon
+module Haskus.Maths.Geometry.Polygon
    ( Polygon (..)
    , polygonArea
    , polygonGravityCenterArea
