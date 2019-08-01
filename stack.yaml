@@ -19,7 +19,7 @@ packages:
 extra-deps:
 - stm-containers-1.1.0.2
 - stm-hamt-1.2.0.2
-- primitive-extras-0.7.1
+- primitive-extras-0.7.1.1
 - happstack-server-tls-7.1.6.7
 - happstack-server-7.5.1.3
 
