@@ -9,13 +9,13 @@
 --
 -- >>> let w = do putWord8 0x01 ; putWord32BE 0x23456789 ; putWord32BE 0xAABBCCDD
 -- >>> b <- newBuffer 10
--- >>> void $ runBufferPut b 0 extendBufferFail w
+-- >>> void $ runBufferPut b 0 overflowBufferFail w
 -- >>> xs <- forM [0..4] (bufferReadWord8IO b)
 -- >>> xs == [0x01,0x23,0x45,0x67,0x89]
 -- True
 --
 -- >>> b <- newBuffer 2 -- small buffer
--- >>> (_,b',_) <- runBufferPut b 0 extendBufferDouble w
+-- >>> (_,b',_) <- runBufferPut b 0 overflowBufferDouble w
 -- >>> xs <- forM [0..4] (bufferReadWord8IO b')
 -- >>> xs == [0x01,0x23,0x45,0x67,0x89]
 -- True
@@ -30,15 +30,15 @@ module Haskus.Format.Binary.Serialize.Buffer
    , setPutOffset
    , runBufferPut
    , liftBufferPut
-   -- * Buffer extension
-   , ExtendStrategy (..)
-   , BufferExtend (..)
-   , getExtendStrategy
-   , extendBufferFail
-   , extendBufferDouble
-   , extendBufferDoublePinned
-   , extendBufferAdd
-   , extendBufferAddPinned
+   -- * Buffer overflow
+   , OverflowStrategy (..)
+   , BufferOverflow (..)
+   , getOverflowStrategy
+   , overflowBufferFail
+   , overflowBufferDouble
+   , overflowBufferDoublePinned
+   , overflowBufferAdd
+   , overflowBufferAddPinned
    )
 where
 
@@ -52,76 +52,92 @@ import Control.Monad.Trans.State as S
 import Control.Monad.Fail as F
 import Control.Monad.Fix
 
--- | Return a new buffer able to store the required data.
+-- | Action to perform when the buffer isn't large enough to contain the
+-- required data (extend the buffer, flush the data, etc.)
 --
--- We don't check buffer size so you have to ensure that the returned buffer is
--- large enough.
-newtype ExtendStrategy m b = ExtendStrategy (BufferExtend b -> m b)
+-- The returned buffer and offset replace the current ones.
+newtype OverflowStrategy m b = OverflowStrategy (BufferOverflow b -> m (b,Word))
 
--- | Buffer extend strategy: fails when there isn't enough space left
-extendBufferFail :: MonadFail m => ExtendStrategy m b
-extendBufferFail = ExtendStrategy \ex -> do
+-- | Buffer overflow strategy: fails when there isn't enough space left
+overflowBufferFail :: MonadFail m => OverflowStrategy m b
+overflowBufferFail = OverflowStrategy \ex -> do
    F.fail $ "Not enough space in the target buffer (requiring "
-          ++ show (extendRequired ex) ++ " bytes)"
+          ++ show (overflowRequired ex) ++ " bytes)"
 
--- | Buffer extend strategy: double the buffer size each time
-extendBufferDouble :: MonadIO m => ExtendStrategy m BufferM
-extendBufferDouble = ExtendStrategy \ex -> do
-   sz <- bufferSizeIO (extendBuffer ex)
-   let off = extendOffset   ex
-       req = extendRequired ex
+-- | Buffer extend strategy: double the buffer size each time and copy the
+-- original contents in it
+overflowBufferDouble :: MonadIO m => OverflowStrategy m BufferM
+overflowBufferDouble = OverflowStrategy \ex -> do
+   sz <- bufferSizeIO (overflowBuffer ex)
+   let off = overflowOffset   ex
+       req = overflowRequired ex
+       b   = overflowBuffer   ex
        makeSzs i = i*i : makeSzs (i*i) -- infinite list of doubling sizes
        newSz = head <| filter (> req+off) (makeSzs sz)
-   newBuffer newSz
+   newB <- newBuffer newSz
+   copyBuffer b 0 newB 0 off
+   pure (newB,off)
 
--- | Buffer extend strategy: double the buffer size each time
-extendBufferDoublePinned :: MonadIO m => Maybe Word -> ExtendStrategy m BufferMP
-extendBufferDoublePinned malignment = ExtendStrategy \ex -> do
-   sz <- bufferSizeIO (extendBuffer ex)
-   let off = extendOffset   ex
-       req = extendRequired ex
+-- | Buffer extend strategy: double the buffer size each time and copy the
+-- original contents in it
+overflowBufferDoublePinned :: MonadIO m => Maybe Word -> OverflowStrategy m BufferMP
+overflowBufferDoublePinned malignment = OverflowStrategy \ex -> do
+   sz <- bufferSizeIO (overflowBuffer ex)
+   let off = overflowOffset   ex
+       req = overflowRequired ex
+       b   = overflowBuffer   ex
        makeSzs i = i*i : makeSzs (i*i) -- infinite list of doubling sizes
        newSz = head <| filter (> req+off) (makeSzs sz)
-   case malignment of
+   newB <- case malignment of
       Nothing -> newPinnedBuffer newSz
       Just al -> newAlignedPinnedBuffer newSz al
+   copyBuffer b 0 newB 0 off
+   pure (newB,off)
 
--- | Buffer extend strategy: add the given size each time
-extendBufferAdd :: MonadIO m => Word -> ExtendStrategy m BufferM
-extendBufferAdd addSz = ExtendStrategy \ex -> do
-   sz <- bufferSizeIO (extendBuffer ex)
-   let off = extendOffset   ex
-       req = extendRequired ex
+-- | Buffer extend strategy: add the given size each time and copy the
+-- original contents in it
+overflowBufferAdd :: MonadIO m => Word -> OverflowStrategy m BufferM
+overflowBufferAdd addSz = OverflowStrategy \ex -> do
+   sz <- bufferSizeIO (overflowBuffer ex)
+   let off = overflowOffset   ex
+       req = overflowRequired ex
+       b   = overflowBuffer   ex
        makeSzs i = i+addSz : makeSzs (i+addSz) -- infinite list of added sizes
        newSz = head <| filter (> req+off) (makeSzs sz)
-   newBuffer newSz
+   newB <- newBuffer newSz
+   copyBuffer b 0 newB 0 off
+   pure (newB,off)
 
--- | Buffer extend strategy: add the given size each time
-extendBufferAddPinned :: MonadIO m => Maybe Word -> Word -> ExtendStrategy m BufferMP
-extendBufferAddPinned malignment addSz = ExtendStrategy \ex -> do
-   sz <- bufferSizeIO (extendBuffer ex)
-   let off = extendOffset   ex
-       req = extendRequired ex
+-- | Buffer extend strategy: add the given size each time and copy the
+-- original contents in it
+overflowBufferAddPinned :: MonadIO m => Maybe Word -> Word -> OverflowStrategy m BufferMP
+overflowBufferAddPinned malignment addSz = OverflowStrategy \ex -> do
+   sz <- bufferSizeIO (overflowBuffer ex)
+   let off = overflowOffset   ex
+       req = overflowRequired ex
+       b   = overflowBuffer   ex
        makeSzs i = i+addSz : makeSzs (i+addSz) -- infinite list of added sizes
        newSz = head <| filter (> req+off) (makeSzs sz)
-   case malignment of
+   newB <- case malignment of
       Nothing -> newPinnedBuffer newSz
       Just al -> newAlignedPinnedBuffer newSz al
+   copyBuffer b 0 newB 0 off
+   pure (newB,off)
 
 
 
 -- | Buffer extension information
-data BufferExtend b = BufferExtend
-   { extendBuffer   :: b     -- ^ Current buffer
-   , extendOffset   :: Word  -- ^ Current offset in buffer
-   , extendRequired :: Word  -- ^ Required size in bytes (don't take into account leftover bytes in the current buffer)
+data BufferOverflow b = BufferOverflow
+   { overflowBuffer   :: b     -- ^ Current buffer
+   , overflowOffset   :: Word  -- ^ Current offset in buffer
+   , overflowRequired :: Word  -- ^ Required size in bytes (don't take into account leftover bytes in the current buffer)
    }
 
 -- | BufferPutT state
 data BufferPutState m b = BufferPutState
-   { bufferPutBuffer :: b                  -- ^ Buffer used for writing
-   , bufferPutOffset :: Word               -- ^ Current offset
-   , bufferPutStrat  :: ExtendStrategy m b -- ^ Extension stretegy
+   { bufferPutBuffer :: b                    -- ^ Buffer used for writing
+   , bufferPutOffset :: Word                 -- ^ Current offset
+   , bufferPutStrat  :: OverflowStrategy m b -- ^ Extension stretegy
    } 
 
 -- | A Put monad than fails when there is not enough space in the target buffer
@@ -136,7 +152,7 @@ liftBufferPut :: Monad m => m a -> BufferPutT b m a
 liftBufferPut act = BufferPutT (lift act)
 
 -- | Run a buffer put
-runBufferPut :: Monad m => b -> Word -> ExtendStrategy m b -> BufferPutT b m a -> m (a,b,Word)
+runBufferPut :: Monad m => b -> Word -> OverflowStrategy m b -> BufferPutT b m a -> m (a,b,Word)
 runBufferPut b off strat (BufferPutT s) = do
    (a,s') <- runStateT s (BufferPutState b off strat)
    return (a,bufferPutBuffer s',bufferPutOffset s')
@@ -161,8 +177,8 @@ setPutOffset v = BufferPutT do
    S.modify \s -> s { bufferPutOffset = v }
 
 -- | Get extend strategy
-getExtendStrategy :: Monad m => BufferPutT b m (ExtendStrategy m b)
-getExtendStrategy = BufferPutT (bufferPutStrat <$> S.get)
+getOverflowStrategy :: Monad m => BufferPutT b m (OverflowStrategy m b)
+getOverflowStrategy = BufferPutT (bufferPutStrat <$> S.get)
 
 
 -- | Helper to put something
@@ -188,22 +204,23 @@ putSomeThings sz mact = do
    bs  <- liftIO (bufferSizeIO b)
    let !newOff = off+sz
 
-   when (newOff > bs) do -- we need to extend the buffer
-      ExtendStrategy strat <- getExtendStrategy
-      newB <- liftBufferPut <| strat <| BufferExtend
-                  { extendBuffer   = b
-                  , extendOffset   = off
-                  , extendRequired = sz
-                  }
-      copyBuffer b 0 newB 0 off
-      setPutBuffer newB
+   if (newOff > bs)
+      then do -- we need to extend/flush the buffer
+         OverflowStrategy strat <- getOverflowStrategy
+         (upB,upOff) <- liftBufferPut <| strat <| BufferOverflow
+                              { overflowBuffer   = b
+                              , overflowOffset   = off
+                              , overflowRequired = sz
+                              }
+         setPutBuffer upB
+         setPutOffset upOff
+         putSomeThings sz mact
 
-   b' <- getPutBuffer -- get the newer put buffer if any
-   case mact of
-      Nothing  -> return () -- we only preallocate
-      Just act -> do        -- we write something for real
-         liftBufferPut (act b' off)
-         setPutOffset newOff
+      else case mact of
+            Nothing  -> return () -- we only preallocate
+            Just act -> do        -- we write something for real
+               liftBufferPut (act b off)
+               setPutOffset newOff
    
 
 instance
