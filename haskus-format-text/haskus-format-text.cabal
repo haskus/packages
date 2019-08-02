@@ -57,3 +57,4 @@ test-suite tests
    build-depends:    
          base
       ,  doctest
+      ,  transformers
