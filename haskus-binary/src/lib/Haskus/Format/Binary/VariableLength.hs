@@ -2,7 +2,9 @@
 
 -- | Variable length encodings
 module Haskus.Format.Binary.VariableLength
-   ( getULEB128
+   ( fromULEB128
+   , toULEB128
+   , getULEB128
    , putULEB128
    , getSLEB128
    , putSLEB128
@@ -23,31 +25,58 @@ import Haskus.Format.Binary.Buffer
 -- bits. Each chunk is put in a Word8. The highest bit indicates if there is a
 -- following byte (0 false, 1 true)
 
+
+-- | Convert a stream of ULEB 128 bytes into an Integral
+--
+-- >>> :set -XBinaryLiterals
+-- >>> import Control.Monad.Trans.State
+-- >>> getNext = do { ~(x:xs) <- get; put xs; pure x }
+-- >>> let x = evalState (fromULEB128 getNext) [0b10000001, 0b01111111] :: Word64
+-- >>> x == 0b11111110000001
+-- True
+fromULEB128 :: (Bits a, Monad m, Integral a) => m Word8 -> m a
+fromULEB128 getW8 = go 0 0
+   where
+      go acc n = do
+         a <- getW8
+         let
+            w    = fromIntegral (a .&. 0x7f)
+            acc' = w `shiftL` n .|. acc
+         if not (testBit a 7)
+            then return acc'
+            else go acc' (n+7)
+
+-- | Convert aan Integral into a stream of ULEB128 bytes
+--
+-- >>> :set -XBinaryLiterals
+-- >>> import Control.Monad.Trans.State
+-- >>> toNext x = modify (x:)
+-- >>> let xs = reverse (execState (toULEB128 toNext (0b1001001010101010 :: Word64)) [])
+-- >>> xs == [0b10101010,0b10100101,0b10]
+-- True
+toULEB128 :: (Bits a, Monad m, Integral a) => (Word8 -> m ()) -> a -> m ()
+toULEB128 putW8 = goFirst
+   where
+      goFirst 0 = putW8 0
+      goFirst n = go n
+
+      go 0 = pure ()
+      go x = do
+         let
+            r = x `shiftR` 7
+            w = fromIntegral (x .&. 0x7f)
+            w' = if r == 0 then w else setBit w 7
+         putW8 w'
+         go r
+
 -- | Get an unsigned word in Little Endian Base 128
 getULEB128 :: (Integral a, Bits a) => Get a
-getULEB128 = do
-   a <- getWord8
-   let w = fromIntegral (a .&. 0x7f)
-   if not (testBit a 7)
-      then return w
-      else do
-         b <- getULEB128
-         return $ (b `shiftL` 7) .|. w
+getULEB128 = fromULEB128 getWord8
 
 -- | Put an unsigned word in Little Endian Base 128
 putULEB128 :: (Integral a, Bits a) => a -> Put
-putULEB128 = rec True
-   where
-      rec first x = case (first,x) of
-         (True,0)  -> putWord8 0
-         (False,0) -> return ()
-         _         -> do
-            let 
-               r = x `shiftR` 7
-               w = x .&. 0x7f
-               w' = if r == 0 then w else setBit w 7
-            putWord8 (fromIntegral w')
-            rec False r
+putULEB128 = toULEB128 putWord8
+
 
 -- | Get a signed int in Little Endian Base 128
 getSLEB128 :: (Integral a, Bits a) => Get a
