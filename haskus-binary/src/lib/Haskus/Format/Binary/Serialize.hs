@@ -12,6 +12,13 @@ module Haskus.Format.Binary.Serialize
    , GetMonad (..)
    , Serializable (..)
    , Size (..)
+   -- * Floating point
+   , putFloat32
+   , putFloat32LE
+   , putFloat32BE
+   , putFloat64
+   , putFloat64LE
+   , putFloat64BE
    -- * Endianness helpers
    , putWord16BE
    , putWord32BE
@@ -43,6 +50,7 @@ where
 import Haskus.Memory.Buffer
 import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Endianness
+import Haskus.Format.Binary.Float
 import Haskus.Utils.Types
 import Haskus.Utils.Monad
 
@@ -76,7 +84,7 @@ class Monad m => PutMonad m where
    putWord64s xs = forM_ xs putWord64
 
    -- | Write the contents of a buffer
-   putBuffer   :: Buffer mut pin gc heap -> m ()
+   putBuffer   :: BufferSize (Buffer Immutable pin gc heap) => Buffer Immutable pin gc heap -> m ()
 
    -- | Pre-allocate at least the given amount of bytes
    --
@@ -140,6 +148,34 @@ class Serializable a where
 
    -- | Deserialize a value
    get :: GetMonad m => Endianness -> Word -> m a
+
+--------------------------------------------
+-- Floating point
+--------------------------------------------
+
+-- | Write a Float64 with host order
+putFloat64 :: PutMonad m => Float64 -> m ()
+putFloat64 d = putWord64 (float64ToWord64 d)
+
+-- | Write a Float64 with little-endian order
+putFloat64LE :: PutMonad m => Float64 -> m ()
+putFloat64LE d = putWord64LE (float64ToWord64 d)
+
+-- | Write a Float64 with big-endian order
+putFloat64BE :: PutMonad m => Float64 -> m ()
+putFloat64BE d = putWord64BE (float64ToWord64 d)
+
+-- | Write a Float32 with host order
+putFloat32 :: PutMonad m => Float32 -> m ()
+putFloat32 d = putWord32 (float32ToWord32 d)
+
+-- | Write a Float32 with little-endian order
+putFloat32LE :: PutMonad m => Float32 -> m ()
+putFloat32LE d = putWord32LE (float32ToWord32 d)
+
+-- | Write a Float32 with big-endian order
+putFloat32BE :: PutMonad m => Float32 -> m ()
+putFloat32BE d = putWord32BE (float32ToWord32 d)
 
 
 --------------------------------------------

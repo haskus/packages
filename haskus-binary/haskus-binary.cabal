@@ -45,6 +45,7 @@ library
     Haskus.Format.Binary.Enum
     Haskus.Format.Binary.Endianness
     Haskus.Format.Binary.FixedPoint
+    Haskus.Format.Binary.Float
     Haskus.Format.Binary.Get
     Haskus.Format.Binary.Put
     Haskus.Format.Binary.VariableLength
