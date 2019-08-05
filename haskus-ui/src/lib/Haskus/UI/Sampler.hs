@@ -48,8 +48,8 @@ import Haskus.Utils.Flow
 import Haskus.UI.Common
 import Haskus.UI.Color
 import Haskus.UI.Maths.Linear
-import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Bits
+import Haskus.Number.Word
+import Haskus.Binary.Bits
 
 newtype SamplerState = SamplerState
    { samplerGen :: TFGen

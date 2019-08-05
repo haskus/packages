@@ -69,7 +69,7 @@ import System.Mem.Weak
 import Control.Concurrent
 
 import Haskus.Utils.Monad
-import Haskus.Format.Binary.Word
+import Haskus.Number.Word
 import Haskus.Memory.Buffer
 
 -- | The source of a view

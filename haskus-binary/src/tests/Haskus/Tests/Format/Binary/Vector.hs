@@ -14,9 +14,9 @@ import Test.Tasty.QuickCheck as QC
 
 import Haskus.Utils.Maybe
 import Haskus.Utils.HList
-import Haskus.Format.Binary.Vector
-import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Bits
+import Haskus.Binary.Vector
+import Haskus.Number.Word
+import Haskus.Binary.Bits
 
 v1234 :: Vector 4 Word32
 v1234 = fromJust $ fromList [1,2,3,4]

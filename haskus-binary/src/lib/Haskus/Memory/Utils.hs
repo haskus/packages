@@ -16,8 +16,8 @@ module Haskus.Memory.Utils
    )
 where
 
-import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Storable
+import Haskus.Number.Word
+import Haskus.Binary.Storable
 import Haskus.Utils.Flow
 
 import Foreign.Ptr

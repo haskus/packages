@@ -23,47 +23,49 @@ source-repository head
 library
   exposed-modules:
 
-    Haskus.Format.Binary.Bits
-    Haskus.Format.Binary.Bits.Finite
-    Haskus.Format.Binary.Bits.Index
-    Haskus.Format.Binary.Bits.Bitwise
-    Haskus.Format.Binary.Bits.Reverse
-    Haskus.Format.Binary.Bits.Rotate
-    Haskus.Format.Binary.Bits.Shift
-    Haskus.Format.Binary.Bits.Order
-    Haskus.Format.Binary.Bits.Get
-    Haskus.Format.Binary.Bits.Put
-    Haskus.Format.Binary.Bits.Mask
-    Haskus.Format.Binary.Bits.Helper
+    Haskus.Binary.Bits
+    Haskus.Binary.Bits.Finite
+    Haskus.Binary.Bits.Index
+    Haskus.Binary.Bits.Bitwise
+    Haskus.Binary.Bits.Reverse
+    Haskus.Binary.Bits.Rotate
+    Haskus.Binary.Bits.Shift
+    Haskus.Binary.Bits.Order
+    Haskus.Binary.Bits.Get
+    Haskus.Binary.Bits.Put
+    Haskus.Binary.Bits.Mask
+    Haskus.Binary.Bits.Helper
 
-    Haskus.Format.Binary.BitSet
-    Haskus.Format.Binary.BitField
-    Haskus.Format.Binary.Buffer
-    Haskus.Format.Binary.BufferList
-    Haskus.Format.Binary.BufferBuilder
-    Haskus.Format.Binary.Char
-    Haskus.Format.Binary.Enum
-    Haskus.Format.Binary.Endianness
-    Haskus.Format.Binary.FixedPoint
-    Haskus.Format.Binary.Float
-    Haskus.Format.Binary.Get
-    Haskus.Format.Binary.Put
-    Haskus.Format.Binary.VariableLength
-    Haskus.Format.Binary.Vector
-    Haskus.Format.Binary.Union
-    Haskus.Format.Binary.Unum
-    Haskus.Format.Binary.Posit
-    Haskus.Format.Binary.Record
-    Haskus.Format.Binary.Storable
-    Haskus.Format.Binary.Word
-    Haskus.Format.Binary.Serialize
-    Haskus.Format.Binary.Serialize.Buffer
+    Haskus.Binary.BitSet
+    Haskus.Binary.BitField
+    Haskus.Binary.Buffer
+    Haskus.Binary.BufferList
+    Haskus.Binary.BufferBuilder
+    Haskus.Binary.Char
+    Haskus.Binary.Enum
+    Haskus.Binary.Endianness
+    Haskus.Binary.Get
+    Haskus.Binary.Put
+    Haskus.Binary.Vector
+    Haskus.Binary.Union
+    Haskus.Binary.Unum
+    Haskus.Binary.Record
+    Haskus.Binary.Storable
+    Haskus.Binary.Serialize
+    Haskus.Binary.Serialize.Buffer
+    Haskus.Binary.CTypes
 
-    Haskus.Format.Number
-    Haskus.Format.Number.BitNat
-    Haskus.Format.Number.Signed
-    Haskus.Format.Number.SignedSafe
-    Haskus.Format.Number.NaturalRange
+    Haskus.Number
+    Haskus.Number.Word
+    Haskus.Number.Int
+    Haskus.Number.Float
+    Haskus.Number.VariableLength
+    Haskus.Number.Posit
+    Haskus.Number.FixedPoint
+    Haskus.Number.BitNat
+    Haskus.Number.Signed
+    Haskus.Number.SignedSafe
+    Haskus.Number.NaturalRange
 
     Haskus.Memory.Utils
     Haskus.Memory.Buffer

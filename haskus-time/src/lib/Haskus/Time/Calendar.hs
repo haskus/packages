@@ -30,8 +30,8 @@ module Haskus.Time.Calendar
    )
 where
 
-import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Bits
+import Haskus.Number.Word
+import Haskus.Binary.Bits
 import Haskus.Memory.Embed
 import Haskus.Memory.Buffer
 

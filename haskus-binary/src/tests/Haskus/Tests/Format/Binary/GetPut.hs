@@ -8,8 +8,8 @@ import Test.Tasty.QuickCheck as QC
 
 import Haskus.Tests.Common
 
-import Haskus.Format.Binary.Get
-import Haskus.Format.Binary.Buffer
+import Haskus.Binary.Get
+import Haskus.Binary.Buffer
 
 testsGetPut :: TestTree
 testsGetPut = testGroup "Get/Put" $

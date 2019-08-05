@@ -14,17 +14,18 @@ import Test.QuickCheck.Gen (elements,choose,vectorOf)
 import Haskus.Tests.Common
 import Haskus.Utils.Flow
 
-import Haskus.Format.Binary.Bits.Put
-import Haskus.Format.Binary.Bits.Get
-import Haskus.Format.Binary.Bits.Order
-import Haskus.Format.Binary.Bits.Reverse
-import Haskus.Format.Binary.Bits
+import Haskus.Binary.Bits.Put
+import Haskus.Binary.Bits.Get
+import Haskus.Binary.Bits.Order
+import Haskus.Binary.Bits.Reverse
+import Haskus.Binary.Bits
 
-import Haskus.Format.Binary.Buffer
-import Haskus.Format.Binary.Get
-import Haskus.Format.Binary.Put
-import Haskus.Format.Binary.VariableLength
-import Haskus.Format.Binary.Word
+import Haskus.Binary.Buffer
+import Haskus.Binary.Get
+import Haskus.Binary.Put
+import Haskus.Number.VariableLength
+import Haskus.Number.Word
+import Haskus.Number.Int
 
 testsBits :: TestTree
 testsBits = testGroup "Binary bits" $

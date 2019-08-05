@@ -81,8 +81,9 @@ module Haskus.Memory.Buffer
    )
 where
 
-import Haskus.Format.Binary.Word
-import Haskus.Format.Binary.Storable
+import Haskus.Number.Word
+import Haskus.Number.Int
+import Haskus.Binary.Storable
 import Haskus.Memory.Property
 import Haskus.Memory.Utils (memcpy#)
 import Haskus.Utils.Monad
@@ -100,7 +101,7 @@ import GHC.Types (IO(..))
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
 -- >>> :set -XScopedTypeVariables
--- >>> import Haskus.Format.Binary.Bits
+-- >>> import Haskus.Binary.Bits
 
 -- | A memory buffer
 data Buffer (mut :: Mutability) (pin :: Pinning) (fin :: Finalization) (heap :: Heap) where

@@ -8,7 +8,7 @@ packages:
 - haskus-utils-variant/
 - haskus-binary/
 - haskus-web/
-- haskus-format-text/
+- haskus-text/
 - haskus-locale/
 - haskus-calculus/
 - haskus-graphics/

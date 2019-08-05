@@ -1,6 +1,6 @@
 -- | Wrap Data.Text
 --
--- We plan to replace it with Haskus.Format.Text in the future
+-- We plan to replace it with Haskus.Text in the future
 module Haskus.Utils.Text
    ( module Data.Text
    -- * Conversions
@@ -33,9 +33,9 @@ import Formatting                   as F
 import Formatting.Formatters
 import Data.Text.Read               as T
 
-import Haskus.Format.Binary.Buffer
-import Haskus.Format.Binary.Put
-import Haskus.Format.Binary.Get
+import Haskus.Binary.Buffer
+import Haskus.Binary.Put
+import Haskus.Binary.Get
 
 -- | Decode Utf8
 bufferDecodeUtf8 :: Buffer -> Text

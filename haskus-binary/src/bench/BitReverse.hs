@@ -1,7 +1,7 @@
 
 import Criterion.Main
-import Haskus.Format.Binary.Bits.Reverse
-import Haskus.Format.Binary.Word
+import Haskus.Binary.Bits.Reverse
+import Haskus.Number.Word
 
 main :: IO ()
 main = do
