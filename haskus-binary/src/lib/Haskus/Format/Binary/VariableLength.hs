@@ -49,8 +49,8 @@ fromULEB128 getW8 = go 0 0
 -- | Convert aan Integral into a stream of ULEB128 bytes
 --
 -- >>> :set -XBinaryLiterals
--- >>> let xs = toULEB128 (\x -> [x]) (0b1001001010101010 :: Word64)
--- >>> xs = [0b10101010,0b10100101,0b10]
+-- >>> let xs = toULEB128 (\x -> ([x] :: [Word8])) (0b1001001010101010 :: Word64)
+-- >>> xs == [0b10101010,0b10100101,0b10]
 -- True
 toULEB128 :: (Bits a, Monoid m, Integral a) => (Word8 -> m) -> a -> m
 toULEB128 putW8 = goFirst
