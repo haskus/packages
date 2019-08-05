@@ -52,6 +52,9 @@ library
     Haskus.Binary.Record
     Haskus.Binary.Storable
     Haskus.Binary.Serialize
+    Haskus.Binary.Serialize.Size
+    Haskus.Binary.Serialize.Put
+    Haskus.Binary.Serialize.Get
     Haskus.Binary.Serialize.Buffer
     Haskus.Binary.CTypes
 

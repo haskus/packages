@@ -43,12 +43,13 @@ module Haskus.Binary.Serialize.Buffer
 where
 
 import Haskus.Binary.Serialize
+import Haskus.Binary.Serialize.Put
 import Haskus.Memory.Buffer
 import Haskus.Utils.Monad
 import Haskus.Utils.Flow
 
 import Data.Functor.Identity
-import Control.Monad.Trans.State as S
+import Control.Monad.Trans.State.Strict as S
 import Control.Monad.Fail as F
 import Control.Monad.Fix
 
