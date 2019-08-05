@@ -49,25 +49,21 @@ fromULEB128 getW8 = go 0 0
 -- | Convert aan Integral into a stream of ULEB128 bytes
 --
 -- >>> :set -XBinaryLiterals
--- >>> import Control.Monad.Trans.State
--- >>> toNext x = modify (x:)
--- >>> let xs = reverse (execState (toULEB128 toNext (0b1001001010101010 :: Word64)) [])
--- >>> xs == [0b10101010,0b10100101,0b10]
+-- >>> let xs = toULEB128 (\x -> [x]) (0b1001001010101010 :: Word64)
+-- >>> xs = [0b10101010,0b10100101,0b10]
 -- True
-toULEB128 :: (Bits a, Monad m, Integral a) => (Word8 -> m ()) -> a -> m ()
+toULEB128 :: (Bits a, Monoid m, Integral a) => (Word8 -> m) -> a -> m
 toULEB128 putW8 = goFirst
    where
       goFirst 0 = putW8 0
       goFirst n = go n
 
-      go 0 = pure ()
-      go x = do
-         let
+      go 0 = mempty
+      go x = putW8 w' <> go r
+         where
             r = x `shiftR` 7
             w = fromIntegral (x .&. 0x7f)
             w' = if r == 0 then w else setBit w 7
-         putW8 w'
-         go r
 
 -- | Get an unsigned word in Little Endian Base 128
 getULEB128 :: (Integral a, Bits a) => Get a
