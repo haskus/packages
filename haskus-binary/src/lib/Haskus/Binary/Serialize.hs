@@ -134,9 +134,9 @@ class Monad m => GetMonad m where
 
 -- | Size in bytes
 data Size
-   = Exactly Nat  -- ^ Exactly the given size
-   | AtLeast Nat  -- ^ At least the given size
-   | Dynamic      -- ^ Dynamically known size
+   = Exactly Nat   -- ^ Exactly the given size
+   | DynamicStored -- ^ Dynamically known size (the size is stored with the object)
+   | DynamicGiven  -- ^ Dynamically known size (the size isn't stored with the object and must be given)
 
 -- | Binary serializable data
 class Serializable a where
@@ -366,7 +366,7 @@ instance Serializable Int64 where
    get BigEndian    _ = fromIntegral <$> getWord64BE
 
 instance Serializable BufferI where
-   type SizeOf BufferI = 'Dynamic
+   type SizeOf BufferI = 'DynamicGiven
    type Endian BufferI = 'False
    sizeOf b            = bufferSize b
    put _ x             = putBuffer x
