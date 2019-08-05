@@ -12,6 +12,7 @@ module Haskus.Format.Text.Unicode.CodePoint
    , pattern CodePointRange
    , toUtf8
    , fromUtf8
+   , toModifiedUtf8
    )
 where
 
@@ -80,14 +81,12 @@ pattern CodePointRange x y <- (fromRange -> (x,y))
 instance Show CodePointRange where
    show (CodePointRange x y) = show x ++ ".." ++ show y
 
--- | Encode a code-point into UTF8.
+-- | Encode a code-point into UTF-8.
 -- Extended to support any Word32 (not just 21 bits) to make the function total
 -- and useful in other contexts
 --
 -- >>> :set -XBinaryLiterals
--- >>> import Control.Monad.Trans.State
--- >>> toNext x = modify (x:)
--- >>> let f x = reverse (execState (toUtf8 toNext x ) [])
+-- >>> let f x = toUtf8 (\x -> [x]) x
 -- >>> f 0x24    == [0b00100100]
 -- True
 -- >>> f 0xA2    == [0b11000010,0b10100010]
@@ -98,34 +97,54 @@ instance Show CodePointRange where
 -- True
 -- >>> f 0x10348 == [0b11110000,0b10010000,0b10001101,0b10001000]
 -- True
-toUtf8 :: Monad m => (Word8 -> m ()) -> Word32 -> m ()
+toUtf8 :: Monoid m => (Word8 -> m) -> Word32 -> m
 toUtf8 putW8 w
    | w .&. 0xFFFFFF80 == 0 = putW8 (fromIntegral w)
-   | w .&. 0xFFFFF800 == 0 = do
-      putW8 <| fromIntegral <| (0b11000000 .|. (w `shiftR` 6))
-      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-   | w .&. 0xFFFF0000 == 0 = do
-      putW8 <| fromIntegral <| (0b11100000 .|. (w `shiftR` 12))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-   | w .&. 0xFFE00000 == 0 = do
-      putW8 <| fromIntegral <| (0b11110000 .|. (w `shiftR` 18))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-   | w .&. 0xFC000000 == 0 = do
-      putW8 <| fromIntegral <| (0b11111000 .|. (w `shiftR` 24))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 18) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-   | otherwise = do
-      putW8 <| fromIntegral <| (0b11111100 .|. (w `shiftR` 30))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 24) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 18) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
-      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+   | w .&. 0xFFFFF800 == 0 = mconcat
+      [ putW8 <| fromIntegral <| (0b11000000 .|. (w `shiftR` 6))
+      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+      ]
+   | w .&. 0xFFFF0000 == 0 = mconcat
+      [ putW8 <| fromIntegral <| (0b11100000 .|. (w `shiftR` 12))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+      ]
+   | w .&. 0xFFE00000 == 0 = mconcat
+      [ putW8 <| fromIntegral <| (0b11110000 .|. (w `shiftR` 18))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+      ]
+   | w .&. 0xFC000000 == 0 = mconcat
+      [ putW8 <| fromIntegral <| (0b11111000 .|. (w `shiftR` 24))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 18) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+      ]
+   | otherwise = mconcat
+      [ putW8 <| fromIntegral <| (0b11111100 .|. (w `shiftR` 30))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 24) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 18) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
+      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+      ]
+
+-- | Encode a code-point into Modified UTF-8.
+--
+-- Compared to UTF-8, NULL values are encoded in two non null bytes.
+--
+-- >>> :set -XBinaryLiterals
+-- >>> let f x = toModifiedUtf8 (\x -> [x]) x
+-- >>> f 0x24    == [0b00100100]
+-- True
+-- >>> f 0x00    == [0b11000000, 0b10000000]
+-- True
+toModifiedUtf8 :: Monoid m => (Word8 -> m) -> Word32 -> m
+toModifiedUtf8 putW8 w
+   | w == 0 = putW8 0b11000000 <> putW8 0b10000000
+   | otherwise = toUtf8 putW8 w
 
 -- | Decode a code-point in UTF8.
 --
