@@ -42,7 +42,6 @@ module Haskus.Binary.Serialize.Buffer
    )
 where
 
-import Haskus.Binary.Serialize
 import Haskus.Binary.Serialize.Put
 import Haskus.Memory.Buffer
 import Haskus.Utils.Monad
