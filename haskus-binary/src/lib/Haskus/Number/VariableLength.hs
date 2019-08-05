@@ -47,7 +47,7 @@ fromULEB128 getW8 = go 0 0
             then return acc'
             else go acc' (n+7)
 
--- | Convert aan Integral into a stream of ULEB128 bytes
+-- | Convert an Integral into a stream of ULEB128 bytes
 --
 -- >>> :set -XBinaryLiterals
 -- >>> :set -XFlexibleContexts
