@@ -19,6 +19,12 @@ module Haskus.Format.Binary.Serialize
    , putFloat64
    , putFloat64LE
    , putFloat64BE
+   , getFloat32
+   , getFloat32LE
+   , getFloat32BE
+   , getFloat64
+   , getFloat64LE
+   , getFloat64BE
    -- * Endianness helpers
    , putWord16BE
    , putWord32BE
@@ -52,7 +58,7 @@ import Haskus.Format.Binary.Word
 import Haskus.Format.Binary.Endianness
 import Haskus.Format.Binary.Float
 import Haskus.Utils.Types
-import Haskus.Utils.Monad
+import Haskus.Utils.Flow
 
 import GHC.Exts (IsList(..))
 
@@ -177,6 +183,30 @@ putFloat32LE d = putWord32LE (float32ToWord32 d)
 putFloat32BE :: PutMonad m => Float32 -> m ()
 putFloat32BE d = putWord32BE (float32ToWord32 d)
 
+
+-- | Get a Float64 with host order
+getFloat64 :: GetMonad m => m Float64
+getFloat64 = getWord64 ||> word64ToFloat64
+
+-- | Get a Float64 with little-endian order
+getFloat64LE :: GetMonad m => m Float64
+getFloat64LE = getWord64LE ||> word64ToFloat64
+
+-- | Get a Float64 with big-endian order
+getFloat64BE :: GetMonad m => m Float64
+getFloat64BE = getWord64BE ||> word64ToFloat64
+
+-- | Get a Float32 with host order
+getFloat32 :: GetMonad m => m Float32
+getFloat32 = getWord32 ||> word32ToFloat32
+
+-- | Get a Float32 with little-endian order
+getFloat32LE :: GetMonad m => m Float32
+getFloat32LE = getWord32LE ||> word32ToFloat32
+
+-- | Get a Float32 with big-endian order
+getFloat32BE :: GetMonad m => m Float32
+getFloat32BE = getWord32BE ||> word32ToFloat32
 
 --------------------------------------------
 -- Helpers for endianness
