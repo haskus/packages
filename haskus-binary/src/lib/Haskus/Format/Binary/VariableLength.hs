@@ -1,6 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 -- | Variable length encodings
+--
+-- * Unsigned Little Endian Base 128 (ULEB128)
+--
+-- The word is splitted in chunks of 7 bits, starting from least significant
+-- bits. Each chunk is put in a Word8. The highest bit indicates if there is a
+-- following byte (0 false, 1 true)
 module Haskus.Format.Binary.VariableLength
    ( fromULEB128
    , toULEB128
@@ -19,12 +25,6 @@ import Haskus.Format.Binary.Bits
 import Haskus.Format.Binary.Bits.Put
 import Haskus.Format.Binary.Bits.Order
 import Haskus.Format.Binary.Buffer
-
--- Unsigned Little Endian Base 128 (ULEB128)
--- The word is splitted in chunks of 7 bits, starting from least significant
--- bits. Each chunk is put in a Word8. The highest bit indicates if there is a
--- following byte (0 false, 1 true)
-
 
 -- | Convert a stream of ULEB 128 bytes into an Integral
 --
