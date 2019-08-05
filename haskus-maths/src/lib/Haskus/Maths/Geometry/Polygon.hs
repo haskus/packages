@@ -3,8 +3,8 @@ module Haskus.Maths.Geometry.Polygon
    , polygonEdges
    , polygonMapPoints
    , polygonArea
-   , polygonGravityCenterArea
-   , polygonGravityCenter
+   , polygonCentroidArea
+   , polygonCentroid
    , polygonWindingNumber
    , polygonPointIn
    )
@@ -53,15 +53,16 @@ polygonArea = abs . (/2) . sum . fmap compute . polygonEdges
    where
       compute (V2 x1 y1, V2 x2 y2) = (x1*y2 - x2*y1)
 
--- | Get the coordinates of gravity center of the polygon and its area.
+-- | Get the coordinates of centroid (gravity center) of the polygon and the
+-- area of the polygon (needed to compute the centroid)
 --
 -- Return (x,y,area)
 --
 -- >>> let p = Polygon [V2 0 0, V2 0 10, V2 5 0]
--- >>> polygonGravityCenterArea @Rational p
+-- >>> polygonCentroidArea @Rational p
 -- (5 % 3,10 % 3,25 % 1)
-polygonGravityCenterArea :: Fractional a => Polygon a -> (a,a,a)
-polygonGravityCenterArea = go . polygonPoints
+polygonCentroidArea :: Fractional a => Polygon a -> (a,a,a)
+polygonCentroidArea = go . polygonPoints
    where
       go []                  = error "Invalid empty polygon"
       go [V2 x y]            = (x,y,0)
@@ -79,15 +80,15 @@ polygonGravityCenterArea = go . polygonPoints
          let k = 3 * ax2
          in (x / k, y / k, abs (ax2 / 2))
 
--- | Get the coordinates of the gravity center of the polygon.
+-- | Get the coordinates of the centroid (gravity center) of the polygon.
 --
--- If you also need the area, use `polygonGravityCenterArea`
+-- If you also need the area, use `polygonCentroidArea`
 --
 -- >>> let p = Polygon [V2 0 0, V2 0 10, V2 5 0]
--- >>> polygonGravityCenter @Rational p
+-- >>> polygonCentroid @Rational p
 -- (5 % 3,10 % 3)
-polygonGravityCenter :: Fractional a => Polygon a -> (a,a)
-polygonGravityCenter p = case polygonGravityCenterArea p of
+polygonCentroid :: Fractional a => Polygon a -> (a,a)
+polygonCentroid p = case polygonCentroidArea p of
    (x,y,_) -> (x,y)
 
 
