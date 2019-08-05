@@ -86,64 +86,63 @@ instance Show CodePointRange where
 -- and useful in other contexts
 --
 -- >>> :set -XBinaryLiterals
--- >>> let f x = toUtf8 (\x -> [x]) x
--- >>> f 0x24    == [0b00100100]
--- True
--- >>> f 0xA2    == [0b11000010,0b10100010]
--- True
--- >>> f 0x939   == [0b11100000,0b10100100,0b10111001]
--- True
--- >>> f 0x20AC  == [0b11100010,0b10000010,0b10101100]
--- True
--- >>> f 0x10348 == [0b11110000,0b10010000,0b10001101,0b10001000]
--- True
-toUtf8 :: Monoid m => (Word8 -> m) -> Word32 -> m
+-- >>> let f x = toUtf8 (putStr . (++ " ") . bitsToString) x
+-- >>> f 0x24
+-- 00100100
+-- >>> f 0xA2
+-- 11000010 10100010
+-- >>> f 0x939
+-- 11100000 10100100 10111001
+-- >>> f 0x20AC
+-- 11100010 10000010 10101100
+-- >>> f 0x10348
+-- 11110000 10010000 10001101 10001000
+toUtf8 :: Monad m => (Word8 -> m ()) -> Word32 -> m ()
 toUtf8 putW8 w
    | w .&. 0xFFFFFF80 == 0 = putW8 (fromIntegral w)
-   | w .&. 0xFFFFF800 == 0 = mconcat
-      [ putW8 <| fromIntegral <| (0b11000000 .|. (w `shiftR` 6))
-      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-      ]
-   | w .&. 0xFFFF0000 == 0 = mconcat
-      [ putW8 <| fromIntegral <| (0b11100000 .|. (w `shiftR` 12))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-      ]
-   | w .&. 0xFFE00000 == 0 = mconcat
-      [ putW8 <| fromIntegral <| (0b11110000 .|. (w `shiftR` 18))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-      ]
-   | w .&. 0xFC000000 == 0 = mconcat
-      [ putW8 <| fromIntegral <| (0b11111000 .|. (w `shiftR` 24))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 18) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-      ]
-   | otherwise = mconcat
-      [ putW8 <| fromIntegral <| (0b11111100 .|. (w `shiftR` 30))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 24) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 18) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
-      , putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
-      ]
+   | w .&. 0xFFFFF800 == 0 = do
+      putW8 <| fromIntegral <| (0b11000000 .|. (w `shiftR` 6))
+      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+
+   | w .&. 0xFFFF0000 == 0 = do
+      putW8 <| fromIntegral <| (0b11100000 .|. (w `shiftR` 12))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+
+   | w .&. 0xFFE00000 == 0 = do
+      putW8 <| fromIntegral <| (0b11110000 .|. (w `shiftR` 18))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+
+   | w .&. 0xFC000000 == 0 = do
+      putW8 <| fromIntegral <| (0b11111000 .|. (w `shiftR` 24))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 18) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
+
+   | otherwise = do
+      putW8 <| fromIntegral <| (0b11111100 .|. (w `shiftR` 30))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 24) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 18) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 12) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. ((w `shiftR` 6 ) .&. 0b00111111))
+      putW8 <| fromIntegral <| (0b10000000 .|. (w .&. 0b00111111))
 
 -- | Encode a code-point into Modified UTF-8.
 --
 -- Compared to UTF-8, NULL values are encoded in two non null bytes.
 --
 -- >>> :set -XBinaryLiterals
--- >>> let f x = toModifiedUtf8 (\x -> [x]) x
--- >>> f 0x24    == [0b00100100]
--- True
--- >>> f 0x00    == [0b11000000, 0b10000000]
--- True
-toModifiedUtf8 :: Monoid m => (Word8 -> m) -> Word32 -> m
+-- >>> let f x = toModifiedUtf8 (putStr . (++ " ") . bitsToString) x
+-- >>> f 0x24
+-- 00100100
+-- >>> f 0x00
+-- 11000000 10000000
+toModifiedUtf8 :: Monad m => (Word8 -> m ()) -> Word32 -> m ()
 toModifiedUtf8 putW8 w
-   | w == 0 = putW8 0b11000000 <> putW8 0b10000000
+   | w == 0 = putW8 0b11000000 >> putW8 0b10000000
    | otherwise = toUtf8 putW8 w
 
 -- | Decode a code-point in UTF8.
