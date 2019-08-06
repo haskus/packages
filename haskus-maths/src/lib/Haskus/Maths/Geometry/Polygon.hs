@@ -210,5 +210,6 @@ polygonPointNearestBorder :: (Ord a,Floating a) => Polygon a -> Point V2 a -> Po
 polygonPointNearestBorder poly p = head (sortOn (distanceA p) cs)
    where
       cs = polygonEdges poly
+            |> filter (uncurry (/=)) -- remove non-segments
             ||> uncurry Segment
             ||> flip segmentPointNearest p
