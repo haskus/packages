@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 61dc35983e6b2ce03867a6fb88359fea9bfa12bf822099900a962610c0535822
+-- hash: fed26b270a2cb5f8a60dc3075924566e32626acfd23f24e7493c144226c6139c
 
 name:           haskus-maths
 version:        0.1
@@ -27,6 +27,9 @@ source-repository head
 library
   exposed-modules:
       Haskus.Maths.Geometry.Polygon
+      Haskus.Maths.Geometry.Line
+      Haskus.Maths.Geometry.Segment
+      Haskus.Maths.Geometry.Point
   other-modules:
       Paths_haskus_maths
   hs-source-dirs:
@@ -35,6 +38,7 @@ library
   build-depends:
       base >=4.8 && <5
     , haskus-utils
+    , haskus-utils-data
     , linear
   default-language: Haskell2010
 
@@ -50,5 +54,6 @@ test-suite main-tests
       base >=4.8 && <5
     , doctest
     , haskus-utils
+    , haskus-utils-data
     , linear
   default-language: Haskell2010

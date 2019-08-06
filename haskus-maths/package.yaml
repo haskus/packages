@@ -14,6 +14,7 @@ description:         Please see the README on Github at <https://github.com/hask
 dependencies:
 - base >= 4.8 && < 5
 - haskus-utils
+- haskus-utils-data
 - linear
 
 ghc-options: -Wall -O
@@ -22,6 +23,9 @@ library:
    source-dirs: src/lib
    exposed-modules:
       - Haskus.Maths.Geometry.Polygon
+      - Haskus.Maths.Geometry.Line
+      - Haskus.Maths.Geometry.Segment
+      - Haskus.Maths.Geometry.Point
 
 tests:
    main-tests:
