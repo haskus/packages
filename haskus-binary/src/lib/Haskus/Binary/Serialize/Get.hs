@@ -69,8 +69,9 @@ class Monad m => GetMonad m where
       xs <- replicateM (fromIntegral n) getWord8
       return (fromListN (fromIntegral n) xs)
 
-   -- | Read the given amount of bytes into the specified buffer
-   getBufferInto :: Word -> Buffer 'Mutable pin gc heap -> m ()
+   -- | Read the given amount of bytes into the specified buffer at the
+   -- optionally specified offset
+   getBufferInto :: Word -> Buffer 'Mutable pin gc heap -> Maybe Word -> m ()
 
 
 -- | Get a Float64 with host order
