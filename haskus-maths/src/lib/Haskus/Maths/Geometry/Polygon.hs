@@ -5,6 +5,8 @@ module Haskus.Maths.Geometry.Polygon
    , polygonArea
    , polygonCentroidArea
    , polygonCentroid
+   , polygonCentroidAreaInner
+   , polygonCentroidInner
    , polygonWindingNumber
    , polygonPointInside
    , polygonPointNearest
@@ -67,13 +69,13 @@ polygonArea = abs . (/2) . sum . fmap compute . polygonEdges
 --
 -- >>> let p = Polygon [P2 0 0, P2 0 10, P2 5 0]
 -- >>> polygonCentroidArea @Rational p
--- (5 % 3,10 % 3,25 % 1)
-polygonCentroidArea :: Fractional a => Polygon a -> (a,a,a)
+-- (P (V2 (5 % 3) (10 % 3)),25 % 1)
+polygonCentroidArea :: Fractional a => Polygon a -> (Point V2 a,a)
 polygonCentroidArea = go . polygonPoints
    where
       go []                  = error "Invalid empty polygon"
-      go [P2 x y]            = (x,y,0)
-      go [P2 x1 y1,P2 x2 y2] = (x1+(x2-x1), y1+(y2-y1),0)
+      go [P2 x y]            = (P2 x y,0)
+      go [P2 x1 y1,P2 x2 y2] = (P2 (x1+(x2-x1)) (y1+(y2-y1)),0)
       go rs                  = compute 0.0 0.0 0.0 (rs ++ [head rs])
 
       -- ax2 is the surface times 2
@@ -85,19 +87,44 @@ polygonCentroidArea = go . polygonPoints
          in compute (x + (x1+x2)*k) (y + (y1+y2)*k) (ax2+k) (P2 x2 y2:rs)
       compute x y ax2 _ =
          let k = 3 * ax2
-         in (x / k, y / k, abs (ax2 / 2))
+         in (P2 (x / k) (y / k), abs (ax2 / 2))
 
--- | Get the coordinates of the centroid (gravity center) of the polygon.
+-- | Get the coordinates of the centroid (gravity center) of the polygon. The
+-- centroid may be outside of the polygon.
 --
 -- If you also need the area, use `polygonCentroidArea`
 --
 -- >>> let p = Polygon [P2 0 0, P2 0 10, P2 5 0]
 -- >>> polygonCentroid @Rational p
--- (5 % 3,10 % 3)
-polygonCentroid :: Fractional a => Polygon a -> (a,a)
-polygonCentroid p = case polygonCentroidArea p of
-   (x,y,_) -> (x,y)
+-- P (V2 (5 % 3) (10 % 3))
+polygonCentroid :: Fractional a => Polygon a -> Point V2 a
+polygonCentroid p = fst (polygonCentroidArea p)
 
+-- | Get the centroid of the polygon if it is inside the polygon, otherwise get
+-- a point inside the polygon as close as possible of the centroid.
+--
+-- >>> let p = Polygon [P2 0 (-10), P2 0 10, P2 4 10, P2 4 8, P2 1 8, P2 1 (-8), P2 4 (-8), P2 4 (-10)]
+-- >>> polygonCentroid @Double p
+-- P (V2 1.25 (-0.0))
+--
+-- >>> polygonPointInside p (polygonCentroid @Double p)
+-- False
+--
+-- >>> polygonCentroidInner @Double p
+-- P (V2 1.0 0.0)
+--
+-- >>> polygonPointInside p (polygonCentroidInner @Double p)
+-- True
+polygonCentroidAreaInner :: (Ord a, Fractional a, Floating a) => Polygon a -> (Point V2 a,a)
+polygonCentroidAreaInner p = (xy,a)
+   where
+      (cxy,a) = polygonCentroidArea p
+      xy = polygonPointNearest p cxy
+
+-- | Get the centroid of the polygon if it is inside the polygon, otherwise get
+-- a point inside the polygon as close as possible of the centroid.
+polygonCentroidInner :: (Ord a, Fractional a, Floating a) => Polygon a -> Point V2 a
+polygonCentroidInner p = fst (polygonCentroidAreaInner p)
 
 -- | Count the number of times a polygon encloses a given point.
 --
@@ -116,14 +143,14 @@ polygonCentroid p = case polygonCentroidArea p of
 --       - top-down: wn-=1
 --
 -- >>> let p = Polygon [P2 (-5) (-5), P2 5 (-5), P2 5 5, P2 (-5) 5]
--- >>> polygonWindingNumber (P2 0 0) p
+-- >>> polygonWindingNumber p (P2 0 0)
 -- -1
 --
 -- >>> let p = Polygon [P2 0 0, P2 0 10, P2 5 0]
--- >>> polygonWindingNumber (P2 1 1) p
+-- >>> polygonWindingNumber p (P2 1 1)
 -- 1
-polygonWindingNumber :: (Fractional a, Num a, Ord a) => Point V2 a -> Polygon a -> Int
-polygonWindingNumber (P p) = (`div` 2) . sum . fmap crossX . polygonEdges . polygonMapPoints (.-^ p)
+polygonWindingNumber :: (Fractional a, Num a, Ord a) => Polygon a -> Point V2 a -> Int
+polygonWindingNumber poly (P p) = (`div` 2) . sum . fmap crossX . polygonEdges . polygonMapPoints (.-^ p) <| poly
    where
       crossX cs@(P2 x1 y1, P2 x2 y2)
          | signum y1 == signum y2   = 0 -- don't cross x-axis
@@ -148,18 +175,18 @@ polygonWindingNumber (P p) = (`div` 2) . sum . fmap crossX . polygonEdges . poly
 -- | Indicate if the given point is inside the (right-hand inside) polygon
 --
 -- >>> let p = Polygon [P2 (-5) (-5), P2 5 (-5), P2 5 5, P2 (-5) 5]
--- >>> polygonPointInside (P2 0 0) p
+-- >>> polygonPointInside p (P2 0 0)
 -- False
 --
 -- >>> let p = Polygon [P2 0 0, P2 0 10, P2 5 0]
--- >>> polygonPointInside (P2 1 1) p
+-- >>> polygonPointInside p (P2 1 1)
 -- True
 --
 -- >>> let p = Polygon [P2 0 0, P2 0 10, P2 5 0]
--- >>> polygonPointInside (P2 20 20) p
+-- >>> polygonPointInside p (P2 20 20)
 -- False
-polygonPointInside :: (Fractional a, Num a, Ord a) => Point V2 a -> Polygon a -> Bool
-polygonPointInside xy p = polygonWindingNumber xy p > 0
+polygonPointInside :: (Fractional a, Num a, Ord a) => Polygon a -> Point V2 a -> Bool
+polygonPointInside p xy = polygonWindingNumber p xy > 0
 
 
 -- | Get the point inside the polygon nearest to the given point
@@ -175,8 +202,8 @@ polygonPointInside xy p = polygonWindingNumber xy p > 0
 -- P (V2 3.0 5.0)
 polygonPointNearest :: (Fractional a, Num a, Ord a, Floating a) => Polygon a -> Point V2 a -> Point V2 a
 polygonPointNearest poly p
-   | polygonPointInside p poly = p
-   | otherwise = polygonPointNearestBorder poly p
+   | polygonPointInside poly p = p
+   | otherwise                 = polygonPointNearestBorder poly p
 
 -- | Get the point on the border of the polygon nearest to the given point
 polygonPointNearestBorder :: (Ord a,Floating a) => Polygon a -> Point V2 a -> Point V2 a
