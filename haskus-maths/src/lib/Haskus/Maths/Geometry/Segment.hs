@@ -2,6 +2,7 @@
 
 module Haskus.Maths.Geometry.Segment
    ( Segment (..)
+   , makeSegment
    , segmentLine
    , segmentPointNearest
    )
@@ -21,6 +22,12 @@ import Haskus.Maths.Geometry.Line
 data Segment a
    = Segment !(Point V2 a) !(Point V2 a)
    deriving (Eq,Ord,Show)
+
+-- | Build a segment
+makeSegment :: Eq a => Point V2 a -> Point V2 a -> Segment a
+makeSegment p1 p2
+   | p1 == p2  = error "Can't build a segment with two equal points"
+   | otherwise = Segment p1 p2
 
 -- | Get the line defined by the segment
 --
