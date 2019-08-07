@@ -103,6 +103,9 @@ polygonCentroid p = fst (polygonCentroidArea p)
 -- | Get the centroid of the polygon if it is inside the polygon, otherwise get
 -- a point inside the polygon as close as possible of the centroid.
 --
+-- Return the real centroid and the area too as they are computed at the same
+-- time.
+--
 -- >>> let p = Polygon [P2 0 (-10), P2 0 10, P2 4 10, P2 4 8, P2 1 8, P2 1 (-8), P2 4 (-8), P2 4 (-10)]
 -- >>> polygonCentroid @Double p
 -- P (V2 1.25 (-0.0))
@@ -115,8 +118,8 @@ polygonCentroid p = fst (polygonCentroidArea p)
 --
 -- >>> polygonPointInside p (polygonCentroidInner @Double p)
 -- True
-polygonCentroidAreaInner :: (Ord a, Fractional a, Floating a) => Polygon a -> (Point V2 a,a)
-polygonCentroidAreaInner p = (xy,a)
+polygonCentroidAreaInner :: (Ord a, Fractional a, Floating a) => Polygon a -> (Point V2 a, Point V2 a, a)
+polygonCentroidAreaInner p = (xy,cxy,a)
    where
       (cxy,a) = polygonCentroidArea p
       xy = polygonPointNearest p cxy
@@ -124,7 +127,7 @@ polygonCentroidAreaInner p = (xy,a)
 -- | Get the centroid of the polygon if it is inside the polygon, otherwise get
 -- a point inside the polygon as close as possible of the centroid.
 polygonCentroidInner :: (Ord a, Fractional a, Floating a) => Polygon a -> Point V2 a
-polygonCentroidInner p = fst (polygonCentroidAreaInner p)
+polygonCentroidInner p = polygonCentroidAreaInner p |> \(g,_,_) -> g
 
 -- | Count the number of times a polygon encloses a given point.
 --
