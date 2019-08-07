@@ -118,11 +118,19 @@ polygonCentroid p = fst (polygonCentroidArea p)
 --
 -- >>> polygonPointInside p (polygonCentroidInner @Double p)
 -- True
+--
+-- >>> let s = Polygon [P2 (-2) (-5), P2 (-2) 2, P2 2 2, P2 2 (-2)]
+-- >>> polygonCentroid s == polygonCentroidInner @Double s
+-- True
+-- >>> polygonCentroid p == polygonCentroidInner @Double p
+-- False
 polygonCentroidAreaInner :: (Ord a, Fractional a, Floating a) => Polygon a -> (Point V2 a, Point V2 a, a)
 polygonCentroidAreaInner p = (xy,cxy,a)
    where
       (cxy,a) = polygonCentroidArea p
-      xy = polygonPointNearest p cxy
+      xy = if polygonPointInside p cxy
+            then cxy
+            else polygonPointNearest p cxy
 
 -- | Get the centroid of the polygon if it is inside the polygon, otherwise get
 -- a point inside the polygon as close as possible of the centroid.
