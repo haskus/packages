@@ -9,6 +9,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Haskus.Utils.Variant.Excepts
    ( Excepts
@@ -38,6 +40,8 @@ module Haskus.Utils.Variant.Excepts
    , catchAllE
    , catchDieE
    , catchRemove
+   , sequenceE
+   , runBothE
    -- * Reexport
    , module Haskus.Utils.Variant.VEither
    )
@@ -360,3 +364,30 @@ instance MonadInIO m => MonadInIO (Excepts es m) where
    {-# INLINABLE liftWith2 #-}
    liftWith2 wth f =
       Excepts $ liftWith2 wth (\a b -> runE (f a b))
+
+-- | Product of the execution of two Excepts
+--
+-- You can use a generic monad combinator such as
+-- `Control.Concurrent.Async.concurrently` (in "async" package) to get
+-- concurrent execution.
+--
+-- >> concurrentE = runBothE concurrently
+runBothE ::
+   ( KnownNat (Length (b:e2))
+   , Monad m
+   ) => (forall x y. m x -> m y -> m (x,y)) -> Excepts e1 m a -> Excepts e2 m b -> Excepts (Tail (Product (a:e1) (b:e2))) m (a,b)
+runBothE exec f g = Excepts do
+   (v1,v2) <- exec (runE f) (runE g)
+   pure (veitherProduct v1 v2)
+
+-- | Product of the sequential execution of two Excepts
+sequenceE ::
+   ( KnownNat (Length (b:e2))
+   , Monad m
+   ) => Excepts e1 m a -> Excepts e2 m b -> Excepts (Tail (Product (a:e1) (b:e2))) m (a,b)
+sequenceE = runBothE exec
+   where
+      exec f g = do
+         v1 <- f
+         v2 <- g
+         pure (v1,v2)

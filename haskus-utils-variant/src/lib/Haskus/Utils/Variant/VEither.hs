@@ -35,6 +35,7 @@ module Haskus.Utils.Variant.VEither
    , veitherPrepend
    , veitherCont
    , veitherToEither
+   , veitherProduct
    , module Haskus.Utils.Variant
    )
 where
@@ -180,6 +181,10 @@ veitherCont :: (V es -> u) -> (a -> u) -> VEither es a -> u
 veitherCont f g v = case v of
    VLeft xs -> f xs
    VRight x -> g x
+
+-- | Product of two VEither
+veitherProduct :: KnownNat (Length (b:e2)) => VEither e1 a -> VEither e2 b -> VEither (Tail (Product (a:e1) (b:e2))) (a,b)
+veitherProduct (VEither x) (VEither y) = VEither (productVariant x y)
 
 -- | Functor instance for VEither
 --
