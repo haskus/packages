@@ -1,0 +1,48 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 6c1f4aa7094ab3a61a392d7d2e2bc3ab1f3f78a462d97213fa0926bf6ff86a29
+
+name:           haskus-integer
+version:        0.1
+description:    Please see the README on Github at <https://github.com/haskus/haskus-packages/#readme>
+homepage:       https://github.com/haskus/haskus-packages#readme
+bug-reports:    https://github.com/haskus/haskus-packages/issues
+author:         Sylvain HENRY
+maintainer:     sylvain@haskus.fr
+copyright:      Sylvain HENRY 2019
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/haskus/haskus-packages
+
+library
+  exposed-modules:
+      Haskus.Integer
+  other-modules:
+      Paths_haskus_integer
+  hs-source-dirs:
+      src/lib
+  ghc-options: -Wall -O -fobject-code
+  build-depends:
+      base >=4.8 && <5
+  default-language: Haskell2010
+
+test-suite main-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_haskus_integer
+  hs-source-dirs:
+      src/tests
+  ghc-options: -Wall -O -fobject-code
+  build-depends:
+      base >=4.8 && <5
+    , doctest
+  default-language: Haskell2010

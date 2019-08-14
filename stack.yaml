@@ -15,6 +15,7 @@ packages:
 - haskus-ui/
 - haskus-time/
 - haskus-maths/
+- haskus-integer/
 
 extra-deps:
 - stm-containers-1.1.0.2
