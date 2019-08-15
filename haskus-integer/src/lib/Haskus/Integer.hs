@@ -35,7 +35,7 @@ import Data.Bits
 
 -- | A Natural
 --
--- Stored as an array of Word64 limbs, lower limbs first, limbs use host
+-- Stored as an array of Word limbs, lower limbs first, limbs use host
 -- endianness.
 --
 -- Invariant:
@@ -74,7 +74,7 @@ naturalFromWord :: Word -> Natural
 naturalFromWord (W# 0##) = naturalZero
 naturalFromWord (W# w)   = runST $ ST \s0 ->
    case newByteArray# WS# s0 of
-      (# s1, mba #) -> case writeWord64Array# mba 0# w s1 of
+      (# s1, mba #) -> case writeWordArray# mba 0# w s1 of
          s2 -> case unsafeFreezeByteArray# mba s2 of
             (# s3, ba #) -> (# s3, Natural ba #)
 
@@ -101,8 +101,8 @@ naturalLimbsMS n@(Natural ba)
    | naturalIsZero n = []
    | otherwise       = goLimbs (fromIntegral (naturalLimbCount n - 1))
    where
-      goLimbs 0         = [W# (indexWord64Array# ba 0#)]
-      goLimbs i@(I# i#) = W# (indexWord64Array# ba i#) : goLimbs (i-1)
+      goLimbs 0         = [W# (indexWordArray# ba 0#)]
+      goLimbs i@(I# i#) = W# (indexWordArray# ba i#) : goLimbs (i-1)
 
 -- Limbs: less significant first
 naturalLimbsLS :: Natural -> [Word]
@@ -113,7 +113,7 @@ naturalLimbsLS n@(Natural ba)
       lc = fromIntegral (naturalLimbCount n)
       goLimbs i@(I# i#)
          | i == lc   = []
-         | otherwise = W# (indexWord64Array# ba i#) : goLimbs (i+1)
+         | otherwise = W# (indexWordArray# ba i#) : goLimbs (i+1)
 
 -- | Equality
 naturalEq :: Natural -> Natural -> Bool
@@ -156,8 +156,8 @@ naturalAdd n1@(Natural ba1) n2@(Natural ba2)
                s2 -> shrinkMutableByteArray# mba (sz -# 1#) s2
          | l >= lc2  = case copyByteArray# ba1 off mba off csz s of
                s2 -> shrinkMutableByteArray# mba (sz -# 1#) s2
-         | otherwise = case plusWord2# (indexWord64Array# ba1 l#) (indexWord64Array# ba2 l#) of
-               (# c, r #) -> case writeWord64Array# mba l# r s of
+         | otherwise = case plusWord2# (indexWordArray# ba1 l#) (indexWordArray# ba2 l#) of
+               (# c, r #) -> case writeWordArray# mba l# r s of
                   s2 -> addLimbs (l+1) c mba s2
             where
                !(I# off) = l*WS
@@ -165,16 +165,16 @@ naturalAdd n1@(Natural ba1) n2@(Natural ba2)
 
       addLimbs l@(I# l#) c mba s
          | isTrue# (eqWord# c 0##) = addLimbsNoCarry l mba s
-         | l == lc-1               = writeWord64Array# mba l# c s
-         | l >= lc1 = case plusWord2# c (indexWord64Array# ba2 l#) of
-               (# c2, r #) -> case writeWord64Array# mba l# r s of
+         | l == lc-1               = writeWordArray# mba l# c s
+         | l >= lc1 = case plusWord2# c (indexWordArray# ba2 l#) of
+               (# c2, r #) -> case writeWordArray# mba l# r s of
                   s2 -> addLimbs (l+1) c2 mba s2
-         | l >= lc2 = case plusWord2# c (indexWord64Array# ba1 l#) of
-               (# c2, r #) -> case writeWord64Array# mba l# r s of
+         | l >= lc2 = case plusWord2# c (indexWordArray# ba1 l#) of
+               (# c2, r #) -> case writeWordArray# mba l# r s of
                   s2 -> addLimbs (l+1) c2 mba s2
-         | otherwise = case plusWord2# (indexWord64Array# ba1 l#) (indexWord64Array# ba2 l#) of
+         | otherwise = case plusWord2# (indexWordArray# ba1 l#) (indexWordArray# ba2 l#) of
                (# c2, r #) -> case plusWord2# r c of
-                  (# c3, r2 #) -> case writeWord64Array# mba l# r2 s of
+                  (# c3, r2 #) -> case writeWordArray# mba l# r2 s of
                      s2 -> addLimbs (l+1) (plusWord# c2 c3) mba s2
 
 -- | Bitwise OR
@@ -199,7 +199,7 @@ naturalOr n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
          | c2 == 0            = let !(I# csz) = (lc1-i) * WS
                                 in copyByteArray# ba1 off mba off csz s
          | otherwise          =
-            case writeWord64Array# mba i# (indexWord64Array# ba1 i# `or#` indexWord64Array# ba2 i#) s of
+            case writeWordArray# mba i# (indexWordArray# ba1 i# `or#` indexWordArray# ba2 i#) s of
                s2 -> go mba (i+1) (c1-1) (c2-1) s2
          where
             !(I# off) = i * WS
@@ -227,7 +227,7 @@ naturalXor n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
          | c2 == 0            = let !(I# csz) = (lc1-i) * WS
                                 in copyByteArray# ba1 off mba off csz s
          | otherwise          =
-            case writeWord64Array# mba i# (indexWord64Array# ba1 i# `xor#` indexWord64Array# ba2 i#) s of
+            case writeWordArray# mba i# (indexWordArray# ba1 i# `xor#` indexWordArray# ba2 i#) s of
                s2 -> go mba (i+1) (c1-1) (c2-1) s2
          where
             !(I# off) = i * WS
@@ -250,7 +250,7 @@ naturalAnd n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
       go :: MutableByteArray# s -> Int -> Int -> State# s -> State# s
       go _   _ 0 s = s
       go mba i c s =
-            case writeWord64Array# mba i# (indexWord64Array# ba1 i# `and#` indexWord64Array# ba2 i#) s of
+            case writeWordArray# mba i# (indexWordArray# ba1 i# `and#` indexWordArray# ba2 i#) s of
                s2 -> go mba (i+1) (c-1) s2
          where
             !(I# i#)  = i
@@ -291,10 +291,10 @@ naturalShiftR n@(Natural ba) k      = runST $ ST \s0 ->
          let
             !(I# limbIdx#) = fromIntegral limbIdx
             srcLimbIdx#    = limbIdx# +# limbOff#
-            u = indexWord64Array# ba srcLimbIdx#
-            v = if limbIdx == lcOut-1 then 0## else indexWord64Array# ba (srcLimbIdx# +# 1#)
+            u = indexWordArray# ba srcLimbIdx#
+            v = if limbIdx == lcOut-1 then 0## else indexWordArray# ba (srcLimbIdx# +# 1#)
             w = (u `uncheckedShiftRL#` bitOff#) `or#` (v `uncheckedShiftL#` (WSBITS# -# bitOff#))
-         in case writeWord64Array# mba limbIdx# w s of
+         in case writeWordArray# mba limbIdx# w s of
             s2 -> go mba (limbIdx+1) s2
 
 -- | Bit shift left
@@ -322,7 +322,7 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
 
       -- if the bits we shift in the highest limb are 0, we don't need an
       -- additional limb (which would be null and would break the invariant).
-      lastLimb           = indexWord64Array# ba (lc# -# 1#)
+      lastLimb           = indexWordArray# ba (lc# -# 1#)
       needAdditionalLimb = isTrue# ((lastLimb `uncheckedShiftRL#` (WSBITS# -# bitOff#)) `neWord#` 0##)
 
       lcOutReal          = lc + if bitOff /= 0 && needAdditionalLimb then 1 else 0
@@ -340,8 +340,8 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
       go mba limbIdx s =
          let
             !(I# limbIdx#) = fromIntegral limbIdx
-            u = if limbIdx == 0 then 0## else indexWord64Array# ba (limbIdx# -# 1#)
-            v = if limbIdx == lc then 0## else indexWord64Array# ba limbIdx#
+            u = if limbIdx == 0 then 0## else indexWordArray# ba (limbIdx# -# 1#)
+            v = if limbIdx == lc then 0## else indexWordArray# ba limbIdx#
             w = (v `uncheckedShiftL#` bitOff#) `or#` (u `uncheckedShiftRL#` (WSBITS# -# bitOff#))
-         in case writeWord64Array# mba (limbIdx# +# limbOff#) w s of
+         in case writeWordArray# mba (limbIdx# +# limbOff#) w s of
             s2 -> go mba (limbIdx+1) s2
