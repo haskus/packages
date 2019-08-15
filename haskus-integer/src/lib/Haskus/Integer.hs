@@ -18,7 +18,8 @@ module Haskus.Integer
    , naturalXor
    , naturalPopCount
    , naturalShiftR
-   , limbCount
+   , naturalShiftL
+   , naturalLimbCount
    )
 where
 
@@ -53,8 +54,8 @@ instance Ord Natural where
    compare = naturalCompare
 
 -- | Count limbs
-limbCount :: Natural -> Word
-limbCount (Natural ba) =
+naturalLimbCount :: Natural -> Word
+naturalLimbCount (Natural ba) =
    W# (uncheckedShiftRL# (int2Word# (sizeofByteArray# ba)) 3#)
 
 -- | Natural Zero
@@ -66,7 +67,7 @@ naturalZero = runST $ ST $ \s0 ->
 
 -- | Indicate if a natural is zero
 naturalIsZero :: Natural -> Bool
-naturalIsZero n = limbCount n == 0
+naturalIsZero n = naturalLimbCount n == 0
 
 -- | Create a Natural from a Word
 naturalFromWord :: Word -> Natural
@@ -98,7 +99,7 @@ naturalShowHex n
 naturalLimbsMS :: Natural -> [Word]
 naturalLimbsMS n@(Natural ba)
    | naturalIsZero n = []
-   | otherwise       = goLimbs (fromIntegral (limbCount n - 1))
+   | otherwise       = goLimbs (fromIntegral (naturalLimbCount n - 1))
    where
       goLimbs 0         = [W# (indexWord64Array# ba 0#)]
       goLimbs i@(I# i#) = W# (indexWord64Array# ba i#) : goLimbs (i-1)
@@ -109,7 +110,7 @@ naturalLimbsLS n@(Natural ba)
    | naturalIsZero n = []
    | otherwise       = goLimbs 0
    where
-      lc = fromIntegral (limbCount n)
+      lc = fromIntegral (naturalLimbCount n)
       goLimbs i@(I# i#)
          | i == lc   = []
          | otherwise = W# (indexWord64Array# ba i#) : goLimbs (i+1)
@@ -117,14 +118,14 @@ naturalLimbsLS n@(Natural ba)
 -- | Equality
 naturalEq :: Natural -> Natural -> Bool
 naturalEq n1 n2
-   | limbCount n1 /= limbCount n2 = False
+   | naturalLimbCount n1 /= naturalLimbCount n2 = False
    | otherwise                    = all (uncurry (==)) (naturalLimbsMS n1 `zip` naturalLimbsMS n2)
 
 -- | Compare
 naturalCompare :: Natural -> Natural -> Ordering
 naturalCompare n1 n2
-   | limbCount n1 > limbCount n2 = GT
-   | limbCount n1 < limbCount n2 = LT
+   | naturalLimbCount n1 > naturalLimbCount n2 = GT
+   | naturalLimbCount n1 < naturalLimbCount n2 = LT
    | otherwise                   = go (naturalLimbsMS n1) (naturalLimbsMS n2)
       where
          go [] []         = EQ
@@ -144,8 +145,8 @@ naturalAdd n1@(Natural ba1) n2@(Natural ba2)
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lc1      = fromIntegral $ limbCount n1
-      lc2      = fromIntegral $ limbCount n2
+      lc1      = fromIntegral $ naturalLimbCount n1
+      lc2      = fromIntegral $ naturalLimbCount n2
       lc       = max lc1 lc2 + 1
       !(I# sz) = lc*WS
 
@@ -185,8 +186,8 @@ naturalOr n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lc1      = fromIntegral $ limbCount n1
-      lc2      = fromIntegral $ limbCount n2
+      lc1      = fromIntegral $ naturalLimbCount n1
+      lc2      = fromIntegral $ naturalLimbCount n2
       lc       = max lc1 lc2
       !(I# sz) = lc*WS
 
@@ -213,8 +214,8 @@ naturalXor n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lc1      = fromIntegral $ limbCount n1
-      lc2      = fromIntegral $ limbCount n2
+      lc1      = fromIntegral $ naturalLimbCount n1
+      lc2      = fromIntegral $ naturalLimbCount n2
       lc       = max lc1 lc2
       !(I# sz) = lc*WS
 
@@ -241,8 +242,8 @@ naturalAnd n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lc1      = fromIntegral $ limbCount n1
-      lc2      = fromIntegral $ limbCount n2
+      lc1      = fromIntegral $ naturalLimbCount n1
+      lc2      = fromIntegral $ naturalLimbCount n2
       lc       = min lc1 lc2
       !(I# sz) = lc*WS
 
@@ -266,7 +267,7 @@ naturalShiftR n@(Natural ba) k      = runST $ ST \s0 ->
       case newByteArray# szOut# s0 of
          (# s1, mba #) -> case bitOff of
              -- we drop full limbs
-            0 -> case copyByteArray# ba limbOff# mba 0# szOut# s1 of
+            0 -> case copyByteArray# ba limbOffByte# mba 0# szOut# s1 of
                   s2 -> case unsafeFreezeByteArray# mba s2 of
                      (# s3, ba2 #) -> (# s3, Natural ba2 #)
 
@@ -275,13 +276,14 @@ naturalShiftR n@(Natural ba) k      = runST $ ST \s0 ->
                   (# s3, ba2 #) -> (# s3, Natural ba2 #)
 
    where
-      lc               = limbCount n
-      (limbOff,bitOff) = k `quotRem` WSBITS
-      lcOut            = lc - limbOff
-      szOut            = lcOut * WS
-      !(I# szOut#)     = fromIntegral szOut
-      !(I# bitOff#)    = fromIntegral bitOff
-      !(I# limbOff#)   = fromIntegral limbOff
+      lc                 = naturalLimbCount n
+      (limbOff,bitOff)   = k `quotRem` WSBITS
+      lcOut              = lc - limbOff
+      szOut              = lcOut * WS
+      !(I# szOut#)       = fromIntegral szOut
+      !(I# bitOff#)      = fromIntegral bitOff
+      !(I# limbOff#)     = fromIntegral limbOff
+      !(I# limbOffByte#) = fromIntegral (limbOff*WS)
 
       go :: MutableByteArray# s -> Word -> State# s -> State# s
       go _   limbIdx s | limbIdx == lcOut = s
@@ -293,4 +295,53 @@ naturalShiftR n@(Natural ba) k      = runST $ ST \s0 ->
             v = if limbIdx == lcOut-1 then 0## else indexWord64Array# ba (srcLimbIdx# +# 1#)
             w = (u `uncheckedShiftRL#` bitOff#) `or#` (v `uncheckedShiftL#` (WSBITS# -# bitOff#))
          in case writeWord64Array# mba limbIdx# w s of
+            s2 -> go mba (limbIdx+1) s2
+
+-- | Bit shift left
+naturalShiftL :: Natural -> Word -> Natural
+naturalShiftL n 0                   = n
+naturalShiftL n _ | naturalIsZero n = n
+naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
+      case newByteArray# szOut# s0 of
+         (# s1, mba #) ->
+            -- insert full empty limbs
+            case setByteArray# mba 0# limbOffByte# 0# s1 of
+               s2 -> case bitOff of
+                  0 -> case copyByteArray# ba 0# mba limbOffByte# szIn# s2 of
+                        s3 -> case unsafeFreezeByteArray# mba s3 of
+                           (# s4, ba2 #) -> (# s4, Natural ba2 #)
+
+                  _ -> case go mba 0 s2 of
+                     s3 -> case unsafeFreezeByteArray# mba s3 of
+                        (# s4, ba2 #) -> (# s4, Natural ba2 #)
+
+   where
+      lc                 = naturalLimbCount n
+      !(I# lc#)          = fromIntegral lc
+      (limbOff,bitOff)   = k `quotRem` WSBITS
+
+      -- if the bits we shift in the highest limb are 0, we don't need an
+      -- additional limb (which would be null and would break the invariant).
+      lastLimb           = indexWord64Array# ba (lc# -# 1#)
+      needAdditionalLimb = isTrue# ((lastLimb `uncheckedShiftRL#` (WSBITS# -# bitOff#)) `neWord#` 0##)
+
+      lcOutReal          = lc + if bitOff /= 0 && needAdditionalLimb then 1 else 0
+      lcOut              = lcOutReal + limbOff
+      szOut              = lcOut * WS
+      szIn               = lc * WS
+      !(I# szIn#)        = fromIntegral szIn
+      !(I# szOut#)       = fromIntegral szOut
+      !(I# bitOff#)      = fromIntegral bitOff
+      !(I# limbOff#)     = fromIntegral limbOff
+      !(I# limbOffByte#) = fromIntegral (limbOff*WS)
+
+      go :: MutableByteArray# s -> Word -> State# s -> State# s
+      go _   limbIdx s | limbIdx == lcOutReal = s
+      go mba limbIdx s =
+         let
+            !(I# limbIdx#) = fromIntegral limbIdx
+            u = if limbIdx == 0 then 0## else indexWord64Array# ba (limbIdx# -# 1#)
+            v = if limbIdx == lc then 0## else indexWord64Array# ba limbIdx#
+            w = (v `uncheckedShiftL#` bitOff#) `or#` (u `uncheckedShiftRL#` (WSBITS# -# bitOff#))
+         in case writeWord64Array# mba (limbIdx# +# limbOff#) w s of
             s2 -> go mba (limbIdx+1) s2
