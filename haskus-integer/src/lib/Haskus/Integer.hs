@@ -372,13 +372,13 @@ naturalMul n1@(Natural ba1) n2@(Natural ba2)
    where
       !lc1@(I# lc1#) = fromIntegral $ naturalLimbCount n1
       !lc2@(I# lc2#) = fromIntegral $ naturalLimbCount n2
-      lc             = lc1 + lc2 - 1
+      lc             = lc1 + lc2
       !(I# sz#)      = lc*WS
 
       loopj mba j@(I# j#) s
          | isTrue# (j# ==# lc2#) = s
          | otherwise             = case indexWordArray# ba2 j# of
-                                       0## -> loopj mba (I# (j# +# 1#)) s
+                                       0## -> loopj mba (j+1) s
                                        vj  -> loopi mba vj j 0 0## s
 
 
