@@ -16,6 +16,8 @@ module Haskus.Integer
    , naturalOr
    , naturalAnd
    , naturalXor
+   , naturalPopCount
+   , naturalShiftR
    , limbCount
    )
 where
@@ -28,6 +30,7 @@ import Data.Bits
 -- Word size in bytes
 #define WS 8
 #define WSSHIFT 3
+#define WSBITS 64
 
 -- | A Natural
 --
@@ -77,9 +80,11 @@ naturalFromWord (W# w)   = runST $ ST \s0 ->
 -- | Show a Natural
 naturalShowHex :: Natural -> String
 naturalShowHex n
-   | naturalIsZero n = "0"
-   | otherwise       = '0' : 'x' : fmap hex16 (dropWhile (==0) (concatMap limb4MS (naturalLimbsMS n)))
+   | naturalIsZero n = "0x0"
+   | otherwise       = '0' : 'x' : add0 (fmap hex16 (dropWhile (==0) (concatMap limb4MS (naturalLimbsMS n))))
    where
+      add0 [] = ['0']
+      add0 xs = xs
       hex16 x
          | x <= 9    = chr (48+fromIntegral x)
          | otherwise = chr (55+fromIntegral x)
@@ -89,7 +94,7 @@ naturalShowHex n
       goLimbs4 0 _ = []
       goLimbs4 k x = (x `unsafeShiftR` (k-4)) .&. 0xF : goLimbs4 (k-4) x
 
--- limbs: most significant first
+-- Limbs: most significant first
 naturalLimbsMS :: Natural -> [Word]
 naturalLimbsMS n@(Natural ba)
    | naturalIsZero n = []
@@ -97,6 +102,17 @@ naturalLimbsMS n@(Natural ba)
    where
       goLimbs 0         = [W# (indexWord64Array# ba 0#)]
       goLimbs i@(I# i#) = W# (indexWord64Array# ba i#) : goLimbs (i-1)
+
+-- Limbs: less significant first
+naturalLimbsLS :: Natural -> [Word]
+naturalLimbsLS n@(Natural ba)
+   | naturalIsZero n = []
+   | otherwise       = goLimbs 0
+   where
+      lc = fromIntegral (limbCount n)
+      goLimbs i@(I# i#)
+         | i == lc   = []
+         | otherwise = W# (indexWord64Array# ba i#) : goLimbs (i+1)
 
 -- | Equality
 naturalEq :: Natural -> Natural -> Bool
@@ -237,3 +253,44 @@ naturalAnd n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
                s2 -> go mba (i+1) (c-1) s2
          where
             !(I# i#)  = i
+
+-- | Pop count
+naturalPopCount :: Natural -> Word
+naturalPopCount n = sum (fmap (fromIntegral . popCount) (naturalLimbsLS n))
+
+-- | Bit shift right
+naturalShiftR :: Natural -> Word -> Natural
+naturalShiftR n 0                   = n
+naturalShiftR n _ | naturalIsZero n = n
+naturalShiftR n@(Natural ba) k      = runST $ ST \s0 ->
+      case newByteArray# szOut# s0 of
+         (# s1, mba #) -> case bitOff of
+             -- we drop full limbs
+            0 -> case copyByteArray# ba limbOff# mba 0# szOut# s1 of
+                  s2 -> case unsafeFreezeByteArray# mba s2 of
+                     (# s3, ba2 #) -> (# s3, Natural ba2 #)
+
+            _ -> case go mba 0 s1 of
+               s2 -> case unsafeFreezeByteArray# mba s2 of
+                  (# s3, ba2 #) -> (# s3, Natural ba2 #)
+
+   where
+      lc               = limbCount n
+      (limbOff,bitOff) = k `quotRem` WSBITS
+      lcOut            = lc - limbOff
+      szOut            = lcOut * WS
+      !(I# szOut#)     = fromIntegral szOut
+      !(I# bitOff#)    = fromIntegral bitOff
+      !(I# limbOff#)   = fromIntegral limbOff
+
+      go :: MutableByteArray# s -> Word -> State# s -> State# s
+      go _   limbIdx s | limbIdx == lcOut = s
+      go mba limbIdx s =
+         let
+            !(I# limbIdx#) = fromIntegral limbIdx
+            srcLimbIdx#    = limbIdx# +# limbOff#
+            u = indexWord64Array# ba srcLimbIdx#
+            v = if limbIdx == lcOut-1 then 0## else indexWord64Array# ba (srcLimbIdx# +# 1#)
+            w = (u `uncheckedShiftRL#` bitOff#) `or#` (v `uncheckedShiftL#` (WSBITS# -# bitOff#))
+         in case writeWord64Array# mba limbIdx# w s of
+            s2 -> go mba (limbIdx+1) s2
