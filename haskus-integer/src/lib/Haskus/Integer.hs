@@ -62,6 +62,23 @@ instance Num Natural where
    signum _ = naturalFromWord 1
    negate _ = error "Can't negate a Natural"
 
+instance Bits Natural where
+   (.&.)          = naturalAnd
+   (.|.)          = naturalOr
+   xor            = naturalXor
+   complement     = error "Can't complement a Natural"
+   shiftL w n     = naturalShiftL w (fromIntegral n)
+   shiftR w n     = naturalShiftR w (fromIntegral n)
+   isSigned _     = False
+   zeroBits       = naturalZero
+   bitSizeMaybe _ = Nothing
+   popCount       = fromIntegral . naturalPopCount
+   bitSize        = error "Can't use bitsize on Natural"
+   bit i
+      | i < WS    = naturalFromWord (bit i)
+      | otherwise = naturalFromWord 1 `shiftL` i
+   testBit w n    = naturalTestBit w (fromIntegral n)
+
 -- | Count limbs
 naturalLimbCount :: Natural -> Word
 naturalLimbCount (Natural ba) =
@@ -401,3 +418,13 @@ naturalMul n1@(Natural ba1) n2@(Natural ba2)
                    k'             = plusWord# (plusWord# k1 k2) k3
                in case writeWordArray# mba (i# +# j#) wij' s2 of
                      s3 -> loopi mba vj j (i+1) k' s3
+
+-- | Natural bit test
+naturalTestBit :: Natural -> Word -> Bool
+naturalTestBit n@(Natural ba) i
+      | q >= lc   = False
+      | otherwise = testBit (W# (indexWordArray# ba q#)) (fromIntegral r)
+   where
+      lc       = naturalLimbCount n
+      (q,r)    = quotRem i WSBITS
+      !(I# q#) = fromIntegral q
