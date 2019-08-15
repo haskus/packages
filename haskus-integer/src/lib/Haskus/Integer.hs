@@ -13,6 +13,9 @@ module Haskus.Integer
    , naturalEq
    , naturalAdd
    , naturalCompare
+   , naturalOr
+   , naturalAnd
+   , naturalXor
    , limbCount
    )
 where
@@ -24,6 +27,7 @@ import Data.Bits
 
 -- Word size in bytes
 #define WS 8
+#define WSSHIFT 3
 
 -- | A Natural
 --
@@ -81,7 +85,7 @@ naturalShowHex n
          | otherwise = chr (55+fromIntegral x)
 
       -- limbs in 4-bit chunk, most significant first
-      limb4MS w = goLimbs4 64 w
+      limb4MS w = goLimbs4 (WS*8) w
       goLimbs4 0 _ = []
       goLimbs4 k x = (x `unsafeShiftR` (k-4)) .&. 0xF : goLimbs4 (k-4) x
 
@@ -140,7 +144,7 @@ naturalAdd n1@(Natural ba1) n2@(Natural ba2)
                   s2 -> addLimbs (l+1) c mba s2
             where
                !(I# off) = l*WS
-               !(I# csz) = (lc2+1-l)*8
+               !(I# csz) = (lc2+1-l)*WS
 
       addLimbs l@(I# l#) c mba s
          | isTrue# (eqWord# c 0##) = addLimbsNoCarry l mba s
@@ -155,3 +159,81 @@ naturalAdd n1@(Natural ba1) n2@(Natural ba2)
                (# c2, r #) -> case plusWord2# r c of
                   (# c3, r2 #) -> case writeWord64Array# mba l# r2 s of
                      s2 -> addLimbs (l+1) (plusWord# c2 c3) mba s2
+
+-- | Bitwise OR
+naturalOr :: Natural -> Natural -> Natural
+naturalOr n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
+      case newByteArray# sz s0 of
+         (# s1, mba #) -> case go mba 0 lc1 lc2 s1 of
+            s2 -> case unsafeFreezeByteArray# mba s2 of
+               (# s3, ba #) -> (# s3, Natural ba #)
+
+   where
+      lc1      = fromIntegral $ limbCount n1
+      lc2      = fromIntegral $ limbCount n2
+      lc       = max lc1 lc2
+      !(I# sz) = lc*WS
+
+      go :: MutableByteArray# s -> Int -> Int -> Int -> State# s -> State# s
+      go mba i c1 c2 s
+         | c1 == 0 && c2 == 0 = s
+         | c1 == 0            = let !(I# csz) = (lc2-i) * WS
+                                in copyByteArray# ba2 off mba off csz s
+         | c2 == 0            = let !(I# csz) = (lc1-i) * WS
+                                in copyByteArray# ba1 off mba off csz s
+         | otherwise          =
+            case writeWord64Array# mba i# (indexWord64Array# ba1 i# `or#` indexWord64Array# ba2 i#) s of
+               s2 -> go mba (i+1) (c1-1) (c2-1) s2
+         where
+            !(I# off) = i * WS
+            !(I# i#)  = i
+
+-- | Bitwise XOR
+naturalXor :: Natural -> Natural -> Natural
+naturalXor n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
+      case newByteArray# sz s0 of
+         (# s1, mba #) -> case go mba 0 lc1 lc2 s1 of
+            s2 -> case unsafeFreezeByteArray# mba s2 of
+               (# s3, ba #) -> (# s3, Natural ba #)
+
+   where
+      lc1      = fromIntegral $ limbCount n1
+      lc2      = fromIntegral $ limbCount n2
+      lc       = max lc1 lc2
+      !(I# sz) = lc*WS
+
+      go :: MutableByteArray# s -> Int -> Int -> Int -> State# s -> State# s
+      go mba i c1 c2 s
+         | c1 == 0 && c2 == 0 = s
+         | c1 == 0            = let !(I# csz) = (lc2-i) * WS
+                                in copyByteArray# ba2 off mba off csz s
+         | c2 == 0            = let !(I# csz) = (lc1-i) * WS
+                                in copyByteArray# ba1 off mba off csz s
+         | otherwise          =
+            case writeWord64Array# mba i# (indexWord64Array# ba1 i# `xor#` indexWord64Array# ba2 i#) s of
+               s2 -> go mba (i+1) (c1-1) (c2-1) s2
+         where
+            !(I# off) = i * WS
+            !(I# i#)  = i
+
+-- | Bitwise And
+naturalAnd :: Natural -> Natural -> Natural
+naturalAnd n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
+      case newByteArray# sz s0 of
+         (# s1, mba #) -> case go mba 0 lc s1 of
+            s2 -> case unsafeFreezeByteArray# mba s2 of
+               (# s3, ba #) -> (# s3, Natural ba #)
+
+   where
+      lc1      = fromIntegral $ limbCount n1
+      lc2      = fromIntegral $ limbCount n2
+      lc       = min lc1 lc2
+      !(I# sz) = lc*WS
+
+      go :: MutableByteArray# s -> Int -> Int -> State# s -> State# s
+      go _   _ 0 s = s
+      go mba i c s =
+            case writeWord64Array# mba i# (indexWord64Array# ba1 i# `and#` indexWord64Array# ba2 i#) s of
+               s2 -> go mba (i+1) (c-1) s2
+         where
+            !(I# i#)  = i
