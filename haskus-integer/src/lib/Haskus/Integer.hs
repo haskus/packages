@@ -8,10 +8,12 @@ module Haskus.Integer
    ( Natural
    , naturalFromWord
    , naturalIsZero
+   , naturalIsOne
    , naturalZero
    , naturalShowHex
    , naturalEq
    , naturalAdd
+   , naturalMul
    , naturalCompare
    , naturalOr
    , naturalAnd
@@ -69,6 +71,10 @@ naturalZero = runST $ ST $ \s0 ->
 naturalIsZero :: Natural -> Bool
 naturalIsZero n = naturalLimbCount n == 0
 
+-- | Indicate if a natural is one
+naturalIsOne :: Natural -> Bool
+naturalIsOne n@(Natural ba) = naturalLimbCount n == 1 && isTrue# (indexWordArray# ba 0# `eqWord#` 1##)
+
 -- | Create a Natural from a Word
 naturalFromWord :: Word -> Natural
 naturalFromWord (W# 0##) = naturalZero
@@ -119,7 +125,7 @@ naturalLimbsLS n@(Natural ba)
 naturalEq :: Natural -> Natural -> Bool
 naturalEq n1 n2
    | naturalLimbCount n1 /= naturalLimbCount n2 = False
-   | otherwise                    = all (uncurry (==)) (naturalLimbsMS n1 `zip` naturalLimbsMS n2)
+   | otherwise = all (uncurry (==)) (naturalLimbsMS n1 `zip` naturalLimbsMS n2)
 
 -- | Compare
 naturalCompare :: Natural -> Natural -> Ordering
@@ -345,3 +351,46 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
             w = (v `uncheckedShiftL#` bitOff#) `or#` (u `uncheckedShiftRL#` (WSBITS# -# bitOff#))
          in case writeWordArray# mba (limbIdx# +# limbOff#) w s of
             s2 -> go mba (limbIdx+1) s2
+
+-- | Multiplication
+--
+-- Implemented using classical algorithm taken from:
+-- Fast multiplication of multiple-precision integers, Sonja Benz, 1991, Thesis
+naturalMul :: Natural -> Natural -> Natural
+naturalMul n1@(Natural ba1) n2@(Natural ba2)
+   | naturalIsZero n1 = n1
+   | naturalIsZero n2 = n2
+   | naturalIsOne  n1 = n2
+   | naturalIsOne  n2 = n1
+   | otherwise        = runST $ ST \s0 ->
+      case newByteArray# sz# s0 of
+         (# s1, mba #) -> case setByteArray# mba 0# sz# 0# s1 of
+            s2 -> case loopj mba 0 s2 of
+               s3 -> case unsafeFreezeByteArray# mba s3 of
+                  (# s4, ba #) -> (# s4, Natural ba #)
+
+   where
+      !lc1@(I# lc1#) = fromIntegral $ naturalLimbCount n1
+      !lc2@(I# lc2#) = fromIntegral $ naturalLimbCount n2
+      lc             = lc1 + lc2 - 1
+      !(I# sz#)      = lc*WS
+
+      loopj mba j@(I# j#) s
+         | isTrue# (j# ==# lc2#) = s
+         | otherwise             = case indexWordArray# ba2 j# of
+                                       0## -> loopj mba (I# (j# +# 1#)) s
+                                       vj  -> loopi mba vj j 0 0## s
+
+
+      loopi mba vj j@(I# j#) i@(I# i#) k s
+         | isTrue# (i# ==# lc1#) = case writeWordArray# mba (i# +# j#) k s of
+                                       s2 -> loopj mba (j+1) s2
+         | otherwise = case readWordArray# mba (i# +# j#) s of
+            (# s2, wij #) ->
+               let ui             = indexWordArray# ba1 i#
+                   !(# k1,r1 #)   = timesWord2# ui vj
+                   !(# k2,r2 #)   = plusWord2# wij k
+                   !(# k3,wij' #) = plusWord2# r1 r2
+                   k'             = plusWord# (plusWord# k1 k2) k3
+               in case writeWordArray# mba (i# +# j#) wij' s2 of
+                     s3 -> loopi mba vj j (i+1) k' s3
