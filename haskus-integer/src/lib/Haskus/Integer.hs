@@ -55,6 +55,13 @@ instance Eq Natural where
 instance Ord Natural where
    compare = naturalCompare
 
+instance Num Natural where
+   (+)      = naturalAdd
+   (*)      = naturalMul
+   abs      = id
+   signum _ = naturalFromWord 1
+   negate _ = error "Can't negate a Natural"
+
 -- | Count limbs
 naturalLimbCount :: Natural -> Word
 naturalLimbCount (Natural ba) =
