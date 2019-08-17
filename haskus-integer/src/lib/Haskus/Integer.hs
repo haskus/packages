@@ -13,6 +13,7 @@ module Haskus.Integer
    , naturalShowHex
    , naturalEq
    , naturalAdd
+   , naturalSub
    , naturalMul
    , naturalCompare
    , naturalOr
@@ -29,6 +30,7 @@ import GHC.Exts
 import GHC.ST
 import Data.Char
 import Data.Bits
+import Data.Maybe
 
 -- Word size in bytes
 #define WS 8
@@ -58,6 +60,7 @@ instance Ord Natural where
 instance Num Natural where
    (+)      = naturalAdd
    (*)      = naturalMul
+   x - y    = fromMaybe (error "Can't subtract these naturals") (naturalSub x y)
    abs      = id
    signum _ = naturalFromWord 1
    negate _ = error "Can't negate a Natural"
@@ -428,3 +431,56 @@ naturalTestBit n@(Natural ba) i
       lc       = naturalLimbCount n
       (q,r)    = quotRem i WSBITS
       !(I# q#) = fromIntegral q
+
+-- | Subtract two naturals
+naturalSub :: Natural -> Natural -> Maybe Natural
+naturalSub n1@(Natural ba1) n2@(Natural ba2)
+   | naturalIsZero n2 = Just n1
+   | lc2 > lc1        = Nothing
+   | otherwise        = runST $ ST \s0 ->
+      case newByteArray# sz s0 of
+         (# s1, mba #) -> go mba False 0 0 s1
+
+   where
+      lc1       = fromIntegral $ naturalLimbCount n1
+      lc2       = fromIntegral $ naturalLimbCount n2
+      !(I# sz)  = lc1*WS
+      !(W# bm1) = maxBound
+
+      go mba carry zeroTrail@(I# zt) i@(I# i#) s
+         | i == lc1 =
+            if not carry
+               then case (case zeroTrail of
+                  0 -> s
+                  _  -> shrinkMutableByteArray# mba (sz -# zt) s
+                  ) of
+                     s2 -> case unsafeFreezeByteArray# mba s2 of
+                        (# s3, ba #) -> (# s3, Just (Natural ba) #)
+               else (# s, Nothing #)
+         | i >= lc2 && not carry =
+               let off       = i# `iShiftL#` WSSHIFT#
+                   !(I# csz) = (lc1 - i) `shiftL` WSSHIFT
+               in case copyByteArray# ba1 off mba off csz s of
+                   s2 -> go mba False 0 lc1 s2
+         | not carry =
+            let
+               ui = indexWordArray# ba1 i#
+               vi = indexWordArray# ba2 i#
+               !(# wi, c #) = subWordC# ui vi
+            in case writeWordArray# mba i# wi s of
+                  s2 -> case wi of
+                     0## -> go mba (isTrue# c) (zeroTrail+1) (i+1) s2
+                     _   -> go mba (isTrue# c) 0             (i+1) s2
+
+         | otherwise =
+            let
+               ui = indexWordArray# ba1 i#
+               vi = if i < lc2 then indexWordArray# ba2 i# else 0##
+               !(# wi, c #) = subWordC# ui vi
+            in case wi of
+                  0## -> case writeWordArray# mba i# bm1 s of
+                     s2 -> go mba True        0 (i+1) s2
+                  1## -> case writeWordArray# mba i# 0## s of
+                     s2 -> go mba (isTrue# c) (zeroTrail+1) (i+1) s2
+                  _   -> case writeWordArray# mba i# (wi `minusWord#` 1##) s of
+                     s2 -> go mba (isTrue# c) 0 (i+1) s2
