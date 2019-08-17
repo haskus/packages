@@ -4,6 +4,10 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE BangPatterns #-}
 
+-- | Multi-precision integers
+--
+-- Classical algorithms adapted from "The Art of Computer Programming, vol. 2,
+-- Donald E. Knuth"
 module Haskus.Integer
    ( Natural
    , naturalFromWord
@@ -15,6 +19,7 @@ module Haskus.Integer
    , naturalAdd
    , naturalSub
    , naturalMul
+   , naturalQuotRem
    , naturalCompare
    , naturalOr
    , naturalAnd
@@ -379,10 +384,7 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
          in case writeWordArray# mba (limbIdx# +# limbOff#) w s of
             s2 -> go mba (limbIdx+1) s2
 
--- | Multiplication
---
--- Implemented using classical algorithm taken from:
--- Fast multiplication of multiple-precision integers, Sonja Benz, 1991, Thesis
+-- | Multiplication (classical algorithm)
 naturalMul :: Natural -> Natural -> Natural
 naturalMul n1@(Natural ba1) n2@(Natural ba2)
    | naturalIsZero n1 = n1
@@ -432,7 +434,7 @@ naturalTestBit n@(Natural ba) i
       (q,r)    = quotRem i WSBITS
       !(I# q#) = fromIntegral q
 
--- | Subtract two naturals
+-- | Subtract two naturals (classical algorithm)
 naturalSub :: Natural -> Natural -> Maybe Natural
 naturalSub n1@(Natural ba1) n2@(Natural ba2)
    | naturalIsZero n2 = Just n1
@@ -484,3 +486,42 @@ naturalSub n1@(Natural ba1) n2@(Natural ba2)
                      s2 -> go mba (isTrue# c) (zeroTrail+1) (i+1) s2
                   _   -> case writeWordArray# mba i# (wi `minusWord#` 1##) s of
                      s2 -> go mba (isTrue# c) 0 (i+1) s2
+
+
+-- | Natural division returning (quotient,remainder)
+--
+-- See "Multiple-Length Division Revisited: A Tour of the Minefield", Per Brinch
+-- Hansen, 1992,
+-- https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
+naturalQuotRem :: Natural -> Natural -> Maybe (Natural,Natural)
+naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
+   | naturalIsZero n2         = Nothing
+   | naturalIsOne n2          = Just (n1, naturalZero)
+   | naturalLimbCount n2 == 1 = runST $ ST \s0 ->
+      let
+         lc       = fromIntegral (naturalLimbCount n1)
+         !(I# sz) = lc * WS
+         d        = indexWordArray# ba2 0#
+
+         go mba i@(I# i#) trailing zeroTrail r s
+            | i == 0 = case zeroTrail of
+                        0        -> (# s, r #)
+                        (!I# zt) -> case shrinkMutableByteArray# mba (sz -# zt) s of
+                           s2 -> (# s2, r #)
+            | otherwise =
+               let
+                  off         = i# -# 1#
+                  n           = indexWordArray# ba1 off
+                  !(# q,r' #) = quotRemWord2# r n d
+                  qZero       = isTrue# (q `eqWord#` 0##)
+                  trailing'   = trailing && qZero
+                  zeroTrail'  = if trailing' then zeroTrail+1 else zeroTrail
+               in case writeWordArray# mba off q s of
+                     s2 -> go mba (I# off) trailing' zeroTrail' r' s2
+      in case newByteArray# sz s0 of
+         (# s1, mba #) -> case go mba lc True 0 0## s1 of
+            (# s2, r #) -> case unsafeFreezeByteArray# mba s2 of
+               (# s3, ba #) -> case naturalFromWord (W# r) of
+                  r' -> (# s3, Just (Natural ba, r') #)
+
+   | otherwise = error "Long-division not implemented"
