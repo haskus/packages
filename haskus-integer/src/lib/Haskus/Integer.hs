@@ -608,5 +608,3 @@ naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
 --  of u' and by using the 2/1 division (first case). We obtain the digits of q
 --  from left to right. The last remainder is the overall remainder.
 --
--
---
