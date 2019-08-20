@@ -1743,7 +1743,7 @@ type family ExtractRHS f where
    ExtractRHS '[]              = '[]
    ExtractRHS ((_ -> x) ': xs) = x ': ExtractRHS xs
 
-type LiftContTuple x = ListToTuple (ReplaceRHS (TupleToList x) (V (ExtractRHS (TupleToList x))))
+type LiftContTuple x = Tuple (ReplaceRHS (TupleToList x) (V (ExtractRHS (TupleToList x))))
 
 class LiftCont x where
    -- | Lift a tuple of functions (a -> r1, b -> r2, ...) into a tuple of

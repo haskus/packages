@@ -9,6 +9,9 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 -- | Tuple helpers
 module Haskus.Utils.Tuple
@@ -22,9 +25,9 @@ module Haskus.Utils.Tuple
    , module Data.Tuple
    , Unit (..)
    , TupleToList
-   , ListToTuple
+   , Tuple
    , ExtractTuple (..)
-   , TupleHead (..)
+   , tupleHead
    , TupleTail (..)
    , TupleCons (..)
    , ReorderTuple (..)
@@ -104,216 +107,162 @@ type family TupleToList (t :: k) :: [k] where
    TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y)   = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y]
    TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z) = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
 
-type family ListToTuple (t :: [k]) :: k where
-   ListToTuple '[]                                                    = ()
-   ListToTuple '[a]                                                   = Unit a
-   ListToTuple '[a,b]                                                 = (a,b)
-   ListToTuple '[a,b,c]                                               = (a,b,c)
-   ListToTuple '[a,b,c,d]                                             = (a,b,c,d)
-   ListToTuple '[a,b,c,d,e]                                           = (a,b,c,d,e)
-   ListToTuple '[a,b,c,d,e,f]                                         = (a,b,c,d,e,f)
-   ListToTuple '[a,b,c,d,e,f,g]                                       = (a,b,c,d,e,f,g)
-   ListToTuple '[a,b,c,d,e,f,g,h]                                     = (a,b,c,d,e,f,g,h)
-   ListToTuple '[a,b,c,d,e,f,g,h,i]                                   = (a,b,c,d,e,f,g,h,i)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j]                                 = (a,b,c,d,e,f,g,h,i,j)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k]                               = (a,b,c,d,e,f,g,h,i,j,k)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l]                             = (a,b,c,d,e,f,g,h,i,j,k,l)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m]                           = (a,b,c,d,e,f,g,h,i,j,k,l,m)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n]                         = (a,b,c,d,e,f,g,h,i,j,k,l,m,n)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o]                       = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]                     = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]                   = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r]                 = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s]               = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]             = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u]           = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v]         = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w]       = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x]     = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y]   = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y)
-   ListToTuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z] = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z)
-
 -- | Extract a tuple value statically
-class ExtractTuple (n :: Nat) t x | n t -> x where
+class ExtractTuple (n :: Nat) xs where
    -- | Extract a tuple value by type-level index
-   tupleN :: t -> x
+   tupleN :: Tuple xs -> Index n xs
 
-instance ExtractTuple 0 (Unit t) t where
+instance ExtractTuple 0 '[a] where
    {-# INLINABLE tupleN #-}
    tupleN (Unit t) = t
 
-instance ExtractTuple 0 (e0, e1) e0 where
+instance ExtractTuple 0 '[e0,e1] where
    {-# INLINABLE tupleN #-}
    tupleN (t,_) = t
 
-instance ExtractTuple 1 (e0, e1) e1 where
+instance ExtractTuple 1 '[e0,e1] where
    {-# INLINABLE tupleN #-}
    tupleN (_,t) = t
 
-instance ExtractTuple 0 (e0, e1, e2) e0 where
+instance ExtractTuple 0 '[e0,e1,e2] where
    {-# INLINABLE tupleN #-}
    tupleN (t,_,_) = t
 
-instance ExtractTuple 1 (e0, e1, e2) e1 where
+instance ExtractTuple 1 '[e0,e1,e2] where
    {-# INLINABLE tupleN #-}
    tupleN (_,t,_) = t
 
-instance ExtractTuple 2 (e0, e1, e2) e2 where
+instance ExtractTuple 2 '[e0,e1,e2] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,t) = t
 
-instance ExtractTuple 0 (e0, e1, e2, e3) e0 where
+instance ExtractTuple 0 '[e0,e1,e2,e3] where
    {-# INLINABLE tupleN #-}
    tupleN (t,_,_,_) = t
 
-instance ExtractTuple 1 (e0, e1, e2, e3) e1 where
+instance ExtractTuple 1 '[e0,e1,e2,e3] where
    {-# INLINABLE tupleN #-}
    tupleN (_,t,_,_) = t
 
-instance ExtractTuple 2 (e0, e1, e2, e3) e2 where
+instance ExtractTuple 2 '[e0,e1,e2,e3] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,t,_) = t
 
-instance ExtractTuple 3 (e0, e1, e2, e3) e3 where
+instance ExtractTuple 3 '[e0,e1,e2,e3] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,t) = t
 
 
-instance ExtractTuple 0 (e0, e1, e2, e3, e4) e0 where
+instance ExtractTuple 0 '[e0,e1,e2,e3,e4] where
    {-# INLINABLE tupleN #-}
    tupleN (t,_,_,_,_) = t
 
-instance ExtractTuple 1 (e0, e1, e2, e3, e4) e1 where
+instance ExtractTuple 1 '[e0,e1,e2,e3,e4] where
    {-# INLINABLE tupleN #-}
    tupleN (_,t,_,_,_) = t
 
-instance ExtractTuple 2 (e0, e1, e2, e3, e4) e2 where
+instance ExtractTuple 2 '[e0,e1,e2,e3,e4] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,t,_,_) = t
 
-instance ExtractTuple 3 (e0, e1, e2, e3, e4) e3 where
+instance ExtractTuple 3 '[e0,e1,e2,e3,e4] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,t,_) = t
 
-instance ExtractTuple 4 (e0, e1, e2, e3, e4) e4 where
+instance ExtractTuple 4 '[e0,e1,e2,e3,e4] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,t) = t
 
 
-instance ExtractTuple 0 (e0, e1, e2, e3, e4, e5) e0 where
+instance ExtractTuple 0 '[e0,e1,e2,e3,e4,e5] where
    {-# INLINABLE tupleN #-}
    tupleN (t,_,_,_,_,_) = t
 
-instance ExtractTuple 1 (e0, e1, e2, e3, e4, e5) e1 where
+instance ExtractTuple 1 '[e0,e1,e2,e3,e4,e5] where
    {-# INLINABLE tupleN #-}
    tupleN (_,t,_,_,_,_) = t
 
-instance ExtractTuple 2 (e0, e1, e2, e3, e4, e5) e2 where
+instance ExtractTuple 2 '[e0,e1,e2,e3,e4,e5] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,t,_,_,_) = t
 
-instance ExtractTuple 3 (e0, e1, e2, e3, e4, e5) e3 where
+instance ExtractTuple 3 '[e0,e1,e2,e3,e4,e5] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,t,_,_) = t
 
-instance ExtractTuple 4 (e0, e1, e2, e3, e4, e5) e4 where
+instance ExtractTuple 4 '[e0,e1,e2,e3,e4,e5] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,t,_) = t
 
-instance ExtractTuple 5 (e0, e1, e2, e3, e4, e5) e5 where
+instance ExtractTuple 5 '[e0,e1,e2,e3,e4,e5] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,_,t) = t
 
 
-instance ExtractTuple 0 (e0, e1, e2, e3, e4, e5, e6) e0 where
+instance ExtractTuple 0 '[e0,e1,e2,e3,e4,e5,e6] where
    {-# INLINABLE tupleN #-}
    tupleN (t,_,_,_,_,_,_) = t
 
-instance ExtractTuple 1 (e0, e1, e2, e3, e4, e5, e6) e1 where
+instance ExtractTuple 1 '[e0,e1,e2,e3,e4,e5,e6] where
    {-# INLINABLE tupleN #-}
    tupleN (_,t,_,_,_,_,_) = t
 
-instance ExtractTuple 2 (e0, e1, e2, e3, e4, e5, e6) e2 where
+instance ExtractTuple 2 '[e0,e1,e2,e3,e4,e5,e6] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,t,_,_,_,_) = t
 
-instance ExtractTuple 3 (e0, e1, e2, e3, e4, e5, e6) e3 where
+instance ExtractTuple 3 '[e0,e1,e2,e3,e4,e5,e6] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,t,_,_,_) = t
 
-instance ExtractTuple 4 (e0, e1, e2, e3, e4, e5, e6) e4 where
+instance ExtractTuple 4 '[e0,e1,e2,e3,e4,e5,e6] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,t,_,_) = t
 
-instance ExtractTuple 5 (e0, e1, e2, e3, e4, e5, e6) e5 where
+instance ExtractTuple 5 '[e0,e1,e2,e3,e4,e5,e6] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,_,t,_) = t
 
-instance ExtractTuple 6 (e0, e1, e2, e3, e4, e5, e6) e6 where
+instance ExtractTuple 6 '[e0,e1,e2,e3,e4,e5,e6] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,_,_,t) = t
 
 
-instance ExtractTuple 0 (e0, e1, e2, e3, e4, e5, e6, e7) e0 where
+instance ExtractTuple 0 '[e0,e1,e2,e3,e4,e5,e6,e7] where
    {-# INLINABLE tupleN #-}
    tupleN (t,_,_,_,_,_,_,_) = t
 
-instance ExtractTuple 1 (e0, e1, e2, e3, e4, e5, e6, e7) e1 where
+instance ExtractTuple 1 '[e0,e1,e2,e3,e4,e5,e6,e7] where
    {-# INLINABLE tupleN #-}
    tupleN (_,t,_,_,_,_,_,_) = t
 
-instance ExtractTuple 2 (e0, e1, e2, e3, e4, e5, e6, e7) e2 where
+instance ExtractTuple 2 '[e0,e1,e2,e3,e4,e5,e6,e7] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,t,_,_,_,_,_) = t
 
-instance ExtractTuple 3 (e0, e1, e2, e3, e4, e5, e6, e7) e3 where
+instance ExtractTuple 3 '[e0,e1,e2,e3,e4,e5,e6,e7] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,t,_,_,_,_) = t
 
-instance ExtractTuple 4 (e0, e1, e2, e3, e4, e5, e6, e7) e4 where
+instance ExtractTuple 4 '[e0,e1,e2,e3,e4,e5,e6,e7] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,t,_,_,_) = t
 
-instance ExtractTuple 5 (e0, e1, e2, e3, e4, e5, e6, e7) e5 where
+instance ExtractTuple 5 '[e0,e1,e2,e3,e4,e5,e6,e7] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,_,t,_,_) = t
 
-instance ExtractTuple 6 (e0, e1, e2, e3, e4, e5, e6, e7) e6 where
+instance ExtractTuple 6 '[e0,e1,e2,e3,e4,e5,e6,e7] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,_,_,t,_) = t
 
-instance ExtractTuple 7 (e0, e1, e2, e3, e4, e5, e6, e7) e7 where
+instance ExtractTuple 7 '[e0,e1,e2,e3,e4,e5,e6,e7] where
    {-# INLINABLE tupleN #-}
    tupleN (_,_,_,_,_,_,_,t) = t
 
-
-class TupleHead ts ts' | ts -> ts' where
-   tupleHead :: ts -> ts'
-
-instance TupleHead (Unit a) a where
-   {-# INLINABLE tupleHead #-}
-   tupleHead (Unit a) = a
-
-instance TupleHead (a,b) a where
-   {-# INLINABLE tupleHead #-}
-   tupleHead (a,_) = a
-
-instance TupleHead (a,b,c) a where
-   {-# INLINABLE tupleHead #-}
-   tupleHead (a,_,_) = a
-
-instance TupleHead (a,b,c,d) a where
-   {-# INLINABLE tupleHead #-}
-   tupleHead (a,_,_,_) = a
-
-instance TupleHead (a,b,c,d,e) a where
-   {-# INLINABLE tupleHead #-}
-   tupleHead (a,_,_,_,_) = a
-
-instance TupleHead (a,b,c,d,e,f) a where
-   {-# INLINABLE tupleHead #-}
-   tupleHead (a,_,_,_,_,_) = a
-
+-- | Get first element of the tuple
+tupleHead :: forall xs. ExtractTuple 0 xs => Tuple xs -> Index 0 xs
+tupleHead = tupleN @0
 
 class TupleTail ts ts' | ts -> ts' where
    tupleTail :: ts -> ts'
@@ -525,32 +474,54 @@ instance ReorderTuple (a,b,c,d,e,f) (x,y,z,w,v,u) => ReorderTuple (a,b,c,d,e,f,g
    tupleReorder (a,b,c,d,e,f,g) = let (x,y,z,w,v,u) = tupleReorder (a,b,c,d,e,f) in (x,y,z,w,v,u,g)
 
 
--- | TODO: put this family into GHC
-type family Tuple xs where
-   Tuple '[]                      = ()
-   Tuple '[a]                     = Unit a
-   Tuple '[a,b]                   = (a,b)
-   Tuple '[a,b,c]                 = (a,b,c)
-   Tuple '[a,b,c,d]               = (a,b,c,d)
-   Tuple '[a,b,c,d,e]             = (a,b,c,d,e)
-   Tuple '[a,b,c,d,e,f]           = (a,b,c,d,e,f)
-   Tuple '[a,b,c,d,e,f,g]         = (a,b,c,d,e,f,g)
-   Tuple '[a,b,c,d,e,f,g,h]       = (a,b,c,d,e,f,g,h)
-   Tuple '[a,b,c,d,e,f,g,h,i]     = (a,b,c,d,e,f,g,h,i)
-   Tuple '[a,b,c,d,e,f,g,h,i,j]   = (a,b,c,d,e,f,g,h,i,j)
-   Tuple '[a,b,c,d,e,f,g,h,i,j,k] = (a,b,c,d,e,f,g,h,i,j,k)
+-- | Boxed tuple
+--
+-- TODO: put this family into GHC
+type family Tuple xs = t | t -> xs where
+   Tuple '[]                                                    = ()
+   Tuple '[a]                                                   = Unit a
+   Tuple '[a,b]                                                 = (a,b)
+   Tuple '[a,b,c]                                               = (a,b,c)
+   Tuple '[a,b,c,d]                                             = (a,b,c,d)
+   Tuple '[a,b,c,d,e]                                           = (a,b,c,d,e)
+   Tuple '[a,b,c,d,e,f]                                         = (a,b,c,d,e,f)
+   Tuple '[a,b,c,d,e,f,g]                                       = (a,b,c,d,e,f,g)
+   Tuple '[a,b,c,d,e,f,g,h]                                     = (a,b,c,d,e,f,g,h)
+   Tuple '[a,b,c,d,e,f,g,h,i]                                   = (a,b,c,d,e,f,g,h,i)
+   Tuple '[a,b,c,d,e,f,g,h,i,j]                                 = (a,b,c,d,e,f,g,h,i,j)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k]                               = (a,b,c,d,e,f,g,h,i,j,k)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l]                             = (a,b,c,d,e,f,g,h,i,j,k,l)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m]                           = (a,b,c,d,e,f,g,h,i,j,k,l,m)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n]                         = (a,b,c,d,e,f,g,h,i,j,k,l,m,n)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o]                       = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]                     = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]                   = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r]                 = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s]               = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]             = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u]           = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v]         = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w]       = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x]     = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y]   = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z] = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z)
+
 
 type family TypeReps xs where
    TypeReps '[]                 = '[]
    TypeReps ((a::TYPE k) ': as) = k ': TypeReps as
 
--- | TODO: put this family into GHC
-type family Tuple# xs :: TYPE ('TupleRep (TypeReps xs)) where
-   Tuple# '[]              = (##)
-   Tuple# '[a]             = (# a #)
-   Tuple# '[a,b]           = (# a,b #)
-   Tuple# '[a,b,c]         = (# a,b,c #)
-   Tuple# '[a,b,c,d]       = (# a,b,c,d #)
-   Tuple# '[a,b,c,d,e]     = (# a,b,c,d,e #)
-   Tuple# '[a,b,c,d,e,f]   = (# a,b,c,d,e,f #)
-   Tuple# '[a,b,c,d,e,f,g] = (# a,b,c,d,e,f,g #)
+-- | Unboxed tuple
+--
+-- TODO: put this family into GHC
+type family Tuple# xs = (t :: TYPE ('TupleRep (TypeReps xs))) | t -> xs where
+   Tuple# '[]                  = (##)
+   Tuple# '[a]                 = (# a #)
+   Tuple# '[a,b]               = (# a,b #)
+   Tuple# '[a,b,c]             = (# a,b,c #)
+   Tuple# '[a,b,c,d]           = (# a,b,c,d #)
+   Tuple# '[a,b,c,d,e]         = (# a,b,c,d,e #)
+   Tuple# '[a,b,c,d,e,f]       = (# a,b,c,d,e,f #)
+   Tuple# '[a,b,c,d,e,f,g]     = (# a,b,c,d,e,f,g #)
+   Tuple# '[a,b,c,d,e,f,g,h]   = (# a,b,c,d,e,f,g,h #)
+   Tuple# '[a,b,c,d,e,f,g,h,i] = (# a,b,c,d,e,f,g,h,i #)

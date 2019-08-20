@@ -200,10 +200,10 @@ instance
 -- | Convert between hlists and tuples
 class HTuple v where
    -- | Convert an heterogeneous list into a tuple
-   hToTuple   :: HList v -> ListToTuple v
+   hToTuple   :: HList v -> Tuple v
    
    -- | Convert a tuple into an heterogeneous list
-   hFromTuple :: ListToTuple v -> HList v
+   hFromTuple :: Tuple v -> HList v
 
 
 instance HTuple '[] where

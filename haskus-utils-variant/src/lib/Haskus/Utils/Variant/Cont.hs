@@ -32,47 +32,51 @@ import Haskus.Utils.ContFlow
 
 -- | Call the type-indexed continuation from the tuple passed as first parameter
 fret :: forall x r t n xs.
-   ( ExtractTuple n t (x -> r)
+   ( ExtractTuple n t
    , xs ~ ContTupleToList t r
    , CheckMember x xs
    , n ~ IndexOf x xs
    , KnownNat n
    , CheckNub xs
-   ) => t -> (x -> r)
+   , Index n t ~ (x -> r)
+   ) => Tuple t -> (x -> r)
 {-# INLINABLE fret #-}
-fret = tupleN @n @t @(x -> r)
+fret = tupleN @n
 
 -- | Implicitly call the type-indexed continuation in the context
 freturn :: forall x r t n xs.
-   ( ExtractTuple n t (x -> r)
+   ( ExtractTuple n t
    , xs ~ ContTupleToList t r
    , CheckMember x xs
    , n ~ IndexOf x xs
    , KnownNat n
    , CheckNub xs
-   , ?__cs :: t
+   , ?__cs :: Tuple t
+   , Index n t ~ (x -> r)
    ) => x -> r
 {-# INLINABLE freturn #-}
 freturn = fret ?__cs
 
 -- | Call the indexed continuation from the tuple passed as first parameter
 fretN :: forall n x r t xs.
-   ( ExtractTuple n t (x -> r)
+   ( ExtractTuple n t
    , xs ~ ContTupleToList t r
    , x ~ Index n xs
    , KnownNat n
-   ) => t -> (x -> r)
+   , Index n t ~ (x -> r)
+   ) => Tuple t -> (x -> r)
 {-# INLINABLE fretN #-}
-fretN = tupleN @n @t @(x -> r)
+fretN = tupleN @n
 
 
 -- | Implicitly call the type-indexed continuation in the context
 freturnN :: forall n x r t xs.
-   ( ExtractTuple n t (x -> r)
+   ( ExtractTuple n t
    , xs ~ ContTupleToList t r
    , x ~ Index n xs
    , KnownNat n
-   , ?__cs :: t
+   , ?__cs :: Tuple t
+   , Index n t ~ (x -> r)
    ) => x -> r
 {-# INLINABLE freturnN #-}
 freturnN = fretN @n ?__cs

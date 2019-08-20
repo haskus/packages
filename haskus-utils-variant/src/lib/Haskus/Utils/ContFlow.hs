@@ -32,11 +32,11 @@ newtype ContFlow (xs :: [*]) r = ContFlow (ContListToTuple xs r -> r)
 -- | Convert a list of types into the actual data type representing the
 -- continuations.
 type family ContListToTuple (xs :: [*]) r where
-   ContListToTuple xs r = ListToTuple (AddR xs r)
+   ContListToTuple xs r = Tuple (AddR xs r)
 
 -- | Convert a tuple of continuations into a list of types
-type family ContTupleToList t r :: [*] where
-   ContTupleToList t r = StripR (TupleToList t) r
+type family ContTupleToList xs r :: [*] where
+   ContTupleToList xs r = StripR xs r
 
 type family AddR f r where
    AddR '[] r       = '[]

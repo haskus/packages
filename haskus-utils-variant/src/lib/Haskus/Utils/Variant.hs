@@ -1202,7 +1202,7 @@ instance
 variantToTuple :: forall l t.
    ( VariantToHList l
    , HTuple (Map Maybe l)
-   , t ~ ListToTuple (Map Maybe l)
+   , t ~ Tuple (Map Maybe l)
    ) => V l -> t
 variantToTuple = hToTuple . variantToHList
 

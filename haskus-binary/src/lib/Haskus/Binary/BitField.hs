@@ -315,7 +315,7 @@ matchFields :: forall l l2 w bs t .
    ( bs ~ BitFields w l
    , HFoldr' Extract (bs, HList '[]) l (bs, HList l2)
    , HTuple l2
-   , t ~ ListToTuple l2
+   , t ~ Tuple l2
    ) => bs -> t
 matchFields = hToTuple @l2 . fieldValues
 
@@ -327,7 +327,7 @@ matchNamedFields ::forall lt lv ln lnv w bs t .
    , HFoldr' Name (HList '[]) lt (HList ln)
    , HZipList ln lv lnv
    , HTuple lnv
-   , t ~ ListToTuple lnv
+   , t ~ Tuple lnv
    ) => bs -> t
 matchNamedFields = hToTuple @lnv . matchNamedFields'
 
