@@ -490,9 +490,7 @@ naturalSub n1@(Natural ba1) n2@(Natural ba2)
 
 -- | Natural division returning (quotient,remainder)
 --
--- See "Multiple-Length Division Revisited: A Tour of the Minefield", Per Brinch
--- Hansen, 1992,
--- https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
+-- See Note [Multi-Precision Division]
 naturalQuotRem :: Natural -> Natural -> Maybe (Natural,Natural)
 naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
    | naturalIsZero n2         = Nothing
@@ -525,3 +523,90 @@ naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
                   r' -> (# s3, Just (Natural ba, r') #)
 
    | otherwise = error "Long-division not implemented"
+
+--
+-- Note [Multi-Precision Division]
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--
+-- See "Multiple-Length Division Revisited: A Tour of the Minefield", Per Brinch
+-- Hansen, 1992,
+-- https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
+--
+-- 1/1 division
+-- ------------
+--
+-- For any base B. Suppose we want to divide u by v where u and v are composed
+-- of 1 digit each:
+--    u = (u0){B}
+--    v = (v0){B}
+--    v /= 0
+--
+-- We want to compute (q,r) so that: u = q*v + r with r < v
+--
+-- Number of digits:
+--    countDigits (r) <= 1 (proof: r < v so r is composed of at most one digit)
+--    countDigits (q) <= 1 (proof: if q had more than one digit, u would have more than one digit)
+--
+-- 2/1 division
+-- ------------
+--
+-- For any base B. Suppose we want to divide u by v where u and v are composed
+-- of 2 and 1 digits respectively:
+--    u = (u1,u0){B}
+--    v = (v0){B}
+--    v /= 0
+--
+-- We want to compute (q,r) so that: u = q*v + r with r < v
+--    r=(r0){B}
+--
+-- Suppose v0 = 1 (smallest non-zero value). Then q = u. (x `div` y) is
+-- decreasing over y, hence q has at most 2 digits in base B.
+--
+--    q = (q1,q0){B}
+--
+--    u1*B+u0 = q1*B*v0 + q0*v0 + r0
+--    u1*B    = q1*B*v0 + q0*v0 + r0 - u0
+--    u1      = q1*v0   + K/B       where K = q0*v0+r0-u0
+--
+-- First case: u1 < v0
+-- ~~~~~~~~~~~~~~~~~~~
+--    q1 = 0 hence countDigits(q) <= 1
+--
+--    We have primops to compute q0 and r0 in this case (e.g. X86_64 DIV
+--    instruction, `quotRemWord2#` primop)
+--
+-- Second case: u1 >= v0
+-- ~~~~~~~~~~~~~~~~~~~~~
+--
+--    q1 /= 0 hence countDigits(q) == 2
+--
+--    let u1 = q'*v0 + r' where r' < v0 using 1/1 division.
+--
+--    u1*B+u0           = q1*B*v0 + q0*v0 + r
+--    (q'*v0+r')*B+u0   = q1*B*v0 + q0*v0 + r
+--    q'*v0*B + r'*B+u0 = q1*B*v0 + q0*v0 + r
+--    r'*B+u0           = (q1-q')*B*v0 + q0*v0 + r
+--    r'*B+u0           = ((q1-q')*B + q0)*v0 + r
+--
+--    let u' = (r',u0){B}
+--    The 2/1 division of u' by v=(v0){B} (with r' < v0) gives us q0, r and:
+--       q' = q1
+--       
+--
+-- k/1 division
+-- ------------
+--
+-- For any base B. Suppose we want to divide u by v where v is composed of a
+-- single non-zero digit:
+--    u = (u{n-1},...,u0){B}
+--    v = (v0){B}
+--
+-- 
+--  Let u' = (0,u{n-1},...,u0) (equivalent to u)
+--
+--  We perform the division of u' by v by folding from left to right the digits
+--  of u' and by using the 2/1 division (first case). We obtain the digits of q
+--  from left to right. The last remainder is the overall remainder.
+--
+-
+--
