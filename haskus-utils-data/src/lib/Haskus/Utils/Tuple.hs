@@ -27,6 +27,7 @@ module Haskus.Utils.Tuple
    , TupleToList
    , Tuple
    , ExtractTuple (..)
+   , TupleCon (..)
    , tupleHead
    , TupleTail (..)
    , TupleCons (..)
@@ -473,6 +474,35 @@ instance ReorderTuple (a,b,c,d,e,f) (x,y,z,w,v,u) => ReorderTuple (a,b,c,d,e,f,g
    {-# INLINABLE tupleReorder #-}
    tupleReorder (a,b,c,d,e,f,g) = let (x,y,z,w,v,u) = tupleReorder (a,b,c,d,e,f) in (x,y,z,w,v,u,g)
 
+type family TupleFun r xs where
+   TupleFun r '[]      = r
+   TupleFun r (x:xs)   = x -> (TupleFun r xs)
+
+-- | Create a tuple
+class TupleCon xs where
+   -- | Create a tuple
+   tupleCon :: TupleFun (Tuple xs) xs
+
+instance TupleCon '[] where
+   tupleCon = ()
+
+instance TupleCon '[a] where
+   tupleCon = Unit
+
+instance TupleCon '[a,b] where
+   tupleCon = (,)
+
+instance TupleCon '[a,b,c] where
+   tupleCon = (,,)
+
+instance TupleCon '[a,b,c,d] where
+   tupleCon = (,,,)
+
+instance TupleCon '[a,b,c,d,e] where
+   tupleCon = (,,,,)
+
+instance TupleCon '[a,b,c,d,e,f] where
+   tupleCon = (,,,,,)
 
 -- | Boxed tuple
 --
