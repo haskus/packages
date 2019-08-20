@@ -447,9 +447,9 @@ type family TupleFun r xs where
    TupleFun r '[]      = r
    TupleFun r (x:xs)   = x -> (TupleFun r xs)
 
--- | Create a tuple
+-- | Create a Tuple
 class TupleCon xs where
-   -- | Create a tuple
+   -- | Create a Tuple
    tupleCon :: TupleFun (Tuple xs) xs
 
 instance TupleCon '[] where
