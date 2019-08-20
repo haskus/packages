@@ -24,7 +24,6 @@ module Haskus.Utils.Tuple
    , fromTuple4
    , module Data.Tuple
    , Unit (..)
-   , TupleToList
    , Tuple
    , ExtractTuple (..)
    , TupleCon (..)
@@ -77,36 +76,6 @@ take4 _         = error "take4: invalid list (exactly 4 elements required)"
 fromTuple4 :: (a,a,a,a) -> [a]
 {-# INLINABLE fromTuple4 #-}
 fromTuple4 (a,b,c,d) = [a,b,c,d]
-
-
-type family TupleToList (t :: k) :: [k] where
-   TupleToList ()                                                    = '[]
-   TupleToList (Unit a)                                              = '[a]
-   TupleToList (a,b)                                                 = '[a,b]
-   TupleToList (a,b,c)                                               = '[a,b,c]
-   TupleToList (a,b,c,d)                                             = '[a,b,c,d]
-   TupleToList (a,b,c,d,e)                                           = '[a,b,c,d,e]
-   TupleToList (a,b,c,d,e,f)                                         = '[a,b,c,d,e,f]
-   TupleToList (a,b,c,d,e,f,g)                                       = '[a,b,c,d,e,f,g]
-   TupleToList (a,b,c,d,e,f,g,h)                                     = '[a,b,c,d,e,f,g,h]
-   TupleToList (a,b,c,d,e,f,g,h,i)                                   = '[a,b,c,d,e,f,g,h,i]
-   TupleToList (a,b,c,d,e,f,g,h,i,j)                                 = '[a,b,c,d,e,f,g,h,i,j]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k)                               = '[a,b,c,d,e,f,g,h,i,j,k]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l)                             = '[a,b,c,d,e,f,g,h,i,j,k,l]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m)                           = '[a,b,c,d,e,f,g,h,i,j,k,l,m]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n)                         = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o)                       = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p)                     = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q)                   = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r)                 = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s)               = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t)             = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u)           = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v)         = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w)       = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x)     = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y)   = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y]
-   TupleToList (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z) = '[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]
 
 -- | Extract a tuple value statically
 class ExtractTuple (n :: Nat) xs where

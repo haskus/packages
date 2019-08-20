@@ -1743,30 +1743,30 @@ type family ExtractRHS f where
    ExtractRHS '[]              = '[]
    ExtractRHS ((_ -> x) ': xs) = x ': ExtractRHS xs
 
-type LiftContTuple x = Tuple (ReplaceRHS (TupleToList x) (V (ExtractRHS (TupleToList x))))
+type LiftContTuple x = Tuple (ReplaceRHS x (V (ExtractRHS x)))
 
 class LiftCont x where
    -- | Lift a tuple of functions (a -> r1, b -> r2, ...) into a tuple of
    -- functions (a -> V '[r1,r2,...], b -> V '[r1,r2,...], ...)
-   liftCont :: x -> LiftContTuple x
+   liftCont :: Tuple x -> LiftContTuple x
 
-instance LiftCont (Unit (a -> b)) where
+instance LiftCont '[a -> b] where
    liftCont (Unit a) = Unit (V . a)
 
-instance LiftCont (a->b,c->d) where
+instance LiftCont '[a->b,c->d] where
    liftCont (a,b) =
       ( toVariantAt @0 . a
       , toVariantAt @1 . b
       )
 
-instance LiftCont (a->b,c->d,e->f) where
+instance LiftCont '[a->b,c->d,e->f] where
    liftCont (a,b,c) =
       ( toVariantAt @0 . a
       , toVariantAt @1 . b
       , toVariantAt @2 . c
       )
 
-instance LiftCont (a->b,c->d,e->f,g->h) where
+instance LiftCont '[a->b,c->d,e->f,g->h] where
    liftCont (a,b,c,d) =
       ( toVariantAt @0 . a
       , toVariantAt @1 . b
@@ -1774,7 +1774,7 @@ instance LiftCont (a->b,c->d,e->f,g->h) where
       , toVariantAt @3 . d
       )
 
-instance LiftCont (a->b,c->d,e->f,g->h,i->j) where
+instance LiftCont '[a->b,c->d,e->f,g->h,i->j] where
    liftCont (a,b,c,d,e) =
       ( toVariantAt @0 . a
       , toVariantAt @1 . b
@@ -1783,7 +1783,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j) where
       , toVariantAt @4 . e
       )
 
-instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l) where
+instance LiftCont '[a->b,c->d,e->f,g->h,i->j,k->l] where
    liftCont (a,b,c,d,e,f) =
       ( toVariantAt @0 . a
       , toVariantAt @1 . b
@@ -1793,7 +1793,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l) where
       , toVariantAt @5 . f
       )
 
-instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n) where
+instance LiftCont '[a->b,c->d,e->f,g->h,i->j,k->l,m->n] where
    liftCont (a,b,c,d,e,f,g) =
       ( toVariantAt @0 . a
       , toVariantAt @1 . b
@@ -1804,7 +1804,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n) where
       , toVariantAt @6 . g
       )
 
-instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p) where
+instance LiftCont '[a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p] where
    liftCont (a,b,c,d,e,f,g,h) =
       ( toVariantAt @0 . a
       , toVariantAt @1 . b
@@ -1816,7 +1816,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p) where
       , toVariantAt @7 . h
       )
 
-instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
+instance LiftCont '[a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r] where
    liftCont (a,b,c,d,e,f,g,h,i) =
       ( toVariantAt @0 . a
       , toVariantAt @1 . b
@@ -1846,34 +1846,34 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
 --
 (-||) :: forall fs xs zs.
    ( LiftCont fs
-   , zs ~ ExtractRHS (TupleToList fs)
+   , zs ~ ExtractRHS fs
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
    , ContVariant xs
-   ) => V xs -> fs -> V zs
+   ) => V xs -> Tuple fs -> V zs
 (-||) v fs = variantToCont v >::> liftCont fs
 
 -- | Applicative pure multi-map
 (-||>) :: forall m fs xs zs ks.
    ( LiftCont fs
-   , zs ~ ExtractRHS (TupleToList fs)
+   , zs ~ ExtractRHS fs
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
    , ContVariant xs
    , ks ~ ExtractM m zs
    , Applicative m
    , JoinVariant m zs
-   ) => V xs -> fs -> Flow m ks
+   ) => V xs -> Tuple fs -> Flow m ks
 (-||>) v fs = joinVariant (v -|| fs)
 
 -- | Monadic pure multi-map
 (>-||>) :: forall m fs xs zs ks.
    ( LiftCont fs
-   , zs ~ ExtractRHS (TupleToList fs)
+   , zs ~ ExtractRHS fs
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
    , ContVariant xs
    , ks ~ ExtractM m zs
    , Monad m
    , JoinVariant m zs
-   ) => Flow m xs -> fs -> Flow m ks
+   ) => Flow m xs -> Tuple fs -> Flow m ks
 (>-||>) act fs = do
    r <- act
    r -||> fs
@@ -1901,14 +1901,14 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
 --
 (~||) :: forall fs xs zs ys rs.
    ( LiftCont fs
-   , zs ~ ExtractRHS (TupleToList fs)
+   , zs ~ ExtractRHS fs
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
    , ContVariant xs
    , ys ~ FlattenVariant zs
    , Flattenable (V zs) (V ys)
    , LiftVariant ys (Nub ys)
    , rs ~ Nub ys
-   ) => V xs -> fs -> V rs
+   ) => V xs -> Tuple fs -> V rs
 (~||) v fs = nubVariant (flattenVariant (v -|| fs))
 
 -- | Applicative variant multi-map
@@ -1953,7 +1953,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
 (~||>) :: forall m fs xs zs ks ys rs.
    ( ContVariant xs
    , LiftCont fs
-   , zs ~ ExtractRHS (TupleToList fs)
+   , zs ~ ExtractRHS fs
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
    , ks ~ ExtractM m zs
    , ys ~ FlattenVariant ks
@@ -1962,14 +1962,14 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , LiftVariant ys rs
    , Applicative m
    , JoinVariant m zs
-   ) => V xs -> fs -> Flow m rs
+   ) => V xs -> Tuple fs -> Flow m rs
 (~||>) v fs = nubVariant <$> (flattenVariant <$> joinVariant (v -|| fs))
 
 -- | Monadic variant multi-map
 (>~||>) :: forall m fs xs zs ks ys rs.
    ( ContVariant xs
    , LiftCont fs
-   , zs ~ ExtractRHS (TupleToList fs)
+   , zs ~ ExtractRHS fs
    , LiftContTuple fs ~ ContListToTuple xs (V zs)
    , ks ~ ExtractM m zs
    , ys ~ FlattenVariant ks
@@ -1978,7 +1978,7 @@ instance LiftCont (a->b,c->d,e->f,g->h,i->j,k->l,m->n,o->p,q->r) where
    , LiftVariant ys rs
    , Monad m
    , JoinVariant m zs
-   ) => Flow m xs -> fs -> Flow m rs
+   ) => Flow m xs -> Tuple fs -> Flow m rs
 (>~||>) act fs = do
    r <- act
    r ~||> fs
