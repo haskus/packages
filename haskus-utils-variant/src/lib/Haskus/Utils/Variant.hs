@@ -1227,21 +1227,21 @@ class ContVariant xs where
 
 instance ContVariant '[a] where
    {-# INLINABLE variantToCont #-}
-   variantToCont (Variant _ a) = ContFlow $ \(Single f) ->
+   variantToCont (Variant _ a) = ContFlow $ \(Unit f) ->
       f (unsafeCoerce a)
 
    {-# INLINABLE variantToContM #-}
-   variantToContM act = ContFlow $ \(Single f) -> do
+   variantToContM act = ContFlow $ \(Unit f) -> do
       Variant _ a <- act
       f (unsafeCoerce a)
 
    {-# INLINABLE contToVariant #-}
    contToVariant c = c >::>
-      Single (toVariantAt @0)
+      Unit (toVariantAt @0)
 
    {-# INLINABLE contToVariantM #-}
    contToVariantM c = c >::>
-      Single (return . toVariantAt @0)
+      Unit (return . toVariantAt @0)
 
 instance ContVariant '[a,b] where
    {-# INLINABLE variantToCont #-}

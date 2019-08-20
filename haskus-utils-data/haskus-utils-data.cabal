@@ -41,6 +41,7 @@ library
    ,  containers                >= 0.5
    ,  mtl                       >= 2.2
    ,  transformers              >= 0.4
+   , ghc-prim
 
   ghc-options:          -Wall
   default-language:     Haskell2010

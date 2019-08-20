@@ -1750,8 +1750,8 @@ class LiftCont x where
    -- functions (a -> V '[r1,r2,...], b -> V '[r1,r2,...], ...)
    liftCont :: x -> LiftContTuple x
 
-instance LiftCont (Single (a -> b)) where
-   liftCont (Single a) = Single (V . a)
+instance LiftCont (Unit (a -> b)) where
+   liftCont (Unit a) = Unit (V . a)
 
 instance LiftCont (a->b,c->d) where
    liftCont (a,b) =

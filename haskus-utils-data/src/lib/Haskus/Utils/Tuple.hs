@@ -6,6 +6,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Tuple helpers
 module Haskus.Utils.Tuple
@@ -17,7 +20,7 @@ module Haskus.Utils.Tuple
    , take4
    , fromTuple4
    , module Data.Tuple
-   , Single (..)
+   , Unit (..)
    , TupleToList
    , ListToTuple
    , ExtractTuple (..)
@@ -28,6 +31,8 @@ module Haskus.Utils.Tuple
    )
 where
 
+import GHC.Tuple
+import GHC.Exts
 import Data.Tuple
 import Haskus.Utils.Types
 
@@ -70,13 +75,9 @@ fromTuple4 :: (a,a,a,a) -> [a]
 fromTuple4 (a,b,c,d) = [a,b,c,d]
 
 
--- | Singleton type
-newtype Single a = Single a deriving (Show,Eq)
-
-
 type family TupleToList (t :: k) :: [k] where
    TupleToList ()                                                    = '[]
-   TupleToList (Single a)                                            = '[a]
+   TupleToList (Unit a)                                              = '[a]
    TupleToList (a,b)                                                 = '[a,b]
    TupleToList (a,b,c)                                               = '[a,b,c]
    TupleToList (a,b,c,d)                                             = '[a,b,c,d]
@@ -105,7 +106,7 @@ type family TupleToList (t :: k) :: [k] where
 
 type family ListToTuple (t :: [k]) :: k where
    ListToTuple '[]                                                    = ()
-   ListToTuple '[a]                                                   = Single a
+   ListToTuple '[a]                                                   = Unit a
    ListToTuple '[a,b]                                                 = (a,b)
    ListToTuple '[a,b,c]                                               = (a,b,c)
    ListToTuple '[a,b,c,d]                                             = (a,b,c,d)
@@ -137,9 +138,9 @@ class ExtractTuple (n :: Nat) t x | n t -> x where
    -- | Extract a tuple value by type-level index
    tupleN :: t -> x
 
-instance ExtractTuple 0 (Single t) t where
+instance ExtractTuple 0 (Unit t) t where
    {-# INLINABLE tupleN #-}
-   tupleN (Single t) = t
+   tupleN (Unit t) = t
 
 instance ExtractTuple 0 (e0, e1) e0 where
    {-# INLINABLE tupleN #-}
@@ -289,9 +290,9 @@ instance ExtractTuple 7 (e0, e1, e2, e3, e4, e5, e6, e7) e7 where
 class TupleHead ts ts' | ts -> ts' where
    tupleHead :: ts -> ts'
 
-instance TupleHead (Single a) a where
+instance TupleHead (Unit a) a where
    {-# INLINABLE tupleHead #-}
-   tupleHead (Single a) = a
+   tupleHead (Unit a) = a
 
 instance TupleHead (a,b) a where
    {-# INLINABLE tupleHead #-}
@@ -317,9 +318,9 @@ instance TupleHead (a,b,c,d,e,f) a where
 class TupleTail ts ts' | ts -> ts' where
    tupleTail :: ts -> ts'
 
-instance TupleTail (a,b) (Single b) where
+instance TupleTail (a,b) (Unit b) where
    {-# INLINABLE tupleTail #-}
-   tupleTail (_,b) = Single b
+   tupleTail (_,b) = Unit b
 
 instance TupleTail (a,b,c) (b,c) where
    {-# INLINABLE tupleTail #-}
@@ -342,9 +343,9 @@ instance TupleTail (a,b,c,d,e,f) (b,c,d,e,f) where
 class TupleCons t ts ts' | t ts -> ts' where
    tupleCons :: t -> ts -> ts'
 
-instance TupleCons a (Single b) (a,b) where
+instance TupleCons a (Unit b) (a,b) where
    {-# INLINABLE tupleCons #-}
-   tupleCons a (Single b) = (a,b)
+   tupleCons a (Unit b) = (a,b)
 
 instance TupleCons a (b,c) (a,b,c) where
    {-# INLINABLE tupleCons #-}
@@ -369,7 +370,7 @@ class ReorderTuple t1 t2 where
    tupleReorder :: t1 -> t2
 
 
-instance ReorderTuple (Single a) (Single a) where
+instance ReorderTuple (Unit a) (Unit a) where
    {-# INLINABLE tupleReorder #-}
    tupleReorder = id
 
@@ -522,3 +523,34 @@ instance ReorderTuple (a,b,c,d,e,g) (x,y,z,w,v,u) => ReorderTuple (a,b,c,d,e,f,g
 instance ReorderTuple (a,b,c,d,e,f) (x,y,z,w,v,u) => ReorderTuple (a,b,c,d,e,f,g) (x,y,z,w,v,u,g) where
    {-# INLINABLE tupleReorder #-}
    tupleReorder (a,b,c,d,e,f,g) = let (x,y,z,w,v,u) = tupleReorder (a,b,c,d,e,f) in (x,y,z,w,v,u,g)
+
+
+-- | TODO: put this family into GHC
+type family Tuple xs where
+   Tuple '[]                      = ()
+   Tuple '[a]                     = Unit a
+   Tuple '[a,b]                   = (a,b)
+   Tuple '[a,b,c]                 = (a,b,c)
+   Tuple '[a,b,c,d]               = (a,b,c,d)
+   Tuple '[a,b,c,d,e]             = (a,b,c,d,e)
+   Tuple '[a,b,c,d,e,f]           = (a,b,c,d,e,f)
+   Tuple '[a,b,c,d,e,f,g]         = (a,b,c,d,e,f,g)
+   Tuple '[a,b,c,d,e,f,g,h]       = (a,b,c,d,e,f,g,h)
+   Tuple '[a,b,c,d,e,f,g,h,i]     = (a,b,c,d,e,f,g,h,i)
+   Tuple '[a,b,c,d,e,f,g,h,i,j]   = (a,b,c,d,e,f,g,h,i,j)
+   Tuple '[a,b,c,d,e,f,g,h,i,j,k] = (a,b,c,d,e,f,g,h,i,j,k)
+
+type family TypeReps xs where
+   TypeReps '[]                 = '[]
+   TypeReps ((a::TYPE k) ': as) = k ': TypeReps as
+
+-- | TODO: put this family into GHC
+type family Tuple# xs :: TYPE ('TupleRep (TypeReps xs)) where
+   Tuple# '[]              = (##)
+   Tuple# '[a]             = (# a #)
+   Tuple# '[a,b]           = (# a,b #)
+   Tuple# '[a,b,c]         = (# a,b,c #)
+   Tuple# '[a,b,c,d]       = (# a,b,c,d #)
+   Tuple# '[a,b,c,d,e]     = (# a,b,c,d,e #)
+   Tuple# '[a,b,c,d,e,f]   = (# a,b,c,d,e,f #)
+   Tuple# '[a,b,c,d,e,f,g] = (# a,b,c,d,e,f,g #)
