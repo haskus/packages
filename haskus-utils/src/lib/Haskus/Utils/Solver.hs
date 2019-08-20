@@ -216,16 +216,16 @@ constraintIsError (CErr _) = True
 constraintIsError _        = False
 
 -- | Get predicates used in a constraint
-getConstraintPredicates :: Constraint e p -> [p]
+getConstraintPredicates :: Ord p => Constraint e p -> Set p
 getConstraintPredicates = \case
-   CErr _       -> []
-   IsValid   p  -> [p]
-   Predicate p  -> [p]
+   CErr _       -> Set.empty
+   IsValid   p  -> Set.singleton p
+   Predicate p  -> Set.singleton p
    Not c        -> getConstraintPredicates c
-   And cs       -> concatMap getConstraintPredicates cs
-   Or  cs       -> concatMap getConstraintPredicates cs
-   Xor cs       -> concatMap getConstraintPredicates cs
-   CBool _      -> []
+   And cs       -> Set.unions $ fmap getConstraintPredicates cs
+   Or  cs       -> Set.unions $ fmap getConstraintPredicates cs
+   Xor cs       -> Set.unions $ fmap getConstraintPredicates cs
+   CBool _      -> Set.empty
 
 -- | Get constraint terminals
 getConstraintTerminals :: Constraint e p -> Set Bool
@@ -395,11 +395,11 @@ getRuleTerminals (NonTerminal xs)        = Set.unions (fmap (getRuleTerminals . 
 getRuleTerminals (OrderedNonTerminal xs) = Set.unions (fmap (getRuleTerminals . snd) xs)
 
 -- | Get predicates used in a rule
-getRulePredicates :: Eq p => Rule e p a -> [p]
-getRulePredicates (Fail _)                = []
-getRulePredicates (Terminal _)            = []
-getRulePredicates (NonTerminal xs)        = nub $ concatMap (\(x,y) -> getConstraintPredicates x ++ getRulePredicates y) xs
-getRulePredicates (OrderedNonTerminal xs) = nub $ concatMap (\(x,y) -> getConstraintPredicates x ++ getRulePredicates y) xs
+getRulePredicates :: (Eq p,Ord p) => Rule e p a -> Set p
+getRulePredicates (Fail _)                = Set.empty
+getRulePredicates (Terminal _)            = Set.empty
+getRulePredicates (NonTerminal xs)        = Set.unions $ fmap (\(x,y) -> getConstraintPredicates x `Set.union` getRulePredicates y) xs
+getRulePredicates (OrderedNonTerminal xs) = Set.unions $ fmap (\(x,y) -> getConstraintPredicates x `Set.union` getRulePredicates y) xs
 
 -- | Constraint checking that a predicated value evaluates to some terminal
 evalsTo :: (Ord (Pred a), Eq a, Eq (PredTerm a), Eq (Pred a), Predicated a) => a -> PredTerm a -> Constraint e (Pred a)
@@ -477,7 +477,7 @@ evalsTo s a = case createPredicateTable s (const True) of
 --                               , getPredicates b
 --                               ]
 -- @
-class Ord (PredTerm a) => Predicated a where
+class (Ord (Pred a), Ord (PredTerm a)) => Predicated a where
    -- | Error type
    type PredErr a :: *
 
@@ -500,7 +500,7 @@ class Ord (PredTerm a) => Predicated a where
    getTerminals :: a -> Set (PredTerm a)
 
    -- | Get used predicates
-   getPredicates :: a -> [Pred a]
+   getPredicates :: a -> Set (Pred a)
 
 
 instance (Ord a, Ord p, Eq e, Eq a, Eq p) => Predicated (Rule e p a) where
@@ -553,7 +553,7 @@ instance forall x y.
                            [ (x',y') | x' <- Set.toList (getTerminals x)
                                      , y' <- Set.toList (getTerminals y)
                            ]
-   getPredicates (x,y) = getPredicates x ++ getPredicates y
+   getPredicates (x,y) = Set.union (getPredicates x) (getPredicates y)
 
 -- | Reduction result
 data MatchResult e nt t
@@ -629,7 +629,7 @@ createPredicateTable s oracleChecker =
 
       oracles = filter oracleChecker (fmap makeOracle predSets)
 
-      preds = nub (sort (getPredicates (simplifyPredicates emptyOracle s)))
+      preds = Set.toList (getPredicates (simplifyPredicates emptyOracle s))
 
       predSets = makeSets preds [[]] 
 

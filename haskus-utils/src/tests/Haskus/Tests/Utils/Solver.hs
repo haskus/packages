@@ -75,10 +75,7 @@ instance Predicated (PD NT) where
                               , b <- Set.toList (getTerminals bs)
                               ]
 
-   getPredicates (PD a b) = concat
-                              [ getPredicates a
-                              , getPredicates b
-                              ]
+   getPredicates (PD a b) = Set.union (getPredicates a) (getPredicates b)
 
 testsSolver :: TestTree
 testsSolver = testGroup "Solver" $
@@ -166,10 +163,10 @@ testsSolver = testGroup "Solver" $
             _       -> False
          )
    , testProperty "Get predicates: flat"
-         (sort (getPredicates d1) == sort [PredA,PredC,PredD,PredE])
+         (getPredicates d1 == Set.fromList [PredA,PredC,PredD,PredE])
 
    , testProperty "Get predicates: nested"
-         (sort (getPredicates d2) == sort [PredA,PredB,PredC,PredD])
+         (getPredicates d2 == Set.fromList [PredA,PredB,PredC,PredD])
 
    , testProperty "Create predicate table: flat non terminal"
          (case createPredicateTable d1 (const True) of
