@@ -13,6 +13,7 @@ where
 import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 import Data.List
+import qualified Data.Set as Set
 
 import Haskus.Utils.Solver
 import Haskus.Utils.Flow
@@ -68,9 +69,11 @@ instance Predicated (PD NT) where
       PD (simplifyPredicates oracle a)
          (simplifyPredicates oracle b)
 
-   getTerminals (PD as bs) = [ PD a b | a <- getTerminals as
-                                      , b <- getTerminals bs
-                             ]
+   getTerminals (PD as bs) = Set.fromList
+                              [ PD a b
+                              | a <- Set.toList (getTerminals as)
+                              , b <- Set.toList (getTerminals bs)
+                              ]
 
    getPredicates (PD a b) = concat
                               [ getPredicates a

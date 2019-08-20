@@ -48,6 +48,8 @@ import Haskus.Utils.Map.Strict (Map)
 import qualified Haskus.Utils.Map.Strict as Map
 
 import Control.Arrow (first,second)
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 import Prelude hiding (pred,length)
 
@@ -226,37 +228,36 @@ getConstraintPredicates = \case
    CBool _      -> []
 
 -- | Get constraint terminals
-getConstraintTerminals :: Constraint e p -> [Bool]
+getConstraintTerminals :: Constraint e p -> Set Bool
 getConstraintTerminals = \case
-   CErr _       -> []
-   IsValid   _  -> [True,False]
-   Predicate _  -> [True,False]
-   CBool v      -> [v]
-   Not c        -> fmap not (getConstraintTerminals c)
+   CErr _       -> Set.empty
+   IsValid   _  -> tf
+   Predicate _  -> tf
+   CBool v      -> Set.singleton v
+   Not c        -> Set.map not (getConstraintTerminals c)
    And cs       -> let cs' = fmap getConstraintTerminals cs
-                   in if | null cs                -> []
-                         | any (False `elem`) cs' -> [False]
-                         | all (sing True)    cs' -> [True]
-                         | otherwise              -> [True,False]
+                   in if | null cs                         -> Set.empty
+                         | any (False `elem`) cs'          -> Set.singleton False
+                         | all (== Set.singleton True) cs' -> Set.singleton True
+                         | otherwise                       -> tf
    Or  cs       -> let cs' = fmap getConstraintTerminals cs
-                   in if | null cs                -> []
-                         | any (True `elem`) cs'  -> [True]
-                         | all (sing False)   cs' -> [False]
-                         | otherwise              -> [True,False]
-   Xor cs       -> let cs' = fmap getConstraintTerminals cs
-                   in if | null cs                -> []
+                   in if | null cs                          -> Set.empty
+                         | any (True `elem`) cs'            -> Set.singleton True
+                         | all (== Set.singleton False) cs' -> Set.singleton False
+                         | otherwise                        -> tf
+   Xor cs       -> let cs' = fmap (Set.toList . getConstraintTerminals) cs
+                   in if | null cs                -> Set.empty
                          | otherwise              -> xo False cs'
    where
-      xo t     []           = [t]
+      tf = Set.fromList [True,False]
+
+      xo t     []           = Set.singleton t
       xo False ([True]:xs)  = xo True xs
-      xo True  ([True]:_)   = [False]
+      xo True  ([True]:_)   = Set.singleton False
       xo False ([False]:xs) = xo False xs
       xo True  ([False]:xs) = xo True xs
-      xo _     ([]:_)       = []
-      xo _     _            = [True,False]
-
-      sing v [v'] = v == v'
-      sing _ _    = False
+      xo _     ([]:_)       = Set.empty
+      xo _     _            = tf
 
 -- | Optimize/simplify a constraint
 constraintOptimize :: Constraint e p -> Constraint e p
@@ -387,11 +388,11 @@ ruleReduce oracle r = case ruleSimplify oracle r of
 
 
 -- | Get possible resulting terminals
-getRuleTerminals :: Rule e p a -> [a]
-getRuleTerminals (Fail _)                = []
-getRuleTerminals (Terminal a)            = [a]
-getRuleTerminals (NonTerminal xs)        = concatMap (getRuleTerminals . snd) xs
-getRuleTerminals (OrderedNonTerminal xs) = concatMap (getRuleTerminals . snd) xs
+getRuleTerminals :: Ord a => Rule e p a -> Set a
+getRuleTerminals (Fail _)                = Set.empty
+getRuleTerminals (Terminal a)            = Set.singleton a
+getRuleTerminals (NonTerminal xs)        = Set.unions (fmap (getRuleTerminals . snd) xs)
+getRuleTerminals (OrderedNonTerminal xs) = Set.unions (fmap (getRuleTerminals . snd) xs)
 
 -- | Get predicates used in a rule
 getRulePredicates :: Eq p => Rule e p a -> [p]
@@ -476,7 +477,7 @@ evalsTo s a = case createPredicateTable s (const True) of
 --                               , getPredicates b
 --                               ]
 -- @
-class Predicated a where
+class Ord (PredTerm a) => Predicated a where
    -- | Error type
    type PredErr a :: *
 
@@ -496,13 +497,13 @@ class Predicated a where
    simplifyPredicates :: PredOracle (Pred a) -> a -> a
 
    -- | Get possible resulting terminals
-   getTerminals :: a -> [PredTerm a]
+   getTerminals :: a -> Set (PredTerm a)
 
    -- | Get used predicates
    getPredicates :: a -> [Pred a]
 
 
-instance (Ord p, Eq e, Eq a, Eq p) => Predicated (Rule e p a) where
+instance (Ord a, Ord p, Eq e, Eq a, Eq p) => Predicated (Rule e p a) where
    type PredErr  (Rule e p a) = e
    type Pred     (Rule e p a) = p
    type PredTerm (Rule e p a) = a
@@ -548,9 +549,10 @@ instance forall x y.
    simplifyPredicates oracle (x,y) = (simplifyPredicates oracle x, simplifyPredicates oracle y)
 
    liftTerminal (x,y)  = (liftTerminal x, liftTerminal y)
-   getTerminals (x,y)  = [ (x',y') | x' <- getTerminals x
-                                   , y' <- getTerminals y
-                         ]
+   getTerminals (x,y)  = Set.fromList
+                           [ (x',y') | x' <- Set.toList (getTerminals x)
+                                     , y' <- Set.toList (getTerminals y)
+                           ]
    getPredicates (x,y) = getPredicates x ++ getPredicates y
 
 -- | Reduction result
