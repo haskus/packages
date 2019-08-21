@@ -11,6 +11,7 @@
 module Haskus.Integer
    ( Natural
    , naturalFromWord
+   , naturalFromInteger
    , naturalIsZero
    , naturalIsOne
    , naturalZero
@@ -46,6 +47,7 @@ module Haskus.Integer
    , div3by2_small#
    , div3by2_large#
    , div3by2#
+   , divNby1#
    )
 where
 
@@ -72,7 +74,7 @@ import Data.Maybe
 data Natural = Natural ByteArray#
 
 instance Show Natural where
-   show = naturalShowHex
+   show = show . naturalToInteger
 
 instance Eq Natural where
    (==) = naturalEq
@@ -81,12 +83,13 @@ instance Ord Natural where
    compare = naturalCompare
 
 instance Num Natural where
-   (+)      = naturalAdd
-   (*)      = naturalMul
-   x - y    = fromMaybe (error "Can't subtract these naturals") (naturalSub x y)
-   abs      = id
-   signum _ = naturalFromWord 1
-   negate _ = error "Can't negate a Natural"
+   (+)         = naturalAdd
+   (*)         = naturalMul
+   x - y       = fromMaybe (error "Can't subtract these naturals") (naturalSub x y)
+   abs         = id
+   signum _    = naturalFromWord 1
+   negate _    = error "Can't negate a Natural"
+   fromInteger = naturalFromInteger
 
 instance Bits Natural where
    (.&.)          = naturalAnd
@@ -104,6 +107,16 @@ instance Bits Natural where
       | i < WS    = naturalFromWord (bit i)
       | otherwise = naturalFromWord 1 `shiftL` i
    testBit w n    = naturalTestBit w (fromIntegral n)
+
+instance Integral Natural where
+   toInteger = naturalToInteger
+
+instance Real Natural where
+   toRational n = toRational (naturalToInteger n)
+
+instance Enum Natural where
+   toEnum   = naturalFromInteger . toInteger
+   fromEnum = fromInteger . naturalToInteger
 
 -- | Count limbs
 naturalLimbCount :: Natural -> Word
@@ -134,7 +147,25 @@ naturalFromWord (W# w)   = runST $ ST \s0 ->
          s2 -> case unsafeFreezeByteArray# mba s2 of
             (# s3, ba #) -> (# s3, Natural ba #)
 
--- | Show a Natural
+-- | Convert an Integer into a Natural
+naturalFromInteger :: Integer -> Natural
+naturalFromInteger k
+   | k < 0     = error "naturalFromInteger: negative integer"
+   | otherwise = go naturalZero 0 k
+   where
+      -- FIXME: be clever and allocate log2(k)/WSBITS ByteArray directly. Then
+      -- fill it.
+      go c _ 0 = c
+      go c s n = go (c `naturalOr` naturalShiftL (naturalFromWord (fromInteger n)) s) (s + WSBITS) (n `shiftR` WSBITS)
+
+-- | Convert a Natural into an Integer
+naturalToInteger :: Natural -> Integer
+naturalToInteger = go 0 . naturalLimbsMS
+   where
+      go c []     = c
+      go c (x:xs) = go (c `shiftL` WSBITS .|. toInteger x) xs
+
+-- | Show a Natural in hexadecimal
 naturalShowHex :: Natural -> String
 naturalShowHex n
    | naturalIsZero n = "0x0"
@@ -510,41 +541,18 @@ naturalSub n1@(Natural ba1) n2@(Natural ba2)
 --
 -- See Note [Multi-Precision Division]
 naturalQuotRem :: Natural -> Natural -> Maybe (Natural,Natural)
-naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
+naturalQuotRem n1 n2@(Natural ba2)
    | naturalIsZero n2         = Nothing
    | naturalIsOne n2          = Just (n1, naturalZero)
    | lc1 < lc2                = Just (naturalZero, n1)
-   | lc2 == 1                 = runST $ ST \s0 ->
-      let
-         lc       = lc1
-         !(I# sz) = lc * WS
-         d        = indexWordArray# ba2 0#
-
-         go mba i@(I# i#) trailing zeroTrail r s
-            | i == 0 = case zeroTrail of
-                        0        -> (# s, r #)
-                        (!I# zt) -> case shrinkMutableByteArray# mba (sz -# zt) s of
-                           s2 -> (# s2, r #)
-            | otherwise =
-               let
-                  off         = i# -# 1#
-                  n           = indexWordArray# ba1 off
-                  !(# q,r' #) = quotRemWord2# r n d
-                  qZero       = isTrue# (q `eqWord#` 0##)
-                  trailing'   = trailing && qZero
-                  zeroTrail'  = if trailing' then zeroTrail+1 else zeroTrail
-               in case writeWordArray# mba off q s of
-                     s2 -> go mba (I# off) trailing' zeroTrail' r' s2
-      in case newByteArray# sz s0 of
-         (# s1, mba #) -> case go mba lc True 0 0## s1 of
-            (# s2, r #) -> case unsafeFreezeByteArray# mba s2 of
-               (# s3, ba #) -> case naturalFromWord (W# r) of
-                  r' -> (# s3, Just (Natural ba, r') #)
+   | lc2 == 1                 = case divNby1# n1 (indexWordArray# ba2 0#) of
+                                    Nothing    -> Nothing
+                                    Just (q,r) -> Just (q, naturalFromWord r)
 
    | otherwise = error "Long-division not implemented"
       where
-         lc1      = fromIntegral (naturalLimbCount n1)
-         lc2      = fromIntegral (naturalLimbCount n2)
+         lc1      = naturalLimbCount n1
+         lc2      = naturalLimbCount n2
 
 -- | 1-by-1 small addition
 --
@@ -734,6 +742,37 @@ div3by2# a@(# a2,_,_ #) b@(# b1,_ #)
    | isTrue# (a2 `ltWord#` b1) = case div3by2_small# a b of
                                     (# q0, r #) -> (# (# 0##,q0 #), r #)
    | otherwise                 = div3by2_large# a b
+
+
+-- | N-by-1 division
+--
+-- Require:
+--    b /= 0
+divNby1# :: Natural -> Word# -> Maybe (Natural, Word)
+divNby1# n@(Natural a) b = runST $ ST \s0 ->
+   let
+      lc       = fromIntegral $ naturalLimbCount n
+      !(I# sz) = lc * WS
+
+      go mba i@(I# i#) trailing zeroTrail r s
+         | i == 0 = case zeroTrail of
+                     0        -> (# s, r #)
+                     (!I# zt) -> case shrinkMutableByteArray# mba (sz -# zt) s of
+                        s2 -> (# s2, r #)
+         | otherwise =
+            let
+               off         = i# -# 1#
+               an          = indexWordArray# a off
+               !(# q,r' #) = quotRemWord2# r an b
+               qZero       = isTrue# (q `eqWord#` 0##)
+               trailing'   = trailing && qZero
+               zeroTrail'  = if trailing' then zeroTrail+1 else zeroTrail
+            in case writeWordArray# mba off q s of
+                  s2 -> go mba (I# off) trailing' zeroTrail' r' s2
+   in case newByteArray# sz s0 of
+      (# s1, mba #) -> case go mba lc True 0 0## s1 of
+         (# s2, r #) -> case unsafeFreezeByteArray# mba s2 of
+            (# s3, ba #) -> (# s3, Just (Natural ba, W# r) #)
 
 --
 -- Note [Multi-Precision Division]
