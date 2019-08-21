@@ -28,6 +28,24 @@ module Haskus.Integer
    , naturalShiftR
    , naturalShiftL
    , naturalLimbCount
+   -- * Primitives
+   , add1by1_small#
+   , add1by1_large#
+   , add1by2_small#
+   , add1by2_large#
+   , add2by2_small#
+   , sub2by1#
+   , sub2by2#
+   , sub3by1#
+   , mul1by1_small#
+   , mul1by1_large#
+   , mul1by2#
+   , div1by1#
+   , div2by1_small#
+   , div2by1_large#
+   , div3by2_small#
+   , div3by2_large#
+   , div3by2#
    )
 where
 
@@ -528,74 +546,206 @@ naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
          lc1      = fromIntegral (naturalLimbCount n1)
          lc2      = fromIntegral (naturalLimbCount n2)
 
+-- | 1-by-1 small addition
+--
+-- Requires:
+--    a0+b0 < B
+add1by1_small# :: Word# -> Word# -> Word#
+add1by1_small# a0 b0 = plusWord# a0 b0
+
+-- | 1-by-1 large addition
+add1by1_large# :: Word# -> Word# -> (# Word#,Word# #)
+add1by1_large# a0 b0 = plusWord2# a0 b0
+
+-- | 1-by-2 small addition
+--
+-- Requires:
+--    a0+(b1,b0) < B^2
+add1by2_small# :: Word# -> (# Word#,Word# #) -> (# Word#,Word# #)
+add1by2_small# a0 (# b1,b0 #) = (# m1, m0 #)
+   where
+      !(# t, m0 #) = add1by1_large# a0 b0
+      !m1          = add1by1_small# t b1
+
+-- | 1-by-2 large addition
+add1by2_large# :: Word# -> (# Word#,Word# #) -> (# Word#,Word#,Word# #)
+add1by2_large# a0 (# b1,b0 #) = (# m2,m1,m0 #)
+   where
+      !(# t, m0 #) = add1by1_large# a0 b0
+      !(# m2,m1 #) = add1by1_large# t b1
+
+-- | 2-by-2 small addition
+--
+-- Requires:
+--    (a1,a0)+(b1,b0) < B^2
+add2by2_small# :: (# Word#,Word# #) -> (# Word#,Word# #) -> (# Word#,Word# #)
+add2by2_small# (# a1,a0 #) (# b1,b0 #) = (# m1, m0 #)
+   where
+      !(# c0, m0 #) = add1by1_large# a0 b0
+      !c1           = add1by1_small# c0 b1
+      !m1           = add1by1_small# c1 a1
+
+-- | 2-by-1 small subtraction
+--
+-- Requires:
+--    (a1,a0)>=b0
+sub2by1# :: (# Word#,Word# #) -> Word# -> (# Word#,Word# #)
+sub2by1# (# a1,a0 #) b0 = (# m1, m0 #)
+   where
+      !(# m0,c #) = subWordC# a0 b0
+      !m1         = if isTrue# c then minusWord# a1 1## else a1
+
+-- | 2-by-2 small subtraction
+--
+-- Requires:
+--    (a1,a0)>=(b1,b0)
+sub2by2# :: (# Word#,Word# #) -> (# Word#,Word# #) -> (# Word#,Word# #)
+sub2by2# (# a1,a0 #) (# b1,b0 #) = (# m1, m0 #)
+   where
+      !(# t,m0 #) = sub2by1# (# a1, a0 #) b0
+      !m1         = minusWord# t b1
+
+-- | 3-by-1 small subtraction
+--
+-- Requires:
+--    (a2,a1,a0)>=b0
+sub3by1# :: (# Word#,Word#,Word# #) -> Word# -> (# Word#,Word#,Word# #)
+sub3by1# (# a2,a1,a0 #) b0 = (# m2,m1,m0 #)
+   where
+      !(# m0,c #)  = subWordC# a0 b0
+      !(# m2,m1 #) = if isTrue# c then sub2by1# (# a2,a1 #) 1## else (# a2, a1 #)
+
+
+-- | 1-by-1 small multiplication
+--
+-- Requires:
+--    a0*b0 < B
+mul1by1_small# :: Word# -> Word# -> Word#
+mul1by1_small# a0 b0 = timesWord# a0 b0
+
+-- | 1-by-1 large multiplication
+mul1by1_large# :: Word# -> Word# -> (# Word#,Word# #)
+mul1by1_large# a0 b0 = timesWord2# a0 b0
+
+-- | 1-by-2
+mul1by2# :: Word# -> (# Word#,Word# #) -> (# Word#,Word#,Word# #)
+mul1by2# a0 (# b1,b0 #) = (# m2,m1,m0 #)
+   where
+      !(# t0, m0 #) = mul1by1_large# a0 b0
+      !(# t2, t1 #) = mul1by1_large# a0 b1
+      -- if a0 = b1 = maxBound = B-1 then a0*b1 = (B-1)^2 = B^2 + 1 - 2*B
+      -- t0 < B hence a0*b1+t0 < B^2 + 1 - B
+      -- B > 1 hence a0*b1+t0 < B^2
+      -- Conclusion: we can use add1by2_small#
+      !(# m2, m1 #) = add1by2_small# t0 (# t2,t1 #)
+
+-- | Compare 2-word naturals
+cmp2by2# :: (# Word#,Word# #) -> (# Word#,Word# #) -> Ordering
+cmp2by2# (# a1,a0 #) (# b1, b0 #)
+   | isTrue# (a1 `gtWord#` b1) = GT
+   | isTrue# (b1 `gtWord#` a1) = LT
+   | isTrue# (a0 `gtWord#` b0) = GT
+   | isTrue# (b0 `gtWord#` a0) = LT
+   | otherwise                 = EQ
+
+
+-- | 1-by-1 division
+--
+-- Requires:
+--    b0 /= 0
+div1by1# :: Word# -> Word# -> (# Word#,Word# #)
+div1by1# a0 b0 = (# q0, r0 #)
+   where 
+      !(# q0,r0 #) = quotRemWord# a0 b0
+
+-- | 2-by-1 small division (a1 < b0)
+-- 
+-- Requires:
+--    b0 /= 0
+--    a1 < b0
+div2by1_small# :: (# Word#,Word# #) -> Word# -> (# Word#,Word# #)
+div2by1_small# (# a1,a0 #) b0 = (# q0, r0 #)
+   where
+      !(# q0, r0 #) = quotRemWord2# a1 a0 b0
+
+-- | 2-by-1 large division (a1 >= b0)
+-- 
+-- Requires:
+--    b0 /= 0
+--    a1 >= b0 (not required, but if not q1=0)
+div2by1_large# :: (# Word#,Word# #) -> Word# -> (# (# Word#,Word# #),Word# #)
+div2by1_large# (# a1,a0 #) b0 = (# (# q1, q0 #), r0 #)
+   where
+      !(# q1, r' #) = div1by1# a1 b0
+      !(# q0, r0 #) = div2by1_small# (# r',a0 #) b0
+
+-- | 3-by-2 small division
+-- 
+-- Requires:
+--    b1 /= 0
+--    a2 < b1
+div3by2_small# :: (# Word#,Word#,Word# #) -> (# Word#,Word# #) -> (# Word#, (# Word#,Word# #) #)
+div3by2_small# (# a2,a1,a0 #) (# b1,b0 #) = (# q0, (# r1,r0 #) #)
+   where
+      -- candidate quotient qe. The real quotient is <= qe0
+      !(# qe, re0 #) = div2by1_small# (# a2,a1 #) b1
+      -- high remainder: remainder obtained by dividing (a2,a1,a0) by (b1,0##)
+      !hr = (# re0,a0 #)
+
+      -- we sub 1 to the quotient q until q*b0 <= hr
+      !(# q0, (# r1,r0 #) #) = go qe hr (mul1by1_large# qe b0)
+
+      go qc rc c = case cmp2by2# rc c of
+         EQ -> (# qc, (# 0##, 0## #) #)
+         LT -> go (qc `minusWord#` 1##) (add2by2_small# rc (# b1,b0 #)) (sub2by1# c b0)
+         GT -> (# qc, rc #)
+
+-- | 3-by-2 large division
+-- 
+-- Requires:
+--    b1 /= 0
+div3by2_large# :: (# Word#,Word#,Word# #) -> (# Word#,Word# #) -> (# (# Word#,Word# #), (# Word#,Word# #) #)
+div3by2_large# (# a2,a1,a0 #) (# b1,b0 #) = (# (# q1,q0 #), (# r1,r0 #) #)
+   where
+      -- candidate quotient qe. The real quotient is <= qe0
+      !(# (# qe1, qe0 #), re0 #) = div2by1_large# (# a2,a1 #) b1
+      -- high remainder: remainder obtained by dividing (a2,a1,a0) by (b1,0##)
+      !hr = (# re0,a0 #)
+
+      -- we sub 1 to the quotient q until q*b0 <= hr
+      !(# (# q1,q0 #), (# r1,r0 #) #) = go (# qe1, qe0 #) hr (mul1by2# b0 (# qe1,qe0 #))
+
+      go qc rc c@(# c2,c1,c0 #) = 
+         case c2 of
+            0## -> go2 qc rc (# c1,c0 #)
+            _   -> go (sub2by1# qc 1##) (add2by2_small# rc (# b1,b0 #)) (sub3by1# c b0)
+
+      go2 qc rc c = case cmp2by2# rc c of
+         EQ -> (# qc, (# 0##, 0## #) #)
+         LT -> go2 (sub2by1# qc 1##) (add2by2_small# rc (# b1,b0 #)) (sub2by1# c b0)
+         GT -> (# qc, rc #)
+
+-- | 3-by-2 division
+-- 
+-- Requires:
+--    b1 /= 0
+div3by2# :: (# Word#,Word#,Word# #) -> (# Word#,Word# #) -> (# (# Word#,Word# #),(# Word#,Word# #) #)
+div3by2# a@(# a2,_,_ #) b@(# b1,_ #)
+   | isTrue# (a2 `ltWord#` b1) = case div3by2_small# a b of
+                                    (# q0, r #) -> (# (# 0##,q0 #), r #)
+   | otherwise                 = div3by2_large# a b
+
 --
 -- Note [Multi-Precision Division]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 --
--- See "Multiple-Length Division Revisited: A Tour of the Minefield", Per Brinch
--- Hansen, 1992,
--- https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
+-- See:
+--    * "Multiple-Length Division Revisited: A Tour of the Minefield", Per
+--    Brinch Hansen, 1992,
+--    https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
 --
--- 1/1 division
--- ------------
+--    * "Fast Recursive Division", Burnikel and Ziegler, 1998
 --
--- For any base B. Suppose we want to divide u by v where u and v are composed
--- of 1 digit each:
---    u = (u0){B}
---    v = (v0){B}
---    v /= 0
---
--- We want to compute (q,r) so that: u = q*v + r with r < v
---
--- Number of digits:
---    countDigits (r) <= 1 (proof: r < v so r is composed of at most one digit)
---    countDigits (q) <= 1 (proof: if q had more than one digit, u would have more than one digit)
---
--- 2/1 division
--- ------------
---
--- For any base B. Suppose we want to divide u by v where u and v are composed
--- of 2 and 1 digits respectively:
---    u = (u1,u0){B}
---    v = (v0){B}
---    v /= 0
---
--- We want to compute (q,r) so that: u = q*v + r with r < v
---    r=(r0){B}
---
--- Suppose v0 = 1 (smallest non-zero value). Then q = u. (x `div` y) is
--- decreasing over y, hence q has at most 2 digits in base B.
---
---    q = (q1,q0){B}
---
---    u1*B+u0 = q1*B*v0 + q0*v0 + r0
---    u1*B    = q1*B*v0 + q0*v0 + r0 - u0
---    u1      = q1*v0   + K/B       where K = q0*v0+r0-u0
---
--- First case: u1 < v0
--- ~~~~~~~~~~~~~~~~~~~
---    q1 = 0 hence countDigits(q) <= 1
---
---    We have primops to compute q0 and r0 in this case (e.g. X86_64 DIV
---    instruction, `quotRemWord2#` primop)
---
--- Second case: u1 >= v0
--- ~~~~~~~~~~~~~~~~~~~~~
---
---    q1 /= 0 hence countDigits(q) == 2
---
---    let u1 = q'*v0 + r' where r' < v0 using 1/1 division.
---
---    u1*B+u0           = q1*B*v0 + q0*v0 + r
---    (q'*v0+r')*B+u0   = q1*B*v0 + q0*v0 + r
---    q'*v0*B + r'*B+u0 = q1*B*v0 + q0*v0 + r
---    r'*B+u0           = (q1-q')*B*v0 + q0*v0 + r
---    r'*B+u0           = ((q1-q')*B + q0)*v0 + r
---
---    let u' = (r',u0){B}
---    The 2/1 division of u' by v=(v0){B} (with r' < v0) gives us q0, r and:
---       q' = q1
---       
 --
 -- k/1 division
 -- ------------
@@ -611,4 +761,3 @@ naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
 --  We perform the division of u' by v by folding from left to right the digits
 --  of u' and by using the 2/1 division (first case). We obtain the digits of q
 --  from left to right. The last remainder is the overall remainder.
---
