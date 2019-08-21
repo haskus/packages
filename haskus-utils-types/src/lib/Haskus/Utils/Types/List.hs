@@ -299,9 +299,9 @@ type family MaybeIndexOf' (n :: Nat) (a :: k) (l :: [k]) where
    MaybeIndexOf' n x (y ': xs) = MaybeIndexOf' (n+1) x xs
 
 -- | Indexed access into the list
-type family Index (n :: Nat) (l :: [k]) :: k where
-   Index 0 (x ': xs) = x
-   Index n (x ': xs) = Index (n-1) xs
+type family Index (n :: Nat) (l :: [k]) = (r :: k) where
+   Index 0 (x ': _ ) = x
+   Index n (_ ': xs) = Index (n-1) xs
 
 -- | List membership test
 type family Elem (t :: b) (f :: b) (x :: k) (xs :: [k]) :: b where
