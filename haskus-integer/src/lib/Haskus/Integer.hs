@@ -495,9 +495,10 @@ naturalQuotRem :: Natural -> Natural -> Maybe (Natural,Natural)
 naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
    | naturalIsZero n2         = Nothing
    | naturalIsOne n2          = Just (n1, naturalZero)
-   | naturalLimbCount n2 == 1 = runST $ ST \s0 ->
+   | lc1 < lc2                = Just (naturalZero, n1)
+   | lc2 == 1                 = runST $ ST \s0 ->
       let
-         lc       = fromIntegral (naturalLimbCount n1)
+         lc       = lc1
          !(I# sz) = lc * WS
          d        = indexWordArray# ba2 0#
 
@@ -523,6 +524,9 @@ naturalQuotRem n1@(Natural ba1) n2@(Natural ba2)
                   r' -> (# s3, Just (Natural ba, r') #)
 
    | otherwise = error "Long-division not implemented"
+      where
+         lc1      = fromIntegral (naturalLimbCount n1)
+         lc2      = fromIntegral (naturalLimbCount n2)
 
 --
 -- Note [Multi-Precision Division]
