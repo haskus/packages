@@ -3,6 +3,7 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -fobject-code #-}
 
 -- | Multi-precision integers
 --
@@ -436,16 +437,16 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
 -- | Multiplication (classical algorithm)
 naturalMul :: Natural -> Natural -> Natural
 naturalMul n1@(Natural ba1) n2@(Natural ba2)
+   | naturalLimbCount n2 > naturalLimbCount n1 = naturalMul n2 n1 -- optimize loops
    | naturalIsZero n1 = n1
    | naturalIsZero n2 = n2
    | naturalIsOne  n1 = n2
    | naturalIsOne  n2 = n1
    | otherwise        = runST $ ST \s0 ->
       case newByteArray# sz# s0 of
-         (# s1, mba #) -> case setByteArray# mba 0# sz# 0# s1 of
-            s2 -> case loopj mba 0 s2 of
-               s3 -> case unsafeFreezeByteArray# mba s3 of
-                  (# s4, ba #) -> (# s4, Natural ba #)
+         (# s1, mba #) -> case loopj0 mba 0 s1 of
+               s2 -> case unsafeFreezeByteArray# mba s2 of
+                  (# s3, ba #) -> (# s3, Natural ba #)
 
    where
       !lc1@(I# lc1#) = fromIntegral $ naturalLimbCount n1
@@ -472,6 +473,23 @@ naturalMul n1@(Natural ba1) n2@(Natural ba2)
                    k'             = plusWord# (plusWord# k1 k2) k3
                in case writeWordArray# mba (i# +# j#) wij' s2 of
                      s3 -> loopi mba vj j (i+1) k' s3
+
+      -- loopj0 and loopi0 are executed first when we haven't initialized the
+      -- result array.
+      loopj0 mba j@(I# j#) s = case indexWordArray# ba2 j# of
+                                 0## -> loopj0 mba (j+1) s -- n2 /= 0 so we can loop safely
+                                 vj  -> loopi0 mba vj j 0 0## s
+
+      loopi0 mba vj j@(I# j#) i@(I# i#) k s
+         | isTrue# (i# ==# lc1#) = case writeWordArray# mba (i# +# j#) k s of
+                                       s2 -> loopj mba (j+1) s2
+         | otherwise =
+               let ui             = indexWordArray# ba1 i#
+                   !(# k1,r1 #)   = timesWord2# ui vj
+                   !(# k2,wij #)  = plusWord2# r1 k
+                   k'             = plusWord# k1 k2
+               in case writeWordArray# mba (i# +# j#) wij s of
+                     s2 -> loopi0 mba vj j (i+1) k' s2
 
 -- | Natural bit test
 naturalTestBit :: Natural -> Word -> Bool
@@ -691,7 +709,7 @@ div2by1_large# (# a1,a0 #) b0 = (# (# q1, q0 #), r0 #)
 -- 
 -- Requires:
 --    b1 /= 0
---    a2 < b1
+--    (a2,a1) < (b1,b0)
 div3by2_small# :: (# Word#,Word#,Word# #) -> (# Word#,Word# #) -> (# Word#, (# Word#,Word# #) #)
 div3by2_small# (# a2,a1,a0 #) (# b1,b0 #) = (# q0, (# r1,r0 #) #)
    where
@@ -720,7 +738,12 @@ div3by2_large# (# a2,a1,a0 #) (# b1,b0 #) = (# (# q1,q0 #), (# r1,r0 #) #)
       -- high remainder: remainder obtained by dividing (a2,a1,a0) by (b1,0##)
       !hr = (# re0,a0 #)
 
-      -- we sub 1 to the quotient q until q*b0 <= hr
+      -- We sub 1 to the quotient q until q*b0 <= hr
+      -- We don't require normalization as we loop, but normalization implies
+      -- less loop cycles.
+      -- Normalization = make b1 larger by left-shifting b and a by
+      -- "countLeadingZeros b1". The quotient stays the same but the remainder
+      -- as to be shifted right of the same amount of bits.
       !(# (# q1,q0 #), (# r1,r0 #) #) = go (# qe1, qe0 #) hr (mul1by2# b0 (# qe1,qe0 #))
 
       go qc rc c@(# c2,c1,c0 #) = 
@@ -738,10 +761,35 @@ div3by2_large# (# a2,a1,a0 #) (# b1,b0 #) = (# (# q1,q0 #), (# r1,r0 #) #)
 -- Requires:
 --    b1 /= 0
 div3by2# :: (# Word#,Word#,Word# #) -> (# Word#,Word# #) -> (# (# Word#,Word# #),(# Word#,Word# #) #)
-div3by2# a@(# a2,_,_ #) b@(# b1,_ #)
-   | isTrue# (a2 `ltWord#` b1) = case div3by2_small# a b of
-                                    (# q0, r #) -> (# (# 0##,q0 #), r #)
-   | otherwise                 = div3by2_large# a b
+div3by2# a@(# a2,a1,_ #) b@(# b1,b0 #) = case cmp2by2# (# a2,a1 #) (# b1,b0 #) of
+   LT -> case div3by2_small# a b of
+            (# q0, r #) -> (# (# 0##,q0 #), r #)
+   _  -> div3by2_large# a b
+
+
+-- | 4-by-2 small division
+--
+-- Requires:
+--    b1 /= 0
+--    (a3,a2) < (b1,b0)
+div4by2_small# :: (# Word#,Word#,Word#,Word# #) -> (# Word#,Word# #) -> (# (# Word#,Word# #),(# Word#,Word# #) #)
+div4by2_small# (# a3,a2,a1,a0 #) (# b1,b0 #) = (# (# q1,q0 #), (# r1,r0 #) #)
+   where
+      -- we require that (b1,b0) > (a3,a2) so we can use small division
+      !(# q1, (# c1,c0 #) #) = div3by2_small# (# a3,a2,a1 #) (# b1,b0 #)
+      -- we know that (b1,b0) > (c1,c0) so we can use small division
+      !(# q0, (# r1,r0 #) #) = div3by2_small# (# c1,c0,a0 #) (# b1,b0 #)
+
+-- | 4-by-2 large division
+--
+-- Requires:
+--    b1 /= 0
+div4by2_large# :: (# Word#,Word#,Word#,Word# #) -> (# Word#,Word# #) -> (# (# Word#,Word#,Word# #),(# Word#,Word# #) #)
+div4by2_large# (# a3,a2,a1,a0 #) (# b1,b0 #) = (# (# q2,q1,q0 #), (# r1,r0 #) #)
+   where
+      !(# (# q2,q1 #), (# c1,c0 #) #) = div3by2_large# (# a3,a2,a1 #) (# b1,b0 #)
+      -- we know that (b1,b0) > (c1,c0) so we can use small division
+      !(# q0, (# r1,r0 #) #)          = div3by2_small# (# c1,c0,a0 #) (# b1,b0 #)
 
 
 -- | N-by-1 division
