@@ -30,6 +30,7 @@ module Haskus.Integer
    , naturalShiftR
    , naturalShiftL
    , naturalLimbCount
+   , naturalWithNormalized
    -- * Primitives
    , add1by1_small#
    , add1by1_large#
@@ -49,6 +50,9 @@ module Haskus.Integer
    , div3by2_large#
    , div3by2#
    , divNby1#
+   , div4by2_small#
+   , div4by2_large#
+   , cmpMS
    )
 where
 
@@ -821,6 +825,40 @@ divNby1# n@(Natural a) b = runST $ ST \s0 ->
       (# s1, mba #) -> case go mba lc True 0 0## s1 of
          (# s2, r #) -> case unsafeFreezeByteArray# mba s2 of
             (# s3, ba #) -> (# s3, Just (Natural ba, W# r) #)
+
+
+
+-- | Perform the division operation with normalized values.
+--
+-- Given fdiv, A and B:
+--    * compute normalized values A' and B'
+--    * compute (Q',R') = fdiv A' B'
+--    * return unormalized (Q,R)
+naturalWithNormalized :: (Natural -> Natural -> (Natural,Natural)) -> Natural -> Natural -> (Natural,Natural)
+{-# INLINABLE naturalWithNormalized #-}
+naturalWithNormalized f a b@(Natural ba)
+   | isTrue# (k# `eqWord#` 0##) = f a b
+   | otherwise                  = let (q,r') = f (naturalShiftL a k) (naturalShiftL b k)
+                                  in (q, naturalShiftR r' k)
+   where
+      lc        = naturalLimbCount b
+      !(I# lc#) = fromIntegral lc
+      !k#       = clz# (indexWordArray# ba (lc# -# 1#))
+      k         = W# k#
+
+-- | Compare a and b where limbCount a >= limbCount b after dropping the
+-- superfluous least-significant limbs of a so that limbCount a == limbCount b
+--
+-- Inputs: A (m+n limbs) and B (n limbs). Compare (A>>(WSBITS*m)) and B
+cmpMS :: Natural -> Natural -> Ordering
+cmpMS a b = go (take n (naturalLimbsMS a)) (naturalLimbsMS b)
+   where
+      n  = fromIntegral $ naturalLimbCount b
+      go (x:xs) (y:ys)
+         | x > y     = GT
+         | x < y     = LT
+         | otherwise = go xs ys
+      go ~[] ~[]     = EQ
 
 --
 -- Note [Multi-Precision Division]
