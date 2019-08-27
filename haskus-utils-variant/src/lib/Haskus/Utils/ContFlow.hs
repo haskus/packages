@@ -17,41 +17,25 @@ module Haskus.Utils.ContFlow
    , (>::>)
    , (>:-:>)
    , (>:%:>)
-   , ContListToTuple
-   , ContTupleToList
-   , StripR
+   , ContTuple
    , AddR
    , MultiCont (..)
    )
 where
 
 import Haskus.Utils.Tuple
-import Haskus.Utils.Types
 
 -- | A continuation based control-flow
-newtype ContFlow (xs :: [*]) r = ContFlow (ContListToTuple xs r -> r)
+newtype ContFlow (xs :: [*]) r = ContFlow (ContTuple xs r -> r)
 
 -- | Convert a list of types into the actual data type representing the
 -- continuations.
-type family ContListToTuple (xs :: [*]) r where
-   ContListToTuple xs r = Tuple (AddR xs r)
-
--- | Convert a tuple of continuations into a list of types
-type family ContTupleToList xs r :: [*] where
-   ContTupleToList xs r = StripR xs r
+type family ContTuple (xs :: [*]) r where
+   ContTuple xs r = Tuple (AddR xs r)
 
 type family AddR f r where
    AddR '[] r       = '[]
    AddR (x ': xs) r = (x -> r) ': AddR xs r
-
-type family StripR f r where
-   StripR '[] r              = '[]
-   StripR ((x -> r) ': xs) r = x ': StripR xs r
-   StripR ((x -> w) ': xs) r =
-      TypeError ( 'Text "Invalid continuation return type `"
-                  ':<>: 'ShowType w ':<>: 'Text "', expecting `"
-                  ':<>: 'ShowType r ':<>: 'Text "'")
-
 
 -- | A multi-continuable type
 class MultiCont a where
@@ -65,7 +49,7 @@ class MultiCont a where
 
 
 -- | Bind a multi-continuable type to a tuple of continuations
-(>:>) :: MultiCont a => a -> ContListToTuple (MultiContTypes a) r -> r
+(>:>) :: MultiCont a => a -> ContTuple (MultiContTypes a) r -> r
 {-# INLINABLE (>:>) #-}
 (>:>) a !cs = toCont a >::> cs
 
@@ -82,7 +66,7 @@ infixl 0 >-:>
 -- reorder fields if necessary
 (>%:>) ::
    ( MultiCont a
-   , ReorderTuple ts (ContListToTuple (MultiContTypes a) r)
+   , ReorderTuple ts (ContTuple (MultiContTypes a) r)
    ) => a -> ts -> r
 {-# INLINABLE (>%:>) #-}
 (>%:>) a !cs = toCont a >:%:> cs
@@ -91,7 +75,7 @@ infixl 0 >%:>
 
 
 -- | Bind a flow to a tuple of continuations
-(>::>) :: ContFlow xs r -> ContListToTuple xs r -> r
+(>::>) :: ContFlow xs r -> ContTuple xs r -> r
 {-# INLINABLE (>::>) #-}
 (>::>) (ContFlow f) !cs = f cs
 
@@ -107,7 +91,7 @@ infixl 0 >:-:>
 -- | Bind a flow to a tuple of continuations and
 -- reorder fields if necessary
 (>:%:>) :: forall ts xs r.
-   ( ReorderTuple ts (ContListToTuple xs r)
+   ( ReorderTuple ts (ContTuple xs r)
    ) => ContFlow xs r -> ts -> r
 {-# INLINABLE (>:%:>) #-}
 (>:%:>) (ContFlow f) !cs = f (tupleReorder cs)
