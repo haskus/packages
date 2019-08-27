@@ -13,7 +13,7 @@
 module Haskus.Natural
    ( Natural
    , naturalFromWord
-   , naturalFromWords
+   , naturalFromLimbsMS
    , naturalFromInteger
    , naturalIsZero
    , naturalIsOne
@@ -36,6 +36,9 @@ module Haskus.Natural
    -- * Primitives
    , naturalLimbCount#
    , naturalLimbCountMutable#
+   , naturalLimbsLS
+   , naturalLimbsMS
+   , naturalComparePrefix
    , add1by1_small#
    , add1by1_large#
    , add1by2_small#
@@ -58,7 +61,6 @@ module Haskus.Natural
    , div4by2_large#
    , sub#
    , subAt#
-   , cmpMS
    , cmpDropped#
    , shrinkMS
    , subAtInplace#
@@ -194,20 +196,22 @@ naturalFromInteger k
       go c s n = go (c `naturalOr` naturalShiftL (naturalFromWord (fromInteger n)) s) (s + WSBITS) (n `shiftR` WSBITS)
 
 -- | Convert a list of non-zero Words (most-significant first) into a Natural
-naturalFromWords :: [Word] -> Natural
-naturalFromWords [] = naturalZero
-naturalFromWords xs = runST $ ST \s0 ->
-   let !(I# sz)       = lxs * WS
-       !lxs@(I# lxs#) = length xs
-   in case newByteArray# sz s0 of
-      (# s1, mba #) ->
-         let
-            go []        _ s = s
-            go (W# w:ws) i s = case writeWordArray# mba i w s of
-               s' -> go ws (i -# 1#) s'
-         in case go xs (lxs# -# 1#) s1 of
-            s2 -> case unsafeFreezeByteArray# mba s2 of
-               (# s3, ba #) -> (# s3, Natural ba #)
+naturalFromLimbsMS :: [Word] -> Natural
+naturalFromLimbsMS = doit . dropWhile (== 0)
+   where
+   doit [] = naturalZero
+   doit xs = runST $ ST \s0 ->
+      let !(I# sz)       = lxs * WS
+          !lxs@(I# lxs#) = length xs
+      in case newByteArray# sz s0 of
+         (# s1, mba #) ->
+            let
+               go []        _ s = s
+               go (W# w:ws) i s = case writeWordArray# mba i w s of
+                  s' -> go ws (i -# 1#) s'
+            in case go xs (lxs# -# 1#) s1 of
+               s2 -> case unsafeFreezeByteArray# mba s2 of
+                  (# s3, ba #) -> (# s3, Natural ba #)
 
 -- | Convert a Natural into an Integer
 naturalToInteger :: Natural -> Integer
@@ -507,11 +511,13 @@ naturalMul n1@(Natural ba1) n2@(Natural ba2)
    where
       !lc1@(I# lc1#) = fromIntegral $ naturalLimbCount n1
       !lc2@(I# lc2#) = fromIntegral $ naturalLimbCount n2
-      lc             = lc1 + lc2
+      !lc@(I# lc#)   = lc1 + lc2
       !(I# sz#)      = lc*WS
 
       loopj mba j@(I# j#) s
-         | isTrue# (j# ==# lc2#) = s
+         | isTrue# (j# ==# lc2#) = case readWordArray# mba (lc# -# 1#) s of
+                                    (# s2, 0## #) -> shrinkMS mba 1# s2
+                                    (# s2, _   #) -> s2
          | otherwise             = case indexWordArray# ba2 j# of
                                        0## -> loopj mba (j+1) s
                                        vj  -> loopi mba vj j 0 0## s
@@ -955,8 +961,8 @@ naturalWithNormalized f a b@(Natural ba)
 -- superfluous least-significant limbs of a so that limbCount a == limbCount b
 --
 -- Inputs: A (m+n limbs) and B (n limbs). Compare (A>>(m<<WSBITS)) and B
-cmpMS :: Natural -> Natural -> Ordering
-cmpMS a b = go (take n (naturalLimbsMS a)) (naturalLimbsMS b)
+naturalComparePrefix :: Natural -> Natural -> Ordering
+naturalComparePrefix a b = go (take n (naturalLimbsMS a)) (naturalLimbsMS b)
    where
       n  = fromIntegral $ naturalLimbCount b
       go (x:xs) (y:ys)
@@ -1015,7 +1021,7 @@ naturalQuotRem_normalized a@(Natural ba1) b@(Natural ba2) = runST $ ST \s0 ->
       n   = naturalLimbCount# ba2
       !m  = lc1 -# n
 
-      cmpms   = cmpMS a b
+      cmpms   = naturalComparePrefix a b
 
       -- initialize q array with the initial carry if necessary
       !lcq = case cmpms of
