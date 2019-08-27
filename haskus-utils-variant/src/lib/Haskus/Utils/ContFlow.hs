@@ -12,6 +12,8 @@
 module Haskus.Utils.ContFlow
    ( ContFlow (..)
    , (>:>)
+   , (>-:>)
+   , (>%:>)
    , (>::>)
    , (>:-:>)
    , (>:%:>)
@@ -50,12 +52,43 @@ type family StripR f r where
                   ':<>: 'ShowType w ':<>: 'Text "', expecting `"
                   ':<>: 'ShowType r ':<>: 'Text "'")
 
+
+-- | A multi-continuable type
+class MultiCont a where
+   type MultiContTypes a :: [*]
+
+   -- | Convert a data into a multi-continuation
+   toCont :: a -> ContFlow (MultiContTypes a) r
+
+   -- | Convert a data into a multi-continuation (monadic)
+   toContM :: Monad m => m a -> ContFlow (MultiContTypes a) (m r)
+
+
 -- | Bind a multi-continuable type to a tuple of continuations
 (>:>) :: MultiCont a => a -> ContListToTuple (MultiContTypes a) r -> r
 {-# INLINABLE (>:>) #-}
 (>:>) a !cs = toCont a >::> cs
 
 infixl 0 >:>
+
+-- | Bind a single-continuable type to a 1-tuple of continuations
+(>-:>) :: (MultiCont a, MultiContTypes a ~ '[b]) => a -> (b -> r) -> r
+{-# INLINABLE (>-:>) #-}
+(>-:>) a c = toCont a >:-:> c
+
+infixl 0 >-:>
+
+-- | Bind a multi-continuable type to a tuple of continuations and
+-- reorder fields if necessary
+(>%:>) ::
+   ( MultiCont a
+   , ReorderTuple ts (ContListToTuple (MultiContTypes a) r)
+   ) => a -> ts -> r
+{-# INLINABLE (>%:>) #-}
+(>%:>) a !cs = toCont a >:%:> cs
+
+infixl 0 >%:>
+
 
 -- | Bind a flow to a tuple of continuations
 (>::>) :: ContFlow xs r -> ContListToTuple xs r -> r
@@ -80,14 +113,3 @@ infixl 0 >:-:>
 (>:%:>) (ContFlow f) !cs = f (tupleReorder cs)
 
 infixl 0 >:%:>
-
-
--- | A multi-continuable type
-class MultiCont a where
-   type MultiContTypes a :: [*]
-
-   -- | Convert a data into a multi-continuation
-   toCont :: a -> ContFlow (MultiContTypes a) r
-
-   -- | Convert a data into a multi-continuation (monadic)
-   toContM :: Monad m => m a -> ContFlow (MultiContTypes a) (m r)
