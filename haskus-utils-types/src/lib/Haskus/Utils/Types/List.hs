@@ -25,6 +25,7 @@ module Haskus.Utils.Types.List
    , NubHead
    -- * Sublist
    , Head
+   , Last
    , Tail
    , Init
    , Take
@@ -121,6 +122,11 @@ type family Snoc (xs :: [k]) (x :: k) :: [k] where
 -- | Head of a list
 type family Head (xs :: [k]) :: k where
    Head (x ': xs) = x
+
+-- | Last of a list
+type family Last (xs :: [k]) :: k where
+   Last '[x]      = x
+   Last (x ': xs) = Last xs
 
 -- | Concat two type lists
 type family Concat (xs :: [k]) (ys :: [k]) :: [k] where
