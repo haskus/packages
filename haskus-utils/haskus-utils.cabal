@@ -21,7 +21,6 @@ source-repository head
 library
   exposed-modules:
     Haskus.Utils.Solver
-    Haskus.Utils.Parser
     Haskus.Utils.HArray
     Haskus.Utils.MultiState
     Haskus.Utils.Dynamic

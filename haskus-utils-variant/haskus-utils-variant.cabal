@@ -24,7 +24,6 @@ library
     Haskus.Utils.ContFlow
     Haskus.Utils.Variant
     Haskus.Utils.Variant.VEither
-    Haskus.Utils.Variant.OldFlow
     Haskus.Utils.Variant.Excepts
     Haskus.Utils.Variant.Syntax
     Haskus.Utils.VariantF
