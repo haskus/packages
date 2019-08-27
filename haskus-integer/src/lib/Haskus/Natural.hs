@@ -993,20 +993,11 @@ cmpDropped# mba idx ba s1 = case naturalLimbCountMutable# mba s1 of
                | otherwise               -> go (i -# 1#) (j -# 1#) s2
 
 
--- | Compute A-(B<<(m<<WSBITS)) where A (m+n limbs) and B (n limbs)
--- 
--- Requires:
---    a{m MSL} >= b{m MSL}
---subMS :: Natural -> Natural -> State# s -> (# State# s, MutableByteArray# s #)
---subMS a@(Natural aa) a@(Natural ba) s =
---   where
---      go zeroCount i#
-
 -- | Natural quot/rem
 --
 -- Requires:
 --    a > b
---    a and b normalized
+--    b normalized
 naturalQuotRem_normalized :: Natural -> Natural -> (Natural,Natural)
 naturalQuotRem_normalized a@(Natural ba1) b@(Natural ba2) = runST $ ST \s0 ->
       case initQ s0 of
@@ -1038,11 +1029,10 @@ naturalQuotRem_normalized a@(Natural ba1) b@(Natural ba2) = runST $ ST \s0 ->
       --    * either with a
       --    * or with a - (b<<WSBITS*m)
       initR s = case newByteArray# (sizeofByteArray# ba1) s of
-         (# s2,mba #) -> case cmpms of
-            LT -> case copyLimbs ba1 0# mba 0# (sizeofByteArray# ba1) s2 of
-               s3 -> (# s3,mba #)
-            _  -> case copyLimbs ba1 0# mba 0# (limbsToBytes# m) s2 of
-               s3 -> case subAt# ba1 m ba2 0# mba m s3 of
+         (# s2,mba #) -> case copyByteArray# ba1 0# mba 0# (sizeofByteArray# ba1) s2 of
+            s3 -> case cmpms of
+               LT -> (# s3, mba #)
+               _  -> case subAtInplace# mba m ba2 0# s3 of
                   s4 -> (# s4, mba #)
 
       -- most significant limb of b
@@ -1056,41 +1046,44 @@ naturalQuotRem_normalized a@(Natural ba1) b@(Natural ba2) = runST $ ST \s0 ->
             s2 -> loop ra qa (j -# 1#) s2
    
       -- compute qj (in qa) and remainder in ra
-      computeQuot ra qa j s1 = case computeQuot' s1 of
-            (# s2, q #) -> writeWordArray# qa j q s2
-         where
-            !anj   = indexWordArray# ba1 (n +# j)
-            !anjm1 = indexWordArray# ba1 (n +# j -# 1#)
+      computeQuot ra qa j s1 = 
+         case naturalLimbCountMutable# ra s1 of
+            (# s2, lcra #) ->
+               let
+                  !(# s3, anj #)    = case isTrue# ((n +# j -# 1#) <# lcra) of
+                                         True  -> readWordArray# ra (n +# j -# 1#) s2
+                                         False -> (# s2, 0## #)
+                  !(# s4, anjm1 #)  =  case isTrue# ((n +# j -# 2#) <# lcra) of
+                                         True  -> readWordArray# ra (n +# j -# 2#) s3
+                                         False -> (# s3, 0## #)
+                  -- get a upper bound on the quotient by dividing the two MSL of r by
+                  -- the MSL of b
+                  -- The quotient can't be a two-digit quotient as the prefix of r is
+                  -- inferior to b (either because of initR or because it is the
+                  -- remainder of the previous step which by definition is < b).
+                  -- If the upper bound quotient above has two digits (i.e. a(n+k) >=
+                  -- b(msl)), use the maximum 1-digit quotient instead.
+                  !qe = if isTrue# (anj `geWord#` bMSL)
+                           then maxLimb
+                           else case div2by1_small# (# anj, anjm1 #) bMSL of
+                              (# qx, _ #) -> qx
+                  -- Now we can compute qe*b and check whether it is < (a >> j limbs)
+                  -- If not, it means we need to decrease qe and recheck until it is
+                  -- true.
+                  -- Note: we only compute qe*b once and then we subtract b from it.
+                  vinit          = naturalMul b (naturalFromWord (W# qe)) -- TODO: implement and use mulNby1#
 
-            -- get a upper bound on the quotient by dividing the two MSL of r by
-            -- the MSL of b
-            !(# (# qe1,qe0 #), _ #) = div2by1_large# (# anj, anjm1 #) bMSL
+                  go qc c@(Natural ca) s = case cmpDropped# ra j ca s of
+                     (# s', LT #) -> go (qc `minusWord#` 1##) (naturalSub_nocheck c b) s'
+                     (# s', EQ #) -> -- we can just drop the higher MSLs of a
+                                     case shrinkMS ra (naturalLimbCount# ca) s' of
+                                        s'' -> (# s'', qc #)
+                     (# s', GT #) -> -- we need to compute the subtraction of b
+                                     case subAtInplace# ra j ca 0# s' of
+                                        s'' -> (# s'', qc #)
 
-            -- The quotient can't be a two-digit quotient as the prefix of r is
-            -- inferior to b (either because of initR or because it is the
-            -- remainder of the previous step which by definition is < b).
-            -- If the upper bound quotient above has two digits, use the maximum
-            -- 1-digit quotient instead.
-            !qe = case qe1 of
-                     0## -> qe0
-                     _   -> maxLimb
-
-            -- Now we can compute qe*b and check whether it is < (a >> j limbs)
-            -- If not, it means we need to decrese qe and recheck until it is
-            -- true.
-            -- Note: we only compute qe*b once and then we subtract b from it.
-            vinit          = naturalMul b (naturalFromWord (W# qe)) -- TODO: implement and use mulNby1#
-            computeQuot' s = go qe vinit s
-
-            go qc c@(Natural ca) s = case cmpDropped# ra j ca s of
-               (# s2, LT #) -> go (qc `minusWord#` 1##) (naturalSub_nocheck c b) s2
-               (# s2, EQ #) -> -- we can just drop the n higher MSL of a
-                               case shrinkMS ra n s2 of
-                                  s3 -> (# s3, qc #)
-               (# s2, GT #) -> -- we need to compute the subtraction of b
-                               case subAtInplace# ra j ca 0# s2 of
-                                  s3 -> (# s3, qc #)
-         
+               in case go qe vinit s4 of
+                  (# s5, q #) -> writeWordArray# qa j q s5
 
 
 --
