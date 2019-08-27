@@ -16,7 +16,7 @@ ghc-options: -Wall -O -fobject-code
 library:
    source-dirs: src/lib
    exposed-modules:
-      - Haskus.Integer
+      - Haskus.Natural
    dependencies:
       - base >= 4.8 && < 5
 

@@ -10,9 +10,10 @@
 --
 -- Classical algorithms adapted from "The Art of Computer Programming, vol. 2,
 -- Donald E. Knuth"
-module Haskus.Integer
+module Haskus.Natural
    ( Natural
    , naturalFromWord
+   , naturalFromWords
    , naturalFromInteger
    , naturalIsZero
    , naturalIsOne
@@ -191,6 +192,22 @@ naturalFromInteger k
       -- fill it.
       go c _ 0 = c
       go c s n = go (c `naturalOr` naturalShiftL (naturalFromWord (fromInteger n)) s) (s + WSBITS) (n `shiftR` WSBITS)
+
+-- | Convert a list of non-zero Words (most-significant first) into a Natural
+naturalFromWords :: [Word] -> Natural
+naturalFromWords [] = naturalZero
+naturalFromWords xs = runST $ ST \s0 ->
+   let !(I# sz)       = lxs * WS
+       !lxs@(I# lxs#) = length xs
+   in case newByteArray# sz s0 of
+      (# s1, mba #) ->
+         let
+            go []        _ s = s
+            go (W# w:ws) i s = case writeWordArray# mba i w s of
+               s' -> go ws (i -# 1#) s'
+         in case go xs (lxs# -# 1#) s1 of
+            s2 -> case unsafeFreezeByteArray# mba s2 of
+               (# s3, ba #) -> (# s3, Natural ba #)
 
 -- | Convert a Natural into an Integer
 naturalToInteger :: Natural -> Integer

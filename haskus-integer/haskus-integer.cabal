@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6c1f4aa7094ab3a61a392d7d2e2bc3ab1f3f78a462d97213fa0926bf6ff86a29
+-- hash: fe950f423b4c2df3d7293810490f5fec848611c13da0da91a85068c23540ad68
 
 name:           haskus-integer
 version:        0.1
@@ -24,7 +24,7 @@ source-repository head
 
 library
   exposed-modules:
-      Haskus.Integer
+      Haskus.Natural
   other-modules:
       Paths_haskus_integer
   hs-source-dirs:

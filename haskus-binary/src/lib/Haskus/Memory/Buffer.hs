@@ -540,7 +540,7 @@ toListBufferIO b = do
    go (sz-1) []
 
 -- | Convert a buffer into a list of bytes by reading bytes one by one
-toListBuffer :: BufferSize (Buffer Immutable pin fin heap) => Buffer Immutable pin fin heap -> [Word8]
+toListBuffer :: BufferSize (Buffer 'Immutable pin fin heap) => Buffer 'Immutable pin fin heap -> [Word8]
 toListBuffer b = if sz == 0 then [] else fmap (bufferReadWord8 b) [0..(sz-1)] 
    where
       sz = bufferSize b
