@@ -11,14 +11,14 @@
 -- | Continuation based control-flow
 module Haskus.Utils.ContFlow
    ( ContFlow (..)
+   , ContTuple
    , (>:>)
    , (>-:>)
    , (>%:>)
    , (>::>)
    , (>:-:>)
    , (>:%:>)
-   , ContTuple
-   , AddR
+   , ToMultiCont
    , MultiCont (..)
    )
 where
@@ -31,11 +31,11 @@ newtype ContFlow (xs :: [*]) r = ContFlow (ContTuple xs r -> r)
 -- | Convert a list of types into the actual data type representing the
 -- continuations.
 type family ContTuple (xs :: [*]) r where
-   ContTuple xs r = Tuple (AddR xs r)
+   ContTuple xs r = Tuple (ToMultiCont xs r)
 
-type family AddR f r where
-   AddR '[] r       = '[]
-   AddR (x ': xs) r = (x -> r) ': AddR xs r
+type family ToMultiCont xs r where
+   ToMultiCont '[] r       = '[]
+   ToMultiCont (x ': xs) r = (x -> r) ': ToMultiCont xs r
 
 -- | A multi-continuable type
 class MultiCont a where

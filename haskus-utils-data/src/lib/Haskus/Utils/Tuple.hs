@@ -25,6 +25,8 @@ module Haskus.Utils.Tuple
    , module Data.Tuple
    , Unit (..)
    , Tuple
+   , Tuple#
+   , TypeReps
    , ExtractTuple (..)
    , TupleCon (..)
    , tupleHead
