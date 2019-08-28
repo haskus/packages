@@ -2,12 +2,17 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE UnboxedSums #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Multi-precision natural
 --
 -- Compared to BigNat, it uses a simple Word# for smaller values
 module Haskus.Number.Natural
    ( Natural (..)
+   , pattern NSmall
+   , pattern NBig
    , naturalFromWord
    , naturalFromWord#
    , naturalAdd
@@ -26,9 +31,18 @@ import Data.Bits
 -- | A Natural
 --
 -- Invariant: small values (and 0) use NSmall
-data Natural
-   = NSmall Word#
-   | NBig   {-# UNPACK #-} !BigNat
+data Natural = Natural (# Word# | ByteArray# #)
+--    = NSmall Word#
+--    | NBig   {-# UNPACK #-} !BigNat
+
+{-# COMPLETE NSmall, NBig #-}
+pattern NSmall :: Word# -> Natural
+pattern NSmall w = Natural (# w | #)
+
+pattern NBig :: BigNat -> Natural
+pattern NBig bn <- Natural (# | (BigNat -> bn) #)
+   where
+      NBig (BigNat ba) = Natural (# | ba #)
 
 instance Eq Natural where
    (==) = naturalEq
