@@ -60,13 +60,13 @@ module Haskus.Natural
    , div4by2_small#
    , div4by2_large#
    , sub#
-   , subAt#
    , cmpDropped#
    , shrinkMS
    , subAtInplace#
    , naturalSub_nocheck
    , mostSignificantLimb#
    , naturalQuotRem_normalized
+   , checkDiv
    )
 where
 
@@ -239,7 +239,7 @@ naturalShowHex n
 
 -- | Get the most significant limb
 mostSignificantLimb# :: ByteArray# -> Word#
-mostSignificantLimb# ba = indexWordArray# ba (sizeofByteArray# ba -# 1#)
+mostSignificantLimb# ba = indexWordArray# ba (bytesToLimbs# (sizeofByteArray# ba) -# 1#)
 
 -- Limbs: most significant first
 naturalLimbsMS :: Natural -> [Word]
@@ -269,13 +269,13 @@ naturalEq n1 n2
 
 -- | Compare
 naturalCompare :: Natural -> Natural -> Ordering
-naturalCompare n1 n2
-   | lc1 > lc2 = GT
-   | lc1 < lc2 = LT
-   | otherwise = go (naturalLimbsMS n1) (naturalLimbsMS n2)
+naturalCompare a b
+   | lcA > lcB = GT
+   | lcA < lcB = LT
+   | otherwise = go (naturalLimbsMS a) (naturalLimbsMS b)
       where
-         lc1 = naturalLimbCount n1
-         lc2 = naturalLimbCount n2
+         lcA = naturalLimbCount a
+         lcB = naturalLimbCount b
          go [] []         = EQ
          go ~(x:xs) ~(y:ys) = case compare x y of
             EQ -> go xs ys
@@ -283,71 +283,71 @@ naturalCompare n1 n2
 
 -- | Add two naturals
 naturalAdd :: Natural -> Natural -> Natural
-naturalAdd n1@(Natural ba1) n2@(Natural ba2)
-   | naturalIsZero n1 = n2
-   | naturalIsZero n2 = n1
-   | otherwise        = runST $ ST \s0 ->
+naturalAdd a@(Natural lA) b@(Natural lB)
+   | naturalIsZero a = b
+   | naturalIsZero b = a
+   | otherwise       = runST $ ST \s0 ->
       case newByteArray# sz s0 of
          (# s1, mba #) -> case addLimbsNoCarry 0 mba s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lc1      = fromIntegral $ naturalLimbCount n1
-      lc2      = fromIntegral $ naturalLimbCount n2
-      lc       = max lc1 lc2 + 1
+      lcA      = fromIntegral $ naturalLimbCount a
+      lcB      = fromIntegral $ naturalLimbCount b
+      lc       = max lcA lcB + 1
       !(I# sz) = lc*WS
 
       addLimbsNoCarry l@(I# l#) mba s
          | l == lc-1 = shrinkMS mba 1# s
-         | l >= lc1  = case copyByteArray# ba2 off mba off csz s of
+         | l >= lcA  = case copyByteArray# lB off mba off csz s of
                s2 -> shrinkMS mba 1# s2
-         | l >= lc2  = case copyByteArray# ba1 off mba off csz s of
+         | l >= lcB  = case copyByteArray# lA off mba off csz s of
                s2 -> shrinkMS mba 1# s2
-         | otherwise = case plusWord2# (indexWordArray# ba1 l#) (indexWordArray# ba2 l#) of
+         | otherwise = case plusWord2# (indexWordArray# lA l#) (indexWordArray# lB l#) of
                (# c, r #) -> case writeWordArray# mba l# r s of
                   s2 -> addLimbs (l+1) c mba s2
             where
                !(I# off) = l*WS
-               !(I# csz) = (lc2+1-l)*WS
+               !(I# csz) = (lcB+1-l)*WS
 
       addLimbs l@(I# l#) c mba s
          | isTrue# (eqWord# c 0##) = addLimbsNoCarry l mba s
          | l == lc-1               = writeWordArray# mba l# c s
-         | l >= lc1 = case plusWord2# c (indexWordArray# ba2 l#) of
+         | l >= lcA = case plusWord2# c (indexWordArray# lB l#) of
                (# c2, r #) -> case writeWordArray# mba l# r s of
                   s2 -> addLimbs (l+1) c2 mba s2
-         | l >= lc2 = case plusWord2# c (indexWordArray# ba1 l#) of
+         | l >= lcB = case plusWord2# c (indexWordArray# lA l#) of
                (# c2, r #) -> case writeWordArray# mba l# r s of
                   s2 -> addLimbs (l+1) c2 mba s2
-         | otherwise = case plusWord2# (indexWordArray# ba1 l#) (indexWordArray# ba2 l#) of
+         | otherwise = case plusWord2# (indexWordArray# lA l#) (indexWordArray# lB l#) of
                (# c2, r #) -> case plusWord2# r c of
                   (# c3, r2 #) -> case writeWordArray# mba l# r2 s of
                      s2 -> addLimbs (l+1) (plusWord# c2 c3) mba s2
 
 -- | Bitwise OR
 naturalOr :: Natural -> Natural -> Natural
-naturalOr n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
+naturalOr a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
       case newByteArray# sz s0 of
-         (# s1, mba #) -> case go mba 0 lc1 lc2 s1 of
+         (# s1, mba #) -> case go mba 0 lcA lcB s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lc1      = fromIntegral $ naturalLimbCount n1
-      lc2      = fromIntegral $ naturalLimbCount n2
-      lc       = max lc1 lc2
+      lcA      = fromIntegral $ naturalLimbCount a
+      lcB      = fromIntegral $ naturalLimbCount b
+      lc       = max lcA lcB
       !(I# sz) = lc*WS
 
       go :: MutableByteArray# s -> Int -> Int -> Int -> State# s -> State# s
       go mba i c1 c2 s
          | c1 == 0 && c2 == 0 = s
-         | c1 == 0            = let !(I# csz) = (lc2-i) * WS
-                                in copyByteArray# ba2 off mba off csz s
-         | c2 == 0            = let !(I# csz) = (lc1-i) * WS
-                                in copyByteArray# ba1 off mba off csz s
+         | c1 == 0            = let !(I# csz) = (lcB-i) * WS
+                                in copyByteArray# lB off mba off csz s
+         | c2 == 0            = let !(I# csz) = (lcA-i) * WS
+                                in copyByteArray# lA off mba off csz s
          | otherwise          =
-            case writeWordArray# mba i# (indexWordArray# ba1 i# `or#` indexWordArray# ba2 i#) s of
+            case writeWordArray# mba i# (indexWordArray# lA i# `or#` indexWordArray# lB i#) s of
                s2 -> go mba (i+1) (c1-1) (c2-1) s2
          where
             !(I# off) = i * WS
@@ -355,27 +355,27 @@ naturalOr n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
 
 -- | Bitwise XOR
 naturalXor :: Natural -> Natural -> Natural
-naturalXor n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
+naturalXor n1@(Natural lA) n2@(Natural lB) = runST $ ST \s0 ->
       case newByteArray# sz s0 of
-         (# s1, mba #) -> case go mba 0 lc1 lc2 s1 of
+         (# s1, mba #) -> case go mba 0 lcA lcB s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lc1      = fromIntegral $ naturalLimbCount n1
-      lc2      = fromIntegral $ naturalLimbCount n2
-      lc       = max lc1 lc2
+      lcA      = fromIntegral $ naturalLimbCount n1
+      lcB      = fromIntegral $ naturalLimbCount n2
+      lc       = max lcA lcB
       !(I# sz) = lc*WS
 
       go :: MutableByteArray# s -> Int -> Int -> Int -> State# s -> State# s
       go mba i c1 c2 s
          | c1 == 0 && c2 == 0 = s
-         | c1 == 0            = let !(I# csz) = (lc2-i) * WS
-                                in copyByteArray# ba2 off mba off csz s
-         | c2 == 0            = let !(I# csz) = (lc1-i) * WS
-                                in copyByteArray# ba1 off mba off csz s
+         | c1 == 0            = let !(I# csz) = (lcB-i) * WS
+                                in copyByteArray# lB off mba off csz s
+         | c2 == 0            = let !(I# csz) = (lcA-i) * WS
+                                in copyByteArray# lA off mba off csz s
          | otherwise          =
-            case writeWordArray# mba i# (indexWordArray# ba1 i# `xor#` indexWordArray# ba2 i#) s of
+            case writeWordArray# mba i# (indexWordArray# lA i# `xor#` indexWordArray# lB i#) s of
                s2 -> go mba (i+1) (c1-1) (c2-1) s2
          where
             !(I# off) = i * WS
@@ -383,22 +383,22 @@ naturalXor n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
 
 -- | Bitwise And
 naturalAnd :: Natural -> Natural -> Natural
-naturalAnd n1@(Natural ba1) n2@(Natural ba2) = runST $ ST \s0 ->
+naturalAnd n1@(Natural lA) n2@(Natural lB) = runST $ ST \s0 ->
       case newByteArray# sz s0 of
          (# s1, mba #) -> case go mba 0 lc s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lc1      = fromIntegral $ naturalLimbCount n1
-      lc2      = fromIntegral $ naturalLimbCount n2
-      lc       = min lc1 lc2
+      lcA      = fromIntegral $ naturalLimbCount n1
+      lcB      = fromIntegral $ naturalLimbCount n2
+      lc       = min lcA lcB
       !(I# sz) = lc*WS
 
       go :: MutableByteArray# s -> Int -> Int -> State# s -> State# s
       go _   _ 0 s = s
       go mba i c s =
-            case writeWordArray# mba i# (indexWordArray# ba1 i# `and#` indexWordArray# ba2 i#) s of
+            case writeWordArray# mba i# (indexWordArray# lA i# `and#` indexWordArray# lB i#) s of
                s2 -> go mba (i+1) (c-1) s2
          where
             !(I# i#)  = i
@@ -417,11 +417,11 @@ naturalShiftR n@(Natural ba) k      = runST $ ST \s0 ->
              -- we drop full limbs
             0 -> case copyByteArray# ba limbOffByte# mba 0# szOut# s1 of
                   s2 -> case unsafeFreezeByteArray# mba s2 of
-                     (# s3, ba2 #) -> (# s3, Natural ba2 #)
+                     (# s3, lB #) -> (# s3, Natural lB #)
 
             _ -> case go mba 0 s1 of
                s2 -> case unsafeFreezeByteArray# mba s2 of
-                  (# s3, ba2 #) -> (# s3, Natural ba2 #)
+                  (# s3, lB #) -> (# s3, Natural lB #)
 
    where
       lc                 = naturalLimbCount n
@@ -457,11 +457,11 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
                s2 -> case bitOff of
                   0 -> case copyByteArray# ba 0# mba limbOffByte# szIn# s2 of
                         s3 -> case unsafeFreezeByteArray# mba s3 of
-                           (# s4, ba2 #) -> (# s4, Natural ba2 #)
+                           (# s4, lB #) -> (# s4, Natural lB #)
 
                   _ -> case go mba 0 s2 of
                      s3 -> case unsafeFreezeByteArray# mba s3 of
-                        (# s4, ba2 #) -> (# s4, Natural ba2 #)
+                        (# s4, lB #) -> (# s4, Natural lB #)
 
    where
       lc                 = naturalLimbCount n
@@ -496,7 +496,7 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
 
 -- | Multiplication (classical algorithm)
 naturalMul :: Natural -> Natural -> Natural
-naturalMul n1@(Natural ba1) n2@(Natural ba2)
+naturalMul n1@(Natural lA) n2@(Natural lB)
    | naturalLimbCount n2 > naturalLimbCount n1 = naturalMul n2 n1 -- optimize loops
    | naturalIsZero n1 = n1
    | naturalIsZero n2 = n2
@@ -509,26 +509,26 @@ naturalMul n1@(Natural ba1) n2@(Natural ba2)
                   (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      !lc1@(I# lc1#) = fromIntegral $ naturalLimbCount n1
-      !lc2@(I# lc2#) = fromIntegral $ naturalLimbCount n2
-      !lc@(I# lc#)   = lc1 + lc2
+      !lcA@(I# lcA#) = fromIntegral $ naturalLimbCount n1
+      !lcB@(I# lcB#) = fromIntegral $ naturalLimbCount n2
+      !lc@(I# lc#)   = lcA + lcB
       !(I# sz#)      = lc*WS
 
       loopj mba j@(I# j#) s
-         | isTrue# (j# ==# lc2#) = case readWordArray# mba (lc# -# 1#) s of
+         | isTrue# (j# ==# lcB#) = case readWordArray# mba (lc# -# 1#) s of
                                     (# s2, 0## #) -> shrinkMS mba 1# s2
                                     (# s2, _   #) -> s2
-         | otherwise             = case indexWordArray# ba2 j# of
+         | otherwise             = case indexWordArray# lB j# of
                                        0## -> loopj mba (j+1) s
                                        vj  -> loopi mba vj j 0 0## s
 
 
       loopi mba vj j@(I# j#) i@(I# i#) k s
-         | isTrue# (i# ==# lc1#) = case writeWordArray# mba (i# +# j#) k s of
+         | isTrue# (i# ==# lcA#) = case writeWordArray# mba (i# +# j#) k s of
                                        s2 -> loopj mba (j+1) s2
          | otherwise = case readWordArray# mba (i# +# j#) s of
             (# s2, wij #) ->
-               let ui             = indexWordArray# ba1 i#
+               let ui             = indexWordArray# lA i#
                    !(# k1,r1 #)   = timesWord2# ui vj
                    !(# k2,r2 #)   = plusWord2# wij k
                    !(# k3,wij' #) = plusWord2# r1 r2
@@ -538,15 +538,15 @@ naturalMul n1@(Natural ba1) n2@(Natural ba2)
 
       -- loopj0 and loopi0 are executed first when we haven't initialized the
       -- result array.
-      loopj0 mba j@(I# j#) s = case indexWordArray# ba2 j# of
+      loopj0 mba j@(I# j#) s = case indexWordArray# lB j# of
                                  0## -> loopj0 mba (j+1) s -- n2 /= 0 so we can loop safely
                                  vj  -> loopi0 mba vj j 0 0## s
 
       loopi0 mba vj j@(I# j#) i@(I# i#) k s
-         | isTrue# (i# ==# lc1#) = case writeWordArray# mba (i# +# j#) k s of
+         | isTrue# (i# ==# lcA#) = case writeWordArray# mba (i# +# j#) k s of
                                        s2 -> loopj mba (j+1) s2
          | otherwise =
-               let ui             = indexWordArray# ba1 i#
+               let ui             = indexWordArray# lA i#
                    !(# k1,r1 #)   = timesWord2# ui vj
                    !(# k2,wij #)  = plusWord2# r1 k
                    k'             = plusWord# k1 k2
@@ -565,80 +565,67 @@ naturalTestBit n@(Natural ba) i
 
 -- | Subtract two naturals (classical algorithm)
 naturalSub :: Natural -> Natural -> Maybe Natural
-naturalSub n1@(Natural ba1) n2@(Natural ba2)
+naturalSub n1@(Natural lA) n2@(Natural lB)
    | naturalIsZero n2      = Just n1
    | n1 < n2               = Nothing
    | otherwise             = runST $ ST \s0 ->
-      case newByteArray# (sizeofByteArray# ba1) s0 of
-         (# s1, mba #) -> case sub# ba1 ba2 mba s1 of
+      case newByteArray# (sizeofByteArray# lA) s0 of
+         (# s1, mba #) -> case sub# lA lB mba s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
                (# s3, ba #) -> (# s3, Just (Natural ba) #)
 
 -- | Subtract two naturals (don't check if a >= b)
 naturalSub_nocheck :: Natural -> Natural -> Natural
-naturalSub_nocheck (Natural ba1) (Natural ba2) = runST $ ST \s0 ->
-   case newByteArray# (sizeofByteArray# ba1) s0 of
-      (# s1, mba #) -> case sub# ba1 ba2 mba s1 of
+naturalSub_nocheck (Natural lA) (Natural lB) = runST $ ST \s0 ->
+   case newByteArray# (sizeofByteArray# lA) s0 of
+      (# s1, mba #) -> case sub# lA lB mba s1 of
          s2 -> case unsafeFreezeByteArray# mba s2 of
             (# s3, ba #) -> (# s3, Natural ba #)
 
 sub# :: ByteArray# -> ByteArray# -> MutableByteArray# s -> State# s -> State# s
-sub# ba1 ba2 mba = go 0# 0# 0# 
+sub# lA lB mba = go 0# 0# 0# 
    where
-      !lc1# = naturalLimbCount# ba1
-      !lc2# = naturalLimbCount# ba2
+      !lcA# = naturalLimbCount# lA
+      !lcB# = naturalLimbCount# lB
 
       go carry zeroMSCount i s
-         | isTrue# (i ==# lc1#)               = shrinkMS mba zeroMSCount s
-         | isTrue# (i >=# lc2#) , 0# <- carry = copyLimbs ba1 i mba i (lc1# -# i) s
+         | isTrue# (i ==# lcA#)               = shrinkMS mba zeroMSCount s
+         | isTrue# (i >=# lcB#) , 0# <- carry = copyLimbs lA i mba i (lcA# -# i) s
          | otherwise =
             let
-               ui = indexWordArray# ba1 i
-               vi = case i <# lc2# of
+               ui = indexWordArray# lA i
+               vi = case i <# lcB# of
                         0# -> 0##
-                        _  -> indexWordArray# ba2 i
+                        _  -> indexWordArray# lB i
                !(# wi, carry', zeroMSCount' #) = subWordCTrail# ui vi carry zeroMSCount 
             in case writeWordArray# mba i wi s of
                   s2 -> go carry' zeroMSCount' (i +# 1#) s2
 
 -- | Sub two naturals starting at specified indices
-subAt# :: ByteArray# -> Int# -> ByteArray# -> Int# -> MutableByteArray# s -> Int# -> State# s -> State# s
-subAt# ba1 idx1 ba2 idx2 mba idxo = go 0# 0# idx1 idx2 idxo
-   where
-      !lc1# = naturalLimbCount# ba1
-      !lc2# = naturalLimbCount# ba2
-
-      go carry zeroMSCount i1 i2 io s
-         | isTrue# (i1 ==# lc1#)               = shrinkMS mba zeroMSCount s
-         | isTrue# (i2 >=# lc2#) , 0# <- carry = copyLimbs ba1 i1 mba io (lc1# -# i1) s
-         | otherwise =
-            let
-               ui = indexWordArray# ba1 i1
-               vi = case i2 <# lc2# of
-                        0# -> 0##
-                        _  -> indexWordArray# ba2 i2
-               !(# wi, carry', zeroMSCount' #) = subWordCTrail# ui vi carry zeroMSCount 
-            in case writeWordArray# mba io wi s of
-                  s2 -> go carry' zeroMSCount' (i1 +# 1#) (i2 +# 1#) (io +# 1#) s2
-
--- | Sub two naturals starting at specified indices
+--
+-- Requires:
+--    shifted A > shifted B
 subAtInplace# :: MutableByteArray# s -> Int# -> ByteArray# -> Int# -> State# s -> State# s
-subAtInplace# mba idx1 ba2 idx2 s1 = case naturalLimbCountMutable# mba s1 of
-      (# s2, lc1# #) -> go 0# 0# idx1 idx2 s2
-         where
-            !lc2# = naturalLimbCount# ba2
+subAtInplace# mba idxA lB idxB s1 = case naturalLimbCountMutable# mba s1 of
+   (# s2, lcA# #) -> go 0# 0# idxA idxB s2
+      where
+         !lcB# = naturalLimbCount# lB
 
-            go carry zeroMSCount i1 i2 s
-               | isTrue# (i1 ==# lc1#) = shrinkMS mba zeroMSCount s
-               | otherwise = case readWordArray# mba i1 s of
-                  (# s3, ui #) ->
-                     let
-                        vi = case i2 <# lc2# of
-                                 0# -> 0##
-                                 _  -> indexWordArray# ba2 i2
-                        !(# wi, carry', zeroMSCount' #) = subWordCTrail# ui vi carry zeroMSCount 
-                     in case writeWordArray# mba i1 wi s3 of
-                           s4 -> go carry' zeroMSCount' (i1 +# 1#) (i2 +# 1#) s4
+         go carry zeroMSCount iA iB s
+            | isTrue# (iB >=# lcB#)
+            , isTrue# (carry ==# 0#) = if isTrue# (iA ==# lcA#)
+                                          then shrinkMS mba zeroMSCount s
+                                          else s -- there are still non-zero greater limbs in A
+
+            | otherwise = case readWordArray# mba iA s of
+               (# s3, ui #) ->
+                  let
+                     vi = case iB <# lcB# of
+                              0# -> 0##
+                              _  -> indexWordArray# lB iB
+                     !(# wi, carry', zeroMSCount' #) = subWordCTrail# ui vi carry zeroMSCount 
+                  in case writeWordArray# mba iA wi s3 of
+                        s4 -> go carry' zeroMSCount' (iA +# 1#) (iB +# 1#) s4
 
 -- | Copy limbs
 copyLimbs :: ByteArray# -> Int# -> MutableByteArray# s -> Int# -> Int# -> State# s -> State# s
@@ -676,18 +663,18 @@ subWordCTrail# u v carry zeroMSCount = case subWordC# u v of
 --
 -- See Note [Multi-Precision Division]
 naturalQuotRem :: Natural -> Natural -> Maybe (Natural,Natural)
-naturalQuotRem n1 n2@(Natural ba2)
+naturalQuotRem n1 n2@(Natural lB)
    | naturalIsZero n2         = Nothing
    | naturalIsOne n2          = Just (n1, naturalZero)
-   | lc1 < lc2                = Just (naturalZero, n1)
-   | lc2 == 1                 = case divNby1# n1 (indexWordArray# ba2 0#) of
+   | lcA < lcB                = Just (naturalZero, n1)
+   | lcB == 1                 = case divNby1# n1 (indexWordArray# lB 0#) of
                                     Nothing    -> Nothing
                                     Just (q,r) -> Just (q, naturalFromWord r)
 
    | otherwise = Just (naturalWithNormalized naturalQuotRem_normalized n1 n2)
       where
-         lc1      = naturalLimbCount n1
-         lc2      = naturalLimbCount n2
+         lcA      = naturalLimbCount n1
+         lcB      = naturalLimbCount n2
 
 -- | 1-by-1 small addition
 --
@@ -997,93 +984,140 @@ cmpDropped# mba idx ba s1 = case naturalLimbCountMutable# mba s1 of
 --
 -- Requires:
 --    a > b
+--    b /= 0
 --    b normalized
 naturalQuotRem_normalized :: Natural -> Natural -> (Natural,Natural)
-naturalQuotRem_normalized a@(Natural ba1) b@(Natural ba2) = runST $ ST \s0 ->
+naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
       case initQ s0 of
          (# s1, qa #) -> case initR s1 of
-            (# s2, ra #) -> case loop ra qa (m -# 1#) s2 of
+            (# s2, ra #) -> case loop ra qa (lcAmB -# 1#) s2 of
                s3 -> case unsafeFreezeByteArray# qa s3 of
                   (# s4, q #) -> case unsafeFreezeByteArray# ra s4 of
                      (# s5, r #) -> (# s5, (Natural q, Natural r) #)
 
    where
-      lc1 = naturalLimbCount# ba1
-      n   = naturalLimbCount# ba2
-      !m  = lc1 -# n
 
-      cmpms   = naturalComparePrefix a b
+      -- We require a > b so lcA >= lcB: E.g.
+      --    lA: A9 A8 A7 A6 ... A1 A0
+      --    lB:          A6 ... A1 A0
 
-      -- initialize q array with the initial carry if necessary
-      !lcq = case cmpms of
-         LT -> m
-         _  -> m +# 1#
+      lcA = naturalLimbCount# lA
+      lcB = naturalLimbCount# lB
 
-      initQ s = case newByteArray# (limbsToBytes# lcq) s of
-         (# s2,mba #) -> case cmpms of
-            LT -> (# s2,mba #)
-            _  -> case writeWordArray# mba m 1## s2 of -- write the carry
-                     s3 -> (# s3,mba #)
+      -- The difference lcAmB between the two limb counts gives the number of
+      -- steps of the algorithm. For each step k from lcAmB to 0 we compare the
+      -- remainder (= A at the beginning) with B left-shifted of k limbs and we
+      -- find how many shifted Bs can be subtracted from the remainder: this is
+      -- qk (the k-th limb of the quotient).
 
-      -- initialize r array:
-      --    * either with a
-      --    * or with a - (b<<WSBITS*m)
-      initR s = case newByteArray# (sizeofByteArray# ba1) s of
-         (# s2,mba #) -> case copyByteArray# ba1 0# mba 0# (sizeofByteArray# ba1) s2 of
-            s3 -> case cmpms of
+      !lcAmB = lcA -# lcB
+
+      -- The first step (k = lcAmB) is particular because as B is normalized its
+      -- most-significant bit is set. Moreover A and B' (= k-left-shifted B)
+      -- have the same number of limbs. Suppose we have Qk >= 2. Then Qk*B' has
+      -- at least an additional limb, so Qk*B'>A. Hence Qk=0 or Qk=1.
+      -- We can compute Qk very cheaply by doing a prefix comparison of A and B:
+      --    if prefix of A>B then Qk=1 else Qk=0
+      --
+      -- Note that if Qk=0 then we mustn't allocate a 0 most-significant limb
+      -- for Q.
+      --
+      -- Depending on Qk, the initial remainder is either:
+      --    Qk=0 ==> A
+      --    Qk=1 ==> A-B'
+
+      prefixCmpAB = naturalComparePrefix a b
+
+      initQ s = case prefixCmpAB of
+         LT -> newByteArray# (limbsToBytes# lcAmB) s
+         _  -> case newByteArray# (limbsToBytes# (lcAmB +# 1#)) s of
+            (# s2,mba #) -> case writeWordArray# mba lcAmB 1## s2 of -- write the carry
+               s3 -> (# s3,mba #)
+
+      initR s = case newByteArray# (sizeofByteArray# lA) s of
+         (# s2,mba #) -> case copyByteArray# lA 0# mba 0# (sizeofByteArray# lA) s2 of
+            s3 -> case prefixCmpAB of
                LT -> (# s3, mba #)
-               _  -> case subAtInplace# mba m ba2 0# s3 of
+               _  -> case subAtInplace# mba lcAmB lB 0# s3 of
                   s4 -> (# s4, mba #)
 
-      -- most significant limb of b
-      bMSL = mostSignificantLimb# ba2
+      -- Now the loop per se. Note that if A and B have the same number of
+      -- limbs, the loop isn't executed at all.
+      -- We have k iterating from (lcAmB-1) to 0. Each time we get qk and an
+      -- updated R.
+      -- First we compute an upper bound qMax for qk: qk <= qMax
+      -- Then the idea is to iterate qe from qMax to 0 until
+      --    qe*B k-left-shifted <= R
+      --  or equivalently:
+      --    qe*B <= R k-right-shifted
+      --
+      -- As multiplication is costly, we implement it as follows:
+      --    qe = qMax
+      --    c  = qe*B
+      --    while c > R k-right-shifted do
+      --       c  -= B
+      --       qe -= 1
+      --
+      -- To determine qMax we compute:
+      --    (qMaxCarry,qMax') = (R{k+lcB},R{k+lcB-1}) `div` B{lcB-1}
+      --    If qMaxCarry /= 0 then
+      --       qMax = maxLimbValue
+      --    else
+      --       qMax = qMax'
+      -- qk can only be a single digit number because q(k+1) is already computed
+      -- and the prefix of R is < B.
 
+      computeQMax lR k s1 =
+         case naturalLimbCountMutable# lR s1 of
+            (# s2, lcR #) ->
+               let
+                  !o1 = lcB +# k
+                  !o2 = o1  -# 1#
+                  !(# s3, ro1 #)    = case isTrue# (o1 <# lcR) of
+                                         True  -> readWordArray# lR o1 s2
+                                         False -> (# s2, 0## #)
+                  !(# s4, ro2 #)  =  case isTrue# (o2 <# lcR) of
+                                         True  -> readWordArray# lR o2 s3
+                                         False -> (# s3, 0## #)
+                  !qMax = case div2by1_large# (# ro1, ro2 #) bMSL of
+                     (# (# qMaxCarry, qMax' #), _ #) -> case qMaxCarry of
+                        0## -> qMax'
+                        _   -> maxLimb
+               in (# s4, qMax #)
+
+
+      -- most significant limb of b
+      bMSL = mostSignificantLimb# lB
+      -- maximal limb value
       !(W# maxLimb) = maxBound
 
-      loop ra qa j s
-         | 0# <- j   = computeQuot ra qa j s
-         | otherwise = case computeQuot ra qa j s of
-            s2 -> loop ra qa (j -# 1#) s2
+      loop ra qa k s
+         | 0# <- k   = computeQuot ra qa k s
+         | otherwise = case computeQuot ra qa k s of
+            s2 -> loop ra qa (k -# 1#) s2
    
       -- compute qj (in qa) and remainder in ra
-      computeQuot ra qa j s1 = 
-         case naturalLimbCountMutable# ra s1 of
-            (# s2, lcra #) ->
+      computeQuot ra qa k s1 =
+         case computeQMax ra k s1 of
+            (# s2, qe #) ->
                let
-                  !(# s3, anj #)    = case isTrue# ((n +# j -# 1#) <# lcra) of
-                                         True  -> readWordArray# ra (n +# j -# 1#) s2
-                                         False -> (# s2, 0## #)
-                  !(# s4, anjm1 #)  =  case isTrue# ((n +# j -# 2#) <# lcra) of
-                                         True  -> readWordArray# ra (n +# j -# 2#) s3
-                                         False -> (# s3, 0## #)
-                  -- get a upper bound on the quotient by dividing the two MSL of r by
-                  -- the MSL of b
-                  -- The quotient can't be a two-digit quotient as the prefix of r is
-                  -- inferior to b (either because of initR or because it is the
-                  -- remainder of the previous step which by definition is < b).
-                  -- If the upper bound quotient above has two digits (i.e. a(n+k) >=
-                  -- b(msl)), use the maximum 1-digit quotient instead.
-                  !qe = if isTrue# (anj `geWord#` bMSL)
-                           then maxLimb
-                           else case div2by1_small# (# anj, anjm1 #) bMSL of
-                              (# qx, _ #) -> qx
-                  -- Now we can compute qe*b and check whether it is < (a >> j limbs)
+                  -- Now we can compute qe*b and check whether it is < (a >> k limbs)
                   -- If not, it means we need to decrease qe and recheck until it is
                   -- true.
                   -- Note: we only compute qe*b once and then we subtract b from it.
                   vinit          = naturalMul b (naturalFromWord (W# qe)) -- TODO: implement and use mulNby1#
 
-                  go qc c@(Natural ca) s = case cmpDropped# ra j ca s of
+                  go qc c@(Natural ca) s = case cmpDropped# ra k ca s of
                      (# s', LT #) -> go (qc `minusWord#` 1##) (naturalSub_nocheck c b) s'
                      (# s', EQ #) -> -- we can just drop the higher MSLs of a
                                      case shrinkMS ra (naturalLimbCount# ca) s' of
                                         s'' -> (# s'', qc #)
                      (# s', GT #) -> -- we need to compute the subtraction of b
-                                     case subAtInplace# ra j ca 0# s' of
+                                     case subAtInplace# ra k ca 0# s' of
                                         s'' -> (# s'', qc #)
 
-               in case go qe vinit s4 of
-                  (# s5, q #) -> writeWordArray# qa j q s5
+               in case go qe vinit s2 of
+                  (# s3, q #) -> writeWordArray# qa k q s3
 
 
 --
@@ -1112,3 +1146,13 @@ naturalQuotRem_normalized a@(Natural ba1) b@(Natural ba2) = runST $ ST \s0 ->
 --  We perform the division of u' by v by folding from left to right the digits
 --  of u' and by using the 2/1 division (first case). We obtain the digits of q
 --  from left to right. The last remainder is the overall remainder.
+
+
+checkDiv :: [Word] -> [Word] -> Bool
+checkDiv xs ys
+   | naturalIsZero y = True
+   | otherwise       = q*y +r == x
+   where
+      x = naturalFromLimbsMS xs
+      y = naturalFromLimbsMS ys
+      (q,r) = x `quotRem` y
