@@ -11,6 +11,7 @@ module Haskus.Number.Natural
    , naturalFromWord
    , naturalFromWord#
    , naturalAdd
+   , naturalMul
    , naturalShiftL
    , naturalShiftR
    )
@@ -34,6 +35,7 @@ instance Eq Natural where
 
 instance Num Natural where
    (+) = naturalAdd
+   (*) = naturalMul
 
 instance Bits Natural where
    shiftL w n = naturalShiftL w (fromIntegral n)
@@ -57,6 +59,22 @@ naturalAdd (NSmall a)   (NSmall b)   = case plusWord2# a b of
 naturalAdd (NSmall a)   (NBig b)    = NBig (bigNatAddWord# b a)
 naturalAdd (NBig a)     (NSmall b)  = NBig (bigNatAddWord# a b)
 naturalAdd (NBig a)     (NBig b)    = NBig (bigNatAdd a b)
+
+
+-- | Multiply two naturals
+naturalMul :: Natural -> Natural -> Natural
+naturalMul a@(NSmall 0##) _              = a
+naturalMul _              b@(NSmall 0##) = b
+naturalMul (NSmall 1##)   b              = b
+naturalMul a              (NSmall 1##)   = a
+naturalMul (NSmall a)   (NSmall b)   = case timesWord2# a b of
+   (# 0##,r0 #) -> NSmall r0
+   (#  r1,r0 #) -> NBig (bigNatFrom2LimbsMS r1 r0)
+naturalMul (NBig a)     (NBig b)    = NBig (bigNatMul a b)
+-- TODO: implement and use bigNatMulWord#
+naturalMul (NSmall a)   (NBig b)    = NBig (bigNatMul b (bigNatFromWord# a))
+naturalMul (NBig a)     (NSmall b)  = NBig (bigNatMul a (bigNatFromWord# b))
+
 
 -- | Create a Natural from a Word#
 naturalFromWord# :: Word# -> Natural
