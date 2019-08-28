@@ -76,10 +76,12 @@ import Data.Char
 import Data.Bits
 import Data.Maybe
 
--- Word size in bytes
+#include "MachDeps.h"
+
+#define WSBITS WORD_SIZE_IN_BITS
+-- FIXME:
 #define WS 8
 #define WSSHIFT 3
-#define WSBITS 64
 
 -- | A BigNat
 --
