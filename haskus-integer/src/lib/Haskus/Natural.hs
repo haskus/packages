@@ -6,10 +6,7 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# OPTIONS_GHC -fobject-code #-}
 
--- | Multi-precision integers
---
--- Classical algorithms adapted from "The Art of Computer Programming, vol. 2,
--- Donald E. Knuth"
+-- | Multi-precision Naturals
 module Haskus.Natural
    ( Natural
    , naturalFromWord
@@ -1057,6 +1054,7 @@ naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
       --    while c > R k-right-shifted do
       --       c  -= B
       --       qe -= 1
+      --    qk = qe
       --
       -- To determine qMax we compute:
       --    (qMaxCarry,qMax') = (R{k+lcB},R{k+lcB-1}) `div` B{lcB-1}
@@ -1065,7 +1063,7 @@ naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
       --    else
       --       qMax = qMax'
       -- qk can only be a single digit number because q(k+1) is already computed
-      -- and the prefix of R is < B.
+      -- and the prefix of R is < B after the previous step.
 
       computeQMax lR k s1 =
          case naturalLimbCountMutable# lR s1 of
@@ -1118,34 +1116,6 @@ naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
 
                in case go qe vinit s2 of
                   (# s3, q #) -> writeWordArray# qa k q s3
-
-
---
--- Note [Multi-Precision Division]
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
---
--- See:
---    * "Multiple-Length Division Revisited: A Tour of the Minefield", Per
---    Brinch Hansen, 1992,
---    https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
---
---    * "Fast Recursive Division", Burnikel and Ziegler, 1998
---
---
--- k/1 division
--- ------------
---
--- For any base B. Suppose we want to divide u by v where v is composed of a
--- single non-zero digit:
---    u = (u{n-1},...,u0){B}
---    v = (v0){B}
---
--- 
---  Let u' = (0,u{n-1},...,u0) (equivalent to u)
---
---  We perform the division of u' by v by folding from left to right the digits
---  of u' and by using the 2/1 division (first case). We obtain the digits of q
---  from left to right. The last remainder is the overall remainder.
 
 
 checkDiv :: [Word] -> [Word] -> Bool
