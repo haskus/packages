@@ -6,36 +6,39 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# OPTIONS_GHC -fobject-code #-}
 
--- | Multi-precision Naturals
-module Haskus.Natural
-   ( Natural
-   , naturalFromWord
-   , naturalFromLimbsMS
-   , naturalFromInteger
-   , naturalIsZero
-   , naturalIsOne
-   , naturalZero
-   , naturalShowHex
-   , naturalEq
-   , naturalAdd
-   , naturalSub
-   , naturalMul
-   , naturalQuotRem
-   , naturalCompare
-   , naturalOr
-   , naturalAnd
-   , naturalXor
-   , naturalPopCount
-   , naturalShiftR
-   , naturalShiftL
-   , naturalLimbCount
-   , naturalWithNormalized
+-- | Multi-precision natural
+module Haskus.Number.BigNat
+   ( BigNat
+   , bigNatFromWord
+   , bigNatFromLimbsMS
+   , bigNatFromInteger
+   , bigNatIsZero
+   , bigNatIsOne
+   , bigNatZero
+   , bigNatShowHex
+   , bigNatEq
+   , bigNatAdd
+   , bigNatSub
+   , bigNatMul
+   , bigNatQuotRem
+   , bigNatCompare
+   , bigNatOr
+   , bigNatAnd
+   , bigNatXor
+   , bigNatPopCount
+   , bigNatShiftR
+   , bigNatShiftL
+   , bigNatLimbCount
    -- * Primitives
-   , naturalLimbCount#
-   , naturalLimbCountMutable#
-   , naturalLimbsLS
-   , naturalLimbsMS
-   , naturalComparePrefix
+   , bigNatFromWord#
+   , bigNatFrom2LimbsMS
+   , bigNatAddWord#
+   , bigNatWithNormalized
+   , bigNatLimbCount#
+   , bigNatLimbCountMutable#
+   , bigNatLimbsLS
+   , bigNatLimbsMS
+   , bigNatComparePrefix
    , add1by1_small#
    , add1by1_large#
    , add1by2_small#
@@ -60,9 +63,9 @@ module Haskus.Natural
    , cmpDropped#
    , shrinkMS
    , subAtInplace#
-   , naturalSub_nocheck
+   , bigNatSub_nocheck
    , mostSignificantLimb#
-   , naturalQuotRem_normalized
+   , bigNatQuotRem_normalized
    , checkDiv
    )
 where
@@ -78,7 +81,7 @@ import Data.Maybe
 #define WSSHIFT 3
 #define WSBITS 64
 
--- | A Natural
+-- | A BigNat
 --
 -- Stored as an array of Word limbs, lower limbs first, limbs use host
 -- endianness.
@@ -87,54 +90,54 @@ import Data.Maybe
 --  - no empty high limb
 --     ==> zero is zero size array
 --     ==> canonical representation
-data Natural = Natural ByteArray#
+data BigNat = BigNat ByteArray#
 
-instance Show Natural where
-   show = show . naturalToInteger
+instance Show BigNat where
+   show = show . bigNatToInteger
 
-instance Eq Natural where
-   (==) = naturalEq
+instance Eq BigNat where
+   (==) = bigNatEq
 
-instance Ord Natural where
-   compare = naturalCompare
+instance Ord BigNat where
+   compare = bigNatCompare
 
-instance Num Natural where
-   (+)         = naturalAdd
-   (*)         = naturalMul
-   x - y       = fromMaybe (error "Can't subtract these naturals") (naturalSub x y)
+instance Num BigNat where
+   (+)         = bigNatAdd
+   (*)         = bigNatMul
+   x - y       = fromMaybe (error "Can't subtract these bigNats") (bigNatSub x y)
    abs         = id
-   signum _    = naturalFromWord 1
-   negate _    = error "Can't negate a Natural"
-   fromInteger = naturalFromInteger
+   signum _    = bigNatFromWord 1
+   negate _    = error "Can't negate a BigNat"
+   fromInteger = bigNatFromInteger
 
-instance Bits Natural where
-   (.&.)          = naturalAnd
-   (.|.)          = naturalOr
-   xor            = naturalXor
-   complement     = error "Can't complement a Natural"
-   shiftL w n     = naturalShiftL w (fromIntegral n)
-   shiftR w n     = naturalShiftR w (fromIntegral n)
+instance Bits BigNat where
+   (.&.)          = bigNatAnd
+   (.|.)          = bigNatOr
+   xor            = bigNatXor
+   complement     = error "Can't complement a BigNat"
+   shiftL w n     = bigNatShiftL w (fromIntegral n)
+   shiftR w n     = bigNatShiftR w (fromIntegral n)
    isSigned _     = False
-   zeroBits       = naturalZero
+   zeroBits       = bigNatZero
    bitSizeMaybe _ = Nothing
-   popCount       = fromIntegral . naturalPopCount
-   bitSize        = error "Can't use bitsize on Natural"
+   popCount       = fromIntegral . bigNatPopCount
+   bitSize        = error "Can't use bitsize on BigNat"
    bit i
-      | i < WS    = naturalFromWord (bit i)
-      | otherwise = naturalFromWord 1 `shiftL` i
-   testBit w n    = naturalTestBit w (fromIntegral n)
-   rotate         = error "Can't rotate a Natural"
+      | i < WS    = bigNatFromWord (bit i)
+      | otherwise = bigNatFromWord 1 `shiftL` i
+   testBit w n    = bigNatTestBit w (fromIntegral n)
+   rotate         = error "Can't rotate a BigNat"
 
-instance Integral Natural where
-   toInteger   = naturalToInteger
-   quotRem a b = fromJust (naturalQuotRem a b)
+instance Integral BigNat where
+   toInteger   = bigNatToInteger
+   quotRem a b = fromJust (bigNatQuotRem a b)
 
-instance Real Natural where
-   toRational n = toRational (naturalToInteger n)
+instance Real BigNat where
+   toRational n = toRational (bigNatToInteger n)
 
-instance Enum Natural where
-   toEnum   = naturalFromInteger . toInteger
-   fromEnum = fromInteger . naturalToInteger
+instance Enum BigNat where
+   toEnum   = bigNatFromInteger . toInteger
+   fromEnum = fromInteger . bigNatToInteger
 
 -- | Convert limb count into byte count
 limbsToBytes# :: Int# -> Int#
@@ -145,59 +148,63 @@ bytesToLimbs# :: Int# -> Int#
 bytesToLimbs# i = i `iShiftRL#` WSSHIFT#
 
 -- | Count limbs
-naturalLimbCount :: Natural -> Word
-naturalLimbCount (Natural ba) = W# (int2Word# (naturalLimbCount# ba))
+bigNatLimbCount :: BigNat -> Word
+bigNatLimbCount (BigNat ba) = W# (int2Word# (bigNatLimbCount# ba))
 
 -- | Count limbs
-naturalLimbCount# :: ByteArray# -> Int#
-naturalLimbCount# ba = bytesToLimbs# (sizeofByteArray# ba)
+bigNatLimbCount# :: ByteArray# -> Int#
+bigNatLimbCount# ba = bytesToLimbs# (sizeofByteArray# ba)
 
 -- | Count limbs
-naturalLimbCountMutable# :: MutableByteArray# s-> State# s -> (# State# s, Int# #)
-naturalLimbCountMutable# mba s = case getSizeofMutableByteArray# mba s of
+bigNatLimbCountMutable# :: MutableByteArray# s-> State# s -> (# State# s, Int# #)
+bigNatLimbCountMutable# mba s = case getSizeofMutableByteArray# mba s of
    (# s2, sz #) -> (# s2, bytesToLimbs# sz #)
 
--- | Natural Zero
-naturalZero :: Natural
-naturalZero = runST $ ST $ \s0 ->
+-- | BigNat Zero
+bigNatZero :: BigNat
+bigNatZero = runST $ ST $ \s0 ->
    case newByteArray# 0# s0 of
       (# s1, mba #) -> case unsafeFreezeByteArray# mba s1 of
-            (# s2, ba #) -> (# s2, Natural ba #)
+            (# s2, ba #) -> (# s2, BigNat ba #)
 
--- | Indicate if a natural is zero
-naturalIsZero :: Natural -> Bool
-{-# INLINABLE naturalIsZero #-}
-naturalIsZero (Natural ba) = isTrue# (naturalLimbCount# ba ==# 0#)
+-- | Indicate if a bigNat is zero
+bigNatIsZero :: BigNat -> Bool
+{-# INLINABLE bigNatIsZero #-}
+bigNatIsZero (BigNat ba) = isTrue# (bigNatLimbCount# ba ==# 0#)
 
--- | Indicate if a natural is one
-naturalIsOne :: Natural -> Bool
-naturalIsOne n@(Natural ba) = naturalLimbCount n == 1 && isTrue# (indexWordArray# ba 0# `eqWord#` 1##)
+-- | Indicate if a bigNat is one
+bigNatIsOne :: BigNat -> Bool
+bigNatIsOne n@(BigNat ba) = bigNatLimbCount n == 1 && isTrue# (indexWordArray# ba 0# `eqWord#` 1##)
 
--- | Create a Natural from a Word
-naturalFromWord :: Word -> Natural
-naturalFromWord (W# 0##) = naturalZero
-naturalFromWord (W# w)   = runST $ ST \s0 ->
+-- | Create a BigNat from a Word
+bigNatFromWord :: Word -> BigNat
+bigNatFromWord (W# w) = bigNatFromWord# w
+
+-- | Create a BigNat from a Word
+bigNatFromWord# :: Word# -> BigNat
+bigNatFromWord# 0## = bigNatZero
+bigNatFromWord# w   = runST $ ST \s0 ->
    case newByteArray# WS# s0 of
       (# s1, mba #) -> case writeWordArray# mba 0# w s1 of
          s2 -> case unsafeFreezeByteArray# mba s2 of
-            (# s3, ba #) -> (# s3, Natural ba #)
+            (# s3, ba #) -> (# s3, BigNat ba #)
 
--- | Convert an Integer into a Natural
-naturalFromInteger :: Integer -> Natural
-naturalFromInteger k
-   | k < 0     = error "naturalFromInteger: negative integer"
-   | otherwise = go naturalZero 0 k
+-- | Convert an Integer into a BigNat
+bigNatFromInteger :: Integer -> BigNat
+bigNatFromInteger k
+   | k < 0     = error "bigNatFromInteger: negative integer"
+   | otherwise = go bigNatZero 0 k
    where
       -- FIXME: be clever and allocate log2(k)/WSBITS ByteArray directly. Then
       -- fill it.
       go c _ 0 = c
-      go c s n = go (c `naturalOr` naturalShiftL (naturalFromWord (fromInteger n)) s) (s + WSBITS) (n `shiftR` WSBITS)
+      go c s n = go (c `bigNatOr` bigNatShiftL (bigNatFromWord (fromInteger n)) s) (s + WSBITS) (n `shiftR` WSBITS)
 
--- | Convert a list of non-zero Words (most-significant first) into a Natural
-naturalFromLimbsMS :: [Word] -> Natural
-naturalFromLimbsMS = doit . dropWhile (== 0)
+-- | Convert a list of non-zero Words (most-significant first) into a BigNat
+bigNatFromLimbsMS :: [Word] -> BigNat
+bigNatFromLimbsMS = doit . dropWhile (== 0)
    where
-   doit [] = naturalZero
+   doit [] = bigNatZero
    doit xs = runST $ ST \s0 ->
       let !(I# sz)       = lxs * WS
           !lxs@(I# lxs#) = length xs
@@ -209,20 +216,31 @@ naturalFromLimbsMS = doit . dropWhile (== 0)
                   s' -> go ws (i -# 1#) s'
             in case go xs (lxs# -# 1#) s1 of
                s2 -> case unsafeFreezeByteArray# mba s2 of
-                  (# s3, ba #) -> (# s3, Natural ba #)
+                  (# s3, ba #) -> (# s3, BigNat ba #)
 
--- | Convert a Natural into an Integer
-naturalToInteger :: Natural -> Integer
-naturalToInteger = go 0 . naturalLimbsMS
+-- | Convert two Word# (MSL first) into a BigNat
+bigNatFrom2LimbsMS :: Word# -> Word# -> BigNat
+bigNatFrom2LimbsMS 0## 0## = bigNatZero
+bigNatFrom2LimbsMS 0## n   = bigNatFromWord# n
+bigNatFrom2LimbsMS w1 w2   = runST $ ST \s0 ->
+   case newByteArray# (WS# +# WS#) s0 of
+      (# s1, mba #) -> case writeWordArray# mba 0# w2 s1 of
+         s2 -> case writeWordArray# mba 1# w1 s2 of
+            s3 -> case unsafeFreezeByteArray# mba s3 of
+               (# s4, ba #) -> (# s4, BigNat ba #)
+
+-- | Convert a BigNat into an Integer
+bigNatToInteger :: BigNat -> Integer
+bigNatToInteger = go 0 . bigNatLimbsMS
    where
       go c []     = c
       go c (x:xs) = go (c `shiftL` WSBITS .|. toInteger x) xs
 
--- | Show a Natural in hexadecimal
-naturalShowHex :: Natural -> String
-naturalShowHex n
-   | naturalIsZero n = "0x0"
-   | otherwise       = '0' : 'x' : add0 (fmap hex16 (dropWhile (==0) (concatMap limb4MS (naturalLimbsMS n))))
+-- | Show a BigNat in hexadecimal
+bigNatShowHex :: BigNat -> String
+bigNatShowHex n
+   | bigNatIsZero n = "0x0"
+   | otherwise       = '0' : 'x' : add0 (fmap hex16 (dropWhile (==0) (concatMap limb4MS (bigNatLimbsMS n))))
    where
       add0 [] = ['0']
       add0 xs = xs
@@ -240,59 +258,59 @@ mostSignificantLimb# :: ByteArray# -> Word#
 mostSignificantLimb# ba = indexWordArray# ba (bytesToLimbs# (sizeofByteArray# ba) -# 1#)
 
 -- Limbs: most significant first
-naturalLimbsMS :: Natural -> [Word]
-naturalLimbsMS n@(Natural ba)
-   | naturalIsZero n = []
-   | otherwise       = goLimbs (fromIntegral (naturalLimbCount n - 1))
+bigNatLimbsMS :: BigNat -> [Word]
+bigNatLimbsMS n@(BigNat ba)
+   | bigNatIsZero n = []
+   | otherwise       = goLimbs (fromIntegral (bigNatLimbCount n - 1))
    where
       goLimbs 0         = [W# (indexWordArray# ba 0#)]
       goLimbs i@(I# i#) = W# (indexWordArray# ba i#) : goLimbs (i-1)
 
 -- Limbs: less significant first
-naturalLimbsLS :: Natural -> [Word]
-naturalLimbsLS n@(Natural ba)
-   | naturalIsZero n = []
+bigNatLimbsLS :: BigNat -> [Word]
+bigNatLimbsLS n@(BigNat ba)
+   | bigNatIsZero n = []
    | otherwise       = goLimbs 0
    where
-      lc = fromIntegral (naturalLimbCount n)
+      lc = fromIntegral (bigNatLimbCount n)
       goLimbs i@(I# i#)
          | i == lc   = []
          | otherwise = W# (indexWordArray# ba i#) : goLimbs (i+1)
 
 -- | Equality
-naturalEq :: Natural -> Natural -> Bool
-naturalEq n1 n2
-   | naturalLimbCount n1 /= naturalLimbCount n2 = False
-   | otherwise = all (uncurry (==)) (naturalLimbsMS n1 `zip` naturalLimbsMS n2)
+bigNatEq :: BigNat -> BigNat -> Bool
+bigNatEq n1 n2
+   | bigNatLimbCount n1 /= bigNatLimbCount n2 = False
+   | otherwise = all (uncurry (==)) (bigNatLimbsMS n1 `zip` bigNatLimbsMS n2)
 
 -- | Compare
-naturalCompare :: Natural -> Natural -> Ordering
-naturalCompare a b
+bigNatCompare :: BigNat -> BigNat -> Ordering
+bigNatCompare a b
    | lcA > lcB = GT
    | lcA < lcB = LT
-   | otherwise = go (naturalLimbsMS a) (naturalLimbsMS b)
+   | otherwise = go (bigNatLimbsMS a) (bigNatLimbsMS b)
       where
-         lcA = naturalLimbCount a
-         lcB = naturalLimbCount b
+         lcA = bigNatLimbCount a
+         lcB = bigNatLimbCount b
          go [] []         = EQ
          go ~(x:xs) ~(y:ys) = case compare x y of
             EQ -> go xs ys
             r  -> r
 
--- | Add two naturals
-naturalAdd :: Natural -> Natural -> Natural
-naturalAdd a@(Natural lA) b@(Natural lB)
-   | naturalIsZero a = b
-   | naturalIsZero b = a
+-- | Add two bigNats
+bigNatAdd :: BigNat -> BigNat -> BigNat
+bigNatAdd a@(BigNat lA) b@(BigNat lB)
+   | bigNatIsZero a = b
+   | bigNatIsZero b = a
    | otherwise       = runST $ ST \s0 ->
       case newByteArray# sz s0 of
          (# s1, mba #) -> case addLimbsNoCarry 0 mba s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
-               (# s3, ba #) -> (# s3, Natural ba #)
+               (# s3, ba #) -> (# s3, BigNat ba #)
 
    where
-      !lcA     = fromIntegral $ naturalLimbCount a
-      !lcB     = fromIntegral $ naturalLimbCount b
+      !lcA     = fromIntegral $ bigNatLimbCount a
+      !lcB     = fromIntegral $ bigNatLimbCount b
       !lc      = max lcA lcB + 1
       !(I# sz) = lc*WS
 
@@ -323,17 +341,52 @@ naturalAdd a@(Natural lA) b@(Natural lB)
                   (# c3, r2 #) -> case writeWordArray# mba l# r2 s of
                      s2 -> addLimbs (l+1) (plusWord# c2 c3) mba s2
 
+-- | Add a bigNat and a Word#
+bigNatAddWord# :: BigNat -> Word# -> BigNat
+bigNatAddWord# a             0## = a
+bigNatAddWord# a@(BigNat lA) b
+   | bigNatIsZero a = bigNatFromWord# b
+   | otherwise      = runST $ ST \s0 ->
+      let
+         !lcA = bigNatLimbCount# lA
+         !lc  = lcA +# 1#
+         !sz  = lc *# WS#
+      in case newByteArray# sz s0 of
+         (# s1, mba #) -> 
+            let
+               go !k !carry !s
+                  | isTrue# (k ==# lcA) =
+                        if isTrue# (carry `eqWord#` 0##)
+                           then shrinkMS mba 1# s
+                           else writeWordArray# mba k carry s
+                  | isTrue# (carry `eqWord#` 0##) =
+                     let
+                        !(# c1, c0 #) = plusWord2# (indexWordArray# lA k) b
+                     in case writeWordArray# mba k c0 s of
+                           s' -> go (k +# 1#) c1 s'
+                  | otherwise =
+                     let
+                        !(# c1' ,  r #) = plusWord2# (indexWordArray# lA k) b
+                        !(# c1'', c0 #) = plusWord2# r carry
+                        !c1              = plusWord# c1' c1''
+                     in case writeWordArray# mba k c0 s of
+                           s' -> go (k +# 1#) c1 s'
+            in case go 0# 0## s1 of
+                  s2 -> case unsafeFreezeByteArray# mba s2 of
+                     (# s3, ba #) -> (# s3, BigNat ba #)
+
+
 -- | Bitwise OR
-naturalOr :: Natural -> Natural -> Natural
-naturalOr a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
+bigNatOr :: BigNat -> BigNat -> BigNat
+bigNatOr a@(BigNat lA) b@(BigNat lB) = runST $ ST \s0 ->
       case newByteArray# sz s0 of
          (# s1, mba #) -> case go mba 0 lcA lcB s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
-               (# s3, ba #) -> (# s3, Natural ba #)
+               (# s3, ba #) -> (# s3, BigNat ba #)
 
    where
-      !lcA     = fromIntegral $ naturalLimbCount a
-      !lcB     = fromIntegral $ naturalLimbCount b
+      !lcA     = fromIntegral $ bigNatLimbCount a
+      !lcB     = fromIntegral $ bigNatLimbCount b
       !lc      = max lcA lcB
       !(I# sz) = lc*WS
 
@@ -352,16 +405,16 @@ naturalOr a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
             !(I# i#)  = i
 
 -- | Bitwise XOR
-naturalXor :: Natural -> Natural -> Natural
-naturalXor n1@(Natural lA) n2@(Natural lB) = runST $ ST \s0 ->
+bigNatXor :: BigNat -> BigNat -> BigNat
+bigNatXor n1@(BigNat lA) n2@(BigNat lB) = runST $ ST \s0 ->
       case newByteArray# sz s0 of
          (# s1, mba #) -> case go mba 0 lcA lcB s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
-               (# s3, ba #) -> (# s3, Natural ba #)
+               (# s3, ba #) -> (# s3, BigNat ba #)
 
    where
-      !lcA     = fromIntegral $ naturalLimbCount n1
-      !lcB     = fromIntegral $ naturalLimbCount n2
+      !lcA     = fromIntegral $ bigNatLimbCount n1
+      !lcB     = fromIntegral $ bigNatLimbCount n2
       !lc      = max lcA lcB
       !(I# sz) = lc*WS
 
@@ -380,16 +433,16 @@ naturalXor n1@(Natural lA) n2@(Natural lB) = runST $ ST \s0 ->
             !(I# i#)  = i
 
 -- | Bitwise And
-naturalAnd :: Natural -> Natural -> Natural
-naturalAnd n1@(Natural lA) n2@(Natural lB) = runST $ ST \s0 ->
+bigNatAnd :: BigNat -> BigNat -> BigNat
+bigNatAnd n1@(BigNat lA) n2@(BigNat lB) = runST $ ST \s0 ->
       case newByteArray# sz s0 of
          (# s1, mba #) -> case go mba 0 lc s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
-               (# s3, ba #) -> (# s3, Natural ba #)
+               (# s3, ba #) -> (# s3, BigNat ba #)
 
    where
-      !lcA     = fromIntegral $ naturalLimbCount n1
-      !lcB     = fromIntegral $ naturalLimbCount n2
+      !lcA     = fromIntegral $ bigNatLimbCount n1
+      !lcB     = fromIntegral $ bigNatLimbCount n2
       !lc      = min lcA lcB
       !(I# sz) = lc*WS
 
@@ -402,27 +455,27 @@ naturalAnd n1@(Natural lA) n2@(Natural lB) = runST $ ST \s0 ->
             !(I# i#)  = i
 
 -- | Pop count
-naturalPopCount :: Natural -> Word
-naturalPopCount n = sum (fmap (fromIntegral . popCount) (naturalLimbsLS n))
+bigNatPopCount :: BigNat -> Word
+bigNatPopCount n = sum (fmap (fromIntegral . popCount) (bigNatLimbsLS n))
 
 -- | Bit shift right
-naturalShiftR :: Natural -> Word -> Natural
-naturalShiftR n 0                   = n
-naturalShiftR n _ | naturalIsZero n = n
-naturalShiftR n@(Natural ba) k      = runST $ ST \s0 ->
+bigNatShiftR :: BigNat -> Word -> BigNat
+bigNatShiftR n 0                   = n
+bigNatShiftR n _ | bigNatIsZero n = n
+bigNatShiftR n@(BigNat ba) k      = runST $ ST \s0 ->
       case newByteArray# szOut# s0 of
          (# s1, mba #) -> case bitOff of
              -- we drop full limbs
             0 -> case copyByteArray# ba limbOffByte# mba 0# szOut# s1 of
                   s2 -> case unsafeFreezeByteArray# mba s2 of
-                     (# s3, lB #) -> (# s3, Natural lB #)
+                     (# s3, lB #) -> (# s3, BigNat lB #)
 
             _ -> case go mba 0 s1 of
                s2 -> case unsafeFreezeByteArray# mba s2 of
-                  (# s3, lB #) -> (# s3, Natural lB #)
+                  (# s3, lB #) -> (# s3, BigNat lB #)
 
    where
-      lc                 = naturalLimbCount n
+      lc                 = bigNatLimbCount n
       (limbOff,bitOff)   = k `quotRem` WSBITS
       lcOut              = lc - limbOff
       szOut              = lcOut * WS
@@ -444,10 +497,10 @@ naturalShiftR n@(Natural ba) k      = runST $ ST \s0 ->
             s2 -> go mba (limbIdx+1) s2
 
 -- | Bit shift left
-naturalShiftL :: Natural -> Word -> Natural
-naturalShiftL n 0                   = n
-naturalShiftL n _ | naturalIsZero n = n
-naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
+bigNatShiftL :: BigNat -> Word -> BigNat
+bigNatShiftL n 0                   = n
+bigNatShiftL n _ | bigNatIsZero n = n
+bigNatShiftL n@(BigNat ba) k      = runST $ ST \s0 ->
       case newByteArray# szOut# s0 of
          (# s1, mba #) ->
             -- insert full empty limbs
@@ -455,14 +508,14 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
                s2 -> case bitOff of
                   0 -> case copyByteArray# ba 0# mba limbOffByte# szIn# s2 of
                         s3 -> case unsafeFreezeByteArray# mba s3 of
-                           (# s4, lB #) -> (# s4, Natural lB #)
+                           (# s4, lB #) -> (# s4, BigNat lB #)
 
                   _ -> case go mba 0 s2 of
                      s3 -> case unsafeFreezeByteArray# mba s3 of
-                        (# s4, lB #) -> (# s4, Natural lB #)
+                        (# s4, lB #) -> (# s4, BigNat lB #)
 
    where
-      lc                 = naturalLimbCount n
+      lc                 = bigNatLimbCount n
       !(I# lc#)          = fromIntegral lc
       (limbOff,bitOff)   = k `quotRem` WSBITS
 
@@ -493,22 +546,22 @@ naturalShiftL n@(Natural ba) k      = runST $ ST \s0 ->
             s2 -> go mba (limbIdx+1) s2
 
 -- | Multiplication (classical algorithm)
-naturalMul :: Natural -> Natural -> Natural
-naturalMul n1@(Natural lA) n2@(Natural lB)
-   | naturalLimbCount n2 > naturalLimbCount n1 = naturalMul n2 n1 -- optimize loops
-   | naturalIsZero n1 = n1
-   | naturalIsZero n2 = n2
-   | naturalIsOne  n1 = n2
-   | naturalIsOne  n2 = n1
+bigNatMul :: BigNat -> BigNat -> BigNat
+bigNatMul n1@(BigNat lA) n2@(BigNat lB)
+   | bigNatLimbCount n2 > bigNatLimbCount n1 = bigNatMul n2 n1 -- optimize loops
+   | bigNatIsZero n1 = n1
+   | bigNatIsZero n2 = n2
+   | bigNatIsOne  n1 = n2
+   | bigNatIsOne  n2 = n1
    | otherwise        = runST $ ST \s0 ->
       case newByteArray# sz# s0 of
          (# s1, mba #) -> case loopj0 mba 0 s1 of
                s2 -> case unsafeFreezeByteArray# mba s2 of
-                  (# s3, ba #) -> (# s3, Natural ba #)
+                  (# s3, ba #) -> (# s3, BigNat ba #)
 
    where
-      !lcA@(I# lcA#) = fromIntegral $ naturalLimbCount n1
-      !lcB@(I# lcB#) = fromIntegral $ naturalLimbCount n2
+      !lcA@(I# lcA#) = fromIntegral $ bigNatLimbCount n1
+      !lcB@(I# lcB#) = fromIntegral $ bigNatLimbCount n2
       !lc@(I# lc#)   = lcA + lcB
       !(I# sz#)      = lc*WS
 
@@ -551,40 +604,40 @@ naturalMul n1@(Natural lA) n2@(Natural lB)
                in case writeWordArray# mba (i# +# j#) wij s of
                      s2 -> loopi0 mba vj j (i+1) k' s2
 
--- | Natural bit test
-naturalTestBit :: Natural -> Word -> Bool
-naturalTestBit n@(Natural ba) i
+-- | BigNat bit test
+bigNatTestBit :: BigNat -> Word -> Bool
+bigNatTestBit n@(BigNat ba) i
       | q >= lc   = False
       | otherwise = testBit (W# (indexWordArray# ba q#)) (fromIntegral r)
    where
-      lc       = naturalLimbCount n
+      lc       = bigNatLimbCount n
       (q,r)    = quotRem i WSBITS
       !(I# q#) = fromIntegral q
 
--- | Subtract two naturals (classical algorithm)
-naturalSub :: Natural -> Natural -> Maybe Natural
-naturalSub n1@(Natural lA) n2@(Natural lB)
-   | naturalIsZero n2      = Just n1
+-- | Subtract two bigNats (classical algorithm)
+bigNatSub :: BigNat -> BigNat -> Maybe BigNat
+bigNatSub n1@(BigNat lA) n2@(BigNat lB)
+   | bigNatIsZero n2      = Just n1
    | n1 < n2               = Nothing
    | otherwise             = runST $ ST \s0 ->
       case newByteArray# (sizeofByteArray# lA) s0 of
          (# s1, mba #) -> case sub# lA lB mba s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
-               (# s3, ba #) -> (# s3, Just (Natural ba) #)
+               (# s3, ba #) -> (# s3, Just (BigNat ba) #)
 
--- | Subtract two naturals (don't check if a >= b)
-naturalSub_nocheck :: Natural -> Natural -> Natural
-naturalSub_nocheck (Natural lA) (Natural lB) = runST $ ST \s0 ->
+-- | Subtract two bigNats (don't check if a >= b)
+bigNatSub_nocheck :: BigNat -> BigNat -> BigNat
+bigNatSub_nocheck (BigNat lA) (BigNat lB) = runST $ ST \s0 ->
    case newByteArray# (sizeofByteArray# lA) s0 of
       (# s1, mba #) -> case sub# lA lB mba s1 of
          s2 -> case unsafeFreezeByteArray# mba s2 of
-            (# s3, ba #) -> (# s3, Natural ba #)
+            (# s3, ba #) -> (# s3, BigNat ba #)
 
 sub# :: ByteArray# -> ByteArray# -> MutableByteArray# s -> State# s -> State# s
 sub# lA lB mba = go 0# 0# 0# 
    where
-      !lcA# = naturalLimbCount# lA
-      !lcB# = naturalLimbCount# lB
+      !lcA# = bigNatLimbCount# lA
+      !lcB# = bigNatLimbCount# lB
 
       go carry zeroMSCount i s
          | isTrue# (i ==# lcA#)               = shrinkMS mba zeroMSCount s
@@ -599,15 +652,15 @@ sub# lA lB mba = go 0# 0# 0#
             in case writeWordArray# mba i wi s of
                   s2 -> go carry' zeroMSCount' (i +# 1#) s2
 
--- | Sub two naturals starting at specified indices
+-- | Sub two bigNats starting at specified indices
 --
 -- Requires:
 --    shifted A > shifted B
 subAtInplace# :: MutableByteArray# s -> Int# -> ByteArray# -> Int# -> State# s -> State# s
-subAtInplace# mba idxA lB idxB s1 = case naturalLimbCountMutable# mba s1 of
+subAtInplace# mba idxA lB idxB s1 = case bigNatLimbCountMutable# mba s1 of
    (# s2, lcA# #) -> go 0# 0# idxA idxB s2
       where
-         !lcB# = naturalLimbCount# lB
+         !lcB# = bigNatLimbCount# lB
 
          go carry zeroMSCount iA iB s
             | isTrue# (iB >=# lcB#)
@@ -657,22 +710,22 @@ subWordCTrail# u v carry zeroMSCount = case subWordC# u v of
       !(W# maxLimb) = maxBound
 
 
--- | Natural division returning (quotient,remainder)
+-- | BigNat division returning (quotient,remainder)
 --
 -- See Note [Multi-Precision Division]
-naturalQuotRem :: Natural -> Natural -> Maybe (Natural,Natural)
-naturalQuotRem n1 n2@(Natural lB)
-   | naturalIsZero n2         = Nothing
-   | naturalIsOne n2          = Just (n1, naturalZero)
-   | lcA < lcB                = Just (naturalZero, n1)
+bigNatQuotRem :: BigNat -> BigNat -> Maybe (BigNat,BigNat)
+bigNatQuotRem n1 n2@(BigNat lB)
+   | bigNatIsZero n2         = Nothing
+   | bigNatIsOne n2          = Just (n1, bigNatZero)
+   | lcA < lcB                = Just (bigNatZero, n1)
    | lcB == 1                 = case divNby1# n1 (indexWordArray# lB 0#) of
                                     Nothing    -> Nothing
-                                    Just (q,r) -> Just (q, naturalFromWord r)
+                                    Just (q,r) -> Just (q, bigNatFromWord r)
 
-   | otherwise = Just (naturalWithNormalized naturalQuotRem_normalized n1 n2)
+   | otherwise = Just (bigNatWithNormalized bigNatQuotRem_normalized n1 n2)
       where
-         lcA      = naturalLimbCount n1
-         lcB      = naturalLimbCount n2
+         lcA      = bigNatLimbCount n1
+         lcB      = bigNatLimbCount n2
 
 -- | 1-by-1 small addition
 --
@@ -767,7 +820,7 @@ mul1by2# a0 (# b1,b0 #) = (# m2,m1,m0 #)
       -- Conclusion: we can use add1by2_small#
       !(# m2, m1 #) = add1by2_small# t0 (# t2,t1 #)
 
--- | Compare 2-word naturals
+-- | Compare 2-word bigNats
 cmp2by2# :: (# Word#,Word# #) -> (# Word#,Word# #) -> Ordering
 cmp2by2# (# a1,a0 #) (# b1, b0 #)
    | isTrue# (a1 `gtWord#` b1) = GT
@@ -898,10 +951,10 @@ div4by2_large# (# a3,a2,a1,a0 #) (# b1,b0 #) = (# (# q2,q1,q0 #), (# r1,r0 #) #)
 --
 -- Require:
 --    b /= 0
-divNby1# :: Natural -> Word# -> Maybe (Natural, Word)
-divNby1# n@(Natural a) b = runST $ ST \s0 ->
+divNby1# :: BigNat -> Word# -> Maybe (BigNat, Word)
+divNby1# n@(BigNat a) b = runST $ ST \s0 ->
    let
-      lc       = fromIntegral $ naturalLimbCount n
+      lc       = fromIntegral $ bigNatLimbCount n
       !(I# sz) = lc * WS
 
       go mba i@(I# i#) trailing zeroMSCount@(I# zt) r s
@@ -920,7 +973,7 @@ divNby1# n@(Natural a) b = runST $ ST \s0 ->
    in case newByteArray# sz s0 of
       (# s1, mba #) -> case go mba lc True 0 0## s1 of
          (# s2, r #) -> case unsafeFreezeByteArray# mba s2 of
-            (# s3, ba #) -> (# s3, Just (Natural ba, W# r) #)
+            (# s3, ba #) -> (# s3, Just (BigNat ba, W# r) #)
 
 
 
@@ -930,14 +983,14 @@ divNby1# n@(Natural a) b = runST $ ST \s0 ->
 --    * compute normalized values A' and B'
 --    * compute (Q',R') = fdiv A' B'
 --    * return unormalized (Q,R)
-naturalWithNormalized :: (Natural -> Natural -> (Natural,Natural)) -> Natural -> Natural -> (Natural,Natural)
-{-# INLINABLE naturalWithNormalized #-}
-naturalWithNormalized f a b@(Natural ba)
+bigNatWithNormalized :: (BigNat -> BigNat -> (BigNat,BigNat)) -> BigNat -> BigNat -> (BigNat,BigNat)
+{-# INLINABLE bigNatWithNormalized #-}
+bigNatWithNormalized f a b@(BigNat ba)
    | isTrue# (k# `eqWord#` 0##) = f a b
-   | otherwise                  = let (q,r') = f (naturalShiftL a k) (naturalShiftL b k)
-                                  in (q, naturalShiftR r' k)
+   | otherwise                  = let (q,r') = f (bigNatShiftL a k) (bigNatShiftL b k)
+                                  in (q, bigNatShiftR r' k)
    where
-      lc        = naturalLimbCount b
+      lc        = bigNatLimbCount b
       !(I# lc#) = fromIntegral lc
       !k#       = clz# (indexWordArray# ba (lc# -# 1#))
       k         = W# k#
@@ -946,10 +999,10 @@ naturalWithNormalized f a b@(Natural ba)
 -- superfluous least-significant limbs of a so that limbCount a == limbCount b
 --
 -- Inputs: A (m+n limbs) and B (n limbs). Compare (A>>(m<<WSBITS)) and B
-naturalComparePrefix :: Natural -> Natural -> Ordering
-naturalComparePrefix a b = go (take n (naturalLimbsMS a)) (naturalLimbsMS b)
+bigNatComparePrefix :: BigNat -> BigNat -> Ordering
+bigNatComparePrefix a b = go (take n (bigNatLimbsMS a)) (bigNatLimbsMS b)
    where
-      n  = fromIntegral $ naturalLimbCount b
+      n  = fromIntegral $ bigNatLimbCount b
       go (x:xs) (y:ys)
          | x > y     = GT
          | x < y     = LT
@@ -960,13 +1013,13 @@ naturalComparePrefix a b = go (take n (naturalLimbsMS a)) (naturalLimbsMS b)
 --    a' = dropLSL i a 
 --    limbCount a' >= limbCount b
 cmpDropped# :: MutableByteArray# s -> Int# -> ByteArray# -> State# s -> (# State# s, Ordering #)
-cmpDropped# mba idx ba s1 = case naturalLimbCountMutable# mba s1 of
+cmpDropped# mba idx ba s1 = case bigNatLimbCountMutable# mba s1 of
    (# s2, lca #) -> case compare (I# (lca -# idx)) (I# lcb) of
       GT -> (# s2, GT #)
       LT -> (# s2, LT #)
       EQ -> go (lca -# 1#) (lcb -# 1#) s2
    where
-      !lcb = naturalLimbCount# ba
+      !lcb = bigNatLimbCount# ba
       go i j s =
          let
             !v = indexWordArray# ba j
@@ -978,20 +1031,20 @@ cmpDropped# mba idx ba s1 = case naturalLimbCountMutable# mba s1 of
                | otherwise               -> go (i -# 1#) (j -# 1#) s2
 
 
--- | Natural quot/rem
+-- | BigNat quot/rem
 --
 -- Requires:
 --    a > b
 --    b /= 0
 --    b normalized
-naturalQuotRem_normalized :: Natural -> Natural -> (Natural,Natural)
-naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
+bigNatQuotRem_normalized :: BigNat -> BigNat -> (BigNat,BigNat)
+bigNatQuotRem_normalized a@(BigNat lA) b@(BigNat lB) = runST $ ST \s0 ->
       case initQ s0 of
          (# s1, qa #) -> case initR s1 of
             (# s2, ra #) -> case loop ra qa (lcAmB -# 1#) s2 of
                s3 -> case unsafeFreezeByteArray# qa s3 of
                   (# s4, q #) -> case unsafeFreezeByteArray# ra s4 of
-                     (# s5, r #) -> (# s5, (Natural q, Natural r) #)
+                     (# s5, r #) -> (# s5, (BigNat q, BigNat r) #)
 
    where
 
@@ -999,8 +1052,8 @@ naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
       --    lA: A9 A8 A7 A6 ... A1 A0
       --    lB:          A6 ... A1 A0
 
-      lcA = naturalLimbCount# lA
-      lcB = naturalLimbCount# lB
+      lcA = bigNatLimbCount# lA
+      lcB = bigNatLimbCount# lB
 
       -- The difference lcAmB between the two limb counts gives the number of
       -- steps of the algorithm. For each step k from lcAmB to 0 we compare the
@@ -1024,7 +1077,7 @@ naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
       --    Qk=0 ==> A
       --    Qk=1 ==> A-B'
 
-      prefixCmpAB = naturalComparePrefix a b
+      prefixCmpAB = bigNatComparePrefix a b
 
       initQ s = case prefixCmpAB of
          LT -> newByteArray# (limbsToBytes# lcAmB) s
@@ -1067,7 +1120,7 @@ naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
       -- and the prefix of R is < B after the previous step.
 
       computeQMax lR k s1 =
-         case naturalLimbCountMutable# lR s1 of
+         case bigNatLimbCountMutable# lR s1 of
             (# s2, lcR #) ->
                let
                   !o1 = lcB +# k
@@ -1104,12 +1157,12 @@ naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
                   -- If not, it means we need to decrease qe and recheck until it is
                   -- true.
                   -- Note: we only compute qe*b once and then we subtract b from it.
-                  vinit          = naturalMul b (naturalFromWord (W# qe)) -- TODO: implement and use mulNby1#
+                  vinit          = bigNatMul b (bigNatFromWord (W# qe)) -- TODO: implement and use mulNby1#
 
-                  go qc c@(Natural ca) s = case cmpDropped# ra k ca s of
-                     (# s', LT #) -> go (qc `minusWord#` 1##) (naturalSub_nocheck c b) s'
+                  go qc c@(BigNat ca) s = case cmpDropped# ra k ca s of
+                     (# s', LT #) -> go (qc `minusWord#` 1##) (bigNatSub_nocheck c b) s'
                      (# s', EQ #) -> -- we can just drop the higher MSLs of a
-                                     case shrinkMS ra (naturalLimbCount# ca) s' of
+                                     case shrinkMS ra (bigNatLimbCount# ca) s' of
                                         s'' -> (# s'', qc #)
                      (# s', GT #) -> -- we need to compute the subtraction of b
                                      case subAtInplace# ra k ca 0# s' of
@@ -1121,9 +1174,9 @@ naturalQuotRem_normalized a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
 
 checkDiv :: [Word] -> [Word] -> Bool
 checkDiv xs ys
-   | naturalIsZero y = True
+   | bigNatIsZero y = True
    | otherwise       = q*y +r == x
    where
-      x = naturalFromLimbsMS xs
-      y = naturalFromLimbsMS ys
+      x = bigNatFromLimbsMS xs
+      y = bigNatFromLimbsMS ys
       (q,r) = x `quotRem` y
