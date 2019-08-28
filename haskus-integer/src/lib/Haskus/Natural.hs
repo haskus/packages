@@ -166,7 +166,8 @@ naturalZero = runST $ ST $ \s0 ->
 
 -- | Indicate if a natural is zero
 naturalIsZero :: Natural -> Bool
-naturalIsZero n = naturalLimbCount n == 0
+{-# INLINABLE naturalIsZero #-}
+naturalIsZero (Natural ba) = isTrue# (naturalLimbCount# ba ==# 0#)
 
 -- | Indicate if a natural is one
 naturalIsOne :: Natural -> Bool
