@@ -89,11 +89,9 @@ naturalShiftL :: Natural -> Word -> Natural
 naturalShiftL a              0 = a
 naturalShiftL (NBig b)       c = NBig (bigNatShiftL b c)
 naturalShiftL a@(NSmall 0##) _ = a
-naturalShiftL (NSmall b)     (W# c#)
-   | isTrue# (clz# b `leWord#` c#) = NSmall (b `uncheckedShiftL#` i)
-   | otherwise                     = NBig (bigNatFrom2LimbsMS
-                                      (b `uncheckedShiftRL#` (WORD_SIZE_IN_BITS# -# i))
-                                      (b `uncheckedShiftL#` i))
+naturalShiftL (NSmall b)     c@(W# c#)
+   | isTrue# (clz# b `geWord#` c#) = NSmall (b `uncheckedShiftL#` i)
+   | otherwise                     = NBig (bigNatShiftL (bigNatFromWord# b) c)
    where
       !i = word2Int# c#
 
