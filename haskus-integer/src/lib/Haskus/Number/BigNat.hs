@@ -8,7 +8,7 @@
 
 -- | Multi-precision natural
 module Haskus.Number.BigNat
-   ( BigNat
+   ( BigNat (..)
    , bigNatFromWord
    , bigNatFromLimbsMS
    , bigNatFromInteger
@@ -462,7 +462,7 @@ bigNatPopCount n = sum (fmap (fromIntegral . popCount) (bigNatLimbsLS n))
 
 -- | Bit shift right
 bigNatShiftR :: BigNat -> Word -> BigNat
-bigNatShiftR n 0                   = n
+bigNatShiftR n 0                  = n
 bigNatShiftR n _ | bigNatIsZero n = n
 bigNatShiftR n@(BigNat ba) k      = runST $ ST \s0 ->
       case newByteArray# szOut# s0 of

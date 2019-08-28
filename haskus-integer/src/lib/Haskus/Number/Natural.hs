@@ -12,6 +12,7 @@ module Haskus.Number.Natural
    , naturalFromWord#
    , naturalAdd
    , naturalShiftL
+   , naturalShiftR
    )
 where
 
@@ -36,6 +37,7 @@ instance Num Natural where
 
 instance Bits Natural where
    shiftL w n = naturalShiftL w (fromIntegral n)
+   shiftR w n = naturalShiftR w (fromIntegral n)
 
 
 -- | Eq for Natural
@@ -66,6 +68,7 @@ naturalFromWord (W# w) = NSmall w
 
 -- | Shift left
 naturalShiftL :: Natural -> Word -> Natural
+naturalShiftL a              0 = a
 naturalShiftL (NBig b)       c = NBig (bigNatShiftL b c)
 naturalShiftL a@(NSmall 0##) _ = a
 naturalShiftL (NSmall b)     (W# c#)
@@ -75,4 +78,15 @@ naturalShiftL (NSmall b)     (W# c#)
                                       (b `uncheckedShiftL#` i))
    where
       !i = word2Int# c#
+
+-- | Shift right
+naturalShiftR :: Natural -> Word -> Natural
+naturalShiftR a              0  = a
+naturalShiftR a@(NSmall 0##) _  = a
+naturalShiftR (NSmall b)(W# c#) = NSmall (b `uncheckedShiftRL#` (word2Int# c#))
+naturalShiftR (NBig   b)     c  = case bigNatShiftR b c of
+   r@(BigNat ba) -> case bigNatLimbCount# ba of
+      0# -> NSmall 0##
+      1# -> NSmall (indexWordArray# ba 0#)
+      _  -> NBig r
 
