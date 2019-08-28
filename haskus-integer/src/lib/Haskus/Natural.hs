@@ -291,12 +291,12 @@ naturalAdd a@(Natural lA) b@(Natural lB)
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lcA      = fromIntegral $ naturalLimbCount a
-      lcB      = fromIntegral $ naturalLimbCount b
-      lc       = max lcA lcB + 1
+      !lcA     = fromIntegral $ naturalLimbCount a
+      !lcB     = fromIntegral $ naturalLimbCount b
+      !lc      = max lcA lcB + 1
       !(I# sz) = lc*WS
 
-      addLimbsNoCarry l@(I# l#) mba s
+      addLimbsNoCarry !l@(I# l#) !mba !s
          | l == lc-1 = shrinkMS mba 1# s
          | l >= lcA  = case copyByteArray# lB off mba off csz s of
                s2 -> shrinkMS mba 1# s2
@@ -309,7 +309,7 @@ naturalAdd a@(Natural lA) b@(Natural lB)
                !(I# off) = l*WS
                !(I# csz) = (lcB+1-l)*WS
 
-      addLimbs l@(I# l#) c mba s
+      addLimbs !l@(I# l#) !c !mba !s
          | isTrue# (eqWord# c 0##) = addLimbsNoCarry l mba s
          | l == lc-1               = writeWordArray# mba l# c s
          | l >= lcA = case plusWord2# c (indexWordArray# lB l#) of
@@ -332,9 +332,9 @@ naturalOr a@(Natural lA) b@(Natural lB) = runST $ ST \s0 ->
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lcA      = fromIntegral $ naturalLimbCount a
-      lcB      = fromIntegral $ naturalLimbCount b
-      lc       = max lcA lcB
+      !lcA     = fromIntegral $ naturalLimbCount a
+      !lcB     = fromIntegral $ naturalLimbCount b
+      !lc      = max lcA lcB
       !(I# sz) = lc*WS
 
       go :: MutableByteArray# s -> Int -> Int -> Int -> State# s -> State# s
@@ -360,9 +360,9 @@ naturalXor n1@(Natural lA) n2@(Natural lB) = runST $ ST \s0 ->
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lcA      = fromIntegral $ naturalLimbCount n1
-      lcB      = fromIntegral $ naturalLimbCount n2
-      lc       = max lcA lcB
+      !lcA     = fromIntegral $ naturalLimbCount n1
+      !lcB     = fromIntegral $ naturalLimbCount n2
+      !lc      = max lcA lcB
       !(I# sz) = lc*WS
 
       go :: MutableByteArray# s -> Int -> Int -> Int -> State# s -> State# s
@@ -388,9 +388,9 @@ naturalAnd n1@(Natural lA) n2@(Natural lB) = runST $ ST \s0 ->
                (# s3, ba #) -> (# s3, Natural ba #)
 
    where
-      lcA      = fromIntegral $ naturalLimbCount n1
-      lcB      = fromIntegral $ naturalLimbCount n2
-      lc       = min lcA lcB
+      !lcA     = fromIntegral $ naturalLimbCount n1
+      !lcB     = fromIntegral $ naturalLimbCount n2
+      !lc      = min lcA lcB
       !(I# sz) = lc*WS
 
       go :: MutableByteArray# s -> Int -> Int -> State# s -> State# s
