@@ -17,6 +17,7 @@ module Haskus.Number.Natural
    , naturalAdd
    , naturalSub
    , naturalMul
+   , naturalQuotRem
    , naturalShiftL
    , naturalShiftR
    )
@@ -108,6 +109,22 @@ naturalMul (NSmall a)   (NBig b)    = NBig (bigNatMul b (bigNatFromWord# a))
 naturalMul (NBig a)     (NSmall b)  = NBig (bigNatMul a (bigNatFromWord# b))
 
 
+-- | QuotRem two naturals
+naturalQuotRem :: Natural -> Natural -> Maybe (Natural, Natural)
+naturalQuotRem _              (NSmall 0##) = Nothing
+naturalQuotRem a@(NSmall 0##) _            = Just (a, a)
+naturalQuotRem a              (NSmall 1##) = Just (a, NSmall 0##)
+naturalQuotRem (NSmall a)     (NSmall b  ) = case quotRemWord# a b of
+   (# q, r #) -> Just (NSmall q, NSmall r)
+naturalQuotRem a@(NSmall _)   (NBig _  )   = Just (NSmall 0##, a)
+naturalQuotRem (NBig a)       (NBig b  )   = case bigNatQuotRem a b of
+  Nothing    -> Nothing
+  Just (q,r) -> Just (naturalFromBigNat q, naturalFromBigNat r)
+
+-- TODO: implement faster bigNatQuotRemWord
+naturalQuotRem (NBig a)    (NSmall b  )    = case bigNatQuotRem a (bigNatFromWord# b) of
+  Nothing    -> Nothing
+  Just (q,r) -> Just (naturalFromBigNat q, naturalFromBigNat r)
 
 -- | Create a Natural from a Word#
 naturalFromWord# :: Word# -> Natural

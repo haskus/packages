@@ -719,8 +719,8 @@ bigNatQuotRem :: BigNat -> BigNat -> Maybe (BigNat,BigNat)
 bigNatQuotRem n1 n2@(BigNat lB)
    | bigNatIsZero n2         = Nothing
    | bigNatIsOne n2          = Just (n1, bigNatZero)
-   | lcA < lcB                = Just (bigNatZero, n1)
-   | lcB == 1                 = case divNby1# n1 (indexWordArray# lB 0#) of
+   | lcA < lcB               = Just (bigNatZero, n1)
+   | lcB == 1                = case divNby1# n1 (indexWordArray# lB 0#) of
                                     Nothing    -> Nothing
                                     Just (q,r) -> Just (q, bigNatFromWord r)
 
