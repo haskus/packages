@@ -13,7 +13,9 @@ module Haskus.Number.Natural
    ( Natural (..)
    , naturalFromWord
    , naturalFromWord#
+   , naturalFromBigNat
    , naturalAdd
+   , naturalSub
    , naturalMul
    , naturalShiftL
    , naturalShiftR
@@ -25,6 +27,7 @@ where
 import Haskus.Number.BigNat
 import GHC.Exts
 import Data.Bits
+import Data.Maybe
 
 -- | A Natural
 --
@@ -50,8 +53,9 @@ instance Eq Natural where
    (==) = naturalEq
 
 instance Num Natural where
-   (+) = naturalAdd
-   (*) = naturalMul
+   (+)   = naturalAdd
+   (*)   = naturalMul
+   x - y = fromMaybe (error "Can't subtract these naturals") (naturalSub x y)
 
 instance Bits Natural where
    shiftL w n = naturalShiftL w (fromIntegral n)
@@ -76,6 +80,18 @@ naturalAdd (NSmall a)   (NBig b)    = NBig (bigNatAddWord# b a)
 naturalAdd (NBig a)     (NSmall b)  = NBig (bigNatAddWord# a b)
 naturalAdd (NBig a)     (NBig b)    = NBig (bigNatAdd a b)
 
+-- | Sub two naturals
+naturalSub :: Natural -> Natural -> Maybe Natural
+naturalSub a          (NSmall 0##) = Just a
+naturalSub (NSmall _) (NBig _)     = Nothing
+naturalSub (NSmall a) (NSmall b)
+   | isTrue# (a `ltWord#` b) = Nothing
+   | otherwise               = Just (NSmall (a `minusWord#` b))
+naturalSub (NBig a) (NBig b) = case bigNatSub a b of
+   Nothing -> Nothing
+   Just r  -> Just (naturalFromBigNat r)
+-- TODO: implement faster bigNatMinusWord
+naturalSub (NBig a) (NSmall b) = Just (naturalFromBigNat (a - bigNatFromWord# b))
 
 -- | Multiply two naturals
 naturalMul :: Natural -> Natural -> Natural
@@ -92,6 +108,7 @@ naturalMul (NSmall a)   (NBig b)    = NBig (bigNatMul b (bigNatFromWord# a))
 naturalMul (NBig a)     (NSmall b)  = NBig (bigNatMul a (bigNatFromWord# b))
 
 
+
 -- | Create a Natural from a Word#
 naturalFromWord# :: Word# -> Natural
 naturalFromWord# w = NSmall w
@@ -99,6 +116,13 @@ naturalFromWord# w = NSmall w
 -- | Create a Natural from a Word
 naturalFromWord :: Word -> Natural
 naturalFromWord (W# w) = NSmall w
+
+-- | Create a natural from a BigNat
+naturalFromBigNat :: BigNat -> Natural
+naturalFromBigNat !r@(BigNat ba) = case bigNatLimbCount# ba of
+   0# -> NSmall 0##
+   1# -> NSmall (indexWordArray# ba 0#)
+   _  -> NBig r
 
 -- | Shift left
 naturalShiftL :: Natural -> Word -> Natural
@@ -116,9 +140,5 @@ naturalShiftR :: Natural -> Word -> Natural
 naturalShiftR a              0  = a
 naturalShiftR a@(NSmall 0##) _  = a
 naturalShiftR (NSmall b)(W# c#) = NSmall (b `uncheckedShiftRL#` (word2Int# c#))
-naturalShiftR (NBig   b)     c  = case bigNatShiftR b c of
-   r@(BigNat ba) -> case bigNatLimbCount# ba of
-      0# -> NSmall 0##
-      1# -> NSmall (indexWordArray# ba 0#)
-      _  -> NBig r
+naturalShiftR (NBig   b)     c  = naturalFromBigNat (bigNatShiftR b c)
 

@@ -619,7 +619,7 @@ bigNatTestBit n@(BigNat ba) i
 -- | Subtract two bigNats (classical algorithm)
 bigNatSub :: BigNat -> BigNat -> Maybe BigNat
 bigNatSub n1@(BigNat lA) n2@(BigNat lB)
-   | bigNatIsZero n2      = Just n1
+   | bigNatIsZero n2       = Just n1
    | n1 < n2               = Nothing
    | otherwise             = runST $ ST \s0 ->
       case newByteArray# (sizeofByteArray# lA) s0 of
