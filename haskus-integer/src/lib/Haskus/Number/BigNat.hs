@@ -332,9 +332,9 @@ bigNatAdd a@(BigNat lA) b@(BigNat lB)
       doTripleAdd :: MutableByteArray# s -> Int# -> Word# -> State# s -> State# s
       doTripleAdd !mba !i !carry !s
          | isTrue# (i ==# lcA)
-         , isTrue# (i ==# lcB) = doWriteCarry mba carry s
-         | isTrue# (i ==# lcA) = doSingleArray mba lcB lB i carry s
-         | isTrue# (i ==# lcB) = doSingleArray mba lcA lA i carry s
+         , isTrue# (i ==# lcB) = doAddWriteCarry mba carry i s
+         | isTrue# (i ==# lcA) = doAddSingleArray mba lcB lB i carry s
+         | isTrue# (i ==# lcB) = doAddSingleArray mba lcA lA i carry s
          | otherwise           =
             let
                !(# carry', r #) = add1by1by1_large#
@@ -344,26 +344,29 @@ bigNatAdd a@(BigNat lA) b@(BigNat lB)
             in case writeWordArray# mba i r s of
                   s2 -> doTripleAdd mba (i +# 1#) carry' s2
 
-      doSingleArray !mba !lcx !lx !i !carry !s
-         | isTrue# (i ==# lcx) = doWriteCarry mba carry s
-         | 0## <- carry        = doArrayCopy mba lcx lx i s
-         | otherwise           =
-            let
-               !(# carry', r #) = add1by1_large#
-                                    (indexWordArray# lx i)
-                                    carry
-            in case writeWordArray# mba i r s of
-                  s2 -> doSingleArray mba lcx lx (i +# 1#) carry' s2
+doAddSingleArray :: MutableByteArray# s -> Int# -> ByteArray# -> Int# -> Word# -> State# s -> State# s
+doAddSingleArray !mba !lcx !lx !i !carry !s
+   | isTrue# (i ==# lcx) = doAddWriteCarry mba carry i s
+   | 0## <- carry        = doAddArrayCopy mba lcx lx i s
+   | otherwise           =
+      let
+         !(# carry', r #) = add1by1_large#
+                              (indexWordArray# lx i)
+                              carry
+      in case writeWordArray# mba i r s of
+            s2 -> doAddSingleArray mba lcx lx (i +# 1#) carry' s2
 
-      doArrayCopy !mba !lcx !lx !i !s =
-         let !off = limbsToBytes# i
-             !csz = limbsToBytes# (lcx -# i)
-         in case copyByteArray# lx off mba off csz s of
-               s2 -> shrinkMS mba 1# s2
+doAddArrayCopy :: MutableByteArray# s -> Int# -> ByteArray# -> Int# -> State# s -> State# s
+doAddArrayCopy !mba !lcx !lx !i !s =
+   let !off = limbsToBytes# i
+       !csz = limbsToBytes# (lcx -# i)
+   in case copyByteArray# lx off mba off csz s of
+         s2 -> shrinkMS mba 1# s2
 
-      doWriteCarry !mba !carry !s
-         | 0## <- carry = shrinkMS mba 1# s
-         | otherwise    = writeWordArray# mba lcMax carry s
+doAddWriteCarry :: MutableByteArray# s -> Word# -> Int# -> State# s -> State# s
+doAddWriteCarry !mba !carry !i !s
+   | 0## <- carry = shrinkMS mba 1# s
+   | otherwise    = writeWordArray# mba i carry s
 
 
 -- | Add a bigNat and a Word#
@@ -375,31 +378,13 @@ bigNatAddWord# a@(BigNat lA) b
       let
          !lcA = bigNatLimbCount# lA
          !lc  = lcA +# 1#
-         !sz  = lc *# WS#
-      in case newByteArray# sz s0 of
-         (# s1, mba #) -> 
-            let
-               go !k !carry !s
-                  | isTrue# (k ==# lcA) =
-                        if isTrue# (carry `eqWord#` 0##)
-                           then shrinkMS mba 1# s
-                           else writeWordArray# mba k carry s
-                  | isTrue# (carry `eqWord#` 0##) =
-                     let
-                        !(# c1, c0 #) = plusWord2# (indexWordArray# lA k) b
-                     in case writeWordArray# mba k c0 s of
-                           s' -> go (k +# 1#) c1 s'
-                  | otherwise =
-                     let
-                        !(# c1' ,  r #) = plusWord2# (indexWordArray# lA k) b
-                        !(# c1'', c0 #) = plusWord2# r carry
-                        !c1              = plusWord# c1' c1''
-                     in case writeWordArray# mba k c0 s of
-                           s' -> go (k +# 1#) c1 s'
-            in case go 0# 0## s1 of
-                  s2 -> case unsafeFreezeByteArray# mba s2 of
-                     (# s3, ba #) -> (# s3, BigNat ba #)
 
+      -- compared to bigNatAdd, we only have to pass b as an initial carry
+      -- to doAddSingleArray
+      in case newByteArray# (limbsToBytes# lc) s0 of
+         (# s1, mba #) -> case doAddSingleArray mba lcA lA 0# b s1 of
+            s2 -> case unsafeFreezeByteArray# mba s2 of
+               (# s3, ba #) -> (# s3, BigNat ba #)
 
 -- | Bitwise OR
 bigNatOr :: BigNat -> BigNat -> BigNat

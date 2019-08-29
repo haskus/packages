@@ -11,11 +11,13 @@ import Data.Bits
 
 instance Arbitrary Natural where
    arbitrary = fmap (fromInteger . abs) arbitrary
+   shrink n  = [n `shiftR` WORD_SIZE_IN_BITS]
 
 newtype BigNatural = BigNatural Natural deriving Show
 
 instance Arbitrary BigNatural where
    arbitrary = fmap (BigNatural . naturalFromLimbsMS) arbitrary
+   shrink (BigNatural n)  = [BigNatural (n `shiftR` WORD_SIZE_IN_BITS)]
 
 main :: IO ()
 main = defaultMain tests
