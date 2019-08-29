@@ -13,10 +13,13 @@ module Haskus.Number.Integer
    , integerCompare
    , integerFromInt#
    , integerFromInt
+   , integerFromInteger
+   , integerAbs
    )
 where
 
 import Prelude hiding (Integer)
+import qualified Prelude as P
 import Haskus.Number.BigNat
 import GHC.Exts
 
@@ -38,6 +41,11 @@ instance Eq Integer where
 
 instance Ord Integer where
    compare = integerCompare
+
+instance Num Integer where
+   fromInteger = integerFromInteger
+   abs         = integerAbs
+
 
 -- | Eq for Integer
 integerEq :: Integer -> Integer -> Bool
@@ -66,3 +74,21 @@ integerFromInt# i = ISmall i
 -- | Create an Integer from an Int
 integerFromInt :: Int -> Integer
 integerFromInt (I# i) = ISmall i
+
+-- | Create an Integer from a prelude Integer
+integerFromInteger :: P.Integer -> Integer
+integerFromInteger x
+   | x < fromIntegral (minBound :: Int) = IBig Neg (bigNatFromInteger (abs x))
+   | x > fromIntegral (maxBound :: Int) = IBig Pos (bigNatFromInteger x)
+   | otherwise                          = ISmall i
+      where
+         !(I# i) = fromIntegral x
+
+-- | Abs for Integer
+integerAbs :: Integer -> Integer
+integerAbs a@(ISmall x)
+   | isTrue# (x >=# 0#) = a
+   | I# x /= minBound   = ISmall (negateInt# x)
+   | otherwise          = IBig Pos (bigNatFromWord (fromIntegral (minBound :: Int)))
+integerAbs a@(IBig Pos _) = a
+integerAbs   (IBig _   x) = IBig Pos x
