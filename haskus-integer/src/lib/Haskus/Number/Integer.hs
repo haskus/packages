@@ -11,6 +11,8 @@ module Haskus.Number.Integer
    ( Integer (..)
    , integerEq
    , integerCompare
+   , integerFromInt#
+   , integerFromInt
    )
 where
 
@@ -56,3 +58,11 @@ integerCompare (ISmall _)   (IBig Pos _) = LT
 integerCompare (ISmall _)   (IBig Neg _) = GT
 integerCompare (IBig Pos _) (ISmall _)   = GT
 integerCompare (IBig Neg _) (ISmall _)   = LT
+
+-- | Create an Integer from an Int#
+integerFromInt# :: Int# -> Integer
+integerFromInt# i = ISmall i
+
+-- | Create an Integer from an Int
+integerFromInt :: Int -> Integer
+integerFromInt (I# i) = ISmall i
