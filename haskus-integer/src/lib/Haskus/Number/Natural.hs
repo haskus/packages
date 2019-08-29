@@ -28,6 +28,7 @@ module Haskus.Number.Natural
    , naturalXor
    , naturalTestBit
    , naturalPopCount
+   , naturalEq
    )
 where
 
@@ -42,7 +43,7 @@ import Data.Maybe
 --
 -- Invariant: small values (and 0) use NSmall
 data Natural
-    = NSmall Word#
+    = NSmall !Word#
     | NBig   {-# UNPACK #-} !BigNat
 
 -- Using an UnboxedSum seems to be slower for now

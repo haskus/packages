@@ -18,6 +18,7 @@ library:
    exposed-modules:
       - Haskus.Number.BigNat
       - Haskus.Number.Natural
+      - Haskus.Number.Integer
    dependencies:
       - base >= 4.8 && < 5
 
