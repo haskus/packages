@@ -152,9 +152,8 @@ naturalMul (NSmall a)   (NSmall b)   = case timesWord2# a b of
    (# 0##,r0 #) -> NSmall r0
    (#  r1,r0 #) -> NBig (bigNatFrom2LimbsMS r1 r0)
 naturalMul (NBig a)     (NBig b)    = NBig (bigNatMul a b)
--- TODO: implement and use bigNatMulWord#
-naturalMul (NSmall a)   (NBig b)    = NBig (bigNatMul b (bigNatFromWord# a))
-naturalMul (NBig a)     (NSmall b)  = NBig (bigNatMul a (bigNatFromWord# b))
+naturalMul (NSmall a)   (NBig b)    = NBig (bigNatMulByWord# b a)
+naturalMul (NBig a)     (NSmall b)  = NBig (bigNatMulByWord# a b)
 
 
 -- | QuotRem two naturals

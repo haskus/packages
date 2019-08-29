@@ -31,6 +31,8 @@ module Haskus.Number.BigNat
    , bigNatLimbCount
    , bigNatTestBit
    -- * Primitives
+   , bigNatMulByWord
+   , bigNatMulByWord#
    , bigNatFromWord#
    , bigNatFrom2LimbsMS
    , bigNatToInteger
@@ -564,55 +566,83 @@ bigNatMul n1@(BigNat lA) n2@(BigNat lB)
    | bigNatIsOne  n1 = n2
    | bigNatIsOne  n2 = n1
    | otherwise        = runST $ ST \s0 ->
-      case newByteArray# sz# s0 of
-         (# s1, mba #) -> case loopj0 mba 0 s1 of
+      case newByteArray# (limbsToBytes# lc) s0 of
+         (# s1, mba #) -> case go mba s1 of
                s2 -> case unsafeFreezeByteArray# mba s2 of
                   (# s3, ba #) -> (# s3, BigNat ba #)
 
    where
-      !lcA@(I# lcA#) = fromIntegral $ bigNatLimbCount n1
-      !lcB@(I# lcB#) = fromIntegral $ bigNatLimbCount n2
-      !lc@(I# lc#)   = lcA + lcB
-      !(I# sz#)      = lc*WS
+      !lcA = bigNatLimbCount# lA
+      !lcB = bigNatLimbCount# lB
+      !lc  = lcA +# lcB
 
-      loopj mba j@(I# j#) s
-         | isTrue# (j# ==# lcB#) = case readWordArray# mba (lc# -# 1#) s of
-                                    (# s2, 0## #) -> shrinkMS mba 1# s2
-                                    (# s2, _   #) -> s2
-         | otherwise             = case indexWordArray# lB j# of
-                                       0## -> loopj mba (j+1) s
-                                       vj  -> loopi mba vj j 0 0## s
+      go !mba s = case doMulByWord# mba lcA lA (indexWordArray# lB 0#) s of
+         (# s', carry #) -> goN mba carry 1# s'
+
+      goN !mba !carry !i s
+         | isTrue# (i ==# lcB) = case carry of
+               0## -> shrinkMS mba 1# s
+               _   -> s
+         | otherwise = case doMulByWordAt# mba lcA lA (indexWordArray# lB i) i s of
+              (# s', carry' #) -> goN mba carry' (i +# 1#) s'
+
+doMulByWordAt# :: MutableByteArray# d -> Int# -> ByteArray# -> Word# -> Int# -> State# d -> (# State# d, Word# #)
+doMulByWordAt# !mba !lcA   _ !0## !k !s0 = case writeWordArray# mba (lcA +# k) 0## s0 of
+                                       s1 -> (# s1, 0## #)
+doMulByWordAt# !mba !lcA !lA !w   !k !s0 = go 0# 0## s0
+   where
+      go !i !carry s
+         | isTrue# (i ==# lcA) = case writeWordArray# mba (lcA +# k) carry s of
+                                    s1 -> (# s1, carry #)
+         | otherwise           = case readWordArray# mba (i +# k) s of
+            (# s', oldri #) -> 
+               let !a              = indexWordArray# lA i
+                   !(# ci' ,ri' #) = mul1by1_large# a w
+                   !(# ci'',ri  #) = add1by1by1_large# ri' carry oldri
+                   !carry'         = add1by1_small# ci' ci''
+               in case writeWordArray# mba (i +# k) ri s' of
+                     s2 -> go (i +# 1#) carry' s2
+
+-- | Multiply by a Word#
+bigNatMulByWord# :: BigNat -> Word# -> BigNat
+bigNatMulByWord# _ 0## = bigNatZero
+bigNatMulByWord# a 1## = a
+bigNatMulByWord# (BigNat lA) w   = runST $ ST \s0 ->
+   let
+      !lcA = bigNatLimbCount# lA
+   in case newByteArray# (limbsToBytes# (lcA +# 1#)) s0 of
+      (# s1, mba #) -> case doMulByWord# mba lcA lA w s1 of
+         (# s2, 0## #) -> case shrinkMS mba 1# s2 of
+               s3 -> case unsafeFreezeByteArray# mba s3 of
+                  (# s4, ba #) -> (# s4, BigNat ba #)
+         (# s2, _ #) -> case unsafeFreezeByteArray# mba s2 of
+                  (# s3, ba #) -> (# s3, BigNat ba #)
+
+-- | Multiply by a Word
+bigNatMulByWord :: BigNat -> Word -> BigNat
+bigNatMulByWord a (W# w) = bigNatMulByWord# a w
 
 
-      loopi mba vj j@(I# j#) i@(I# i#) k s
-         | isTrue# (i# ==# lcA#) = case writeWordArray# mba (i# +# j#) k s of
-                                       s2 -> loopj mba (j+1) s2
-         | otherwise = case readWordArray# mba (i# +# j#) s of
-            (# s2, wij #) ->
-               let ui             = indexWordArray# lA i#
-                   !(# k1,r1 #)   = timesWord2# ui vj
-                   !(# k2,r2 #)   = plusWord2# wij k
-                   !(# k3,wij' #) = plusWord2# r1 r2
-                   k'             = plusWord# (plusWord# k1 k2) k3
-               in case writeWordArray# mba (i# +# j#) wij' s2 of
-                     s3 -> loopi mba vj j (i+1) k' s3
-
-      -- loopj0 and loopi0 are executed first when we haven't initialized the
-      -- result array.
-      loopj0 mba j@(I# j#) s = case indexWordArray# lB j# of
-                                 0## -> loopj0 mba (j+1) s -- n2 /= 0 so we can loop safely
-                                 vj  -> loopi0 mba vj j 0 0## s
-
-      loopi0 mba vj j@(I# j#) i@(I# i#) k s
-         | isTrue# (i# ==# lcA#) = case writeWordArray# mba (i# +# j#) k s of
-                                       s2 -> loopj mba (j+1) s2
-         | otherwise =
-               let ui             = indexWordArray# lA i#
-                   !(# k1,r1 #)   = timesWord2# ui vj
-                   !(# k2,wij #)  = plusWord2# r1 k
-                   k'             = plusWord# k1 k2
-               in case writeWordArray# mba (i# +# j#) wij s of
-                     s2 -> loopi0 mba vj j (i+1) k' s2
+-- | Perform multiplication by a single Word
+-- MBA = BA * Word
+-- If MBA is too large, higher limbs stay garbage.
+-- Return the last written value (the carry)
+doMulByWord# :: MutableByteArray# s -> Int# -> ByteArray# -> Word# -> State# s -> (# State# s, Word# #)
+doMulByWord# !mba !lcA   _ !0## s0 = case setByteArray# mba 0# (limbsToBytes# lcA) 0# s0 of
+                                       s1 -> (# s1, 0## #)
+doMulByWord# !mba !lcA !lA !w   s0 = go 0# 0## s0
+   where
+      go !i !carry s
+         | isTrue# (i ==# lcA) = case writeWordArray# mba i carry s of
+                                    s1 -> (# s1, carry #)
+         | otherwise           =
+            let !a              = indexWordArray# lA i
+                !(# ci' ,ri' #) = mul1by1_large# a w
+                !(# ci'',ri  #) = add1by1_large# ri' carry
+                !carry'         = add1by1_small# ci' ci''
+            in case writeWordArray# mba i ri s of
+                  s2 -> go (i +# 1#) carry' s2
+               
 
 -- | BigNat bit test
 bigNatTestBit :: BigNat -> Word -> Bool
@@ -826,10 +856,12 @@ sub3by1# (# a2,a1,a0 #) b0 = (# m2,m1,m0 #)
 -- Requires:
 --    a0*b0 < B
 mul1by1_small# :: Word# -> Word# -> Word#
+{-# INLINABLE mul1by1_small# #-}
 mul1by1_small# a0 b0 = timesWord# a0 b0
 
 -- | 1-by-1 large multiplication
 mul1by1_large# :: Word# -> Word# -> (# Word#,Word# #)
+{-# INLINABLE mul1by1_large# #-}
 mul1by1_large# a0 b0 = timesWord2# a0 b0
 
 -- | 1-by-2

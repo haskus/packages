@@ -51,6 +51,9 @@ qcProps = testGroup "QuickCheck"
    , QC.testProperty "x*y = y*x" $
       \x y -> (x :: Natural) * y == y * x
 
+   , QC.testProperty "BIG-SMALL: x*y = y*x" $
+      \(BigNatural x) y -> x * y == y * x
+
    , QC.testProperty "BIG: x*y = y*x" $
       \(BigNatural x) (BigNatural y) -> x * y == y * x
 
