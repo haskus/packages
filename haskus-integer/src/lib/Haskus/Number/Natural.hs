@@ -14,12 +14,17 @@ module Haskus.Number.Natural
    , naturalFromWord
    , naturalFromWord#
    , naturalFromBigNat
+   , naturalToInteger
    , naturalAdd
    , naturalSub
    , naturalMul
    , naturalQuotRem
    , naturalShiftL
    , naturalShiftR
+   , naturalOr
+   , naturalAnd
+   , naturalXor
+   , naturalTestBit
    )
 where
 
@@ -54,14 +59,45 @@ instance Eq Natural where
    (==) = naturalEq
 
 instance Num Natural where
-   (+)   = naturalAdd
-   (*)   = naturalMul
-   x - y = fromMaybe (error "Can't subtract these naturals") (naturalSub x y)
+   (+)         = naturalAdd
+   (*)         = naturalMul
+   x - y       = fromMaybe (error "Can't subtract these naturals") (naturalSub x y)
+   abs         = id
+   signum _    = NSmall 1##
+   negate _    = error "Can't negate a Natural"
+   fromInteger = naturalFromInteger
 
 instance Bits Natural where
-   shiftL w n = naturalShiftL w (fromIntegral n)
-   shiftR w n = naturalShiftR w (fromIntegral n)
+   shiftL w n     = naturalShiftL w (fromIntegral n)
+   shiftR w n     = naturalShiftR w (fromIntegral n)
+   isSigned _     = False
+   zeroBits       = NSmall 0##
+   complement     = error "Can't complement a Natural"
+   bitSizeMaybe _ = Nothing
+   bitSize        = error "Can't use bitsize on Natural"
+   popCount       = fromIntegral . naturalPopCount
+   rotate         = error "Can't rotate a Natural"
+   bit i@(I# i#)
+      | i < WORD_SIZE_IN_BITS = NSmall (1## `uncheckedShiftL#` i#)
+      | otherwise             = NBig (bit i)
+   (.|.)          = naturalOr
+   (.&.)          = naturalAnd
+   xor            = naturalXor
+   testBit w n    = naturalTestBit w (fromIntegral n)
 
+instance Integral Natural where
+   toInteger   = naturalToInteger
+   quotRem a b = fromJust (naturalQuotRem a b)
+
+instance Real Natural where
+   toRational n = toRational (naturalToInteger n)
+
+instance Ord Natural where
+   compare = naturalCompare
+
+instance Enum Natural where
+   toEnum   = naturalFromInteger . toInteger
+   fromEnum = fromInteger . naturalToInteger
 
 -- | Eq for Natural
 naturalEq :: Natural -> Natural -> Bool
@@ -69,6 +105,13 @@ naturalEq (NSmall a) (NSmall b) = isTrue# (a `eqWord#` b)
 naturalEq (NBig   a) (NBig   b) = bigNatEq a b
 naturalEq (NSmall _) (NBig   _) = False
 naturalEq (NBig   _) (NSmall _) = False
+
+-- | Compare for Natural
+naturalCompare :: Natural -> Natural -> Ordering
+naturalCompare (NSmall a) (NSmall b) = compare (W# a) (W# b)
+naturalCompare (NBig   a) (NBig   b) = bigNatCompare a b
+naturalCompare (NSmall _) (NBig   _) = LT
+naturalCompare (NBig   _) (NSmall _) = GT
 
 -- | Add two naturals
 naturalAdd :: Natural -> Natural -> Natural
@@ -141,6 +184,19 @@ naturalFromBigNat !r@(BigNat ba) = case bigNatLimbCount# ba of
    1# -> NSmall (indexWordArray# ba 0#)
    _  -> NBig r
 
+-- | Convert a Natural into an Integer
+naturalToInteger :: Natural -> Integer
+naturalToInteger (NSmall w) = fromIntegral (W# w)
+naturalToInteger (NBig w)   = bigNatToInteger w
+
+-- | Convert an Integer into a Natural
+naturalFromInteger :: Integer -> Natural
+naturalFromInteger k
+   | k < 0     = error "bigNatFromInteger: negative integer"
+   | k <= fromIntegral (maxBound :: Word)
+   , W# w <- fromIntegral k = NSmall w
+   | otherwise = NBig (bigNatFromInteger k)
+
 -- | Shift left
 naturalShiftL :: Natural -> Word -> Natural
 naturalShiftL a              0 = a
@@ -159,3 +215,35 @@ naturalShiftR a@(NSmall 0##) _  = a
 naturalShiftR (NSmall b)(W# c#) = NSmall (b `uncheckedShiftRL#` (word2Int# c#))
 naturalShiftR (NBig   b)     c  = naturalFromBigNat (bigNatShiftR b c)
 
+-- | Pop count
+naturalPopCount :: Natural -> Word
+naturalPopCount (NSmall w) = fromIntegral (popCount (W# w))
+naturalPopCount (NBig   w) = bigNatPopCount w
+
+-- | Or two naturals
+naturalOr :: Natural -> Natural -> Natural
+naturalOr (NSmall a) (NSmall b) = NSmall (a `or#` b)
+naturalOr (NBig a)   (NBig b)   = NBig (bigNatOr a b)
+naturalOr (NBig a)   (NSmall b) = NBig (bigNatOr a (bigNatFromWord# b))
+naturalOr (NSmall a) (NBig b)   = NBig (bigNatOr b (bigNatFromWord# a))
+
+-- | And two naturals
+naturalAnd :: Natural -> Natural -> Natural
+naturalAnd (NSmall a) (NSmall b) = NSmall (a `and#` b)
+naturalAnd (NBig a)   (NBig b)   = NBig (bigNatAnd a b)
+naturalAnd (NBig a)   (NSmall b) = NBig (bigNatAnd a (bigNatFromWord# b))
+naturalAnd (NSmall a) (NBig b)   = NBig (bigNatAnd b (bigNatFromWord# a))
+
+-- | Xor two naturals
+naturalXor :: Natural -> Natural -> Natural
+naturalXor (NSmall a) (NSmall b) = NSmall (a `xor#` b)
+naturalXor (NBig a)   (NBig b)   = NBig (bigNatXor a b)
+naturalXor (NBig a)   (NSmall b) = NBig (bigNatXor a (bigNatFromWord# b))
+naturalXor (NSmall a) (NBig b)   = NBig (bigNatXor b (bigNatFromWord# a))
+
+-- | Natural test bit
+naturalTestBit :: Natural -> Word -> Bool
+naturalTestBit (NSmall a) k
+   | k >= WORD_SIZE_IN_BITS = False
+   | otherwise              = testBit (W# a) (fromIntegral k)
+naturalTestBit (NBig a) k   = bigNatTestBit a k

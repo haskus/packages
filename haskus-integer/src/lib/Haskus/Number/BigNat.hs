@@ -29,9 +29,11 @@ module Haskus.Number.BigNat
    , bigNatShiftR
    , bigNatShiftL
    , bigNatLimbCount
+   , bigNatTestBit
    -- * Primitives
    , bigNatFromWord#
    , bigNatFrom2LimbsMS
+   , bigNatToInteger
    , bigNatAddWord#
    , bigNatWithNormalized
    , bigNatLimbCount#
@@ -113,22 +115,22 @@ instance Num BigNat where
    fromInteger = bigNatFromInteger
 
 instance Bits BigNat where
-   (.&.)          = bigNatAnd
-   (.|.)          = bigNatOr
-   xor            = bigNatXor
-   complement     = error "Can't complement a BigNat"
-   shiftL w n     = bigNatShiftL w (fromIntegral n)
-   shiftR w n     = bigNatShiftR w (fromIntegral n)
-   isSigned _     = False
-   zeroBits       = bigNatZero
-   bitSizeMaybe _ = Nothing
-   popCount       = fromIntegral . bigNatPopCount
-   bitSize        = error "Can't use bitsize on BigNat"
+   (.&.)           = bigNatAnd
+   (.|.)           = bigNatOr
+   xor             = bigNatXor
+   complement      = error "Can't complement a BigNat"
+   shiftL w n      = bigNatShiftL w (fromIntegral n)
+   shiftR w n      = bigNatShiftR w (fromIntegral n)
+   isSigned _      = False
+   zeroBits        = bigNatZero
+   bitSizeMaybe _  = Nothing
+   popCount        = fromIntegral . bigNatPopCount
+   bitSize         = error "Can't use bitsize on BigNat"
    bit i
-      | i < WS    = bigNatFromWord (bit i)
-      | otherwise = bigNatFromWord 1 `shiftL` i
-   testBit w n    = bigNatTestBit w (fromIntegral n)
-   rotate         = error "Can't rotate a BigNat"
+      | i < WSBITS = bigNatFromWord (bit i)
+      | otherwise  = bigNatFromWord 1 `shiftL` i
+   testBit w n     = bigNatTestBit w (fromIntegral n)
+   rotate          = error "Can't rotate a BigNat"
 
 instance Integral BigNat where
    toInteger   = bigNatToInteger
