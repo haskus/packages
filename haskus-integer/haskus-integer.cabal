@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 143ec2f268497e729fbc51884d71fe7d9f2ac510e48c1e1034d8c317711e9402
+-- hash: c684a2c2a0621e0f7410f09e8820958b1cae354ac5acaf49c781fd5f5ba339f3
 
 name:           haskus-integer
 version:        0.1
@@ -45,5 +45,7 @@ test-suite main-tests
   ghc-options: -Wall -O -fobject-code
   build-depends:
       base >=4.8 && <5
-    , doctest
+    , haskus-integer
+    , tasty
+    , tasty-quickcheck
   default-language: Haskell2010

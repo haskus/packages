@@ -26,4 +26,6 @@ tests:
       main: Main.hs
       source-dirs: src/tests
       dependencies:
-         - doctest
+         - haskus-integer
+         - tasty
+         - tasty-quickcheck

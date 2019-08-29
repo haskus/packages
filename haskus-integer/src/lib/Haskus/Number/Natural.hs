@@ -14,6 +14,7 @@ module Haskus.Number.Natural
    , naturalFromWord
    , naturalFromWord#
    , naturalFromBigNat
+   , naturalFromLimbsMS
    , naturalToInteger
    , naturalAdd
    , naturalSub
@@ -25,6 +26,7 @@ module Haskus.Number.Natural
    , naturalAnd
    , naturalXor
    , naturalTestBit
+   , naturalPopCount
    )
 where
 
@@ -54,6 +56,9 @@ data Natural
 -- pattern NBig bn <- Natural (# | (BigNat -> bn) #)
 --    where
 --       NBig (BigNat ba) = Natural (# | ba #)
+
+instance Show Natural where
+   show = show . naturalToInteger
 
 instance Eq Natural where
    (==) = naturalEq
@@ -179,6 +184,7 @@ naturalFromWord (W# w) = NSmall w
 
 -- | Create a natural from a BigNat
 naturalFromBigNat :: BigNat -> Natural
+{-# INLINABLE naturalFromBigNat #-}
 naturalFromBigNat !r@(BigNat ba) = case bigNatLimbCount# ba of
    0# -> NSmall 0##
    1# -> NSmall (indexWordArray# ba 0#)
@@ -186,6 +192,7 @@ naturalFromBigNat !r@(BigNat ba) = case bigNatLimbCount# ba of
 
 -- | Convert a Natural into an Integer
 naturalToInteger :: Natural -> Integer
+{-# INLINABLE naturalToInteger #-}
 naturalToInteger (NSmall w) = fromIntegral (W# w)
 naturalToInteger (NBig w)   = bigNatToInteger w
 
@@ -196,6 +203,13 @@ naturalFromInteger k
    | k <= fromIntegral (maxBound :: Word)
    , W# w <- fromIntegral k = NSmall w
    | otherwise = NBig (bigNatFromInteger k)
+
+-- | Convert a list of Word into a Natural
+naturalFromLimbsMS :: [Word] -> Natural
+naturalFromLimbsMS xs = case dropWhile (== 0) xs of
+   []     -> NSmall 0##
+   [W# x] -> NSmall x
+   ks     -> NBig (bigNatFromLimbsMS ks)
 
 -- | Shift left
 naturalShiftL :: Natural -> Word -> Natural
@@ -212,7 +226,7 @@ naturalShiftL (NSmall b)     c@(W# c#)
 naturalShiftR :: Natural -> Word -> Natural
 naturalShiftR a              0  = a
 naturalShiftR a@(NSmall 0##) _  = a
-naturalShiftR (NSmall b)(W# c#) = NSmall (b `uncheckedShiftRL#` (word2Int# c#))
+naturalShiftR (NSmall b)(W# c#) = NSmall (b `shiftRL#` (word2Int# c#))
 naturalShiftR (NBig   b)     c  = naturalFromBigNat (bigNatShiftR b c)
 
 -- | Pop count

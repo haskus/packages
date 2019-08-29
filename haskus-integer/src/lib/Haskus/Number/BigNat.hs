@@ -46,6 +46,7 @@ module Haskus.Number.BigNat
    , add1by2_small#
    , add1by2_large#
    , add2by2_small#
+   , add1by1by1_large#
    , sub2by1#
    , sub2by2#
    , sub3by1#
@@ -307,43 +308,63 @@ bigNatAdd a@(BigNat lA) b@(BigNat lB)
    | bigNatIsZero a = b
    | bigNatIsZero b = a
    | otherwise       = runST $ ST \s0 ->
-      case newByteArray# sz s0 of
-         (# s1, mba #) -> case addLimbsNoCarry 0 mba s1 of
+      case newByteArray# (limbsToBytes# lc) s0 of
+         (# s1, mba #) -> case doTripleAdd mba 0# 0## s1 of
             s2 -> case unsafeFreezeByteArray# mba s2 of
                (# s3, ba #) -> (# s3, BigNat ba #)
 
    where
-      !lcA     = fromIntegral $ bigNatLimbCount a
-      !lcB     = fromIntegral $ bigNatLimbCount b
-      !lc      = max lcA lcB + 1
-      !(I# sz) = lc*WS
+      !lcA     = bigNatLimbCount# lA
+      !lcB     = bigNatLimbCount# lB
+      !lcMax   = if isTrue# (lcA ># lcB) then lcA else lcB
+      !lc      = lcMax +# 1#
 
-      addLimbsNoCarry !l@(I# l#) !mba !s
-         | l == lc-1 = shrinkMS mba 1# s
-         | l >= lcA  = case copyByteArray# lB off mba off csz s of
-               s2 -> shrinkMS mba 1# s2
-         | l >= lcB  = case copyByteArray# lA off mba off csz s of
-               s2 -> shrinkMS mba 1# s2
-         | otherwise = case plusWord2# (indexWordArray# lA l#) (indexWordArray# lB l#) of
-               (# c, r #) -> case writeWordArray# mba l# r s of
-                  s2 -> addLimbs (l+1) c mba s2
-            where
-               !(I# off) = l*WS
-               !(I# csz) = (lcB+1-l)*WS
+      -- we have four cases:
+      -- 1) we have a digit in A and in B + an optional carry
+      --    => perform triple addition
+      -- 2) We have a digit only in A or B and a carry
+      --    => perform double addition from a single array
+      -- 3) We have a digit only in A or B and no carry
+      --    => perform array copy and shrink the array
+      -- 4) We only have an optional carry
+      --    => write the carry or shrink the array
 
-      addLimbs !l@(I# l#) !c !mba !s
-         | isTrue# (eqWord# c 0##) = addLimbsNoCarry l mba s
-         | l == lc-1               = writeWordArray# mba l# c s
-         | l >= lcA = case plusWord2# c (indexWordArray# lB l#) of
-               (# c2, r #) -> case writeWordArray# mba l# r s of
-                  s2 -> addLimbs (l+1) c2 mba s2
-         | l >= lcB = case plusWord2# c (indexWordArray# lA l#) of
-               (# c2, r #) -> case writeWordArray# mba l# r s of
-                  s2 -> addLimbs (l+1) c2 mba s2
-         | otherwise = case plusWord2# (indexWordArray# lA l#) (indexWordArray# lB l#) of
-               (# c2, r #) -> case plusWord2# r c of
-                  (# c3, r2 #) -> case writeWordArray# mba l# r2 s of
-                     s2 -> addLimbs (l+1) (plusWord# c2 c3) mba s2
+      doTripleAdd :: MutableByteArray# s -> Int# -> Word# -> State# s -> State# s
+      doTripleAdd !mba !i !carry !s
+         | isTrue# (i ==# lcA)
+         , isTrue# (i ==# lcB) = doWriteCarry mba carry s
+         | isTrue# (i ==# lcA) = doSingleArray mba lcB lB i carry s
+         | isTrue# (i ==# lcB) = doSingleArray mba lcA lA i carry s
+         | otherwise           =
+            let
+               !(# carry', r #) = add1by1by1_large#
+                                    (indexWordArray# lA i)
+                                    (indexWordArray# lB i)
+                                    carry
+            in case writeWordArray# mba i r s of
+                  s2 -> doTripleAdd mba (i +# 1#) carry' s2
+
+      doSingleArray !mba !lcx !lx !i !carry !s
+         | isTrue# (i ==# lcx) = doWriteCarry mba carry s
+         | 0## <- carry        = doArrayCopy mba lcx lx i s
+         | otherwise           =
+            let
+               !(# carry', r #) = add1by1_large#
+                                    (indexWordArray# lx i)
+                                    carry
+            in case writeWordArray# mba i r s of
+                  s2 -> doSingleArray mba lcx lx (i +# 1#) carry' s2
+
+      doArrayCopy !mba !lcx !lx !i !s =
+         let !off = limbsToBytes# i
+             !csz = limbsToBytes# (lcx -# i)
+         in case copyByteArray# lx off mba off csz s of
+               s2 -> shrinkMS mba 1# s2
+
+      doWriteCarry !mba !carry !s
+         | 0## <- carry = shrinkMS mba 1# s
+         | otherwise    = writeWordArray# mba lcMax carry s
+
 
 -- | Add a bigNat and a Word#
 bigNatAddWord# :: BigNat -> Word# -> BigNat
@@ -736,10 +757,12 @@ bigNatQuotRem n1 n2@(BigNat lB)
 -- Requires:
 --    a0+b0 < B
 add1by1_small# :: Word# -> Word# -> Word#
+{-# INLINABLE add1by1_small# #-}
 add1by1_small# a0 b0 = plusWord# a0 b0
 
 -- | 1-by-1 large addition
 add1by1_large# :: Word# -> Word# -> (# Word#,Word# #)
+{-# INLINABLE add1by1_large# #-}
 add1by1_large# a0 b0 = plusWord2# a0 b0
 
 -- | 1-by-2 small addition
@@ -747,6 +770,7 @@ add1by1_large# a0 b0 = plusWord2# a0 b0
 -- Requires:
 --    a0+(b1,b0) < B^2
 add1by2_small# :: Word# -> (# Word#,Word# #) -> (# Word#,Word# #)
+{-# INLINABLE add1by2_small# #-}
 add1by2_small# a0 (# b1,b0 #) = (# m1, m0 #)
    where
       !(# t, m0 #) = add1by1_large# a0 b0
@@ -754,6 +778,7 @@ add1by2_small# a0 (# b1,b0 #) = (# m1, m0 #)
 
 -- | 1-by-2 large addition
 add1by2_large# :: Word# -> (# Word#,Word# #) -> (# Word#,Word#,Word# #)
+{-# INLINABLE add1by2_large# #-}
 add1by2_large# a0 (# b1,b0 #) = (# m2,m1,m0 #)
    where
       !(# t, m0 #) = add1by1_large# a0 b0
@@ -764,11 +789,21 @@ add1by2_large# a0 (# b1,b0 #) = (# m2,m1,m0 #)
 -- Requires:
 --    (a1,a0)+(b1,b0) < B^2
 add2by2_small# :: (# Word#,Word# #) -> (# Word#,Word# #) -> (# Word#,Word# #)
+{-# INLINABLE add2by2_small# #-}
 add2by2_small# (# a1,a0 #) (# b1,b0 #) = (# m1, m0 #)
    where
       !(# c0, m0 #) = add1by1_large# a0 b0
       !c1           = add1by1_small# c0 b1
       !m1           = add1by1_small# c1 a1
+
+-- | Add 3 values together
+add1by1by1_large# :: Word# -> Word# -> Word# -> (# Word#, Word# #)
+{-# INLINABLE add1by1by1_large# #-}
+add1by1by1_large# a b c = (# r1, r0 #)
+   where
+      !(# c1, c0 #) = add1by1_large# a b
+      !(# r1, r0 #) = add1by2_small# c (# c1, c0 #)
+
 
 -- | 2-by-1 small subtraction
 --
