@@ -16,6 +16,7 @@ module Haskus.Number.Natural
    , naturalFromBigNat
    , naturalFromLimbsMS
    , naturalToInteger
+   , naturalFromInteger
    , naturalAdd
    , naturalSub
    , naturalMul

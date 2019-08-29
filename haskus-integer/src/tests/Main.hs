@@ -69,5 +69,22 @@ qcProps = testGroup "QuickCheck"
    , QC.testProperty "BIG: x+y = y+x" $
       \(BigNatural x) (BigNatural y) -> x + y == y + x
 
+   , QC.testProperty "Round-trip to Integer" $
+      \x -> naturalFromInteger (naturalToInteger x) == x
+
+   , QC.testProperty "BIG: round-trip to Integer" $
+      \(BigNatural x) -> naturalFromInteger (naturalToInteger x) == x
+
+   , QC.testProperty "x+y {Integer} ~ x+y {Natural}" $
+      \x y -> x + y == naturalFromInteger (naturalToInteger x + naturalToInteger y)
+
+   , QC.testProperty "BIG: x+y {Integer} ~ x+y {Natural}" $
+      \(BigNatural x) (BigNatural y) -> x + y == naturalFromInteger (naturalToInteger x + naturalToInteger y)
+
+   , QC.testProperty "x*y {Integer} ~ x*y {Natural}" $
+      \x y -> x * y == naturalFromInteger (naturalToInteger x * naturalToInteger y)
+
+   , QC.testProperty "BIG: x*y {Integer} ~ x*y {Natural}" $
+      \(BigNatural x) (BigNatural y) -> x * y == naturalFromInteger (naturalToInteger x * naturalToInteger y)
    ]
 

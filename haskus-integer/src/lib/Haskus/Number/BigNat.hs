@@ -567,28 +567,27 @@ bigNatMul n1@(BigNat lA) n2@(BigNat lB)
    | bigNatIsOne  n2 = n1
    | otherwise        = runST $ ST \s0 ->
       case newByteArray# (limbsToBytes# lc) s0 of
-         (# s1, mba #) -> case go mba s1 of
-               s2 -> case unsafeFreezeByteArray# mba s2 of
-                  (# s3, ba #) -> (# s3, BigNat ba #)
+         (# s1, mba #) -> case setByteArray# mba 0# (limbsToBytes# lc) 0# s1 of -- FIXME: it shouldn't be necessary to set all mba to 0
+            s1' -> case doMulByWord# mba lcA lA (indexWordArray# lB 0#) s1' of  -- but currently we have a bug if we don't
+               (# s', carry #) -> case go mba carry 1# s' of
+                  s2 -> case unsafeFreezeByteArray# mba s2 of
+                     (# s3, ba #) -> (# s3, BigNat ba #)
 
    where
       !lcA = bigNatLimbCount# lA
       !lcB = bigNatLimbCount# lB
       !lc  = lcA +# lcB
 
-      go !mba s = case doMulByWord# mba lcA lA (indexWordArray# lB 0#) s of
-         (# s', carry #) -> goN mba carry 1# s'
-
-      goN !mba !carry !i s
+      go !mba !carry !i s
          | isTrue# (i ==# lcB) = case carry of
                0## -> shrinkMS mba 1# s
                _   -> s
          | otherwise = case doMulByWordAt# mba lcA lA (indexWordArray# lB i) i s of
-              (# s', carry' #) -> goN mba carry' (i +# 1#) s'
+              (# s', carry' #) -> go mba carry' (i +# 1#) s'
 
 doMulByWordAt# :: MutableByteArray# d -> Int# -> ByteArray# -> Word# -> Int# -> State# d -> (# State# d, Word# #)
 doMulByWordAt# !mba !lcA   _ !0## !k !s0 = case writeWordArray# mba (lcA +# k) 0## s0 of
-                                       s1 -> (# s1, 0## #)
+                                             s1 -> (# s1, 0## #)
 doMulByWordAt# !mba !lcA !lA !w   !k !s0 = go 0# 0## s0
    where
       go !i !carry s
@@ -602,6 +601,27 @@ doMulByWordAt# !mba !lcA !lA !w   !k !s0 = go 0# 0## s0
                    !carry'         = add1by1_small# ci' ci''
                in case writeWordArray# mba (i +# k) ri s' of
                      s2 -> go (i +# 1#) carry' s2
+
+-- | Perform multiplication by a single Word
+-- MBA = BA * Word
+-- If MBA is too large, higher limbs stay garbage.
+-- Return the last written value (the carry)
+doMulByWord# :: MutableByteArray# s -> Int# -> ByteArray# -> Word# -> State# s -> (# State# s, Word# #)
+doMulByWord# !mba !lcA   _ !0## s0 = case setByteArray# mba 0# (limbsToBytes# lcA +# 1#) 0# s0 of
+                                       s1 -> (# s1, 0## #)
+doMulByWord# !mba !lcA !lA !w   s0 = go 0# 0## s0
+   where
+      go !i !carry s
+         | isTrue# (i ==# lcA) = case writeWordArray# mba lcA carry s of
+                                    s1 -> (# s1, carry #)
+         | otherwise           =
+            let !a              = indexWordArray# lA i
+                !(# ci' ,ri' #) = mul1by1_large# a w
+                !(# ci'',ri  #) = add1by1_large# ri' carry
+                !carry'         = add1by1_small# ci' ci''
+            in case writeWordArray# mba i ri s of
+                  s2 -> go (i +# 1#) carry' s2
+               
 
 -- | Multiply by a Word#
 bigNatMulByWord# :: BigNat -> Word# -> BigNat
@@ -623,26 +643,6 @@ bigNatMulByWord :: BigNat -> Word -> BigNat
 bigNatMulByWord a (W# w) = bigNatMulByWord# a w
 
 
--- | Perform multiplication by a single Word
--- MBA = BA * Word
--- If MBA is too large, higher limbs stay garbage.
--- Return the last written value (the carry)
-doMulByWord# :: MutableByteArray# s -> Int# -> ByteArray# -> Word# -> State# s -> (# State# s, Word# #)
-doMulByWord# !mba !lcA   _ !0## s0 = case setByteArray# mba 0# (limbsToBytes# lcA) 0# s0 of
-                                       s1 -> (# s1, 0## #)
-doMulByWord# !mba !lcA !lA !w   s0 = go 0# 0## s0
-   where
-      go !i !carry s
-         | isTrue# (i ==# lcA) = case writeWordArray# mba i carry s of
-                                    s1 -> (# s1, carry #)
-         | otherwise           =
-            let !a              = indexWordArray# lA i
-                !(# ci' ,ri' #) = mul1by1_large# a w
-                !(# ci'',ri  #) = add1by1_large# ri' carry
-                !carry'         = add1by1_small# ci' ci''
-            in case writeWordArray# mba i ri s of
-                  s2 -> go (i +# 1#) carry' s2
-               
 
 -- | BigNat bit test
 bigNatTestBit :: BigNat -> Word -> Bool
