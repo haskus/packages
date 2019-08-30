@@ -21,6 +21,9 @@ module Haskus.Number.Integer
    , integerCanon
    , integerAdd
    , integerAddInt#
+   , integerSub
+   , integerSubInt#
+   , integerSignum
    )
 where
 
@@ -51,6 +54,8 @@ instance Num Integer where
    abs         = integerAbs
    negate      = integerNegate
    (+)         = integerAdd
+   (-)         = integerSub
+   signum      = integerSignum
 
 
 -- | Eq for Integer
@@ -132,33 +137,40 @@ integerCanon a@(INeg b)
 
 -- | Add for Integer
 integerAdd :: Integer -> Integer -> Integer
-integerAdd (ISmall x) (ISmall y)  = integerAddInt# (ISmall x) y
-integerAdd a          (ISmall 0#) = a
-integerAdd (ISmall 0#) b          = b
-integerAdd (ISmall x) (IPos y)    = integerAddInt# (IPos y) x
-integerAdd (ISmall x) (INeg y)    = integerAddInt# (INeg y) x
-integerAdd (IPos y)   (ISmall x)  = integerAddInt# (IPos y) x
-integerAdd (INeg y)   (ISmall x)  = integerAddInt# (INeg y) x
+integerAdd x          (ISmall y)  = integerAddInt# x y
+integerAdd (ISmall x) y           = integerAddInt# y x
 integerAdd (IPos x)   (IPos y)    = IPos (bigNatAdd x y)
 integerAdd (INeg x)   (INeg y)    = INeg (bigNatAdd x y)
-integerAdd (IPos x) (INeg y) = case bigNatCompare x y of
+integerAdd (IPos x)   (INeg y)    = case bigNatCompare x y of
    EQ -> ISmall 0#
    GT -> integerCanon (IPos (bigNatSub_nocheck x y))
    LT -> integerCanon (INeg (bigNatSub_nocheck y x))
-integerAdd (INeg y) (IPos x) = case bigNatCompare x y of
+integerAdd (INeg y)   (IPos x)    = case bigNatCompare x y of
    EQ -> ISmall 0#
    GT -> integerCanon (IPos (bigNatSub_nocheck x y))
    LT -> integerCanon (INeg (bigNatSub_nocheck y x))
+
+-- | Subtract integers
+integerSub :: Integer -> Integer -> Integer
+integerSub x (ISmall y) = integerSubInt# x y
+integerSub x (IPos y)   = integerAdd x (INeg y)
+integerSub x (INeg y)   = integerAdd x (IPos y)
+
+-- | Make a big Integer
+--
+-- Warning: the returned Integer is not a valid one!
+-- This function allows the use of BigNat functions for small Integer
+makeBigInteger# :: Int# -> Integer
+makeBigInteger# x
+   | isTrue# (x <# 0#)  = INeg (bigNatFromWord# (int2Word# (negateInt# x)))
+   | otherwise          = IPos (bigNatFromWord# (int2Word# x))
 
 -- | Integer add Int#
 integerAddInt# :: Integer -> Int# -> Integer
 integerAddInt# (ISmall x) y   = case addIntC# x y of
    (# s, 0# #) -> ISmall s
-   _           -> if
-      | isTrue# (x ==# 0#) -> ISmall y
-      | isTrue# (x <# 0#)  -> integerAddInt# (INeg (bigNatFromWord# (int2Word# (negateInt# x)))) y
-      | otherwise          -> integerAddInt# (IPos (bigNatFromWord# (int2Word# x))) y
-
+   _           -> integerAddInt# (makeBigInteger# x) y
+integerAddInt# a        0# = a
 integerAddInt# (IPos x) y
    | isTrue# (y ># 0#) = IPos (bigNatAddWord# x (int2Word# y))
    | I# y == minBound  = IPos (bigNatSubWord# x (int2Word# y))
@@ -167,3 +179,27 @@ integerAddInt# (INeg x) y
    | I# y == minBound  = INeg (bigNatAddWord# x (int2Word# y))
    | isTrue# (y <# 0#) = INeg (bigNatAddWord# x (int2Word# (negateInt# y)))
    | otherwise         = integerCanon (INeg (bigNatSubWord# x (int2Word# y)))
+
+-- | Subtract an Int#
+integerSubInt# :: Integer -> Int# -> Integer
+integerSubInt# (ISmall x) y = case subIntC# x y of
+   (# s, 0# #) -> ISmall s
+   _           -> integerSubInt# (makeBigInteger# x) y
+integerSubInt# a        0# = a
+integerSubInt# (IPos x) y
+   | isTrue# (y ># 0#) = integerCanon (IPos (bigNatSubWord# x (int2Word# y)))
+   | I# y == minBound  = IPos (bigNatAddWord# x (int2Word# y))
+   | otherwise         = IPos (bigNatAddWord# x (int2Word# (negateInt# y)))
+integerSubInt# (INeg x) y
+   | I# y == minBound  = integerCanon (INeg (bigNatSubWord# x (int2Word# y)))
+   | isTrue# (y <# 0#) = integerCanon (INeg (bigNatSubWord# x (int2Word# (negateInt# y))))
+   | otherwise         = INeg (bigNatAddWord# x (int2Word# y))
+
+-- | Signum for Integer
+integerSignum :: Integer -> Integer
+integerSignum (ISmall 0#) = ISmall 0#
+integerSignum (ISmall i)
+   | isTrue# (i ># 0#) = ISmall 1#
+   | otherwise         = ISmall -1#
+integerSignum (IPos _) = ISmall 1#
+integerSignum (INeg _) = ISmall -1#
