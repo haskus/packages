@@ -5,6 +5,7 @@
 {-# LANGUAGE UnboxedSums #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE MultiWayIf #-}
 
 -- | Multi-precision Integer
 module Haskus.Number.Integer
@@ -14,7 +15,12 @@ module Haskus.Number.Integer
    , integerFromInt#
    , integerFromInt
    , integerFromInteger
+   , integerToInteger
    , integerAbs
+   , integerNegate
+   , integerCanon
+   , integerAdd
+   , integerAddInt#
    )
 where
 
@@ -31,6 +37,9 @@ data Integer
     | IPos   {-# UNPACK #-} !BigNat
     | INeg   {-# UNPACK #-} !BigNat
 
+instance Show Integer where
+   show = show . integerToInteger
+
 instance Eq Integer where
    (==) = integerEq
 
@@ -40,6 +49,8 @@ instance Ord Integer where
 instance Num Integer where
    fromInteger = integerFromInteger
    abs         = integerAbs
+   negate      = integerNegate
+   (+)         = integerAdd
 
 
 -- | Eq for Integer
@@ -78,11 +89,81 @@ integerFromInteger x
       where
          !(I# i) = fromIntegral x
 
+-- | Create a prelude Integer from an Integer
+integerToInteger :: Integer -> P.Integer
+integerToInteger (ISmall i) = fromIntegral (I# i)
+integerToInteger (IPos   n) = bigNatToInteger n
+integerToInteger (INeg   n) = negate (bigNatToInteger n)
+
 -- | Abs for Integer
 integerAbs :: Integer -> Integer
 integerAbs a@(ISmall x)
    | isTrue# (x >=# 0#) = a
-   | I# x /= minBound   = ISmall (negateInt# x)
-   | otherwise          = IPos (bigNatFromWord (fromIntegral (minBound :: Int)))
+   | I# x == minBound   = IPos (bigNatFromWord# (int2Word# x))
+   | otherwise          = ISmall (negateInt# x)
 integerAbs a@(IPos _)   = a
 integerAbs   (INeg x)   = IPos x
+
+-- | Negate for Integer
+integerNegate :: Integer -> Integer
+integerNegate (ISmall x)
+   | I# x == minBound   = IPos (bigNatFromWord# (int2Word# x))
+   | otherwise          = ISmall (negateInt# x)
+integerNegate (IPos x)  = INeg x
+integerNegate (INeg x)  = IPos x
+
+-- | Convert an integer which may not be in canonical form into a valid integer
+integerCanon :: Integer -> Integer
+integerCanon a@(ISmall _) = a
+integerCanon a@(IPos b)
+   | bigNatLimbCount b == 0 = ISmall 0#
+   | bigNatLimbCount b == 1
+   , bigNatLimb b 0# <= fromIntegral (maxBound :: Int)
+   , I# r <- fromIntegral (bigNatLimb b 0#)
+   = ISmall r
+   | otherwise = a
+integerCanon a@(INeg b)
+   | bigNatLimbCount b == 0 = ISmall 0#
+   | bigNatLimbCount b == 1
+   , bigNatLimb b 0# <= fromIntegral (minBound :: Int)
+   , I# r <- fromIntegral (bigNatLimb b 0#)
+   = ISmall (negateInt# r)
+   | otherwise = a
+
+-- | Add for Integer
+integerAdd :: Integer -> Integer -> Integer
+integerAdd (ISmall x) (ISmall y)  = integerAddInt# (ISmall x) y
+integerAdd a          (ISmall 0#) = a
+integerAdd (ISmall 0#) b          = b
+integerAdd (ISmall x) (IPos y)    = integerAddInt# (IPos y) x
+integerAdd (ISmall x) (INeg y)    = integerAddInt# (INeg y) x
+integerAdd (IPos y)   (ISmall x)  = integerAddInt# (IPos y) x
+integerAdd (INeg y)   (ISmall x)  = integerAddInt# (INeg y) x
+integerAdd (IPos x)   (IPos y)    = IPos (bigNatAdd x y)
+integerAdd (INeg x)   (INeg y)    = INeg (bigNatAdd x y)
+integerAdd (IPos x) (INeg y) = case bigNatCompare x y of
+   EQ -> ISmall 0#
+   GT -> integerCanon (IPos (bigNatSub_nocheck x y))
+   LT -> integerCanon (INeg (bigNatSub_nocheck y x))
+integerAdd (INeg y) (IPos x) = case bigNatCompare x y of
+   EQ -> ISmall 0#
+   GT -> integerCanon (IPos (bigNatSub_nocheck x y))
+   LT -> integerCanon (INeg (bigNatSub_nocheck y x))
+
+-- | Integer add Int#
+integerAddInt# :: Integer -> Int# -> Integer
+integerAddInt# (ISmall x) y   = case addIntC# x y of
+   (# s, 0# #) -> ISmall s
+   _           -> if
+      | isTrue# (x ==# 0#) -> ISmall y
+      | isTrue# (x <# 0#)  -> integerAddInt# (INeg (bigNatFromWord# (int2Word# (negateInt# x)))) y
+      | otherwise          -> integerAddInt# (IPos (bigNatFromWord# (int2Word# x))) y
+
+integerAddInt# (IPos x) y
+   | isTrue# (y ># 0#) = IPos (bigNatAddWord# x (int2Word# y))
+   | I# y == minBound  = IPos (bigNatSubWord# x (int2Word# y))
+   | otherwise         = integerCanon (IPos (bigNatSubWord# x (int2Word# (negateInt# y))))
+integerAddInt# (INeg x) y
+   | I# y == minBound  = INeg (bigNatAddWord# x (int2Word# y))
+   | isTrue# (y <# 0#) = INeg (bigNatAddWord# x (int2Word# (negateInt# y)))
+   | otherwise         = integerCanon (INeg (bigNatSubWord# x (int2Word# y)))

@@ -22,6 +22,7 @@ module Haskus.Number.BigNat
    , bigNatMul
    , bigNatQuotRem
    , bigNatCompare
+   , bigNatCompareWord
    , bigNatOr
    , bigNatAnd
    , bigNatXor
@@ -31,8 +32,10 @@ module Haskus.Number.BigNat
    , bigNatLimbCount
    , bigNatTestBit
    -- * Primitives
+   , bigNatLimb
    , bigNatMulByWord
    , bigNatMulByWord#
+   , bigNatSubWord#
    , bigNatFromWord#
    , bigNatFrom2LimbsMS
    , bigNatToInteger
@@ -284,6 +287,10 @@ bigNatLimbsLS n@(BigNat ba)
          | i == lc   = []
          | otherwise = W# (indexWordArray# ba i#) : goLimbs (i+1)
 
+-- | Get a limb
+bigNatLimb :: BigNat -> Int# -> Word
+bigNatLimb (BigNat ba) i = W# (indexWordArray# ba i)
+
 -- | Equality
 bigNatEq :: BigNat -> BigNat -> Bool
 bigNatEq n1 n2
@@ -303,6 +310,13 @@ bigNatCompare a b
          go ~(x:xs) ~(y:ys) = case compare x y of
             EQ -> go xs ys
             r  -> r
+
+-- | Compare with a Word
+bigNatCompareWord :: BigNat -> Word -> Ordering
+bigNatCompareWord a@(BigNat lA) w
+   | bigNatLimbCount a == 0 = compare 0 w
+   | bigNatLimbCount a /= 1 = GT
+   | otherwise              = compare (W# (indexWordArray# lA 0#)) w
 
 -- | Add two bigNats
 bigNatAdd :: BigNat -> BigNat -> BigNat
@@ -653,6 +667,12 @@ bigNatTestBit n@(BigNat ba) i
       lc       = bigNatLimbCount n
       (q,r)    = quotRem i WSBITS
       !(I# q#) = fromIntegral q
+
+-- | Subtract a Word from a BigNat (unchecked)
+bigNatSubWord# :: BigNat -> Word# -> BigNat
+bigNatSubWord# x w =
+   -- FIXME: implement faster subtraction instead
+   bigNatSub_nocheck x (bigNatFromWord# w)
 
 -- | Subtract two bigNats (classical algorithm)
 bigNatSub :: BigNat -> BigNat -> Maybe BigNat
