@@ -28,13 +28,8 @@ import GHC.Exts
 -- Invariant: small values (and 0) use ISmall
 data Integer
     = ISmall !Int#
-    | IBig   !Sign {-# UNPACK #-} !BigNat
-
-data Sign
-   = Pos
-   | Neg
-   deriving (Show,Eq,Ord)
-
+    | IPos   {-# UNPACK #-} !BigNat
+    | INeg   {-# UNPACK #-} !BigNat
 
 instance Eq Integer where
    (==) = integerEq
@@ -49,23 +44,22 @@ instance Num Integer where
 
 -- | Eq for Integer
 integerEq :: Integer -> Integer -> Bool
-integerEq (ISmall i1)  (ISmall i2) = isTrue# (i1 ==# i2)
-integerEq (IBig s1 n1) (IBig s2 n2)
-   = s1 == s2 && bigNatEq n1 n2
-integerEq (IBig _ _)   (ISmall _) = False
-integerEq (ISmall _)   (IBig _ _) = False
+integerEq (ISmall i1) (ISmall i2) = isTrue# (i1 ==# i2)
+integerEq (IPos n1)   (IPos n2)   = bigNatEq n1 n2
+integerEq (INeg n1)   (INeg n2)   = bigNatEq n1 n2
+integerEq _           _           = False
 
 -- | Compare for Integer
 integerCompare :: Integer -> Integer -> Ordering
-integerCompare (ISmall a)     (ISmall b) = compare (I# a) (I# b)
-integerCompare (IBig Pos a) (IBig Pos b) = bigNatCompare a b
-integerCompare (IBig Neg a) (IBig Neg b) = bigNatCompare b a
-integerCompare (IBig Pos _) (IBig Neg _) = GT
-integerCompare (IBig Neg _) (IBig Pos _) = LT
-integerCompare (ISmall _)   (IBig Pos _) = LT
-integerCompare (ISmall _)   (IBig Neg _) = GT
-integerCompare (IBig Pos _) (ISmall _)   = GT
-integerCompare (IBig Neg _) (ISmall _)   = LT
+integerCompare (ISmall a) (ISmall b) = compare (I# a) (I# b)
+integerCompare (IPos a)   (IPos b)   = bigNatCompare a b
+integerCompare (INeg a)   (INeg b)   = bigNatCompare b a
+integerCompare (IPos _)   (INeg _)   = GT
+integerCompare (INeg _)   (IPos _)   = LT
+integerCompare (ISmall _) (IPos _)   = LT
+integerCompare (ISmall _) (INeg _)   = GT
+integerCompare (IPos _)   (ISmall _) = GT
+integerCompare (INeg _)   (ISmall _) = LT
 
 -- | Create an Integer from an Int#
 integerFromInt# :: Int# -> Integer
@@ -78,8 +72,8 @@ integerFromInt (I# i) = ISmall i
 -- | Create an Integer from a prelude Integer
 integerFromInteger :: P.Integer -> Integer
 integerFromInteger x
-   | x < fromIntegral (minBound :: Int) = IBig Neg (bigNatFromInteger (abs x))
-   | x > fromIntegral (maxBound :: Int) = IBig Pos (bigNatFromInteger x)
+   | x < fromIntegral (minBound :: Int) = INeg (bigNatFromInteger (abs x))
+   | x > fromIntegral (maxBound :: Int) = IPos (bigNatFromInteger x)
    | otherwise                          = ISmall i
       where
          !(I# i) = fromIntegral x
@@ -89,6 +83,6 @@ integerAbs :: Integer -> Integer
 integerAbs a@(ISmall x)
    | isTrue# (x >=# 0#) = a
    | I# x /= minBound   = ISmall (negateInt# x)
-   | otherwise          = IBig Pos (bigNatFromWord (fromIntegral (minBound :: Int)))
-integerAbs a@(IBig Pos _) = a
-integerAbs   (IBig _   x) = IBig Pos x
+   | otherwise          = IPos (bigNatFromWord (fromIntegral (minBound :: Int)))
+integerAbs a@(IPos _)   = a
+integerAbs   (INeg x)   = IPos x
