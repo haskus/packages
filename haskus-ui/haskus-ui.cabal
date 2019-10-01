@@ -9,10 +9,10 @@ cabal-version: 1.12
 name:           haskus-ui
 version:        0.1
 synopsis:       User interface
-description:    Please see the README on Github at <https://github.com/haskus/haskus-packages/#readme>
+description:    Please see the README on Github at <https://github.com/haskus/packages/#readme>
 category:       UI
-homepage:       https://github.com/haskus/haskus-packages#readme
-bug-reports:    https://github.com/haskus/haskus-packages/issues
+homepage:       https://github.com/haskus/packages#readme
+bug-reports:    https://github.com/haskus/packages/issues
 author:         Sylvain HENRY
 maintainer:     sylvain@haskus.fr
 copyright:      Sylvain HENRY 2018
@@ -22,7 +22,7 @@ build-type:     Simple
 
 source-repository head
   type: git
-  location: https://github.com/haskus/haskus-packages
+  location: https://github.com/haskus/packages
 
 library
   exposed-modules:

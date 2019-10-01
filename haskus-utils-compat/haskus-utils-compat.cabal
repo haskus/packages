@@ -16,7 +16,7 @@ description:
 
 source-repository head
   type: git
-  location: git://github.com/haskus/haskus-packages.git
+  location: git://github.com/haskus/packages.git
 
 library
   exposed-modules:

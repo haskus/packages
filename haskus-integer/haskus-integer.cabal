@@ -8,9 +8,9 @@ cabal-version: 1.12
 
 name:           haskus-integer
 version:        0.1
-description:    Please see the README on Github at <https://github.com/haskus/haskus-packages/#readme>
-homepage:       https://github.com/haskus/haskus-packages#readme
-bug-reports:    https://github.com/haskus/haskus-packages/issues
+description:    Please see the README on Github at <https://github.com/haskus/packages/#readme>
+homepage:       https://github.com/haskus/packages#readme
+bug-reports:    https://github.com/haskus/packages/issues
 author:         Sylvain HENRY
 maintainer:     sylvain@haskus.fr
 copyright:      Sylvain HENRY 2019
@@ -20,7 +20,7 @@ build-type:     Simple
 
 source-repository head
   type: git
-  location: https://github.com/haskus/haskus-packages
+  location: https://github.com/haskus/packages
 
 library
   exposed-modules:

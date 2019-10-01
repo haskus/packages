@@ -1,6 +1,6 @@
 name:                haskus-ui
 version:             0.1
-github:              "haskus/haskus-packages"
+github:              "haskus/packages"
 license:             BSD3
 author:              "Sylvain HENRY"
 maintainer:          "sylvain@haskus.fr"
@@ -10,7 +10,7 @@ copyright:           "Sylvain HENRY 2018"
 synopsis:            User interface
 category:            UI
 
-description:         Please see the README on Github at <https://github.com/haskus/haskus-packages/#readme>
+description:         Please see the README on Github at <https://github.com/haskus/packages/#readme>
 
 dependencies:
 - base >= 4.8 && < 5
