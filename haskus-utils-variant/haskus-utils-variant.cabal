@@ -29,6 +29,7 @@ library
     Haskus.Utils.VariantF
     Haskus.Utils.EADT
     Haskus.Utils.EADT.TH
+    Haskus.Utils.EGADT
 
   other-modules:
 
