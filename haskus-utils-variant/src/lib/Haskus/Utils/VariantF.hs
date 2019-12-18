@@ -347,7 +347,7 @@ deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
 -- BottomUp
 ----------------------------------------
 
-class BottomUp c fs a where
+class Functor (VariantF fs) => BottomUp c fs a where
    toBottomUp :: (forall f. c f => f a -> a) -> (VariantF fs a -> a)
 
 instance BottomUp c '[] a where
@@ -356,6 +356,7 @@ instance BottomUp c '[] a where
 
 instance forall c a fs f.
    ( BottomUp c fs a
+   , Functor f
    , c f
    ) => BottomUp c (f ':fs) a where
    {-# INLINABLE toBottomUp #-}
@@ -367,7 +368,7 @@ instance forall c a fs f.
 -- BottomUpOrig
 ----------------------------------------
 
-class BottomUpOrig c fs t a where
+class Functor (VariantF fs) => BottomUpOrig c fs t a where
    toBottomUpOrig :: (forall f. c f => f (t,a) -> a) -> (VariantF fs (t,a) -> a)
 
 instance BottomUpOrig c '[] t a where
@@ -376,6 +377,7 @@ instance BottomUpOrig c '[] t a where
 
 instance forall c a fs f t.
    ( BottomUpOrig c fs t a
+   , Functor f
    , c f
    ) => BottomUpOrig c (f ':fs) t a where
    {-# INLINABLE toBottomUpOrig #-}
@@ -388,7 +390,7 @@ instance forall c a fs f t.
 -- TopDownStop
 ----------------------------------------
 
-class TopDownStop c fs a where
+class Functor (VariantF fs) => TopDownStop c fs a where
    toTopDownStop :: (forall f. c f => TopDownStopT a f) -> TopDownStopT a (VariantF fs)
 
 instance TopDownStop c '[] a where
@@ -397,6 +399,7 @@ instance TopDownStop c '[] a where
 
 instance forall c a fs f.
    ( TopDownStop c fs a
+   , Functor f
    , c f
    ) => TopDownStop c (f ':fs) a where
    {-# INLINABLE toTopDownStop #-}
