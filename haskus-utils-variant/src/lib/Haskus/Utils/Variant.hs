@@ -978,23 +978,23 @@ traverseVariant_ f v = void (traverseVariant @c @a f' v)
 
 
 
-class ReduceVariant c r (b :: [*]) where
+class ReduceVariant c (b :: [*]) where
    reduceVariant' :: (forall a. c a => a -> r) -> Word -> Any -> r
 
-instance ReduceVariant c r '[] where
+instance ReduceVariant c '[] where
    {-# INLINABLE reduceVariant' #-}
    reduceVariant' _ = undefined
 
 instance
-   ( ReduceVariant c r xs
+   ( ReduceVariant c xs
    , c x
-   ) => ReduceVariant c r (x ': xs)
+   ) => ReduceVariant c (x ': xs)
    where
       {-# INLINABLE reduceVariant' #-}
       reduceVariant' f t v =
          case t of
             0 -> f (unsafeCoerce v :: x)
-            n -> reduceVariant' @c @r @xs f (n-1) v
+            n -> reduceVariant' @c @xs f (n-1) v
 
 -- | Reduce a variant to a single value by using a class function. You need to
 -- specify the constraints required by the modifying function.
@@ -1002,11 +1002,12 @@ instance
 -- Usage:
 --    reduceVariant @Show show v
 --
-reduceVariant :: forall c r (a :: [*]).
-   ( ReduceVariant c r a
-   ) => (forall x. c x => x -> r) -> V a  -> r
+reduceVariant :: forall c (a :: [*]) r.
+   ( ReduceVariant c a
+   ) => (forall x. c x => x -> r) -> V a -> r
 {-# INLINABLE reduceVariant #-}
-reduceVariant f (Variant t a) = reduceVariant' @c @r @a f t a
+reduceVariant f (Variant t a) = reduceVariant' @c @a f t a
+
 
 
 -----------------------------------------------------------
