@@ -139,12 +139,21 @@ eval v e = bottomUp (toBottomUp @(Eval a) (eval' v)) e
 -- | Return all the valuation functions for a list of atoms
 --
 -- i.e. all the combinations of True/False values for each atom.
-allValuations :: Eq a => [a] -> [a -> Bool]
-allValuations = go (const False)
+atomsValuations :: Eq a => [a] -> [a -> Bool]
+atomsValuations = go (const False)
    where
       go v []     = [v]
       go v (x:xs) = go (\u -> if u == x then False else v u) xs
                     ++ go (\u -> if u == x then True else v u) xs
+
+-- | Return all the valuation functions for a list of atoms
+--
+-- i.e. all the combinations of True/False values for each atom.
+valuations :: forall a xs.
+   ( Eq a
+   , BottomUp (Atoms a) xs (Set a)
+   ) => EADT xs -> [a -> Bool]
+valuations f = atomsValuations (Set.toList (atoms @a f))
 
 -- | Show the truth table of a formula
 --
@@ -165,7 +174,7 @@ truthTableStr :: forall a xs.
    , BottomUp (Atoms a) xs (Set a)
    , BottomUp (Eval a) xs Bool
    ) => EADT xs -> String
-truthTableStr f = mconcat (hdr:fmap row (allValuations as))
+truthTableStr f = mconcat (hdr:fmap row (atomsValuations as))
    where
       tabs  = concat . intersperse " "
       as    = Set.toList (atoms @a f)
@@ -176,3 +185,50 @@ truthTableStr f = mconcat (hdr:fmap row (allValuations as))
       shB False = '0'
       shB True  = '1'
 
+-- | Return True for all for all valuations?
+--
+-- >>> let x = (Atom 'a' `Or` Tru) :: F Char
+-- >>> putStr (truthTableStr @Char x)
+-- 'a' formula
+-- 0   1
+-- 1   1
+-- >>> tautology @Char x
+-- True
+tautology :: forall a xs.
+   ( Eq a
+   , BottomUp (Eval a) xs Bool
+   , BottomUp (Atoms a) xs (Set a)
+   ) => EADT xs -> Bool
+tautology f = and [ eval @a v f | v <- valuations f]
+
+-- | Return False for all for all valuations?
+--
+-- >>> let x = (Atom 'a' `And` Fals) :: F Char
+-- >>> putStr (truthTableStr @Char x)
+-- 'a' formula
+-- 0   0
+-- 1   0
+-- >>> unsatisfiable @Char x
+-- True
+unsatisfiable :: forall a xs.
+   ( Eq a
+   , BottomUp (Eval a) xs Bool
+   , BottomUp (Atoms a) xs (Set a)
+   ) => EADT xs -> Bool
+unsatisfiable f = not (satisfiable @a f)
+
+-- | Return True for at least one valuation?
+--
+-- >>> let x = (Atom 'a' `Or` Fals) :: F Char
+-- >>> putStr (truthTableStr @Char x)
+-- 'a' formula
+-- 0   0
+-- 1   1
+-- >>> satisfiable @Char x
+-- True
+satisfiable :: forall a xs.
+   ( Eq a
+   , BottomUp (Eval a) xs Bool
+   , BottomUp (Atoms a) xs (Set a)
+   ) => EADT xs -> Bool
+satisfiable f = or [ eval @a v f | v <- valuations f]
