@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}
@@ -52,6 +53,10 @@ import Haskus.Utils.Types
 import Haskus.Utils.Variant.VEither
 
 import Control.Monad.Catch
+#if MIN_VERSION_base(4,12,0) && !MIN_VERSION_base(4,13,0)
+import qualified Control.Monad.Fail
+import           Control.Monad.Fail ( MonadFail )
+#endif
 
 newtype Excepts es m a = Excepts (m (VEither es a))
 
@@ -153,8 +158,11 @@ instance (Monad m) => Monad (Excepts es m) where
             VLeft es -> return (VLeft es)
             VRight x -> runE (k x)
 
-    {-# INLINABLE fail #-}
-    fail = Excepts . fail
+#if MIN_VERSION_base(4,12,0)
+instance (MonadFail m) => MonadFail (Excepts es m) where
+#endif
+   {-# INLINABLE fail #-}
+   fail = Excepts . fail
 
 instance MonadTrans (Excepts e) where
     {-# INLINABLE lift #-}
