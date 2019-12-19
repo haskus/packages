@@ -39,7 +39,6 @@ import Haskus.Utils.Types.List
 import Haskus.Utils.Types
 import Haskus.Utils.ContFlow
 
-import Data.Functor.Classes
 import GHC.Exts (Constraint)
 
 -- $setup

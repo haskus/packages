@@ -59,7 +59,6 @@ import Haskus.Utils.Types
 
 import Data.Bifunctor
 import Control.DeepSeq
-import Data.Functor.Classes
 
 -- $setup
 -- >>> :set -XDataKinds

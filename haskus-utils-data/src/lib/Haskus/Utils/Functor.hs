@@ -9,6 +9,7 @@
 -- | Functor helpers
 module Haskus.Utils.Functor
    ( module Data.Functor.Foldable
+   , module Data.Functor.Classes
    , BottomUpT
    , bottomUp
    , BottomUpOrigT
@@ -24,6 +25,7 @@ module Haskus.Utils.Functor
 where
 
 import Data.Functor.Foldable hiding (ListF(..))
+import Data.Functor.Classes
 
 type Algebra    f a   = f a -> a
 type CoAlgebra  f a   = a -> f a
