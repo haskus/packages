@@ -15,7 +15,9 @@ dependencies:
 - base >= 4.8 && < 5
 - haskus-utils
 - haskus-utils-data
+- haskus-utils-variant
 - linear
+- containers
 
 ghc-options: -Wall -O
 
@@ -26,6 +28,7 @@ library:
       - Haskus.Maths.Geometry.Line
       - Haskus.Maths.Geometry.Segment
       - Haskus.Maths.Geometry.Point
+      - Haskus.Maths.Logic.Propositional
 
 tests:
    main-tests:
