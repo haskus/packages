@@ -22,7 +22,6 @@ import Haskus.Utils.Functor
 import Haskus.Utils.EADT
 import Haskus.Utils.EADT.TH
 import Haskus.Utils.Types
-import Data.Functor.Classes
 
 -------------------------------
 -- List EADT

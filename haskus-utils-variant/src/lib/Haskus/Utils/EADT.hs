@@ -36,10 +36,9 @@ import Haskus.Utils.VariantF
 import Haskus.Utils.Variant
 import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
+import Haskus.Utils.Types.Constraint
 import Haskus.Utils.Types
 import Haskus.Utils.ContFlow
-
-import GHC.Exts (Constraint)
 
 -- $setup
 -- >>> :set -XDataKinds

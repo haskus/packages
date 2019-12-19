@@ -108,7 +108,7 @@ module Haskus.Utils.Variant
 where
 
 import Unsafe.Coerce
-import GHC.Exts (Any,Constraint)
+import GHC.Exts (Any)
 import Data.Typeable
 import Control.DeepSeq
 
