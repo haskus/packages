@@ -208,33 +208,32 @@ type family Generate (n :: Nat) (m :: Nat) :: [Nat] where
 
 -- | Check that a type is member of a type list
 type family CheckMember (a :: k) (l :: [k]) :: Constraint where
-   CheckMember a l = CheckMember' l a l
+   CheckMember a l = CheckMember' (MaybeIndexOf a l) a l
 
 -- | Helper for CheckMember
-type family CheckMember' (i :: [k]) (a :: k) (l :: [k]) :: Constraint where
-   CheckMember' i a (a ': l) = ()
-   CheckMember' i a (b ': l) = CheckMember' i a l
-   CheckMember' i a '[]      = TypeError ( 'Text "`"
-                                     ':<>: 'ShowType a
-                                     ':<>: 'Text "'"
-                                     ':<>: 'Text " is not a member of "
-                                     ':<>: 'ShowType i)
+type family CheckMember' (i :: Nat) (a :: k) (l :: [k]) :: Constraint where
+   CheckMember' 0 a l = TypeError ( 'Text "`"
+                              ':<>: 'ShowType a
+                              ':<>: 'Text "'"
+                              ':<>: 'Text " is not a member of "
+                              ':<>: 'ShowType l)
+   CheckMember' _ _ _ = ()
 
 
 -- | Check that a list is a subset of another
 type family CheckMembers (l1 :: [k]) (l2 :: [k]) :: Constraint where
-   CheckMembers l1 l1 = ()
-   CheckMembers l1 l2 = CheckMembers' l2 '[] l1 l2
+   CheckMembers '[]       l1 = ()
+   CheckMembers (x ': xs) l2 = CheckMembers' (MaybeIndexOf x l2) x xs (x ': xs) l2
 
 -- | Helper for CheckMembers
-type family CheckMembers' (i :: [k]) (e :: [k]) (l1 :: [k]) (l2 :: [k]) :: Constraint where
-   CheckMembers' i e '[] '[] = TypeError (   'ShowType e
-                                       ':$$: 'Text "is not a subset of"
-                                       ':$$: 'ShowType i)
-   CheckMembers' i e '[] l2  = ()
-   CheckMembers' i e (l ': ls) '[]       = CheckMembers' i (l ': e) ls i
-   CheckMembers' i e (x ': xs) (x ': ys) = CheckMembers' i e xs i
-   CheckMembers' i e (x ': xs) (y ': ys) = CheckMembers' i e (x ': xs) ys
+type family CheckMembers' (i :: Nat) (x :: k) (xs :: [k]) (l1 :: [k]) (l2 :: [k]) :: Constraint where
+   CheckMembers' 0 x _ l1 l2 = TypeError (     'ShowType l1
+                                         ':$$: 'Text "is not a subset of"
+                                         ':$$: 'ShowType l2
+                                         ':$$: 'ShowType x
+                                         ':<>: 'Text " is missing from the latter.")
+   CheckMembers' _ _ '[] _ _ = ()
+   CheckMembers' _ _ (x ': xs) l1 l2 = CheckMembers' (MaybeIndexOf x l2) x xs l1 l2
 
 -- | Get list indexes
 type family Indexes (l :: [k]) :: [Nat] where
@@ -276,13 +275,15 @@ type family NubHead (l :: [k]) :: [k] where
    NubHead (x ': xs) = x ': Remove x xs
 
 -- | Get the first index of a type
-type family IndexOf (a :: k) (l :: [k]) :: Nat where
-   IndexOf x xs = IndexOf' x xs xs
+type IndexOf (x :: k) (xs :: [k]) = IndexOf' (MaybeIndexOf x xs) x xs
 
 -- | Get the first index of a type
-type family IndexOf' (a :: k) (l :: [k]) (l2 :: [k]) :: Nat where
-   IndexOf' x (x ': xs) l2 = 0
-   IndexOf' y (x ': xs) l2 = 1 + IndexOf' y xs l2
+type family IndexOf' (i :: Nat) (a :: k) (l :: [k]) :: Nat where
+   IndexOf' 0 x l = TypeError ( 'ShowType x
+                          ':<>: 'Text " not found in list:"
+                          ':$$: 'Text " "
+                          ':<>: 'ShowType l )
+   IndexOf' i _ _ = i - 1
 
 -- | Get all the indexes of a type
 type family IndexesOf (a :: k) (l :: [k]) :: [Nat] where
@@ -301,13 +302,21 @@ type family MaybeIndexOf (a :: k) (l :: [k]) where
 -- | Helper for MaybeIndexOf
 type family MaybeIndexOf' (n :: Nat) (a :: k) (l :: [k]) where
    MaybeIndexOf' n x '[]       = 0
-   MaybeIndexOf' n x (x ': xs) = 1 + n
+   MaybeIndexOf' n x (x ': xs) = n + 1
    MaybeIndexOf' n x (y ': xs) = MaybeIndexOf' (n+1) x xs
 
 -- | Indexed access into the list
-type family Index (n :: Nat) (l :: [k]) = (r :: k) where
-   Index 0 (x ': _ ) = x
-   Index n (_ ': xs) = Index (n-1) xs
+type Index (n :: Nat) (l :: [k]) = Index' n l l
+
+-- | Indexed access into the list
+type family Index' (n :: Nat) (l :: [k]) (l2 :: [k]) = (r :: k) where
+   Index' 0 (x ': _ ) _  = x
+   Index' n (_ ': xs) l2 = Index' (n-1) xs l2
+   Index' n '[]       l2 = TypeError ( 'Text "Index "
+                                ':<>: 'ShowType n
+                                ':<>: 'Text " out of bounds for list:"
+                                ':$$: 'Text " "
+                                ':<>: 'ShowType l2 )
 
 -- | List membership test
 type family Elem (t :: b) (f :: b) (x :: k) (xs :: [k]) :: b where
@@ -354,9 +363,12 @@ type family Product' (x :: *) (ys :: [*]) :: [*] where
 --------------------------------------
 
 -- | Constraint: x member of xs
-type Member x xs =
-   ( x ~ Index (IndexOf x xs) xs
-   , KnownNat (IndexOf x xs)
+type family Member x xs :: Constraint where
+   Member x xs = MemberAtIndex (IndexOf x xs) x xs
+   
+type MemberAtIndex i x xs =
+   ( x ~ Index i xs
+   , KnownNat i
    )
 
 -- | Constraint: all the xs are members of ys
