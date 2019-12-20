@@ -7,10 +7,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Haskus.Utils.EGADT where
 
+import Unsafe.Coerce
+
+import Haskus.Utils.Monad
 import Haskus.Utils.Variant
+import Haskus.Utils.VariantF
 import Haskus.Utils.Types
 
 -- $setup
@@ -67,14 +76,26 @@ import Haskus.Utils.Types
 
 
 -- | An EADT with an additional type parameter
-newtype EGADT fs (t :: k) = EGADT (HVariantF fs (EGADT fs) t)
+newtype EGADT fs t = EGADT (HVariantF fs (EGADT fs) t)
 
-newtype HVariantF xs ast t = HVariantF (V (HApplyAll xs ast t))
+newtype HVariantF (fs :: [ (k -> Type) -> ( k -> Type) ]) (ast :: k -> Type) (t :: k)
+  = HVariantF (VariantF (ApplyAll ast fs) t)
 
-type family HApplyAll (xs :: [(k -> Type) -> (k -> Type)]) (ast :: k -> Type) (t :: k) :: [Type] where
-  HApplyAll '[]       _   _ = '[]
-  HApplyAll (x ': xs) ast t = (x ast t ': HApplyAll xs ast t)
+toHVariantAt
+  :: forall i fs ast a
+  .  KnownNat i
+  => (Index i fs) ast a -> VariantF (ApplyAll ast fs) a
+{-# INLINABLE toHVariantAt #-}
+toHVariantAt a = VariantF (Variant (natValue' @i) (unsafeCoerce a))
 
+fromHVariantAt
+  :: forall i fs ast a
+  .  KnownNat i
+  => VariantF (ApplyAll ast fs) a -> Maybe ((Index i fs) ast a)
+{-# INLINABLE fromHVariantAt #-}
+fromHVariantAt (VariantF (Variant t a)) = do
+  guard (t == natValue' @i)
+  return (unsafeCoerce a)
 
 -- Recursion schemes for higher-order functors
 
@@ -101,13 +122,21 @@ instance HFunctor (HVariantF xs) => HRecursive (EGADT xs) where
 instance HFunctor (HVariantF xs) => HCorecursive (EGADT xs) where
   hembed = EGADT
 
+type family f :<! fs :: Constraint where
+  f :<! fs = ( MemberAtIndex (IndexOf f fs) f fs )
+
+type family MemberAtIndex (i :: Nat) f fs :: Constraint where
+  MemberAtIndex i f fs = ( KnownNat i, Index i fs ~ f )
+
+type family (:<<!) xs ys :: Constraint where
+  '[]       :<<! ys = ()
+  (x ': xs) :<<! ys = (x :<! ys, xs :<<! ys)
+
 -- | Pattern-match in an extensible GADT
-pattern VF :: forall e a f cs i fsa.
-   ( e ~ EGADT cs a  -- allow easy use of TypeApplication to set the EGADT type
-   , fsa ~ (HApplyAll cs (EGADT cs) a)
-   , i ~ IndexOf (f (EGADT cs) a) fsa
-   , Index i fsa ~ f (EGADT cs) a
-   , KnownNat i
-   , PopVariant (f (EGADT cs) a) fsa
-   ) => f (EGADT cs) a -> EGADT cs a
-pattern VF x = EGADT (HVariantF (VSilent x))
+pattern VF :: forall e a f fs.
+  ( e ~ EGADT fs a  -- allow easy use of TypeApplication to set the EGADT type
+  , f :<! fs
+  ) => f (EGADT fs) a -> EGADT fs a
+pattern VF x <- ( ( \ ( EGADT (HVariantF v) ) -> fromHVariantAt @(IndexOf f fs) @fs v ) -> Just x )
+  where
+    VF x = EGADT (HVariantF (toHVariantAt @(IndexOf f fs) @fs x))
