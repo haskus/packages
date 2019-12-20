@@ -93,14 +93,14 @@ import Control.DeepSeq
 -- False
 
 -- | Recursive Functor-like Variant
-newtype VariantF (xs :: [* -> *]) e
+newtype VariantF (xs :: [t -> *]) (e :: t)
    = VariantF (V (ApplyAll e xs))
 
 -- | Apply its first argument to every element of the 2nd arg list
 --
 -- > ApplyAll e '[f,g,h] ==> '[f e, g e, h e]
 --
-type family ApplyAll e (xs :: [* -> k]) :: [k] where
+type family ApplyAll (e :: t) (xs :: [t -> k]) :: [k] where
    ApplyAll e '[]       = '[]
    ApplyAll e (f ': fs) = f e ': ApplyAll e fs
 
@@ -346,18 +346,17 @@ deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
 -- BottomUp
 ----------------------------------------
 
-class Functor (VariantF fs) => BottomUp c fs a where
-   toBottomUp :: (forall f. c f => f a -> a) -> (VariantF fs a -> a)
+class BottomUp c fs where
+   toBottomUp :: (forall f. c f => f a -> b) -> (VariantF fs a -> b)
 
-instance BottomUp c '[] a where
+instance BottomUp c '[] where
    {-# INLINABLE toBottomUp #-}
    toBottomUp _f = undefined
 
-instance forall c a fs f.
-   ( BottomUp c fs a
-   , Functor f
+instance forall c fs f.
+   ( BottomUp c fs
    , c f
-   ) => BottomUp c (f ':fs) a where
+   ) => BottomUp c (f ':fs) where
    {-# INLINABLE toBottomUp #-}
    toBottomUp f v = case popVariantFHead v of
       Right x -> f x
@@ -367,18 +366,17 @@ instance forall c a fs f.
 -- BottomUpOrig
 ----------------------------------------
 
-class Functor (VariantF fs) => BottomUpOrig c fs t a where
-   toBottomUpOrig :: (forall f. c f => f (t,a) -> a) -> (VariantF fs (t,a) -> a)
+class BottomUpOrig c fs where
+   toBottomUpOrig :: (forall f. c f => f (t,a) -> b) -> (VariantF fs (t,a) -> b)
 
-instance BottomUpOrig c '[] t a where
+instance BottomUpOrig c '[] where
    {-# INLINABLE toBottomUpOrig #-}
    toBottomUpOrig _f = undefined
 
-instance forall c a fs f t.
-   ( BottomUpOrig c fs t a
-   , Functor f
+instance forall c fs f.
+   ( BottomUpOrig c fs
    , c f
-   ) => BottomUpOrig c (f ':fs) t a where
+   ) => BottomUpOrig c (f ': fs) where
    {-# INLINABLE toBottomUpOrig #-}
    toBottomUpOrig f v = case popVariantFHead v of
       Right x -> f x
@@ -389,18 +387,18 @@ instance forall c a fs f t.
 -- TopDownStop
 ----------------------------------------
 
-class Functor (VariantF fs) => TopDownStop c fs a where
+class Functor (VariantF fs) => TopDownStop c fs where
    toTopDownStop :: (forall f. c f => TopDownStopT a f) -> TopDownStopT a (VariantF fs)
 
-instance TopDownStop c '[] a where
+instance TopDownStop c '[] where
    {-# INLINABLE toTopDownStop #-}
    toTopDownStop _f = undefined
 
-instance forall c a fs f.
-   ( TopDownStop c fs a
+instance forall c fs f.
+   ( TopDownStop c fs
    , Functor f
    , c f
-   ) => TopDownStop c (f ':fs) a where
+   ) => TopDownStop c (f ':fs) where
    {-# INLINABLE toTopDownStop #-}
    toTopDownStop f v = case popVariantFHead v of
       Right x -> first toVariantFHead (f x)
