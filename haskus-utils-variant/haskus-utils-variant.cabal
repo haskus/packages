@@ -39,7 +39,7 @@ library
    ,  deepseq
    ,  exceptions                >= 0.9
    ,  template-haskell
-   ,  haskus-utils-types        >= 1.4.1
+   ,  haskus-utils-types        >= 1.5
    ,  haskus-utils-data
 
   ghc-options:          -Wall
