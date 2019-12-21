@@ -999,9 +999,13 @@ instance
 -- | Reduce a variant to a single value by using a class function. You need to
 -- specify the constraints required by the modifying function.
 --
--- Usage:
---    reduceVariant @Show show v
+-- >>> let v = V "Yes" :: V '[String,Bool,Char]
+-- >>> reduceVariant @Show show v
+-- "\"Yes\""
 --
+-- >>> let n = V (10 :: Int) :: V '[Int,Word,Integer]
+-- >>> reduceVariant @Integral fromIntegral n :: Int
+-- 10
 reduceVariant :: forall c (a :: [*]) r.
    ( ReduceVariant c a
    ) => (forall x. c x => x -> r) -> V a -> r
