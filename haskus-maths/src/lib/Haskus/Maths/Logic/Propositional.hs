@@ -41,6 +41,7 @@ data AtomF a e = AtomF a    deriving (Show,Functor)
 data NotF    e = NotF e     deriving (Show,Functor)
 data AndF    e = AndF e e   deriving (Show,Functor)
 data OrF     e = OrF e e    deriving (Show,Functor)
+data XorF    e = XorF e e   deriving (Show,Functor)
 data ImpF    e = ImpF e e   deriving (Show,Functor)
 data IffF    e = IffF e e   deriving (Show,Functor)
 
@@ -51,16 +52,19 @@ instance Show a => ShowFormula (AtomF a) where
    showF' (AtomF a) = show a
 
 instance ShowFormula FalseF where
-   showF' _ = "False"
+   showF' _ = "⊥"
 
 instance ShowFormula TrueF where
-   showF' _ = "True"
+   showF' _ = "⊤"
 
 instance ShowFormula NotF where
    showF' (NotF e) = "¬" ++ e
 
 instance ShowFormula OrF where
    showF' (OrF x y) = "(" ++ x ++ " ⋁ " ++ y ++ ")"
+
+instance ShowFormula XorF where
+   showF' (XorF x y) = "(" ++ x ++ " ⊕ " ++ y ++ ")"
 
 instance ShowFormula AndF where
    showF' (AndF x y) = "(" ++ x ++ " ⋀ " ++ y ++ ")"
@@ -80,6 +84,7 @@ eadtPattern 'AtomF  "Atom"
 eadtPattern 'NotF   "Not"
 eadtPattern 'AndF   "And"
 eadtPattern 'OrF    "Or"
+eadtPattern 'XorF   "Xor"
 eadtPattern 'ImpF   "Imp"
 eadtPattern 'IffF   "Iff"
 
@@ -103,6 +108,9 @@ instance Ord a => Atoms a AndF where
 
 instance Ord a => Atoms a OrF where
    atoms' (OrF s1 s2) = Set.union s1 s2
+
+instance Ord a => Atoms a XorF where
+   atoms' (XorF s1 s2) = Set.union s1 s2
 
 instance Ord a => Atoms a ImpF where
    atoms' (ImpF s1 s2) = Set.union s1 s2
@@ -142,6 +150,9 @@ instance Eval a AndF where
 
 instance Eval a OrF where
    eval' _ (OrF p q) = p || q
+
+instance Eval a XorF where
+   eval' _ (XorF p q) = (p && not q) || (q && not p)
 
 instance Eval a ImpF where
    eval' _ (ImpF p q) = not p || q
