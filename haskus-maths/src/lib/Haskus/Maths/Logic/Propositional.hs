@@ -4,12 +4,14 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Haskus.Maths.Logic.Propositional where
 
@@ -41,6 +43,36 @@ data AndF    e = AndF e e   deriving (Show,Functor)
 data OrF     e = OrF e e    deriving (Show,Functor)
 data ImpF    e = ImpF e e   deriving (Show,Functor)
 data IffF    e = IffF e e   deriving (Show,Functor)
+
+class ShowFormula f where
+   showF' :: f String -> String
+
+instance Show a => ShowFormula (AtomF a) where
+   showF' (AtomF a) = show a
+
+instance ShowFormula FalseF where
+   showF' _ = "False"
+
+instance ShowFormula TrueF where
+   showF' _ = "True"
+
+instance ShowFormula NotF where
+   showF' (NotF e) = "¬" ++ e
+
+instance ShowFormula OrF where
+   showF' (OrF x y) = "(" ++ x ++ " ⋁ " ++ y ++ ")"
+
+instance ShowFormula AndF where
+   showF' (AndF x y) = "(" ++ x ++ " ⋀ " ++ y ++ ")"
+
+instance ShowFormula ImpF where
+   showF' (ImpF x y) = "(" ++ x ++ " => " ++ y ++ ")"
+
+instance ShowFormula IffF where
+   showF' (IffF x y) = "(" ++ x ++ " <=> " ++ y ++ ")"
+
+showF :: forall xs. BottomUpF ShowFormula xs => EADT xs -> String
+showF e = bottomUp (toBottomUp @ShowFormula showF') e
 
 eadtPattern 'FalseF "Fals"
 eadtPattern 'TrueF  "Tru"
@@ -232,3 +264,35 @@ satisfiable :: forall a xs.
    , BottomUpF (Atoms a) xs
    ) => EADT xs -> Bool
 satisfiable f = or [ eval @a v f | v <- valuations f]
+
+class Dual fs f where
+   dual' :: f (EADT fs) -> EADT fs
+
+instance TrueF :<: fs => Dual fs FalseF where
+   dual' _ = Tru
+
+instance FalseF :<: fs => Dual fs TrueF where
+   dual' _ = Fals
+
+instance AtomF a :<: fs => Dual fs (AtomF a) where
+   dual' a = VF a
+
+instance NotF :<: fs => Dual fs NotF where
+   dual' (NotF p) = Not p
+
+instance OrF :<: fs => Dual fs AndF where
+   dual' (AndF p q) = Or p q
+
+instance AndF :<: fs => Dual fs OrF where
+   dual' (OrF p q) = And p q
+
+-- | Compute the dual formula
+--
+-- >>> type F2 a = EADT '[FalseF,TrueF,AtomF a,NotF,AndF,OrF]
+-- >>> let x = (Atom 'a' `Or` Atom 'b') `And` Not (Atom 'c' `Or` Atom 'd') :: F2 Char
+-- >>> putStrLn (showF x)
+-- (('a' ⋁ 'b') ⋀ ¬('c' ⋁ 'd'))
+-- >>> putStrLn (showF (dual x))
+-- (('a' ⋀ 'b') ⋁ ¬('c' ⋀ 'd'))
+dual :: forall fs. (BottomUpF (Dual fs) fs) =>  EADT fs -> EADT fs
+dual e = bottomUp (toBottomUp @(Dual fs) dual') e
