@@ -85,7 +85,7 @@ instance Ord a => Atoms a IffF where
 -- fromList "abc"
 --
 atoms :: forall a xs.
-   BottomUp (Atoms a) xs (Set a)
+   BottomUpF (Atoms a) xs
    => EADT xs -> Set a
 atoms e = bottomUp (toBottomUp @(Atoms a) atoms') e
 
@@ -132,7 +132,7 @@ instance Eval a IffF where
 -- False
 --
 eval :: forall a xs.
-   BottomUp (Eval a) xs Bool
+   BottomUpF (Eval a) xs
    => (a -> Bool) -> EADT xs -> Bool
 eval v e = bottomUp (toBottomUp @(Eval a) (eval' v)) e
 
@@ -151,7 +151,7 @@ atomsValuations = go (const False)
 -- i.e. all the combinations of True/False values for each atom.
 valuations :: forall a xs.
    ( Eq a
-   , BottomUp (Atoms a) xs (Set a)
+   , BottomUpF (Atoms a) xs
    ) => EADT xs -> [a -> Bool]
 valuations f = atomsValuations (Set.toList (atoms @a f))
 
@@ -171,8 +171,8 @@ valuations f = atomsValuations (Set.toList (atoms @a f))
 truthTableStr :: forall a xs.
    ( Eq a
    , Show a
-   , BottomUp (Atoms a) xs (Set a)
-   , BottomUp (Eval a) xs Bool
+   , BottomUpF (Atoms a) xs
+   , BottomUpF (Eval a) xs
    ) => EADT xs -> String
 truthTableStr f = mconcat (hdr:fmap row (atomsValuations as))
    where
@@ -196,8 +196,8 @@ truthTableStr f = mconcat (hdr:fmap row (atomsValuations as))
 -- True
 tautology :: forall a xs.
    ( Eq a
-   , BottomUp (Eval a) xs Bool
-   , BottomUp (Atoms a) xs (Set a)
+   , BottomUpF (Eval a) xs
+   , BottomUpF (Atoms a) xs
    ) => EADT xs -> Bool
 tautology f = and [ eval @a v f | v <- valuations f]
 
@@ -212,8 +212,8 @@ tautology f = and [ eval @a v f | v <- valuations f]
 -- True
 unsatisfiable :: forall a xs.
    ( Eq a
-   , BottomUp (Eval a) xs Bool
-   , BottomUp (Atoms a) xs (Set a)
+   , BottomUpF (Eval a) xs
+   , BottomUpF (Atoms a) xs
    ) => EADT xs -> Bool
 unsatisfiable f = not (satisfiable @a f)
 
@@ -228,7 +228,7 @@ unsatisfiable f = not (satisfiable @a f)
 -- True
 satisfiable :: forall a xs.
    ( Eq a
-   , BottomUp (Eval a) xs Bool
-   , BottomUp (Atoms a) xs (Set a)
+   , BottomUpF (Eval a) xs
+   , BottomUpF (Atoms a) xs
    ) => EADT xs -> Bool
 satisfiable f = or [ eval @a v f | v <- valuations f]

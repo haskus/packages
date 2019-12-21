@@ -33,6 +33,6 @@ replaceVar :: forall n t fs.
    , t ~ EADT fs
    , Recursive t
    , Corecursive t
-   , TopDownStop (ReplaceVarF n fs) fs t
+   , TopDownStopF (ReplaceVarF n fs) fs
    ) => n -> t -> t -> t
 replaceVar n e x = topDownStop (toTopDownStop @(ReplaceVarF n fs) (replaceVarF n e)) x

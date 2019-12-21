@@ -22,6 +22,6 @@ class FreeVarsF n (f :: Type -> Type) where
 freeVars :: forall n t xs.
    ( Base t ~ VariantF xs
    , Recursive t
-   , BottomUp (FreeVarsF n) xs (Set n)
+   , BottomUpF (FreeVarsF n) xs
    ) => t -> Set n
 freeVars x = bottomUp (toBottomUp @(FreeVarsF n) freeVarsF) x

@@ -26,6 +26,6 @@ class PrettyPrintF (f :: Type -> Type) where
 prettyPrint :: forall t xs.
    ( Base t ~ VariantF xs
    , Recursive t
-   , BottomUp PrettyPrintF xs (Bool,String)
+   , BottomUpF PrettyPrintF xs
    ) => t -> String
 prettyPrint x = snd (bottomUp (toBottomUp @PrettyPrintF prettyPrintF) x)

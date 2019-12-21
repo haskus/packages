@@ -41,9 +41,12 @@ module Haskus.Utils.VariantF
    , contToVariantF
    , contToVariantFM
    -- * Algebras
+   , BottomUpF
    , BottomUp (..)
    , BottomUpOrig (..)
+   , BottomUpOrigF
    , TopDownStop (..)
+   , TopDownStopF
    -- * Reexport
    , NoConstraint
    , module Haskus.Utils.Functor
@@ -346,6 +349,9 @@ deriving newtype instance (NFData (V (ApplyAll e xs))) => NFData (VariantF xs e)
 -- BottomUp
 ----------------------------------------
 
+type family BottomUpF c fs :: Constraint where
+   BottomUpF c fs = (Functor (VariantF fs), BottomUp c fs)
+
 class BottomUp c fs where
    toBottomUp :: (forall f. c f => f a -> b) -> (VariantF fs a -> b)
 
@@ -365,6 +371,9 @@ instance forall c fs f.
 ----------------------------------------
 -- BottomUpOrig
 ----------------------------------------
+
+type family BottomUpOrigF c fs :: Constraint where
+   BottomUpOrigF c fs = (Functor (VariantF fs), BottomUpOrig c fs)
 
 class BottomUpOrig c fs where
    toBottomUpOrig :: (forall f. c f => f (t,a) -> b) -> (VariantF fs (t,a) -> b)
@@ -387,7 +396,10 @@ instance forall c fs f.
 -- TopDownStop
 ----------------------------------------
 
-class Functor (VariantF fs) => TopDownStop c fs where
+type family TopDownStopF c fs :: Constraint where
+   TopDownStopF c fs = (Functor (VariantF fs), TopDownStop c fs)
+
+class TopDownStop c fs where
    toTopDownStop :: (forall f. c f => TopDownStopT a f) -> TopDownStopT a (VariantF fs)
 
 instance TopDownStop c '[] where
