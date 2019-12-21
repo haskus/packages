@@ -93,23 +93,6 @@ fromHVariantAt (VariantF (Variant t a)) = do
   guard (t == natValue' @i)
   return (unsafeCoerce a)
 
--- Recursion schemes for higher-order functors
-
-type (~>) (f :: k -> Type) (g :: k -> Type) = forall (x :: k). f x -> g x
-infixr 0 ~>
-
-type family HBase (h :: k -> Type) :: (k -> Type) -> (k -> Type)
-
-class HFunctor (h :: (k -> Type) -> (k -> Type)) where
-  hmap :: (f ~> g) -> h f ~> h g
-
-class HFunctor (HBase h) => HRecursive (h :: k -> Type) where
-  hproject :: h ~> (HBase h) h
-
-class HFunctor (HBase h) => HCorecursive (h :: k -> Type) where
-  hembed :: (HBase h) h ~> h
-
-
 type instance HBase (EGADT xs) = HVariantF xs
 
 instance HFunctor (HVariantF xs) => HRecursive (EGADT xs) where
