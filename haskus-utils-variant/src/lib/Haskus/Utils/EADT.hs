@@ -26,6 +26,8 @@ module Haskus.Utils.EADT
    , popEADT
    , contToEADT
    , contToEADTM
+   , EADTShow (..)
+   , eadtShow
    -- * Reexport
    , module Haskus.Utils.Functor
    , module Haskus.Utils.VariantF
@@ -175,3 +177,11 @@ contToEADTM ::
                  (f (V (ApplyAll (EADT xs) xs)))
      -> f (EADT xs)
 contToEADTM f = EADT <$> contToVariantFM f
+
+
+class EADTShow f where
+   eadtShow' :: f String -> String
+
+-- | Show an EADT
+eadtShow :: forall xs. BottomUpF EADTShow xs => EADT xs -> String
+eadtShow = bottomUp (toBottomUp @EADTShow eadtShow')
