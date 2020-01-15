@@ -309,7 +309,7 @@ type family MaybeIndexOf' (n :: Nat) (a :: k) (l :: [k]) where
 type Index (n :: Nat) (l :: [k]) = Index' n l l
 
 -- | Indexed access into the list
-type family Index' (n :: Nat) (l :: [k]) (l2 :: [k]) = (r :: k) where
+type family Index' (n :: Nat) (l :: [k]) (l2 :: [k]) :: k where
    Index' 0 (x ': _ ) _  = x
    Index' n (_ ': xs) l2 = Index' (n-1) xs l2
    Index' n '[]       l2 = TypeError ( 'Text "Index "

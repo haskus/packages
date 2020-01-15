@@ -12,6 +12,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE CPP #-}
+
+#if MIN_VERSION_base(4,14,0)
+{-# LANGUAGE StandaloneKindSignatures #-}
+#endif
 
 -- | Tuple helpers
 module Haskus.Utils.Tuple
@@ -515,7 +520,12 @@ type family TypeReps xs where
 -- | Unboxed tuple
 --
 -- TODO: put this family into GHC
+#if MIN_VERSION_base(4,14,0)
+type Tuple# :: forall xs -> TYPE ('TupleRep (TypeReps xs))
+type family Tuple# xs = t | t -> xs where
+#else
 type family Tuple# xs = (t :: TYPE ('TupleRep (TypeReps xs))) | t -> xs where
+#endif
    Tuple# '[]                  = (##)
    Tuple# '[a]                 = (# a #)
    Tuple# '[a,b]               = (# a,b #)
