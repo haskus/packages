@@ -527,6 +527,15 @@ toVariant' :: forall a l.
 {-# INLINABLE toVariant' #-}
 toVariant' = toVariantAt @(IndexOf a l)
 
+
+-- | Put a value into a variant if possible
+--
+-- >>> toVariantMaybe "Test" :: Maybe (V '[Int,Float])
+-- Nothing
+--
+-- >>> toVariantMaybe "Test" :: Maybe (V '[Int,Float,String])
+-- Just "Test"
+--
 class ToVariantMaybe a xs where
    -- | Put a value into a Variant, when the Variant's row contains that type.
    toVariantMaybe :: a -> Maybe (V xs)
