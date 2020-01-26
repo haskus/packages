@@ -535,10 +535,11 @@ instance ToVariantMaybe a '[] where
    {-# INLINABLE toVariantMaybe #-}
    toVariantMaybe _ = Nothing
 
-instance forall a xs n.
+instance forall a xs n y ys.
       ( n ~ MaybeIndexOf a xs
       , KnownNat n
-      ) => ToVariantMaybe a xs
+      , xs ~ (y ': ys)
+      ) => ToVariantMaybe a (y ': ys)
    where
       {-# INLINABLE toVariantMaybe #-}
       toVariantMaybe a
