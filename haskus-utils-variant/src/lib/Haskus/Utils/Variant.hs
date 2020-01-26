@@ -103,6 +103,7 @@ module Haskus.Utils.Variant
    , toVariant'
    , LiftVariant'
    , PopVariant
+   , ToVariantMaybe(..)
    , showsVariant
    )
 where
@@ -526,6 +527,25 @@ toVariant' :: forall a l.
 {-# INLINABLE toVariant' #-}
 toVariant' = toVariantAt @(IndexOf a l)
 
+class ToVariantMaybe a xs where
+   -- | Put a value into a Variant, when the Variant's row contains that type.
+   toVariantMaybe :: a -> Maybe (V xs)
+
+instance ToVariantMaybe a '[] where
+   {-# INLINABLE toVariantMaybe #-}
+   toVariantMaybe _ = Nothing
+
+instance forall a xs n.
+      ( n ~ MaybeIndexOf a xs
+      , KnownNat n
+      ) => ToVariantMaybe a xs
+   where
+      {-# INLINABLE toVariantMaybe #-}
+      toVariantMaybe a
+         = case natValue' @n of
+            0 -> Nothing
+            n -> Just (Variant (n-1) (unsafeCoerce a))
+
 class PopVariant a xs where
    -- | Remove a type from a variant
    popVariant' :: V xs -> Either (V (Remove a xs)) a
@@ -598,6 +618,7 @@ type family (:<<) xs ys :: Constraint where
 -- We don't check that "x" is in "xs".
 type (:<?) x xs =
    ( PopVariant x xs
+   , ToVariantMaybe x xs
    )
 
 -- | Extract a type from a variant. Return either the value of this type or the
