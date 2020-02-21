@@ -34,7 +34,7 @@ library
   other-modules:
 
   build-depends:       
-     base                       >= 4.9 && < 5
+     base                       >= 4.12 && < 5
    , haskus-utils-types         >= 1.5
    , recursion-schemes          >= 5.0
    , containers                 >= 0.5
