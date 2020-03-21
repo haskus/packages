@@ -292,11 +292,12 @@ instance
    ( MonadIO m
    ) => GetMonad (BufferGetT (Buffer mut pin gc heap) m)
    where
-      getWord8  = getSomething 1 bufferReadWord8IO
-      getWord16 = getSomething 2 bufferReadWord16IO
-      getWord32 = getSomething 4 bufferReadWord32IO
-      getWord64 = getSomething 8 bufferReadWord64IO
-      getBuffer sz = getSomething sz \b off -> do
+      getSkipBytes n = getSomething n \_ _ -> return ()
+      getWord8       = getSomething 1 bufferReadWord8IO
+      getWord16      = getSomething 2 bufferReadWord16IO
+      getWord32      = getSomething 4 bufferReadWord32IO
+      getWord64      = getSomething 8 bufferReadWord64IO
+      getBuffer sz   = getSomething sz \b off -> do
          dest <- newBuffer sz
          copyBuffer b off dest 0 sz
          unsafeBufferFreeze dest

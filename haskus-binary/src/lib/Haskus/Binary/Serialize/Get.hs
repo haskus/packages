@@ -73,6 +73,9 @@ class Monad m => GetMonad m where
    -- optionally specified offset
    getBufferInto :: Word -> Buffer 'Mutable pin gc heap -> Maybe Word -> m ()
 
+   -- | Skip the given amount of bytes
+   getSkipBytes :: Word -> m ()
+
 
 -- | Get a Float64 with host order
 getFloat64 :: GetMonad m => m Float64
