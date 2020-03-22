@@ -1,0 +1,39 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 12776a9b0e5c02a753d84ff8d61cae278e2cfa73fa4289e27380cf08352abc8c
+
+name:           haskus-maps
+version:        0.1
+synopsis:       Geographic utilities
+description:    Please see the README on Github at <https://github.com/haskus/packages/#readme>
+category:       Geodesy
+homepage:       https://github.com/haskus/packages#readme
+bug-reports:    https://github.com/haskus/packages/issues
+author:         Sylvain HENRY
+maintainer:     sylvain@haskus.fr
+copyright:      Sylvain HENRY 2020
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/haskus/packages
+
+library
+  exposed-modules:
+      Haskus.Format.Shapefile
+  other-modules:
+      Paths_haskus_maps
+  hs-source-dirs:
+      src/lib
+  ghc-options: -Wall -O
+  build-depends:
+      base >=4.8 && <5
+    , haskus-binary
+    , haskus-utils
+  default-language: Haskell2010

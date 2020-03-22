@@ -16,6 +16,7 @@ packages:
 - haskus-time/
 - haskus-maths/
 - haskus-integer/
+- haskus-maps/
 
 extra-deps:
 - stm-containers-1.1.0.2

@@ -1,0 +1,28 @@
+name:                haskus-maps
+version:             0.1
+github:              "haskus/packages"
+license:             BSD3
+author:              "Sylvain HENRY"
+maintainer:          "sylvain@haskus.fr"
+copyright:           "Sylvain HENRY 2020"
+
+# Metadata used when publishing your package
+synopsis:            Geographic utilities
+category:            Geodesy
+
+description:         Please see the README on Github at <https://github.com/haskus/packages/#readme>
+
+dependencies:
+- base >= 4.8 && < 5
+- haskus-binary
+
+ghc-options: -Wall -O
+
+library:
+   source-dirs: src/lib
+   exposed-modules:
+      - Haskus.Format.Shapefile
+   dependencies:
+      - base >= 4.8 && < 5
+      - haskus-utils
+      - haskus-binary
