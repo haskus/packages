@@ -7,12 +7,21 @@
 module Haskus.Format.Shapefile
    ( Header (..)
    , readHeader
+   , readRecord
+   , readShapeFile
+   , Record (..)
    , RecordHeader (..)
-   , readRecordHeader
    , Shape (..)
    , Box (..)
    , Point (..)
-   , readRecordContents
+   , PointM (..)
+   , PointZ (..)
+   , MultiPoint (..)
+   , PolyLine (..)
+   , PatchType (..)
+   , Patch (..)
+   , MRange
+   , ZRange
    , IndexRecord (..)
    )
 where
@@ -126,6 +135,7 @@ data RecordHeader = RecordHeader
    { recordNumber        :: !Word32 -- ^ Record number (starting at 1)
    , recordContentLength :: !Word32 -- ^ Content size in 16-bit words
    }
+   deriving (Show)
 
 -- | Read a record header
 readRecordHeader :: GetMonad m => m RecordHeader
@@ -184,6 +194,7 @@ data Shape
    | SPolygonM    Box MRange (Polygon PointM)        -- ^ Counter-clockwise rings are holes. Rings are closed.
    | SPolygonZ    Box ZRange MRange (Polygon PointZ) -- ^ Counter-clockwise rings are holes. Rings are closed.
    | SMultiPatch  Box ZRange MRange [Patch]
+   deriving (Show)
 
 -- | Read a 2D Point
 readPoint :: GetMonad m => m Point
@@ -196,8 +207,15 @@ readBox = do
    y <- (,) <$> getFloat64LE <*> getFloat64LE
    return (Box x y)
 
-readRecordContents :: GetMonad m => m Shape
-readRecordContents = do
+data Record
+   = Record !RecordHeader !Shape
+   deriving (Show)
+
+readRecord :: GetMonad m => m Record
+readRecord = Record <$> readRecordHeader <*> readShape
+
+readShape :: GetMonad m => m Shape
+readShape = do
    shapeType <- fromShapeId <$> getWord32LE
 
    let
@@ -314,6 +332,21 @@ readRecordContents = do
          let patchs = zipWith Patch partTypes partPoints
          return (SMultiPatch box zrange mrange patchs)
 
+
+-- | Read a full shape fill
+readShapeFile :: GetMonad m => m (Header,[Record])
+readShapeFile = do
+   header <- readHeader
+   let go current rs
+         | current >= headerFileLength header
+         = return (header, reverse rs)
+
+         | otherwise = do
+            r@(Record h _) <- readRecord
+            let recLength = recordContentLength h * 2 -- record length are in 16-bit words
+            go (current+recLength) (r:rs)
+
+   go 100 [] -- size of the header
 
 -- | Index record in SHX file
 data IndexRecord = IndexRecord
