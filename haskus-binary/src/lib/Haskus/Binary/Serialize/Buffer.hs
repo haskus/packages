@@ -153,7 +153,7 @@ data BufferOverflow b = BufferOverflow
 data BufferPutState m b = BufferPutState
    { bufferPutBuffer :: !b                      -- ^ Buffer used for writing
    , bufferPutOffset :: !Word                   -- ^ Current offset
-   , bufferPutStrat  :: !(OverflowStrategy m b) -- ^ Extension stretegy
+   , bufferPutStrat  :: !(OverflowStrategy m b) -- ^ Extension strategy
    }
 
 -- | A Put monad than fails when there is not enough space in the target buffer
@@ -201,9 +201,9 @@ getPutOverflowStrategy = BufferPutT (bufferPutStrat <$> S.get)
 putSomething
    :: MonadIO m
    => Word
-   -> (Buffer Mutable pin fin heap -> Word -> t -> m ())
+   -> (Buffer 'Mutable pin fin heap -> Word -> t -> m ())
    -> t
-   -> BufferPutT (Buffer Mutable pin fin heap) m ()
+   -> BufferPutT (Buffer 'Mutable pin fin heap) m ()
 {-# INLINABLE putSomething #-}
 putSomething sz act v = putSomeThings sz $ Just \b off -> act b off v
 
@@ -211,8 +211,8 @@ putSomething sz act v = putSomeThings sz $ Just \b off -> act b off v
 putSomeThings
    :: MonadIO m
    => Word
-   -> Maybe (Buffer Mutable pin fin heap -> Word -> m ())
-   -> BufferPutT (Buffer Mutable pin fin heap) m ()
+   -> Maybe (Buffer 'Mutable pin fin heap -> Word -> m ())
+   -> BufferPutT (Buffer 'Mutable pin fin heap) m ()
 {-# INLINABLE putSomeThings #-}
 putSomeThings sz mact = do
    off <- getPutOffset
@@ -281,7 +281,7 @@ data BufferGetState m b = BufferGetState
    , bufferGetStrat  :: !(OverflowStrategy m b) -- ^ Extension stretegy
    }
 
--- | A Get monad than fails when there is not enough space in the target buffer
+-- | A Get monad over a Buffer
 newtype BufferGetT b m a
    = BufferGetT (StateT (BufferGetState m b) m a)
    deriving newtype (Functor, Applicative, Monad, MonadFail, MonadFix, MonadIO)
