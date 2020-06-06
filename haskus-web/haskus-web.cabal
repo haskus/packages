@@ -30,6 +30,7 @@ library
     Haskus.Web.JQuery
     Haskus.Web.Files
     Haskus.Web.Page
+    Haskus.Web.Server
 
   other-modules:
 
@@ -42,6 +43,11 @@ library
    ,  clay
    ,  lucid
    ,  containers
+   ,  wai
+   ,  warp
+   ,  warp-tls
+   ,  http-types
+
 
   ghc-options:          -Wall
   default-language:     Haskell2010
