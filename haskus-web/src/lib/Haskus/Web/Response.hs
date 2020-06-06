@@ -1,50 +1,36 @@
 module Haskus.Web.Response
-   ( sendJson
+   ( Response (..)
+   , sendJson
    , sendJS
    , sendPNG
    , sendJPG
-   , sendData
    , sendBinary
-   , sendLazyJson
-   , sendLazyData
    )
 where
 
-import qualified Data.ByteString       as BS
-import qualified Data.ByteString.Lazy  as LBS
-import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString as BS
 
-import Haskus.Web.Server
+data Response = Response
+   { responseMime     :: String
+   , responseContents :: BS.ByteString
+   }
 
 -- | Send JSON text
-sendJson :: BS.ByteString -> ServerPartT IO Response
-sendJson = sendData "application/json"
+sendJson :: BS.ByteString -> Response
+sendJson = Response "application/json"
 
 -- | Send JS script
-sendJS :: BS.ByteString -> ServerPartT IO Response
-sendJS = sendData "text/javascript"
+sendJS :: BS.ByteString -> Response
+sendJS = Response "text/javascript"
 
 -- | Send binary data
-sendBinary :: BS.ByteString -> ServerPartT IO Response
-sendBinary = sendData "application/octet-stream"
+sendBinary :: BS.ByteString -> Response
+sendBinary = Response "application/octet-stream"
 
 -- | Send a PNG image
-sendPNG :: BS.ByteString -> ServerPartT IO Response
-sendPNG = sendData "image/png"
+sendPNG :: BS.ByteString -> Response
+sendPNG = Response "image/png"
 
 -- | Send a JPG image
-sendJPG :: BS.ByteString -> ServerPartT IO Response
-sendJPG = sendData "image/jpg"
-
--- | Send data with the given MIME content type
-sendData :: String -> BS.ByteString -> ServerPartT IO Response
-sendData mime dat = ok (toResponseBS (BS8.pack mime) (LBS.fromStrict dat))
-
--- | Send JSON text
-sendLazyJson :: LBS.ByteString -> ServerPartT IO Response
-sendLazyJson = sendLazyData "application/json"
-
--- | Send data with the given MIME content type
-sendLazyData :: String -> LBS.ByteString -> ServerPartT IO Response
-sendLazyData mime dat = ok (toResponseBS (BS8.pack mime) dat)
-
+sendJPG :: BS.ByteString -> Response
+sendJPG = Response "image/jpg"

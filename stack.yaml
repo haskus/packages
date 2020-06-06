@@ -1,4 +1,4 @@
-resolver: lts-13.19
+resolver: lts-15.15
 
 packages:
 - haskus-utils-compat/
@@ -17,13 +17,6 @@ packages:
 - haskus-maths/
 - haskus-integer/
 - haskus-maps/
-
-extra-deps:
-- stm-containers-1.1.0.2
-- stm-hamt-1.2.0.2
-- primitive-extras-0.7.1.1
-- happstack-server-tls-7.1.6.7
-- happstack-server-7.5.1.3
 
 ghc-options:
    "$locals": -fhide-source-paths -freverse-errors

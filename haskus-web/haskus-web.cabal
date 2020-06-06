@@ -24,7 +24,6 @@ source-repository head
 
 library
   exposed-modules:
-    Haskus.Web.Server
     Haskus.Web.Css
     Haskus.Web.Html
     Haskus.Web.Response
@@ -42,8 +41,6 @@ library
    ,  text
    ,  clay
    ,  lucid
-   ,  happstack-server
-   ,  happstack-server-tls
    ,  containers
 
   ghc-options:          -Wall

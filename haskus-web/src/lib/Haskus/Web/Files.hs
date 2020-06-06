@@ -3,34 +3,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Haskus.Web.Files
-   ( serveFiles
-   , scriptFiles
+   ( scriptFiles
    , cssFiles
    )
 where
 
-import Haskus.Web.Response
-import Haskus.Web.Server
 import Haskus.Utils.Embed.ByteString
 
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Text
 import Data.ByteString
-import Control.Monad
-
--- | Serve static files
-serveFiles :: ServerPartT IO Response
-serveFiles = msum
-   [ dir "script" $ path $ \p ->
-      case Map.lookup p scriptFiles of
-         Nothing -> mzero
-         Just c  -> sendJS c
-   , dir "style" $ path $ \p ->
-      case Map.lookup p cssFiles of
-         Nothing -> mzero
-         Just c  -> sendJS c
-   ]
 
 -- | Map (FileName,Contents)
 scriptFiles :: Map Text ByteString
