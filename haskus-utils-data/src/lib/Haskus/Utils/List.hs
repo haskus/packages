@@ -122,11 +122,14 @@ repeatedly f as = b : repeatedly f as'
 --
 -- >>> chunksOf 3 "my test"
 -- ["my ","tes","t"]
+--
 -- >>> chunksOf 3 "mytest"
 -- ["myt","est"]
+--
 -- >>> chunksOf 8 ""
 -- []
--- >>> chunksOf 0 "test"
+--
+-- >> chunksOf 0 "test"
 -- undefined
 chunksOf :: Word -> [a] -> [[a]]
 chunksOf i xs = repeatedly (splitAt i) xs
