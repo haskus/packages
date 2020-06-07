@@ -86,4 +86,5 @@ jobs:
 
     - name: Test
       run: |
-        stack test --system-ghc
+        stack test --system-ghc -j1
+        # we need -j1 because of https://github.com/commercialhaskell/stack/issues/5159
