@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
@@ -94,7 +95,11 @@ embedBSDir fp = do
    bufToBs <- [| bufferToByteString |]
    let embedPair (relpath,realpath) = do
          exp' <- embedFile realpath False Nothing Nothing Nothing
+#if __GLASGOW_HASKELL__ >= 810
+         return $! TupE [Just (LitE $ StringL relpath), Just (bufToBs `AppE` exp')]
+#else
          return $! TupE [LitE $ StringL relpath, bufToBs `AppE` exp']
+#endif
    e <- ListE <$> ((runIO $ listDirectoryRec fp) >>= mapM embedPair)
    return $ SigE e typ
 
