@@ -29,7 +29,7 @@ type TextI t                  = TextBuffer t BufferI
 type TextB t mut pin fin heap = TextBuffer t (Buffer mut pin fin heap)
 
 
-class ShowText t b where
+class ShowText (t :: k) b where
    -- | Show text in IO
    showTextIO :: MonadIO m => TextBuffer t b -> m String
 

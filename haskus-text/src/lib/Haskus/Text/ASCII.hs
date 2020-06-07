@@ -35,7 +35,7 @@ data ASCII = ASCII
 --
 -- >>> :set -XOverloadedLists
 -- >>> let b = [72,69,76,76,79] :: BufferI
--- >>> showText (TextBuffer @ASCII b)
+-- >>> showText (TextBuffer b :: TextI ASCII)
 -- "HELLO"
 --
 instance ShowText ASCII (Buffer mut pin gc heap) where
