@@ -20,6 +20,8 @@
 module Haskus.Memory.Buffer
    ( Buffer (..)
    , AnyBuffer (..)
+   , TypedBuffer (..)
+   , SlicedBuffer (..)
    -- * Buffer taxonomy
    , Pinning (..)
    , Finalization (..)
@@ -109,14 +111,16 @@ data Buffer (mut :: Mutability) (pin :: Pinning) (fin :: Finalization) (heap :: 
    BufferP   :: !ByteArray#                                                  -> BufferP
    BufferM   :: !(MutableByteArray# RealWorld)                               -> BufferM
    BufferMP  :: !(MutableByteArray# RealWorld)                               -> BufferMP
-   BufferME  :: Addr# -> {-# UNPACK #-} !Word                                -> BufferME
-   BufferE   :: Addr# -> {-# UNPACK #-} !Word                                -> BufferE
+   BufferME  :: Addr# -> {-# UNPACK #-} !Size                                -> BufferME
+   BufferE   :: Addr# -> {-# UNPACK #-} !Size                                -> BufferE
    BufferF   :: !ByteArray#                    -> {-# UNPACK #-} !Finalizers -> BufferF
    BufferPF  :: !ByteArray#                    -> {-# UNPACK #-} !Finalizers -> BufferPF
    BufferMF  :: !(MutableByteArray# RealWorld) -> {-# UNPACK #-} !Finalizers -> BufferMF
    BufferMPF :: !(MutableByteArray# RealWorld) -> {-# UNPACK #-} !Finalizers -> BufferMPF
-   BufferMEF :: Addr# -> {-# UNPACK #-} !Word  -> {-# UNPACK #-} !Finalizers -> BufferMEF
-   BufferEF  :: Addr# -> {-# UNPACK #-} !Word  -> {-# UNPACK #-} !Finalizers -> BufferEF
+   BufferMEF :: Addr# -> {-# UNPACK #-} !Size  -> {-# UNPACK #-} !Finalizers -> BufferMEF
+   BufferEF  :: Addr# -> {-# UNPACK #-} !Size  -> {-# UNPACK #-} !Finalizers -> BufferEF
+
+type Size = Word
 
 type BufferI   = Buffer 'Immutable 'NotPinned 'Collected    'Internal
 type BufferP   = Buffer 'Immutable 'Pinned    'Collected    'Internal
@@ -1096,3 +1100,13 @@ copyBuffer sb (fromIntegral -> I# soff) db (fromIntegral -> I# doff) (fromIntegr
 
 -- | Wrapper containing any kind of buffer
 newtype AnyBuffer = AnyBuffer (forall mut pin fin heap. Buffer mut pin fin heap)
+
+-- | Any typed buffer
+newtype TypedBuffer a = TypedBuffer (forall mut pin fin heap. Buffer mut pin fin heap)
+
+-- | A sliced buffer
+data SlicedBuffer = SlicedBuffer
+   { sliceBuffer :: forall mut pin fin heap. Buffer mut pin fin heap
+   , sliceOffset :: Word#
+   , sliceSize   :: Word#
+   }
