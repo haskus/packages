@@ -212,8 +212,8 @@ instance HTuple '[] where
 
 instance HTuple '[a] where
    hToTuple (a `HCons` HNil)
-      = Unit a
-   hFromTuple (Unit a)
+      = Solo a
+   hFromTuple (Solo a)
       = a `HCons` HNil
 
 instance HTuple '[a,b] where
