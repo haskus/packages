@@ -2,6 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE CPP #-}
 
 -- | Template-Haskell helpers for EADTs
 module Haskus.Utils.EADT.TH
@@ -142,7 +143,11 @@ eadtPattern' consName patStr mEadtTy isInfix = do
             tyToTyList = AppT ListT (AppT (AppT ArrowT StarT) StarT)
 
             -- retreive functor var in "e"
+#if MIN_VERSION_base(4,15,0)
+            KindedTV e _ StarT = last tvs
+#else
             KindedTV e StarT = last tvs
+#endif
 
 
          -- make pattern type
@@ -150,7 +155,11 @@ eadtPattern' consName patStr mEadtTy isInfix = do
             xsName <- newName "xs"
             let
                xs = VarT xsName
+#if MIN_VERSION_base(4,15,0)
+               xsTy = KindedTV xsName SpecifiedSpec tyToTyList
+#else
                xsTy = KindedTV xsName tyToTyList
+#endif
             eadtXs <- [t| EADT $(return xs) |]
 
             prd <-  [t| $(return conTyp) :<: $(return xs) |]

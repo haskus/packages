@@ -84,7 +84,7 @@ infixl 0 >::>
 -- | Bind a flow to a 1-tuple of continuations
 (>:-:>) :: ContFlow '[a] r -> (a -> r) -> r
 {-# INLINABLE (>:-:>) #-}
-(>:-:>) (ContFlow f) c = f (Unit c)
+(>:-:>) (ContFlow f) c = f (Solo c)
 
 infixl 0 >:-:>
 

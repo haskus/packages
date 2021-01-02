@@ -13,6 +13,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 #if MIN_VERSION_base(4,14,0)
 {-# LANGUAGE StandaloneKindSignatures #-}
@@ -28,7 +29,7 @@ module Haskus.Utils.Tuple
    , take4
    , fromTuple4
    , module Data.Tuple
-   , Unit (..)
+   , Solo, pattern Solo
    , Tuple
    , Tuple#
    , TypeReps
@@ -45,6 +46,13 @@ import GHC.Tuple
 import GHC.Exts
 import Data.Tuple
 import Haskus.Utils.Types
+
+#if !MIN_VERSION_base(4,15,0)
+type Solo = Unit
+{-# COMPLETE Solo #-}
+pattern Solo :: a -> Solo a
+pattern Solo a = Unit a
+#endif
 
 -- | Uncurry3
 uncurry3 :: (a -> b -> c -> r) -> (a,b,c) -> r
@@ -91,7 +99,7 @@ class ExtractTuple (n :: Nat) xs where
 
 instance ExtractTuple 0 '[a] where
    {-# INLINABLE tupleN #-}
-   tupleN (Unit t) = t
+   tupleN (Solo t) = t
 
 instance ExtractTuple 0 '[e0,e1] where
    {-# INLINABLE tupleN #-}
@@ -244,9 +252,9 @@ tupleHead = tupleN @0
 class TupleTail ts ts' | ts -> ts' where
    tupleTail :: ts -> ts'
 
-instance TupleTail (a,b) (Unit b) where
+instance TupleTail (a,b) (Solo b) where
    {-# INLINABLE tupleTail #-}
-   tupleTail (_,b) = Unit b
+   tupleTail (_,b) = Solo b
 
 instance TupleTail (a,b,c) (b,c) where
    {-# INLINABLE tupleTail #-}
@@ -269,9 +277,9 @@ instance TupleTail (a,b,c,d,e,f) (b,c,d,e,f) where
 class TupleCons t ts ts' | t ts -> ts' where
    tupleCons :: t -> ts -> ts'
 
-instance TupleCons a (Unit b) (a,b) where
+instance TupleCons a (Solo b) (a,b) where
    {-# INLINABLE tupleCons #-}
-   tupleCons a (Unit b) = (a,b)
+   tupleCons a (Solo b) = (a,b)
 
 instance TupleCons a (b,c) (a,b,c) where
    {-# INLINABLE tupleCons #-}
@@ -296,7 +304,7 @@ class ReorderTuple t1 t2 where
    tupleReorder :: t1 -> t2
 
 
-instance ReorderTuple (Unit a) (Unit a) where
+instance ReorderTuple (Solo a) (Solo a) where
    {-# INLINABLE tupleReorder #-}
    tupleReorder = id
 
@@ -463,7 +471,7 @@ instance TupleCon '[] where
    tupleCon = ()
 
 instance TupleCon '[a] where
-   tupleCon = Unit
+   tupleCon = Solo
 
 instance TupleCon '[a,b] where
    tupleCon = (,)
@@ -485,7 +493,7 @@ instance TupleCon '[a,b,c,d,e,f] where
 -- TODO: put this family into GHC
 type family Tuple xs = t | t -> xs where
    Tuple '[]                                                    = ()
-   Tuple '[a]                                                   = Unit a
+   Tuple '[a]                                                   = Solo a
    Tuple '[a,b]                                                 = (a,b)
    Tuple '[a,b,c]                                               = (a,b,c)
    Tuple '[a,b,c,d]                                             = (a,b,c,d)

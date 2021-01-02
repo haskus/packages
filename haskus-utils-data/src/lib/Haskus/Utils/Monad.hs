@@ -36,10 +36,10 @@ class MonadIO m => MonadInIO m where
 
 instance MonadInIO IO where
    {-# INLINABLE liftWith #-}
-   liftWith = id
+   liftWith wth f = wth f
 
    {-# INLINABLE liftWith2 #-}
-   liftWith2 = id
+   liftWith2 wth f = wth f
 
 instance MonadInIO m => MonadInIO (StateT s m) where
    {-# INLINABLE liftWith #-}
