@@ -53,8 +53,6 @@ import Haskus.Utils.Variant.Excepts
 import Haskus.Utils.Monad
 import Haskus.Utils.Maybe
 
-import Control.Monad.Trans.Class (lift)
-
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
