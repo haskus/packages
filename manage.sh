@@ -19,7 +19,7 @@ function is_uploaded {
       then echo "YES"
       else if [ "$v" = "404" ]
          then echo "NO"
-         else echo "DON'T KNOW"
+         else echo "Not found"
       fi
    fi
 }
@@ -34,8 +34,8 @@ function report {
    echo ""
    echo "---------------------------------------------------------------"
    echo "$1:"
-   echo "  - Last tag: $tag"
-   echo "  - Last tag hackage uploaded: $(is_uploaded $tag)"
+   echo "  - Latest tag: $tag"
+   echo "  - Latest tag uploaded on hackage: $(is_uploaded $tag)"
    echo "  - Dev version: $(package_version $1)"
    echo "  - Log since last tag:"
    git --no-pager log --oneline $tag..HEAD -- $1/
@@ -57,8 +57,33 @@ function build_all {
    echo "Building"
    echo "==============================================================="
 
-   stack test --pedantic
+   stack test --pedantic -j1
 }
+
+function build_compat {
+   set -e
+
+   echo "==============================================================="
+   echo "Building for GHC 8.6"
+   echo "==============================================================="
+   stack build --stack-yaml stack-8.6.yaml
+
+   echo "==============================================================="
+   echo "Building for GHC 8.8"
+   echo "==============================================================="
+   stack build --stack-yaml stack-8.8.yaml
+
+   echo "==============================================================="
+   echo "Building for GHC 8.10"
+   echo "==============================================================="
+   stack build --stack-yaml stack-8.10.yaml
+
+   echo "==============================================================="
+   echo "Building for GHC 9.0.1"
+   echo "==============================================================="
+   cabal build all -w ghc-9.0.1
+}
+
 
 function showdone {
    echo ""
@@ -113,6 +138,10 @@ case "$1" in
       check_rep_state
       showdone
       ;;
+   build-compat)
+      build_compat
+      showdone
+      ;;
    build)
       build_all
       showdone
@@ -125,6 +154,6 @@ case "$1" in
       showdone
       ;;
    *)
-      echo "Missing command: check, report, build, release"
+      echo "Missing command: report, check, build, build-compat, release"
       exit 0
 esac
