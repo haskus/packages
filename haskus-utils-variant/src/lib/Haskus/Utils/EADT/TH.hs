@@ -113,8 +113,11 @@ eadtPattern' consName patStr mEadtTy isInfix = do
       ForallT tvs _ tys -> do
          -- make pattern
          let getConArity = \case
-               _ :->: b -> 1 + getConArity b
-               _        -> 0
+               AppT (AppT ArrowT _a) b              -> 1 + getConArity b
+#if MIN_VERSION_base(4,15,0)
+               AppT (AppT (AppT MulArrowT _m) _a) b -> 1 + getConArity b
+#endif
+               _                                    -> 0
 
              conArity = getConArity tys
          conArgs <- replicateM conArity (newName "c")
@@ -133,7 +136,10 @@ eadtPattern' consName patStr mEadtTy isInfix = do
          let
             -- retrieve constructor type without the functor var
             -- e.g. ConsF a for ConsF a e
-            getConTyp (_ :->: b) = getConTyp b
+            getConTyp (AppT (AppT ArrowT _a) b)              = getConTyp b
+#if MIN_VERSION_base(4,15,0)
+            getConTyp (AppT (AppT (AppT MulArrowT _m) _a) b) = getConTyp b
+#endif
             getConTyp (AppT a _) = a -- remove last AppT (functor var)
             getConTyp _          = error "Invalid constructor type"
 
@@ -142,7 +148,7 @@ eadtPattern' consName patStr mEadtTy isInfix = do
             -- [* -> *]
             tyToTyList = AppT ListT (AppT (AppT ArrowT StarT) StarT)
 
-            -- retreive functor var in "e"
+            -- retrieve functor var in "e"
 #if MIN_VERSION_base(4,15,0)
             KindedTV e _ StarT = last tvs
 #else
@@ -181,9 +187,16 @@ eadtPattern' consName patStr mEadtTy isInfix = do
             tvs'       = tvs ++ newTvs
 
             -- replace functor variable with EADT type
-            go (VarT x :->: b)
-               | x == e      = eadtTy :->: go b
-            go (a :->: b)    = a :->: go b
+            go (AppT (AppT ArrowT a) b)
+               | VarT v <- a
+               , v == e      = AppT (AppT ArrowT eadtTy) (go b)
+               | otherwise   = AppT (AppT ArrowT a)      (go b)
+#if MIN_VERSION_base(4,15,0)
+            go (AppT (AppT (AppT MulArrowT m) a) b)
+               | VarT v <- a
+               , v == e      = AppT (AppT (AppT MulArrowT m) eadtTy) (go b)
+               | otherwise   = AppT (AppT (AppT MulArrowT m) a)      (go b)
+#endif
             go _             = eadtTy
             t'               = go tys
 
@@ -193,7 +206,3 @@ eadtPattern' consName patStr mEadtTy isInfix = do
          return [sig,pat]
 
       _ -> fail $ show consName ++ "'s type doesn't have a free variable, it can't be a functor"
-
-
-pattern (:->:) :: Type -> Type -> Type
-pattern a :->: b = AppT (AppT ArrowT a) b
