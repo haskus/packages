@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 
 module Haskus.Binary.Serialize.File
    ( FileGetState (..)
@@ -20,8 +21,11 @@ import Haskus.Utils.Maybe
 import GHC.Exts (Ptr (..))
 import System.IO
 import Control.Monad.Trans.State.Strict as S
-import Control.Monad.Fail as F
 import Control.Monad.Fix
+
+#if !MIN_VERSION_GLASGOW_HASKELL (8,8,0,0)
+import Control.Monad.Fail
+#endif
 
 -- | FileGetT state
 data FileGetState = FileGetState
