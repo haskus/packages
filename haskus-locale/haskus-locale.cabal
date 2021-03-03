@@ -25,7 +25,7 @@ library
   other-modules:
 
   build-depends:       
-         base                      >= 4.9
+         base                      >= 4.9 && < 5
       ,  text
       ,  cassava
       ,  bytestring
