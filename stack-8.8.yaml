@@ -1,4 +1,4 @@
-resolver: lts-17.4
+resolver: lts-16.31
 
 packages:
 - haskus-utils-compat/
@@ -16,6 +16,12 @@ packages:
 - haskus-time/
 - haskus-maths/
 - haskus-maps/
+
+extra-deps:
+- stm-containers-1.2
+- stm-hamt-1.2.0.4
+- primitive-extras-0.8
+- primitive-unlifted-0.1.3.0
 
 ghc-options:
    "$locals": -fhide-source-paths -freverse-errors
