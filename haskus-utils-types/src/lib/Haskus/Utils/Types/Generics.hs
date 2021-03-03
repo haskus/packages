@@ -23,7 +23,7 @@ import Haskus.Utils.Types
 import GHC.Generics
 
 -- | Named field
-data Field (name :: Symbol) (t :: *)
+data Field (name :: Symbol) (t :: Type)
 
 type family FieldType f where
    FieldType (Field name t) = t
@@ -31,7 +31,7 @@ type family FieldType f where
 type family LookupFieldType fs s where
    LookupFieldType fs s = FieldType (LookupField fs s)
 
-type family LookupField (fs :: [*]) (s :: Symbol) where
+type family LookupField (fs :: [Type]) (s :: Symbol) where
    LookupField (Field name t ': fs) name = Field name t
    LookupField (Field name t ': fs) s    = LookupField fs s
    LookupField '[]                  name =
@@ -41,7 +41,7 @@ type family LookupField (fs :: [*]) (s :: Symbol) where
 -- | Extract fields of a data type:
 --    - require selector symbols
 --    - only support data type with a single constructor
-type family ExtractFields (a :: *)  where
+type family ExtractFields (a :: Type)  where
    ExtractFields a = ExtractFields' (Rep a)
 
 type family ExtractFields' a where
@@ -59,7 +59,7 @@ type family ExtractFields' a where
 
 -- | Extract types of the fields of a data type
 --    - only support data type with a single constructor
-type family ExtractFieldTypes (a :: *)  where
+type family ExtractFieldTypes (a :: Type)  where
    ExtractFieldTypes a = ExtractFieldTypes' (Rep a)
 
 type family ExtractFieldTypes' a where

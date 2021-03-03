@@ -96,7 +96,7 @@ import Control.DeepSeq
 -- False
 
 -- | Recursive Functor-like Variant
-newtype VariantF (xs :: [t -> *]) (e :: t)
+newtype VariantF (xs :: [t -> Type]) (e :: t)
    = VariantF (V (ApplyAll e xs))
 
 -- | Apply its first argument to every element of the 2nd arg list
@@ -233,12 +233,12 @@ pattern FV x = VariantF (V x)
 variantFToValue :: VariantF '[f] e -> f e
 variantFToValue (VariantF v) = variantToValue v
 
-appendVariantF :: forall (ys :: [* -> *]) (xs :: [* -> *]) e.
+appendVariantF :: forall (ys :: [Type -> Type]) (xs :: [Type -> Type]) e.
    ( ApplyAll e (Concat xs ys) ~ Concat (ApplyAll e xs) (ApplyAll e ys)
    ) => VariantF xs e -> VariantF (Concat xs ys) e
 appendVariantF (VariantF v) = VariantF (appendVariant @(ApplyAll e ys) v)
 
-prependVariantF :: forall (xs :: [* -> *]) (ys :: [* -> *]) e.
+prependVariantF :: forall (xs :: [Type -> Type]) (ys :: [Type -> Type]) e.
    ( ApplyAll e (Concat xs ys) ~ Concat (ApplyAll e xs) (ApplyAll e ys)
    , KnownNat (Length (ApplyAll e xs))
    ) => VariantF ys e -> VariantF (Concat xs ys) e

@@ -24,13 +24,14 @@ module Haskus.Utils.ContFlow
 where
 
 import Haskus.Utils.Tuple
+import Haskus.Utils.Types
 
 -- | A continuation based control-flow
-newtype ContFlow (xs :: [*]) r = ContFlow (ContTuple xs r -> r)
+newtype ContFlow (xs :: [Type]) r = ContFlow (ContTuple xs r -> r)
 
 -- | Convert a list of types into the actual data type representing the
 -- continuations.
-type family ContTuple (xs :: [*]) r where
+type family ContTuple (xs :: [Type]) r where
    ContTuple xs r = Tuple (ToMultiCont xs r)
 
 type family ToMultiCont xs r where
@@ -39,7 +40,7 @@ type family ToMultiCont xs r where
 
 -- | A multi-continuable type
 class MultiCont a where
-   type MultiContTypes a :: [*]
+   type MultiContTypes a :: [Type]
 
    -- | Convert a data into a multi-continuation
    toCont :: a -> ContFlow (MultiContTypes a) r

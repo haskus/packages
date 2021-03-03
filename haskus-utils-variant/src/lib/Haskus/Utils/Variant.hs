@@ -128,7 +128,7 @@ import Haskus.Utils.ContFlow
 
 -- | A variant contains a value whose type is at the given position in the type
 -- list
-data V (l :: [*]) = Variant {-# UNPACK #-} !Word Any
+data V (l :: [Type]) = Variant {-# UNPACK #-} !Word Any
 
 -- Make GHC consider `l` as a representational parameter to make coercions
 -- between Variant values unsafe
@@ -303,7 +303,7 @@ variantSize _ = natValue @(Length xs)
 -- >>> toVariantAt @1 10 :: V '[Word,Int,Double]
 -- 10
 --
-toVariantAt :: forall (n :: Nat) (l :: [*]).
+toVariantAt :: forall (n :: Nat) (l :: [Type]).
    ( KnownNat n
    ) => Index n l -> V l
 {-# INLINABLE toVariantAt #-}
@@ -339,7 +339,7 @@ toVariantTail (Variant t a) = Variant (t+1) a
 -- >>> fromVariantAt @2 x
 -- Nothing
 --
-fromVariantAt :: forall (n :: Nat) (l :: [*]).
+fromVariantAt :: forall (n :: Nat) (l :: [Type]).
    ( KnownNat n
    ) => V l -> Maybe (Index n l)
 {-# INLINABLE fromVariantAt #-}
@@ -920,11 +920,11 @@ foldMapVariant f v = case popVariant v of
 -- Generic operations with type classes
 -----------------------------------------------------------
 
--- | Useful to specify a "* -> Constraint" function returning an empty constraint
+-- | Useful to specify a "Type -> Constraint" function returning an empty constraint
 class NoConstraint a
 instance NoConstraint a
 
-class AlterVariant c (b :: [*]) where
+class AlterVariant c (b :: [Type]) where
    alterVariant' :: (forall a. c a => a -> a) -> Word -> Any -> Any
 
 instance AlterVariant c '[] where
@@ -955,7 +955,7 @@ instance
 --    instance (Ord a, Num a) => OrdNum a
 --    alterVariant @OrdNum foo v
 --
-alterVariant :: forall c (a :: [*]).
+alterVariant :: forall c (a :: [Type]).
    ( AlterVariant c a
    ) => (forall x. c x => x -> x) -> V a  -> V a
 {-# INLINABLE alterVariant #-}
@@ -965,7 +965,7 @@ alterVariant f (Variant t a) =
 
 
 
-class TraverseVariant c (b :: [*]) m where
+class TraverseVariant c (b :: [Type]) m where
    traverseVariant' :: (forall a . (Monad m, c a) => a -> m a) -> Word -> Any -> m Any
 
 instance TraverseVariant c '[] m where
@@ -987,7 +987,7 @@ instance
 
 -- | Traverse a variant. You need to specify the constraints required by the
 -- modifying function.
-traverseVariant :: forall c (a :: [*]) m.
+traverseVariant :: forall c (a :: [Type]) m.
    ( TraverseVariant c a m
    , Monad m
    ) => (forall x. c x => x -> m x) -> V a  -> m (V a)
@@ -997,7 +997,7 @@ traverseVariant f (Variant t a) =
 
 -- | Traverse a variant. You need to specify the constraints required by the
 -- modifying function.
-traverseVariant_ :: forall c (a :: [*]) m.
+traverseVariant_ :: forall c (a :: [Type]) m.
    ( TraverseVariant c a m
    , Monad m
    ) => (forall x. c x => x -> m ()) -> V a -> m ()
@@ -1009,7 +1009,7 @@ traverseVariant_ f v = void (traverseVariant @c @a f' v)
 
 
 
-class ReduceVariant c (b :: [*]) where
+class ReduceVariant c (b :: [Type]) where
    reduceVariant' :: (forall a. c a => a -> r) -> Word -> Any -> r
 
 instance ReduceVariant c '[] where
@@ -1037,7 +1037,7 @@ instance
 -- >>> let n = V (10 :: Int) :: V '[Int,Word,Integer]
 -- >>> reduceVariant @Integral fromIntegral n :: Int
 -- 10
-reduceVariant :: forall c (a :: [*]) r.
+reduceVariant :: forall c (a :: [Type]) r.
    ( ReduceVariant c a
    ) => (forall x. c x => x -> r) -> V a -> r
 {-# INLINABLE reduceVariant #-}
@@ -1050,12 +1050,12 @@ reduceVariant f (Variant t a) = reduceVariant' @c @a f t a
 -----------------------------------------------------------
 
 -- | Extend a variant by appending other possible values
-appendVariant :: forall (ys :: [*]) (xs :: [*]). V xs -> V (Concat xs ys)
+appendVariant :: forall (ys :: [Type]) (xs :: [Type]). V xs -> V (Concat xs ys)
 {-# INLINABLE appendVariant #-}
 appendVariant (Variant t a) = Variant t a
 
 -- | Extend a variant by prepending other possible values
-prependVariant :: forall (ys :: [*]) (xs :: [*]).
+prependVariant :: forall (ys :: [Type]) (xs :: [Type]).
    ( KnownNat (Length ys)
    ) => V xs -> V (Concat ys xs)
 {-# INLINABLE prependVariant #-}
@@ -1110,7 +1110,7 @@ productVariant :: forall xs ys.
 productVariant (Variant n1 a1) (Variant n2 a2)
    = Variant (n1 * natValue @(Length ys) + n2) (unsafeCoerce (a1,a2))
 
-type family FlattenVariant (xs :: [*]) :: [*] where
+type family FlattenVariant (xs :: [Type]) :: [Type] where
    FlattenVariant '[]       = '[]
    FlattenVariant (V xs:ys) = Concat xs (FlattenVariant ys)
    FlattenVariant (y:ys)    = y ': FlattenVariant ys

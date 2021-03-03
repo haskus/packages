@@ -79,8 +79,6 @@ import Haskus.Utils.Types hiding (Log2)
 import Haskus.Utils.HList
 import Haskus.Utils.Flow
 
-import Data.Kind (Type)
-
 -- | An Unum
 --
 -- 0 (and its reciprocal) is always included.

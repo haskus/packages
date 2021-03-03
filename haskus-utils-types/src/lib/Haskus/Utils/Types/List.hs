@@ -71,6 +71,7 @@ import Haskus.Utils.Types.Bool
 import Haskus.Utils.Types.Error
 import Haskus.Utils.Types.Nat
 import Haskus.Utils.Types.Constraint
+import Data.Kind (Type)
 
 -- | Map a type function
 type family Map (f :: a -> k) (xs :: [a]) :: [k] where
@@ -250,7 +251,7 @@ type family MapTest (a :: k) (l :: [k]) :: [Nat] where
    MapTest a (x ': xs) = 0 ': MapTest a xs
 
 -- | Zip two lists
-type family Zip (l :: [*]) (l2 :: [*]) where
+type family Zip (l :: [Type]) (l2 :: [Type]) where
    Zip '[] xs              = '[]
    Zip xs '[]              = '[]
    Zip (x ': xs) (y ': ys) = (x,y) ': Zip xs ys
@@ -349,12 +350,12 @@ type family Complement (xs :: [k]) (ys :: [k]) :: [k] where
    Complement xs (y:ys) = Complement (Remove y xs) ys
 
 -- | Product of two lists
-type family Product (xs :: [*]) (ys :: [*]) :: [*] where
+type family Product (xs :: [Type]) (ys :: [Type]) :: [Type] where
    Product '[] ys    = '[]
    Product xy '[]    = '[]
    Product (x:xs) ys = Concat (Product' x ys) (Product xs ys)
 
-type family Product' (x :: *) (ys :: [*]) :: [*] where
+type family Product' (x :: Type) (ys :: [Type]) :: [Type] where
    Product' x '[]       = '[]
    Product' x (y ': ys) = (x,y) ': Product' x ys
 

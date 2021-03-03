@@ -38,7 +38,7 @@ import Haskus.Utils.Tuple
 import Haskus.Utils.Types
 
 -- | Heterogeneous list
-data family HList (l :: [*])
+data family HList (l :: [Type])
 data instance HList '[]       = HNil
 data instance HList (x ': xs) = x `HCons` HList xs
 
@@ -89,7 +89,7 @@ class Apply f a b where
 -- Folding
 --------------------------------------
 
-class HFoldr f v (l :: [*]) r where
+class HFoldr f v (l :: [Type]) r where
     hFoldr :: f -> v -> HList l -> r
 
 instance (v ~ v') => HFoldr f v '[] v' where
@@ -107,7 +107,7 @@ instance
 --
 -- It allows us to foldr over a list of types, without any associated hlist of
 -- values.
-class HFoldr' f v (l :: [*]) r where
+class HFoldr' f v (l :: [Type]) r where
    hFoldr' :: f -> v -> HList l -> r
 
 instance (v ~ v') => HFoldr' f v '[] v' where
@@ -122,7 +122,7 @@ instance
       -- supposedly in the list (we don't have a real list associated to HList l)
       hFoldr' f v _ = apply f (undefined :: e, hFoldr' f v (undefined :: HList l) :: r)
 
-class HFoldl f (z :: *) xs (r :: *) where
+class HFoldl f (z :: Type) xs (r :: Type) where
     hFoldl :: f -> z -> HList xs -> r
 
 instance forall f z z' r x zx xs.
@@ -140,7 +140,7 @@ instance (z ~ z') => HFoldl f z '[] z' where
 --
 -- It allows us to foldl over a list of types, without any associated hlist of
 -- values.
-class HFoldl' f (z :: *) xs (r :: *) where
+class HFoldl' f (z :: Type) xs (r :: Type) where
     hFoldl' :: f -> z -> HList xs -> r
 
 instance forall f z z' r x zx xs.
