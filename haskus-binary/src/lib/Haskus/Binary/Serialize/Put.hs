@@ -64,7 +64,7 @@ class Monad m => PutMonad m where
    putWord64s xs = forM_ xs putWord64
 
    -- | Write the contents of a buffer
-   putBuffer   :: BufferSize (Buffer Immutable pin gc heap) => Buffer Immutable pin gc heap -> m ()
+   putBuffer   :: BufferSize (Buffer 'Immutable pin gc heap) => Buffer 'Immutable pin gc heap -> m ()
 
    -- | Pre-allocate at least the given amount of bytes
    --
