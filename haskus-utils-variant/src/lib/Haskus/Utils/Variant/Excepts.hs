@@ -12,6 +12,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Haskus.Utils.Variant.Excepts
    ( Excepts
@@ -53,6 +55,7 @@ import Haskus.Utils.Types
 import Haskus.Utils.Variant.VEither
 
 import Control.Monad.Catch
+import Control.Monad.Reader.Class
 #if MIN_VERSION_base(4,12,0) && !MIN_VERSION_base(4,13,0)
 import qualified Control.Monad.Fail
 import           Control.Monad.Fail ( MonadFail )
@@ -211,6 +214,10 @@ instance MonadMask m => MonadMask (Excepts e m) where
          b <- Excepts (return eb)
          return (b, c)
 
+instance MonadReader r m => MonadReader r (Excepts e m) where
+  ask    = lift ask
+  local  = mapExcepts . local
+  reader = lift . reader
 
 
 -- | Signal an exception value @e@.
