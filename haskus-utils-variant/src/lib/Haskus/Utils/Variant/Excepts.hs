@@ -16,7 +16,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Haskus.Utils.Variant.Excepts
-   ( Excepts
+   ( Excepts (..)
    , runE
    , runE_
    , liftE
