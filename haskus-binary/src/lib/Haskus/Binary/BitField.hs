@@ -64,21 +64,7 @@
 -- w = BitFields 0x0102
 -- @
 --
-module Haskus.Binary.BitField
-   ( BitFields (..)
-   , bitFieldsBits
-   , BitField (..)
-   , extractField
-   , extractField'
-   , updateField
-   , updateField'
-   , withField
-   , withField'
-   , matchFields
-   , matchNamedFields
-   , Field
-   )
-where
+module Haskus.Binary.BitField where
 
 import Haskus.Binary.BitSet as BitSet
 import Haskus.Binary.Enum
