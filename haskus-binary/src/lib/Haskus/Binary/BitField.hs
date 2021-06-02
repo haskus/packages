@@ -10,6 +10,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE PolyKinds #-}
 
 -- | Bit fields (as in C)
 --
@@ -76,6 +77,8 @@ import Haskus.Utils.HList
 import Haskus.Utils.Types
 import Haskus.Utils.Tuple
 
+import Data.Typeable
+
 -- | Bit fields on a base type b
 newtype BitFields b (f :: [*]) = BitFields b deriving (Storable)
 
@@ -86,10 +89,10 @@ bitFieldsBits (BitFields b) = b
 
 
 -- | A field of n bits
-newtype BitField (n :: Nat) (name :: Symbol) s = BitField s deriving (Storable)
+newtype BitField (n :: Nat) (name :: nk) s = BitField s deriving (Storable)
 
 -- | Get the bit offset of a field from its name
-type family Offset (name :: Symbol) fs :: Nat where
+type family Offset name fs :: Nat where
    Offset name (BitField n name  s ': xs) = AddOffset xs
    Offset name (BitField n name2 s ': xs) = Offset name xs
 
@@ -98,12 +101,12 @@ type family AddOffset fs :: Nat where
    AddOffset (BitField n name s ': xs)  = n + AddOffset xs
 
 -- | Get the type of a field from its name
-type family Output (name :: Symbol) fs :: * where
+type family Output name fs :: * where
    Output name (BitField n name  s ': xs) = s
    Output name (BitField n name2 s ': xs) = Output name xs
 
 -- | Get the size of a field from it name
-type family Size (name :: Symbol) fs :: Nat where
+type family Size name fs :: Nat where
    Size name (BitField n name  s ': xs) = n
    Size name (BitField n name2 s ': xs) = Size name xs
 
@@ -175,7 +178,7 @@ instance (Integral b, CEnum a) => Field (EnumField b a) where
    toField   = toEnumField . toCEnum
 
 -- | Get the value of a field
-extractField :: forall (name :: Symbol) fields b .
+extractField :: forall name fields b .
    ( KnownNat (Offset name fields)
    , KnownNat (Size name fields)
    , WholeSize fields ~ BitSize b
@@ -186,7 +189,7 @@ extractField :: forall (name :: Symbol) fields b .
 extractField = extractField' @name
 
 -- | Get the value of a field (without checking sizes)
-extractField' :: forall (name :: Symbol) fields b .
+extractField' :: forall name fields b .
    ( KnownNat (Offset name fields)
    , KnownNat (Size name fields)
    , Bits b, Integral b
@@ -238,7 +241,7 @@ withField :: forall name fields b f .
 withField = withField' @name
 
 -- | Modify the value of a field (without checking sizes)
-withField' :: forall (name :: Symbol) fields b f .
+withField' :: forall name fields b f .
    ( KnownNat (Offset name fields)
    , KnownNat (Size name fields)
    , Bits b, Integral b
@@ -277,9 +280,9 @@ instance forall name bs b l l2 i (n :: Nat) s r w .
    , b ~ BitField n name s    -- the current field
    , i ~ HList l2             -- input type
    , r ~ HList (String ': l2) -- result type
-   , KnownSymbol name
+   , Typeable name
    ) => Apply Name (b, i) r where
-      apply _ (_, xs) = HCons (symbolValue @name) xs
+      apply _ (_, xs) = HCons (show (typeRep (Proxy :: Proxy name))) xs
 
 fieldValues :: forall l l2 w bs .
    ( bs ~ BitFields w l
