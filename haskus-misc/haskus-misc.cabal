@@ -1,0 +1,33 @@
+cabal-version:       2.4
+name:                haskus-misc
+version:             1.0
+synopsis:            Miscellaneous
+license:             BSD-3-Clause
+author:              Sylvain Henry
+maintainer:          sylvain@haskus.fr
+homepage:            https://www.haskus.org
+copyright:           Sylvain Henry 2021
+category:            System
+build-type:          Simple
+
+description:
+   Miscellaneous stuff that doesn't have its proper package (yet).
+
+source-repository head
+  type: git
+  location: git://github.com/haskus/packages.git
+
+library
+  exposed-modules:
+    Haskus.Format.PDF
+
+  other-modules:
+
+  build-depends:       
+      base                      >= 4.9 && < 5.0
+    , bytestring-strict-builder
+    , bytestring
+
+  ghc-options:          -Wall
+  default-language:     Haskell2010
+  hs-source-dirs:       src/lib
