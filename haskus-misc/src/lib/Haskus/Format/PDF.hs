@@ -1,5 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE BlockArguments #-}
 
 module Haskus.Format.PDF where
 
@@ -12,8 +16,13 @@ import GHC.Natural
 import Foreign.Storable
 import qualified Data.List as List
 import Numeric
+import GHC.Exts
 
 type PDF = Builder
+
+newtype Offset
+  = Offset Word
+  deriving newtype (Show,Num,Eq,Ord)
 
 renderPDF :: FilePath -> PDF -> IO ()
 renderPDF fp pdf = BS.writeFile fp (builderBytes pdf)
@@ -211,10 +220,10 @@ dict xs = leftAngle <> leftAngle <> mconcat (List.intersperse space (fmap go xs)
 -- Stream
 
 stream :: PDF -> [Word8] -> PDF
-stream d xs = d <> ascii "stream" <> eol <> mconcat (fmap word8 xs) <> eol <> ascii "endstream"
+stream d xs = d <> ascii "stream" <> eol <> mconcat (fmap word8 xs) <> eol <> ascii "endstream" <> eol
 
 streamStorable :: Storable a => PDF -> a -> PDF
-streamStorable d xs = d <> ascii "stream" <> eol <> storable xs <> eol <> ascii "endstream"
+streamStorable d xs = d <> ascii "stream" <> eol <> storable xs <> eol <> ascii "endstream" <> eol
 
 -- Null
 
@@ -223,13 +232,185 @@ null = ascii "null"
 
 -- Indirect object
 
-obj :: Natural -> Natural -> PDF -> PDF
+obj :: Word -> Word16 -> PDF -> PDF
 obj i gen contents = int i <> space <> int gen <> space
                            <> ascii "obj" <> space <> contents
-                           <> ascii "endobj"
+                           <> ascii "endobj" <> eol
 
-ref :: Natural -> Natural -> PDF
+ref :: Word -> Word16 -> PDF
 ref i gen = int i <> space <> int gen <> space <> ascii "R"
+
+------------------------------------
+-- XRef table
+------------------------------------
+
+data EntryUse
+  = InUse
+  | Free
+
+data XRefEntry = XRefEntry
+  { xeOffset :: {-# UNPACK #-} !Offset
+  , xeGen    :: {-# UNPACK #-} !Word16
+  , xeUsed   :: !EntryUse
+  }
+
+
+xrefTable :: Natural -> [XRefEntry] -> PDF
+xrefTable first entries = mconcat
+  [ ascii "xref", eol, int first, space, int (length entries), eol
+  , mconcat (fmap entry entries)
+  ]
+  where
+    showN n a = ascii (replicate (n-length s) '0' ++ s)
+      where s = show a
+
+    entry (XRefEntry o g t) = mconcat
+      [ showN 10 o, space  -- 10-digit offset
+      , showN 5 g, space   -- 5-digit generation number
+      , case t of
+          InUse -> asciiChar 'n'
+          Free  -> asciiChar 'f'
+      , space, eol
+      ]
+
+xrefNullEntry :: XRefEntry
+xrefNullEntry = XRefEntry 0 65535 Free
+
+xrefNullObjRef :: ObjRef
+xrefNullObjRef = ObjRef 0 xrefNullEntry
+
+------------------------------------
+-- Trailer
+------------------------------------
+
+trailer :: Offset -> PDF -> PDF
+trailer (Offset xref_offset) trail_dict = mconcat
+  [ ascii "trailer", eol
+  , trail_dict, eol
+  , ascii "startxref", eol
+  , int xref_offset, eol
+  , ascii "%%EOL"
+  ]
+
+------------------------------------
+-- Monad
+------------------------------------
+
+data ObjRef = ObjRef
+  { objNum    :: Word   -- ^ Object number
+  , objEntry  :: XRefEntry
+  }
+
+data PdfState = PdfState
+  { st_pdf      :: !PDF
+  , st_obj_num  :: {-# UNPACK #-} !Word
+  , st_obj_refs :: [ObjRef] -- ^ Objects (reverse order)
+  }
+
+emptyPdfState :: PdfState
+emptyPdfState = PdfState
+  { st_pdf      = mempty
+  , st_obj_num  = 0
+  , st_obj_refs = [xrefNullObjRef]
+  }
+
+newtype PdfM a
+  = PdfM' (PdfState -> (PdfState,a))
+
+{-# COMPLETE PdfM #-}
+pattern PdfM :: (PdfState -> (PdfState, a)) -> PdfM a
+pattern PdfM a <- PdfM' a
+  where
+    PdfM a = PdfM' (oneShot a)
+
+unPdfM :: PdfM a -> (PdfState -> (PdfState,a))
+unPdfM (PdfM a) = a
+
+instance Functor PdfM where
+  fmap f (PdfM g) = PdfM \p0 -> case g p0 of
+    (p1,a) -> (p1, f a)
+
+instance Applicative PdfM where
+  pure a = PdfM \p -> (p, a)
+  PdfM f <*> PdfM g = PdfM \p0 -> case f p0 of
+    (p1, fa) -> case g p1 of
+      (p2, a) -> (p2, fa a)
+
+instance Monad PdfM where
+  PdfM f >>= g = PdfM \p0 -> case f p0 of
+    (p1, a) -> unPdfM (g a) p1
+
+getOffset :: PdfM Offset
+getOffset = PdfM \s -> (s, Offset (fromIntegral (builderLength (st_pdf s))))
+
+incObjNum :: PdfM Word
+incObjNum = PdfM \s ->
+  let
+     n  = st_obj_num s + 1
+     s' = s { st_obj_num = n }
+  in (s', n)
+
+runPdfM :: PdfM a -> (PdfState, a)
+runPdfM p = unPdfM p emptyPdfState
+
+runPdf :: PdfM a -> PDF
+runPdf p = st_pdf (fst (runPdfM p))
+
+getState :: PdfM PdfState
+getState = PdfM \s -> (s, s)
+
+modifyState :: (PdfState -> PdfState) -> PdfM ()
+modifyState f = PdfM \p -> (f p, ())
+
+modifyPdf :: (PDF -> PDF) -> PdfM ()
+modifyPdf f = modifyState \s -> s { st_pdf = f (st_pdf s) }
+
+append :: PDF -> PdfM Offset
+append p = do
+  o <- getOffset
+  modifyPdf (<> p)
+  return o
+
+append_ :: PDF -> PdfM ()
+append_ p = modifyPdf (<> p)
+
+-- | Add an object with generation 0
+addObject :: PDF -> PdfM ObjRef
+addObject contents = do
+  i <- incObjNum
+  offset <- append (obj i 0 contents)
+  let obj_ref = ObjRef
+        { objNum   = i
+        , objEntry = XRefEntry
+            { xeGen    = 0
+            , xeUsed   = InUse
+            , xeOffset = offset
+            }
+        }
+  modifyState \s -> s { st_obj_refs = obj_ref : st_obj_refs s }
+  return obj_ref
+
+genXRefTable :: PdfM Offset
+genXRefTable = do
+  refs <- st_obj_refs <$> getState
+  -- FIXME: we don't handle subsections (holes in the object list) and we assume
+  -- that we start from the NULL entry
+  append $ xrefTable 0 (reverse (fmap objEntry refs))
+
+genRef :: ObjRef -> PDF
+genRef r = ref (objNum r) (xeGen (objEntry r))
+
+genTrailer :: Offset -> PdfM ()
+genTrailer xref_offset = do
+  n <- st_obj_num <$> getState
+  append_ $ trailer xref_offset $ dict
+    [ (nameUtf8 "Size", int (n+1))
+    , (nameUtf8 "Root", genRef xrefNullObjRef) -- FIXME: document catalog
+    -- , (nameUtf8 "Prev", ...)
+    -- , (nameUtf8 "Encrypt", ...)
+    -- , (nameUtf8 "Info", ...)
+    -- , (nameUtf8 "ID", ...)
+    ]
 
 ------------------------------------
 -- Example
@@ -241,25 +422,38 @@ toAscii = fmap (fromIntegral . ord)
 example :: IO ()
 example = do
   let hdr = ascii "%PDF-1.7\n"
-  renderPDF "test.pdf" $ mconcat
-    [ hdr
-    , litString (toAscii "this is a test")
-    , hexaString (toAscii "this is a test")
-    , name (toAscii "il était une fois 133###") <> eol
-    , nameUtf8 "il était une fois 133###"
-    , array
-        [ nameUtf8 "il était une fois 133###"
-        , int (18 :: Int)
-        , float (1.2 :: Double)
-        ]
-    , dict [ (nameUtf8 "Type", nameUtf8 "Example")
-           , (nameUtf8 "SubType", nameUtf8 "DictionaryExample")
-           , (nameUtf8 "Version", float (0.01 :: Float))
-           , (nameUtf8 "IntegerItem", int (12 :: Int))
-           , (nameUtf8 "StringItem", litStringUtf8 "a string")
-           , (nameUtf8 "Subdictionary", dict
-                [ (nameUtf8 "Item1", float (0.4 :: Double))
-                , (nameUtf8 "Item2", bTrue)
-                ])
-           ]
-    ]
+  renderPDF "test.pdf" $ runPdf do
+    append_ $ mconcat
+      [ hdr
+      , litString (toAscii "this is a test")
+      , hexaString (toAscii "this is a test")
+      , name (toAscii "il était une fois 133###") <> eol
+      , nameUtf8 "il était une fois 133###"
+      , array
+          [ nameUtf8 "il était une fois 133###"
+          , int (18 :: Int)
+          , float (1.2 :: Double)
+          ]
+      , dict [ (nameUtf8 "Type", nameUtf8 "Example")
+             , (nameUtf8 "SubType", nameUtf8 "DictionaryExample")
+             , (nameUtf8 "Version", float (0.01 :: Float))
+             , (nameUtf8 "IntegerItem", int (12 :: Int))
+             , (nameUtf8 "StringItem", litStringUtf8 "a string")
+             , (nameUtf8 "Subdictionary", dict
+                  [ (nameUtf8 "Item1", float (0.4 :: Double))
+                  , (nameUtf8 "Item2", bTrue)
+                  ])
+             ]
+      , obj 7 0 $ dict [(nameUtf8 "Length", ref 8 0)]
+      , obj 8 0 (int (77 :: Int))
+      ]
+    _obj_ref <- addObject $ dict
+      [ (nameUtf8 "Some", nameUtf8 "Custom")
+      , (nameUtf8 "Object", int (42 :: Int))
+      ]
+    _obj_ref2 <- addObject $ dict
+      [ (nameUtf8 "Some", nameUtf8 "Other")
+      , (nameUtf8 "Object", int (33 :: Int))
+      ]
+    xref_table <- genXRefTable
+    genTrailer xref_table
