@@ -409,6 +409,21 @@ renderDoc Doc{..} = dict $ catMaybes
       )
   ]
 
+------------------------------------
+-- Page tree
+------------------------------------
+
+data PageTree a
+  = PageTreeNode [PageTree a]
+  | PageTreeLeaf a
+
+pageTreeNode :: Maybe Word -> [PDF] -> Word -> PDF
+pageTreeNode mparent cs count = dict $ catMaybes
+  [ Just ("Type", nameUtf8 "Pages")
+  , mparent ||> (\x -> ref x 0) >.> ("Parent",)
+  , Just ("Kids", array cs)
+  , Just ("Count", int count)
+  ]
 
 ------------------------------------
 -- Monad
@@ -461,8 +476,8 @@ instance Monad PdfM where
 getOffset :: PdfM Offset
 getOffset = PdfM \s -> (s, Offset (fromIntegral (builderLength (st_pdf s))))
 
-incObjNum :: PdfM Word
-incObjNum = PdfM \s ->
+getNextObjNum :: PdfM Word
+getNextObjNum = PdfM \s ->
   let
      n  = st_obj_num s + 1
      s' = s { st_obj_num = n }
@@ -495,12 +510,17 @@ append_ p = modifyPdf (<> p)
 -- | Add an object with generation 0
 addObject :: PDF -> PdfM ObjRef
 addObject contents = do
-  i <- incObjNum
-  offset <- append (obj i 0 contents)
+  i <- getNextObjNum
+  addObject' i 0 contents
+
+-- | Add an object
+addObject' :: Word -> Word16 -> PDF -> PdfM ObjRef
+addObject' i gen contents = do
+  offset <- append (obj i gen contents)
   let obj_ref = ObjRef
         { objNum   = i
         , objEntry = XRefEntry
-            { xeGen    = 0
+            { xeGen    = gen
             , xeUsed   = InUse
             , xeOffset = offset
             }
@@ -530,6 +550,22 @@ genTrailer xref_offset doc = do
     -- , (nameUtf8 "Info", ...)
     -- , (nameUtf8 "ID", ...)
     ]
+
+renderPageTree :: PageTree PDF -> PdfM PDF
+renderPageTree tree = fst <$> go Nothing tree
+  where
+    -- do it recursively (tying the knot)
+    go :: Maybe Word -> PageTree PDF -> PdfM (PDF,Word)
+    go mparent = \case
+      PageTreeLeaf a  -> pure (a,1)
+      PageTreeNode cs -> do
+        cid <- getNextObjNum
+        (as,ns) <- unzip <$> forM cs (go (Just cid))
+        let count = sum ns
+        r <- addObject' cid 0 (pageTreeNode mparent as count)
+        pure (renderRef r, count)
+
+
 
 -- TODO: object streams
 -- TODO: xref streams
@@ -578,6 +614,10 @@ example = do
       [ ("Some", nameUtf8 "Other")
       , ("Object", int (33 :: Int))
       ]
+    let tree = PageTreeNode []
+    page_tree <- renderPageTree tree
     xref_table <- genXRefTable
     let doc = defaultDoc
+                { docPages = page_tree
+                }
     genTrailer xref_table doc
