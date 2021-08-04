@@ -4,8 +4,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 
 module Haskus.Format.PDF where
+
+import Haskus.Utils.Flow
+import Data.Maybe
 
 import ByteString.StrictBuilder
 import qualified Data.ByteString as BS
@@ -211,10 +216,10 @@ array xs = leftSquare <> mconcat (List.intersperse space xs) <> rightSquare
 
 -- Dictionary
 
-dict :: [(PDF,PDF)] -> PDF
+dict :: [(String,PDF)] -> PDF
 dict xs = leftAngle <> leftAngle <> mconcat (List.intersperse space (fmap go xs)) <> rightAngle <> rightAngle
   where
-    go (key,val) = key <> space <> val
+    go (key,val) = nameUtf8 key <> space <> val
 
 
 -- Stream
@@ -291,6 +296,119 @@ trailer (Offset xref_offset) trail_dict = mconcat
   , int xref_offset, eol
   , ascii "%%EOL"
   ]
+
+------------------------------------
+-- Document catalog (root object)
+------------------------------------
+
+data PageLayout
+  = SinglePage     -- ^ 1 page at a time
+  | OneColumn      -- ^ 1 column
+  | TwoColumnLeft  -- ^ 2 columns, odd-pages on the left
+  | TwoColumnRight -- ^ 2 columns, odd-pages on the right
+  | TwoPageLeft    -- ^ 2 pages at a time, odd-pages on the left
+  | TwoPageRight   -- ^ 2 pages at a time, odd-pages on the right
+  deriving (Show,Eq,Ord)
+
+data PageMode
+  = DefaultMode
+  | PaneOutlines
+  | PaneThumbs
+  | PaneOptionalContent
+  | PaneAttachments
+  | FullScreen
+  deriving (Show,Eq,Ord)
+
+data Doc = Doc
+  { docVersion            :: !PDF
+  , docExtensions         :: !(Maybe PDF)
+  , docPages              :: !PDF
+  , docPageLabels         :: !(Maybe PDF)
+  , docNames              :: !(Maybe PDF)
+  , docDests              :: !(Maybe PDF)
+  , docViewerPrefs        :: !(Maybe PDF)
+  , docPageLayout         :: !(Maybe PageLayout)
+  , docPageMode           :: !(Maybe PageMode)
+  , docOutlines           :: !(Maybe PDF)
+  , docThreads            :: !(Maybe PDF)
+  , docOpenAction         :: !(Maybe PDF)
+  , docActions            :: !(Maybe PDF)
+  , docURI                :: !(Maybe PDF)
+  , docAcroForm           :: !(Maybe PDF)
+  , docMetaData           :: !(Maybe PDF)
+  , docTreeRoot           :: !(Maybe PDF)        -- ^ StructTreeRoot
+  , docTags               :: !(Maybe PDF)        -- ^ MarkInfo
+  , docLang               :: !(Maybe PDF)
+  , docWebCapture         :: !(Maybe PDF)
+  , docOutputIntents      :: !(Maybe PDF)
+  , docPagePiece          :: !(Maybe PDF)
+  , docOptionalContents   :: !(Maybe PDF)
+  , docPerms              :: !(Maybe PDF)
+  , docLegal              :: !(Maybe PDF)
+  , docRequirements       :: !(Maybe PDF)
+  , docCollection         :: !(Maybe PDF)
+  , docFormsNeedRendering :: !(Maybe Bool)
+  }
+
+defaultDoc :: Doc
+defaultDoc = Doc
+  { docVersion            = nameUtf8 "1.7"
+  , docExtensions         = Nothing
+  , docPages              = renderRef xrefNullObjRef
+  , docPageLabels         = Nothing
+  , docNames              = Nothing
+  , docDests              = Nothing
+  , docViewerPrefs        = Nothing
+  , docPageLayout         = Nothing
+  , docPageMode           = Nothing
+  , docOutlines           = Nothing
+  , docThreads            = Nothing
+  , docOpenAction         = Nothing
+  , docActions            = Nothing
+  , docURI                = Nothing
+  , docAcroForm           = Nothing
+  , docMetaData           = Nothing
+  , docTreeRoot           = Nothing
+  , docTags               = Nothing
+  , docLang               = Nothing
+  , docWebCapture         = Nothing
+  , docOutputIntents      = Nothing
+  , docPagePiece          = Nothing
+  , docOptionalContents   = Nothing
+  , docPerms              = Nothing
+  , docLegal              = Nothing
+  , docRequirements       = Nothing
+  , docCollection         = Nothing
+  , docFormsNeedRendering = Nothing
+  }
+
+renderDoc :: Doc -> PDF
+renderDoc Doc{..} = dict $ catMaybes
+  [ Just ("Type", nameUtf8 "Catalog")
+  , docVersion     |>  ("Version",) >.> Just
+  , docPages       |>  ("Pages",)   >.> Just
+  , docPageLabels  ||> ("PageLabels",)
+  , docNames       ||> ("Names",)
+  , docDests       ||> ("Dests",)
+  , docViewerPrefs ||> ("ViewerPreferences",)
+  , docPageLayout  ||> \layout -> ("PageLayout", case layout of
+      SinglePage     -> nameUtf8 "SinglePage"
+      OneColumn      -> nameUtf8 "OneColumn"
+      TwoColumnLeft  -> nameUtf8 "TwoColumnLeft"
+      TwoColumnRight -> nameUtf8 "TwoColumnRight"
+      TwoPageLeft    -> nameUtf8 "TwoPageLeft"
+      TwoPageRight   -> nameUtf8 "TwoPageRight"
+      )
+  , docPageMode    ||> \mode -> ("PageMode", case mode of
+      DefaultMode         -> nameUtf8 "UseNone"
+      PaneOutlines        -> nameUtf8 "UseOutlines"
+      PaneThumbs          -> nameUtf8 "UseThumbs"
+      PaneOptionalContent -> nameUtf8 "UseOC"
+      PaneAttachments     -> nameUtf8 "UseAttachments"
+      FullScreen          -> nameUtf8 "FullScreen"
+      )
+  ]
+
 
 ------------------------------------
 -- Monad
@@ -397,20 +515,25 @@ genXRefTable = do
   -- that we start from the NULL entry
   append $ xrefTable 0 (reverse (fmap objEntry refs))
 
-genRef :: ObjRef -> PDF
-genRef r = ref (objNum r) (xeGen (objEntry r))
+renderRef :: ObjRef -> PDF
+renderRef r = ref (objNum r) (xeGen (objEntry r))
 
-genTrailer :: Offset -> PdfM ()
-genTrailer xref_offset = do
+genTrailer :: Offset -> Doc -> PdfM ()
+genTrailer xref_offset doc = do
   n <- st_obj_num <$> getState
+  root_ref <- addObject (renderDoc doc)
   append_ $ trailer xref_offset $ dict
-    [ (nameUtf8 "Size", int (n+1))
-    , (nameUtf8 "Root", genRef xrefNullObjRef) -- FIXME: document catalog
+    [ ("Size", int (n+1))
+    , ("Root", renderRef root_ref)
     -- , (nameUtf8 "Prev", ...)
     -- , (nameUtf8 "Encrypt", ...)
     -- , (nameUtf8 "Info", ...)
     -- , (nameUtf8 "ID", ...)
     ]
+
+-- TODO: object streams
+-- TODO: xref streams
+-- TODO: encryption
 
 ------------------------------------
 -- Example
@@ -434,26 +557,27 @@ example = do
           , int (18 :: Int)
           , float (1.2 :: Double)
           ]
-      , dict [ (nameUtf8 "Type", nameUtf8 "Example")
-             , (nameUtf8 "SubType", nameUtf8 "DictionaryExample")
-             , (nameUtf8 "Version", float (0.01 :: Float))
-             , (nameUtf8 "IntegerItem", int (12 :: Int))
-             , (nameUtf8 "StringItem", litStringUtf8 "a string")
-             , (nameUtf8 "Subdictionary", dict
-                  [ (nameUtf8 "Item1", float (0.4 :: Double))
-                  , (nameUtf8 "Item2", bTrue)
+      , dict [ ("Type", nameUtf8 "Example")
+             , ("SubType", nameUtf8 "DictionaryExample")
+             , ("Version", float (0.01 :: Float))
+             , ("IntegerItem", int (12 :: Int))
+             , ("StringItem", litStringUtf8 "a string")
+             , ("Subdictionary", dict
+                  [ ("Item1", float (0.4 :: Double))
+                  , ("Item2", bTrue)
                   ])
              ]
-      , obj 7 0 $ dict [(nameUtf8 "Length", ref 8 0)]
+      , obj 7 0 $ dict [("Length", ref 8 0)]
       , obj 8 0 (int (77 :: Int))
       ]
     _obj_ref <- addObject $ dict
-      [ (nameUtf8 "Some", nameUtf8 "Custom")
-      , (nameUtf8 "Object", int (42 :: Int))
+      [ ("Some", nameUtf8 "Custom")
+      , ("Object", int (42 :: Int))
       ]
     _obj_ref2 <- addObject $ dict
-      [ (nameUtf8 "Some", nameUtf8 "Other")
-      , (nameUtf8 "Object", int (33 :: Int))
+      [ ("Some", nameUtf8 "Other")
+      , ("Object", int (33 :: Int))
       ]
     xref_table <- genXRefTable
-    genTrailer xref_table
+    let doc = defaultDoc
+    genTrailer xref_table doc

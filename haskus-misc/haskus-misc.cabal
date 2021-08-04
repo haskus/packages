@@ -27,6 +27,7 @@ library
       base                      >= 4.9 && < 5.0
     , bytestring-strict-builder
     , bytestring
+    , haskus-utils
 
   ghc-options:          -Wall
   default-language:     Haskell2010
