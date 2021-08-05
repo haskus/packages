@@ -6,6 +6,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 module Haskus.Format.PDF where
 
@@ -217,10 +218,12 @@ array xs = leftSquare <> mconcat (List.intersperse space xs) <> rightSquare
 -- Dictionary
 
 dict :: [(String,PDF)] -> PDF
-dict xs = leftAngle <> leftAngle <> mconcat (List.intersperse space (fmap go xs)) <> rightAngle <> rightAngle
+dict xs = leftAngle <> leftAngle <> mconcat (List.intersperse eol (fmap go xs)) <> rightAngle <> rightAngle <> eol
   where
     go (key,val) = nameUtf8 key <> space <> val
 
+makeDict :: [Maybe (String,PDF)] -> PDF
+makeDict = dict . catMaybes
 
 -- Stream
 
@@ -239,7 +242,7 @@ null = ascii "null"
 
 obj :: Word -> Word16 -> PDF -> PDF
 obj i gen contents = int i <> space <> int gen <> space
-                           <> ascii "obj" <> space <> contents
+                           <> ascii "obj" <> eol <> contents
                            <> ascii "endobj" <> eol
 
 ref :: Word -> Word16 -> PDF
@@ -291,10 +294,10 @@ xrefNullObjRef = ObjRef 0 xrefNullEntry
 trailer :: Offset -> PDF -> PDF
 trailer (Offset xref_offset) trail_dict = mconcat
   [ ascii "trailer", eol
-  , trail_dict, eol
+  , trail_dict
   , ascii "startxref", eol
   , int xref_offset, eol
-  , ascii "%%EOL"
+  , ascii "%%EOF"
   ]
 
 ------------------------------------
@@ -382,31 +385,41 @@ defaultDoc = Doc
   , docFormsNeedRendering = Nothing
   }
 
+-- | Mandatory entry
+mentry :: String -> PDF -> Maybe (String,PDF)
+mentry n c = Just (n,c)
+
+-- | Optional entry
+oentry :: String -> Maybe PDF -> Maybe (String,PDF)
+oentry n mc = fmap (n,) mc
+
+-- | Optional entry with custom filter
+centry :: String -> Maybe a -> (a -> PDF) -> Maybe (String,PDF)
+centry n mc f = fmap (\x -> (n,f x)) mc
+
 renderDoc :: Doc -> PDF
-renderDoc Doc{..} = dict $ catMaybes
-  [ Just ("Type", nameUtf8 "Catalog")
-  , docVersion     |>  ("Version",) >.> Just
-  , docPages       |>  ("Pages",)   >.> Just
-  , docPageLabels  ||> ("PageLabels",)
-  , docNames       ||> ("Names",)
-  , docDests       ||> ("Dests",)
-  , docViewerPrefs ||> ("ViewerPreferences",)
-  , docPageLayout  ||> \layout -> ("PageLayout", case layout of
+renderDoc Doc{..} = makeDict
+  [ mentry "Type"              (nameUtf8 "Catalog")
+  , mentry "Version"           docVersion
+  , mentry "Pages"             docPages
+  , oentry "PageLabels"        docPageLabels
+  , oentry "Names"             docNames
+  , oentry "Dests"             docDests
+  , oentry "ViewerPreferences" docViewerPrefs
+  , centry "PageLayout"        docPageLayout \case
       SinglePage     -> nameUtf8 "SinglePage"
       OneColumn      -> nameUtf8 "OneColumn"
       TwoColumnLeft  -> nameUtf8 "TwoColumnLeft"
       TwoColumnRight -> nameUtf8 "TwoColumnRight"
       TwoPageLeft    -> nameUtf8 "TwoPageLeft"
       TwoPageRight   -> nameUtf8 "TwoPageRight"
-      )
-  , docPageMode    ||> \mode -> ("PageMode", case mode of
+  , centry "PageMode"          docPageMode \case
       DefaultMode         -> nameUtf8 "UseNone"
       PaneOutlines        -> nameUtf8 "UseOutlines"
       PaneThumbs          -> nameUtf8 "UseThumbs"
       PaneOptionalContent -> nameUtf8 "UseOC"
       PaneAttachments     -> nameUtf8 "UseAttachments"
       FullScreen          -> nameUtf8 "FullScreen"
-      )
   ]
 
 ------------------------------------
@@ -418,12 +431,140 @@ data PageTree a
   | PageTreeLeaf a
 
 pageTreeNode :: Maybe Word -> [PDF] -> Word -> PDF
-pageTreeNode mparent cs count = dict $ catMaybes
-  [ Just ("Type", nameUtf8 "Pages")
-  , mparent ||> (\x -> ref x 0) >.> ("Parent",)
-  , Just ("Kids", array cs)
-  , Just ("Count", int count)
+pageTreeNode mparent cs count = makeDict
+  [ mentry "Type"   (nameUtf8 "Pages")
+  , centry "Parent" mparent (\x -> ref x 0)
+  , mentry "Kids"   (array cs)
+  , mentry "Count"  (int count)
   ]
+
+------------------------------------
+-- Page
+------------------------------------
+
+data Inheritable a
+  = Inherited
+  | NotInherited a
+  deriving (Show,Eq,Ord,Functor)
+
+type Rectangle = PDF
+
+data Rotate
+  = Rotate0
+  | Rotate90
+  | Rotate180
+  | Rotate270
+  deriving (Show,Eq,Ord)
+
+data Page = Page
+  { pageTreeParent     :: PDF
+  , pageLastModified   :: Maybe PDF
+  , pageResources      :: Maybe PDF
+  , pageMediaBox       :: Inheritable Rectangle
+  , pageCropBox        :: Inheritable Rectangle
+  , pageBleedBox       :: Maybe Rectangle
+  , pageTrimBox        :: Maybe Rectangle
+  , pageArtBox         :: Maybe Rectangle
+  , pageBoxColorInfo   :: Maybe PDF
+  , pageContents       :: Maybe PDF
+  , pageRotate         :: Inheritable Rotate
+  , pageGroup          :: Maybe PDF
+  , pageThumb          :: Maybe PDF
+  , pageArticleBreads  :: Maybe PDF
+  , pageDuration       :: Maybe Word            -- ^ Duration in seconds
+  , pageTransition     :: Maybe PDF
+  , pageAnnotations    :: Maybe PDF
+  , pageActions        :: Maybe PDF
+  , pageMetaData       :: Maybe PDF
+  , pagePieceInfo      :: Maybe PDF
+  , pageStructParents  :: Maybe PDF
+  , pageWebCaptureID   :: Maybe PDF
+  , pagePreferredZoom  :: Maybe PDF
+  , pageSeparationInfo :: Maybe PDF
+  , pageTabs           :: Maybe PDF
+  , pageTemplate       :: Maybe PDF
+  , pageNavigation     :: Maybe PDF             -- ^ PresSteps
+  , pageUserUnit       :: Maybe PDF
+  , pageViewPorts      :: Maybe PDF
+  }
+
+defaultPage :: Page
+defaultPage = Page
+  { pageTreeParent     = renderRef xrefNullObjRef
+  , pageLastModified   = Nothing
+  , pageResources      = Nothing
+  , pageMediaBox       = Inherited
+  , pageCropBox        = Inherited
+  , pageBleedBox       = Nothing
+  , pageTrimBox        = Nothing
+  , pageArtBox         = Nothing
+  , pageBoxColorInfo   = Nothing
+  , pageContents       = Nothing
+  , pageRotate         = Inherited
+  , pageGroup          = Nothing
+  , pageThumb          = Nothing
+  , pageArticleBreads  = Nothing
+  , pageDuration       = Nothing
+  , pageTransition     = Nothing
+  , pageAnnotations    = Nothing
+  , pageActions        = Nothing
+  , pageMetaData       = Nothing
+  , pagePieceInfo      = Nothing
+  , pageStructParents  = Nothing
+  , pageWebCaptureID   = Nothing
+  , pagePreferredZoom  = Nothing
+  , pageSeparationInfo = Nothing
+  , pageTabs           = Nothing
+  , pageTemplate       = Nothing
+  , pageNavigation     = Nothing
+  , pageUserUnit       = Nothing
+  , pageViewPorts      = Nothing
+  }
+
+-- | Inherited (optional) entry
+ientry :: String -> Inheritable PDF -> Maybe (String,PDF)
+ientry _ Inherited        = Nothing
+ientry n (NotInherited c) = Just (n,c)
+
+renderPage :: Page -> PDF
+renderPage Page{..} = makeDict
+  [ mentry "Type"           (nameUtf8 "Page")
+  , mentry "Parent"         pageTreeParent
+  , oentry "LastModified"   pageLastModified
+  , oentry "Resources"      pageResources
+  , ientry "MediaBox"       pageMediaBox
+  , ientry "CropBox"        pageCropBox
+  , oentry "BleedBox"       pageBleedBox
+  , oentry "TrimBox"        pageTrimBox
+  , oentry "ArtBox"         pageArtBox
+  , oentry "BoxColorInfo"   pageBoxColorInfo
+  , oentry "Contents"       pageContents
+  , ientry "Rotate"         (pageRotate ||> \case
+                              Rotate0   -> int (0   :: Int)
+                              Rotate90  -> int (90  :: Int)
+                              Rotate180 -> int (180 :: Int)
+                              Rotate270 -> int (270 :: Int))
+  , oentry "Group"          pageGroup
+  , oentry "Thumb"          pageThumb
+  , oentry "B"              pageArticleBreads
+  , centry "Dur"            pageDuration int
+  , oentry "Trans"          pageTransition
+  , oentry "Annots"         pageAnnotations
+  , oentry "AA"             pageActions
+  , oentry "MetaData"       pageMetaData
+  , oentry "PieceInfo"      pagePieceInfo
+  , oentry "StructParents"  pageStructParents
+  , oentry "ID"             pageWebCaptureID
+  , oentry "PZ"             pagePreferredZoom
+  , oentry "SeparationInfo" pageSeparationInfo
+  , oentry "Tabs"           pageTabs
+  , oentry "TemplateInstantiated" pageTemplate
+  , oentry "PresSteps"      pageNavigation
+  , oentry "UserUnit"       pageUserUnit
+  , oentry "VP"             pageViewPorts
+  ]
+
+
 
 ------------------------------------
 -- Monad
@@ -542,9 +683,9 @@ genTrailer :: Offset -> Doc -> PdfM ()
 genTrailer xref_offset doc = do
   n <- st_obj_num <$> getState
   root_ref <- addObject (renderDoc doc)
-  append_ $ trailer xref_offset $ dict
-    [ ("Size", int (n+1))
-    , ("Root", renderRef root_ref)
+  append_ $ trailer xref_offset $ makeDict
+    [ mentry "Size" (int (n+1))
+    , mentry "Root" (renderRef root_ref)
     -- , (nameUtf8 "Prev", ...)
     -- , (nameUtf8 "Encrypt", ...)
     -- , (nameUtf8 "Info", ...)
@@ -614,7 +755,10 @@ example = do
       [ ("Some", nameUtf8 "Other")
       , ("Object", int (33 :: Int))
       ]
-    let tree = PageTreeNode []
+    -- FIXME: page must contain a reference to the PageTreeNode containing it...
+    -- Should we render everything (page tree and pages) all at once?
+    page_ref <- addObject $ renderPage defaultPage
+    let tree = PageTreeNode [PageTreeLeaf (renderRef page_ref)]
     page_tree <- renderPageTree tree
     xref_table <- genXRefTable
     let doc = defaultDoc
