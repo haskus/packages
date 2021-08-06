@@ -18,7 +18,6 @@ import qualified Data.ByteString as BS
 import Data.Word
 import Data.Char
 import Data.Bits
-import GHC.Natural
 import Foreign.Storable
 import qualified Data.List as List
 import Numeric
@@ -261,35 +260,52 @@ data EntryUse
   | Free
 
 data XRefEntry = XRefEntry
-  { xeOffset :: {-# UNPACK #-} !Offset
+  { xeNum    :: {-# UNPACK #-} !Word
   , xeGen    :: {-# UNPACK #-} !Word16
+  , xeOffset :: {-# UNPACK #-} !Offset
   , xeUsed   :: !EntryUse
   }
 
 
-xrefTable :: Natural -> [XRefEntry] -> PDF
+xrefTable :: Word -> [XRefEntry] -> PDF
 xrefTable first entries = mconcat
   [ ascii "xref", eol, int first, space, int (length entries), eol
-  , mconcat (fmap entry entries)
+  , mconcat (go first (List.sortOn xeNum entries))
   ]
   where
+    go _ [] = []
+    go n (e:es)
+      | xeNum e /= n = error $ mconcat
+          [ "Invalid XRef entry number, expecting "
+          , show n, " but got ", show (xeNum e)
+          ]
+      | otherwise = renderEntry e : go (n+1) es
+
     showN n a = ascii (replicate (n-length s) '0' ++ s)
       where s = show a
 
-    entry (XRefEntry o g t) = mconcat
-      [ showN 10 o, space  -- 10-digit offset
-      , showN 5 g, space   -- 5-digit generation number
-      , case t of
+    renderEntry XRefEntry{..} = mconcat
+      [ showN 10 xeOffset, space  -- 10-digit offset
+      , showN 5 xeGen, space      -- 5-digit generation number
+      , case xeUsed of
           InUse -> asciiChar 'n'
           Free  -> asciiChar 'f'
       , space, eol
       ]
 
 xrefNullEntry :: XRefEntry
-xrefNullEntry = XRefEntry 0 65535 Free
+xrefNullEntry = XRefEntry
+  { xeNum    = 0
+  , xeGen    = 65535
+  , xeOffset = 0
+  , xeUsed   = Free
+  }
 
 xrefNullObjRef :: ObjRef
-xrefNullObjRef = ObjRef 0 xrefNullEntry
+xrefNullObjRef = ObjRef
+  { objNum = 0
+  , objGen = 65535
+  }
 
 ------------------------------------
 -- Trailer
@@ -434,10 +450,10 @@ data PageTree
   = PageTreeNode [PageTree]
   | PageTreeLeaf Page
 
-pageTreeNode :: Maybe Word -> [PDF] -> Word -> PDF
+pageTreeNode :: Maybe ObjRef -> [PDF] -> Word -> PDF
 pageTreeNode mparent cs count = makeDict
   [ mentry "Type"   (nameUtf8 "Pages")
-  , centry "Parent" mparent (\x -> ref x 0)
+  , centry "Parent" mparent renderRef
   , mentry "Kids"   (array cs)
   , mentry "Count"  (int count)
   ]
@@ -575,21 +591,21 @@ renderPage Page{..} = makeDict
 ------------------------------------
 
 data ObjRef = ObjRef
-  { objNum    :: Word   -- ^ Object number
-  , objEntry  :: XRefEntry
+  { objNum :: {-# UNPACK #-} !Word   -- ^ Object number
+  , objGen :: {-# UNPACK #-} !Word16 -- ^ Object generation
   }
 
 data PdfState = PdfState
-  { st_pdf      :: !PDF
-  , st_obj_num  :: {-# UNPACK #-} !Word
-  , st_obj_refs :: [ObjRef] -- ^ Objects (reverse order)
+  { st_pdf         :: !PDF
+  , st_obj_num     :: {-# UNPACK #-} !Word
+  , st_obj_entries :: [XRefEntry] -- ^ Objects (reverse order)
   }
 
 emptyPdfState :: PdfState
 emptyPdfState = PdfState
-  { st_pdf      = mempty
-  , st_obj_num  = 0
-  , st_obj_refs = [xrefNullObjRef]
+  { st_pdf         = mempty
+  , st_obj_num     = 0
+  , st_obj_entries = [xrefNullEntry]
   }
 
 newtype PdfM a
@@ -656,32 +672,32 @@ append_ p = modifyPdf (<> p)
 addObject :: PDF -> PdfM ObjRef
 addObject contents = do
   i <- getNextObjNum
-  addObject' i 0 contents
+  let r = ObjRef i 0
+  addObject' r contents
+  pure r
 
 -- | Add an object
-addObject' :: Word -> Word16 -> PDF -> PdfM ObjRef
-addObject' i gen contents = do
+addObject' :: ObjRef -> PDF -> PdfM ()
+addObject' (ObjRef i gen) contents = do
   offset <- append (obj i gen contents)
-  let obj_ref = ObjRef
-        { objNum   = i
-        , objEntry = XRefEntry
-            { xeGen    = gen
-            , xeUsed   = InUse
-            , xeOffset = offset
-            }
+  let obj_entry = XRefEntry
+        { xeNum = i
+        , xeGen = gen
+        , xeUsed   = InUse
+        , xeOffset = offset
         }
-  modifyState \s -> s { st_obj_refs = obj_ref : st_obj_refs s }
-  return obj_ref
+  modifyState \s -> s { st_obj_entries = obj_entry : st_obj_entries s }
+  pure ()
 
 genXRefTable :: PdfM Offset
 genXRefTable = do
-  refs <- st_obj_refs <$> getState
+  entries <- st_obj_entries <$> getState
   -- FIXME: we don't handle subsections (holes in the object list) and we assume
   -- that we start from the NULL entry
-  append $ xrefTable 0 (reverse (fmap objEntry refs))
+  append $ xrefTable 0 (reverse entries)
 
 renderRef :: ObjRef -> PDF
-renderRef r = ref (objNum r) (xeGen (objEntry r))
+renderRef (ObjRef n g) = ref n g
 
 genTrailer :: Offset -> ObjRef -> PdfM ()
 genTrailer xref_offset root_ref = do
@@ -702,21 +718,25 @@ renderPageTree tree = fst <$> go_first tree
       PageTreeLeaf _  -> error "Can't render a single page that is not in a tree"
       PageTreeNode cs -> do
         cid <- getNextObjNum
-        (as,ns) <- unzip <$> forM cs (go cid)
+        let r = ObjRef cid 0
+        (as,ns) <- unzip <$> forM cs (go r)
         let count = sum ns
-        r <- addObject' cid 0 (pageTreeNode Nothing as count)
+        addObject' r (pageTreeNode Nothing as count)
         pure (renderRef r, count)
 
-    go :: Word -> PageTree -> PdfM (PDF,Word)
+    go :: ObjRef -> PageTree -> PdfM (PDF,Word)
     go parent = \case
       PageTreeLeaf p  -> do
-        page_ref <- addObject (renderPage p)
+        -- set page's tree parent
+        let page = p { pageTreeParent = renderRef parent }
+        page_ref <- addObject (renderPage page)
         pure (renderRef page_ref,1)
       PageTreeNode cs -> do
         cid <- getNextObjNum
-        (as,ns) <- unzip <$> forM cs (go cid)
+        let r = ObjRef cid 0
+        (as,ns) <- unzip <$> forM cs (go r)
         let count = sum ns
-        r <- addObject' cid 0 (pageTreeNode (Just parent) as count)
+        addObject' r (pageTreeNode (Just parent) as count)
         pure (renderRef r, count)
 
 
