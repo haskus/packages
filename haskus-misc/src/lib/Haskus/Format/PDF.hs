@@ -218,9 +218,13 @@ array xs = leftSquare <> mconcat (List.intersperse space xs) <> rightSquare
 -- Dictionary
 
 dict :: [(String,PDF)] -> PDF
-dict xs = leftAngle <> leftAngle <> mconcat (List.intersperse eol (fmap go xs)) <> rightAngle <> rightAngle <> eol
+dict xs = mconcat
+  [ leftAngle, leftAngle, eol
+  , mconcat (fmap go xs)
+  , rightAngle, rightAngle, eol
+  ]
   where
-    go (key,val) = nameUtf8 key <> space <> val
+    go (key,val) = nameUtf8 key <> space <> val <> eol
 
 makeDict :: [Maybe (String,PDF)] -> PDF
 makeDict = dict . catMaybes
@@ -426,9 +430,9 @@ renderDoc Doc{..} = makeDict
 -- Page tree
 ------------------------------------
 
-data PageTree a
-  = PageTreeNode [PageTree a]
-  | PageTreeLeaf a
+data PageTree
+  = PageTreeNode [PageTree]
+  | PageTreeLeaf Page
 
 pageTreeNode :: Maybe Word -> [PDF] -> Word -> PDF
 pageTreeNode mparent cs count = makeDict
@@ -679,10 +683,9 @@ genXRefTable = do
 renderRef :: ObjRef -> PDF
 renderRef r = ref (objNum r) (xeGen (objEntry r))
 
-genTrailer :: Offset -> Doc -> PdfM ()
-genTrailer xref_offset doc = do
+genTrailer :: Offset -> ObjRef -> PdfM ()
+genTrailer xref_offset root_ref = do
   n <- st_obj_num <$> getState
-  root_ref <- addObject (renderDoc doc)
   append_ $ trailer xref_offset $ makeDict
     [ mentry "Size" (int (n+1))
     , mentry "Root" (renderRef root_ref)
@@ -692,18 +695,28 @@ genTrailer xref_offset doc = do
     -- , (nameUtf8 "ID", ...)
     ]
 
-renderPageTree :: PageTree PDF -> PdfM PDF
-renderPageTree tree = fst <$> go Nothing tree
+renderPageTree :: PageTree -> PdfM PDF
+renderPageTree tree = fst <$> go_first tree
   where
-    -- do it recursively (tying the knot)
-    go :: Maybe Word -> PageTree PDF -> PdfM (PDF,Word)
-    go mparent = \case
-      PageTreeLeaf a  -> pure (a,1)
+    go_first = \case
+      PageTreeLeaf _  -> error "Can't render a single page that is not in a tree"
       PageTreeNode cs -> do
         cid <- getNextObjNum
-        (as,ns) <- unzip <$> forM cs (go (Just cid))
+        (as,ns) <- unzip <$> forM cs (go cid)
         let count = sum ns
-        r <- addObject' cid 0 (pageTreeNode mparent as count)
+        r <- addObject' cid 0 (pageTreeNode Nothing as count)
+        pure (renderRef r, count)
+
+    go :: Word -> PageTree -> PdfM (PDF,Word)
+    go parent = \case
+      PageTreeLeaf p  -> do
+        page_ref <- addObject (renderPage p)
+        pure (renderRef page_ref,1)
+      PageTreeNode cs -> do
+        cid <- getNextObjNum
+        (as,ns) <- unzip <$> forM cs (go cid)
+        let count = sum ns
+        r <- addObject' cid 0 (pageTreeNode (Just parent) as count)
         pure (renderRef r, count)
 
 
@@ -721,7 +734,10 @@ toAscii = fmap (fromIntegral . ord)
 
 example :: IO ()
 example = do
-  let hdr = ascii "%PDF-1.7\n"
+  let hdr = ascii "%PDF-1.7" <> eol
+            <> asciiChar '%'
+            <> word32BE 0xd0d4c5d8 -- binary values
+            <> eol
   renderPDF "test.pdf" $ runPdf do
     append_ $ mconcat
       [ hdr
@@ -755,13 +771,11 @@ example = do
       [ ("Some", nameUtf8 "Other")
       , ("Object", int (33 :: Int))
       ]
-    -- FIXME: page must contain a reference to the PageTreeNode containing it...
-    -- Should we render everything (page tree and pages) all at once?
-    page_ref <- addObject $ renderPage defaultPage
-    let tree = PageTreeNode [PageTreeLeaf (renderRef page_ref)]
-    page_tree <- renderPageTree tree
-    xref_table <- genXRefTable
+    page_tree <- renderPageTree $ PageTreeNode
+      [PageTreeLeaf defaultPage, PageTreeLeaf defaultPage]
     let doc = defaultDoc
                 { docPages = page_tree
                 }
-    genTrailer xref_table doc
+    root_ref <- addObject (renderDoc doc)
+    xref_table <- genXRefTable
+    genTrailer xref_table root_ref
