@@ -34,6 +34,7 @@ import Haskus.Number.Word
 import Haskus.Binary.Bits
 import Haskus.Memory.Embed
 import Haskus.Memory.Buffer
+import System.IO.Unsafe
 
 -- $setup
 -- >>> import Haskus.Utils.Flow
@@ -121,11 +122,11 @@ isLeapYear y = y .&. 3 == 0 && (r100 /= 0 || q100 .&. 3 == 0) where
    (q100, r100) = y `quotRem` 100
 
 -- | Table of number of days in each month (as Word8)
-monthDaysTable :: BufferE
+monthDaysTable :: Buffer
 monthDaysTable = $$(embedBytes [31,28,31,30,31,30,31,31,30,31,30,31])
 
 -- | Table of number of days in each month for a leap year (as Word8)
-monthDaysLeapTable :: BufferE
+monthDaysLeapTable :: Buffer
 monthDaysLeapTable = $$(embedBytes [31,29,31,30,31,30,31,31,30,31,30,31])
 
 -- | Get month length
@@ -135,7 +136,7 @@ monthDaysLeapTable = $$(embedBytes [31,29,31,30,31,30,31,31,30,31,30,31])
 -- >>> monthLength 2016 2
 -- 29
 monthLength :: Year -> Month -> Word8
-monthLength y m = bufferReadWord8 table (fromIntegral m - 1)
+monthLength y m = unsafePerformIO (bufferReadWord8 table (fromIntegral m - 1))
    where
       table
          | isLeapYear y = monthDaysLeapTable

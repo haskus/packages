@@ -12,7 +12,7 @@ import Haskus.Memory.Buffer
 data Picture p = Picture
    { pictureWidth      :: !Word      -- ^ Width in pixels
    , pictureheight     :: !Word      -- ^ Height in pixels
-   , pictureData       :: AnyBuffer  -- ^ Pixel data
+   , pictureData       :: Buffer     -- ^ Pixel data
    , picturePixelRatio :: Ratio Word -- ^ Pixel width/height ratio (= 1 if square pixels)
    }
 

@@ -14,6 +14,7 @@ where
 import Haskus.Binary.Serialize.Put
 import Haskus.Memory.Buffer
 import Control.Monad.Trans.State.Strict as S
+import System.IO.Unsafe
 
 newtype GetSize a
    = GetSize (State Word a) 
@@ -32,4 +33,4 @@ instance PutMonad GetSize where
    putWord16 _ = incSize 2
    putWord32 _ = incSize 4
    putWord64 _ = incSize 8
-   putBuffer b = incSize (bufferSize b)
+   putBuffer b = incSize (unsafePerformIO (bufferSize b))

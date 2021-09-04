@@ -83,9 +83,9 @@ import Haskus.Memory.Buffer
 -- source.
 --
 data ViewSource
-   = forall pin fin heap. SourceBuffer (Buffer 'Immutable pin fin heap)
+   = SourceBuffer Buffer
       -- ^ The source is a buffer. The view keeps the buffer alive
-   | forall pin fin heap. SourceWeakBuffer (Weak (Buffer 'Immutable pin fin heap))
+   | SourceWeakBuffer (Weak Buffer)
       -- ^ The source is a weak buffer. If the buffer is collected, its contents
       -- is copied in to a new buffer and the view is updated to use it.
    | SourceWeakView (Weak ViewIORef)
@@ -151,12 +151,12 @@ patternApplyOn p1 p2 = case (p1, p2) of
    _                                   -> PatternOn p1 p2
 
 -- | Read a Word8 from a view
-viewReadWord8 :: MonadIO m => View -> Word -> m Word8
+viewReadWord8 :: View -> Word -> IO Word8
 viewReadWord8 view off =
    withValidView view
-      (\b pat -> bufferReadWord8IO b (patternOffset pat off))
-      (\b pat -> bufferReadWord8IO b (patternOffset pat off))
-      (\v pat -> viewReadWord8     v (patternOffset pat off))
+      (\b pat -> bufferReadWord8 b (patternOffset pat off))
+      (\b pat -> bufferReadWord8 b (patternOffset pat off))
+      (\v pat -> viewReadWord8   v (patternOffset pat off))
 
 
 -- | Wait for a view to be valid then use one of the 3 passed functions on it
@@ -164,8 +164,8 @@ viewReadWord8 view off =
 withValidView
    :: MonadIO m
    => View
-   -> (forall pin fin heap. Buffer 'Immutable pin fin heap -> ViewPattern -> m a)
-   -> (forall pin fin heap. Buffer 'Immutable pin fin heap -> ViewPattern -> m a)
+   -> (Buffer -> ViewPattern -> m a)
+   -> (Buffer -> ViewPattern -> m a)
    -> (View -> ViewPattern -> m a)
    -> m a
 withValidView (View ref) fb fwb fwv = go True
@@ -196,7 +196,7 @@ withValidView (View ref) fb fwb fwv = go True
 
 
 -- | Create a view on a buffer
-newBufferView :: MonadIO m => Buffer 'Immutable pin fin heap -> ViewPattern -> m View
+newBufferView :: MonadIO m => Buffer -> ViewPattern -> m View
 newBufferView b pat = View <$> liftIO (newIORef (SourceBuffer b,pat))
 
 -- | Create a weak view on a buffer
@@ -208,7 +208,7 @@ newBufferView b pat = View <$> liftIO (newIORef (SourceBuffer b,pat))
 -- buffer so that the copying cost is balanced by the memory occupation
 -- difference.
 --
-newBufferWeakView :: MonadIO m => Buffer 'Immutable pin fin heap -> ViewPattern -> m View
+newBufferWeakView :: MonadIO m => Buffer -> ViewPattern -> m View
 newBufferWeakView b pat = do
    -- temporarily create a View that non-weakly references the buffer
    v <- View <$> (liftIO $ newIORef (SourceBuffer b,pat))
@@ -221,7 +221,7 @@ newBufferWeakView b pat = do
 assignBufferWeakView
    :: MonadIO m
    => View
-   -> Buffer 'Immutable pin fin heap
+   -> Buffer
    -> ViewPattern
    -> m ()
 assignBufferWeakView (View ref) b pat = do
@@ -236,14 +236,14 @@ assignBufferWeakView (View ref) b pat = do
 
 
 bufferWeakViewFinalier
-   :: Buffer 'Immutable pin fin heap -- ^ Source buffer
-   -> ViewPattern                    -- ^ View pattern
-   -> Weak ViewIORef                 -- ^ Weak IORef of the view
+   :: Buffer         -- ^ Source buffer
+   -> ViewPattern    -- ^ View pattern
+   -> Weak ViewIORef -- ^ Weak IORef of the view
    -> IO ()
 bufferWeakViewFinalier b pat wViewRef = deRefWeak wViewRef >>= \case
    Nothing      -> return () -- the view is dead
    Just viewRef -> do
-      bsz <- bufferSizeIO b
+      bsz <- bufferSize b
       newSrc <- case pat of
          -- this is stupid (the view covers the whole buffer) but let's resurrect b
          PatternFull                          -> return (SourceBuffer b)
@@ -254,8 +254,7 @@ bufferWeakViewFinalier b pat wViewRef = deRefWeak wViewRef >>= \case
          _ -> do
             -- we allocate a new buffer and copy the contents in it
             b'  <- copyBufferWithPattern b pat
-            b'' <- unsafeBufferFreeze b'
-            return (SourceBuffer b'')
+            return (SourceBuffer b')
 
       -- update the view IORef
       writeIORef viewRef (newSrc,PatternFull)
@@ -290,7 +289,7 @@ assignViewWeakView (View ref) (View srcRef) pat = do
    liftIO (writeIORef ref (SourceWeakView wSrcRef,pat))
 
    -- we don't want the finalizer to run before we write the IORef
-   liftIO (touch srcRef)
+   -- FIXME: liftIO (touch srcRef)
 
 viewWeakViewFinalizer :: Weak ViewIORef -> ViewIORef -> ViewPattern -> IO ()
 viewWeakViewFinalizer weakView srcRef pat = deRefWeak weakView >>= \case
@@ -314,28 +313,28 @@ viewWeakViewFinalizer weakView srcRef pat = deRefWeak weakView >>= \case
 
 -- | Allocate a new buffer initialized with the contents of the source buffer
 -- according to the given pattern
-copyBufferWithPattern :: Buffer mut pin fin heap -> ViewPattern -> IO BufferM
+copyBufferWithPattern :: Buffer -> ViewPattern -> IO Buffer
 copyBufferWithPattern b pat = do
-   bsz <- bufferSizeIO b
+   bsz <- bufferSize b
    let !sz = patternSize pat bsz
    b' <- newBuffer sz
    case pat of
       PatternFull               -> error "Unreachable code"
-      Pattern1D poff psz        -> copyBuffer b poff b' 0 psz
+      Pattern1D poff psz        -> bufferCopy b poff b' 0 psz
       Pattern2D poff w h stride -> forM_ [0..h-1] $ \r ->
-         copyBuffer b (poff + r*(w+stride)) b' (r*w) w
+         bufferCopy b (poff + r*(w+stride)) b' (r*w) w
       PatternOn _p1 _p2         -> forM_ [0..sz-1] $ \off -> do
          -- Not very efficient to copy byte by byte...
-         v <- bufferReadWord8IO b (patternOffset pat off)
-         bufferWriteWord8IO b' off v
+         v <- bufferReadWord8 b (patternOffset pat off)
+         bufferWriteWord8 b' off v
    return b'
 
 
 -- | Convert a view into an actual buffer
-viewToBuffer :: View -> IO BufferM
+viewToBuffer :: View -> IO Buffer
 viewToBuffer = go PatternFull
    where
-      go :: ViewPattern -> View -> IO BufferM
+      go :: ViewPattern -> View -> IO Buffer
       go pat v = withValidView v
          (\b pat2 -> copyBufferWithPattern b (pat `patternApplyOn` pat2))
          (\b pat2 -> copyBufferWithPattern b (pat `patternApplyOn` pat2))
@@ -345,7 +344,7 @@ viewToBuffer = go PatternFull
 --
 -- >>> :set -XOverloadedLists
 -- >>> import System.Mem
--- >>> v <- newBufferWeakView ([10,11,12,13,14,15,16,17] :: BufferI) (Pattern1D 2 4)
+-- >>> v <- newBufferWeakView ([10,11,12,13,14,15,16,17] :: Buffer) (Pattern1D 2 4)
 -- >>> v2 <- newViewWeakView v (Pattern1D 1 1)
 --
 -- > putStr =<< showViewState v2
@@ -371,13 +370,13 @@ viewToBuffer = go PatternFull
 --    View pattern: PatternFull
 --    Wasted space: 0%
 --
-showViewState :: MonadIO m => View -> m String
+showViewState :: View -> IO String
 showViewState = fmap fst . go
 
    where
       go v = withValidView v
          (\b pat -> do
-            sz <- bufferSizeIO b
+            sz <- bufferSize b
             let psz = patternSize pat sz
             return (unlines
                [ "View source: buffer"
@@ -387,7 +386,7 @@ showViewState = fmap fst . go
                ], psz)
          )
          (\b pat -> do
-            sz <- bufferSizeIO b
+            sz <- bufferSize b
             let psz = patternSize pat sz
             return (unlines
                [ "View source: weak buffer"

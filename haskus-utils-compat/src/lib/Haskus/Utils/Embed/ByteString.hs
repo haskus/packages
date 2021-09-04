@@ -3,6 +3,9 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 -- | Embed files as ByteStrings into an executable
 module Haskus.Utils.Embed.ByteString
@@ -21,6 +24,8 @@ import Language.Haskell.TH.Syntax
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BS
 import GHC.Ptr
+import GHC.Exts
+import GHC.IO (IO(..))
 import System.IO.Unsafe
 import System.Directory
 import System.FilePath
@@ -107,23 +112,23 @@ embedBSDir fp = do
 embedBS :: BS.ByteString -> Q Exp
 embedBS bs = do
    bufToBs <- [| bufferToByteString |]
-   -- make an input BufferE from the ByteString
-   buf <- runIO $ BS.unsafeUseAsCStringLen bs $ \(Ptr addr, sz) -> do
-            return (BufferE addr (fromIntegral sz))
+   -- make an input Buffer from the ByteString
+   buf <- runIO $ BS.unsafeUseAsCStringLen bs $ \(Ptr addr, I# sz) -> do
+            return (attachExternalBuffer addr (int2Word# sz))
    -- embed it
    outBuf <- embedBuffer buf False Nothing Nothing Nothing
    -- keep the ByteString alive up to here
-   runIO $ touch bs
+   runIO $ IO \s -> case touch# bs s of s' -> (# s', () #)
    -- return an expression converting the embedded buffer into a ByteString
    return $ bufToBs `AppE` outBuf
 
 -- | Convert an external buffer into a ByteString (O(1))
-bufferToByteString :: Buffer mut pin 'NotFinalized 'External -> BS.ByteString
+bufferToByteString :: Buffer -> BS.ByteString
 bufferToByteString b = unsafePerformIO $ do 
-   let pack addr sz = BS.unsafePackAddressLen (fromIntegral sz) addr
-   case b of
-      BufferE  addr sz -> pack addr sz
-      BufferME addr sz -> pack addr sz
+  case b of
+    InBuffer {}                        -> error "bufferToByteString: not an external buffer"
+    OutBuffer _addr _sz (Finalizers _) -> error "bufferToByteString: unsupported finalized buffer"
+    OutBuffer addr sz NoFinalizers     -> BS.unsafePackAddressLen (I# (word2Int# sz)) addr
 
 -- | List a directory recursively, only returning non-hidden files.
 --

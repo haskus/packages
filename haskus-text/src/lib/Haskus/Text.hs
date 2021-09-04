@@ -8,30 +8,19 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Haskus.Text
-   ( TextBuffer (..)
-   , TextI
-   , TextB
+   ( Text (..)
    , ShowText (..)
    )
 where
 
 import Haskus.Memory.Buffer
-import Haskus.Utils.Flow
 
--- | Text buffer
+-- | Text
 --
 -- The buffer contains a text encoded according to phantom type t
-newtype TextBuffer (t :: k) b
-   = TextBuffer b
+newtype Text (t :: k)
+   = Text Buffer
 
--- type aliases
-type TextI t                  = TextBuffer t BufferI
-type TextB t mut pin fin heap = TextBuffer t (Buffer mut pin fin heap)
-
-
-class ShowText (t :: k) b where
+class ShowText (t :: k) where
    -- | Show text in IO
-   showTextIO :: MonadIO m => TextBuffer t b -> m String
-
-   -- | Pure show text
-   showText   :: BufferToList b => TextBuffer t b -> String
+   showTextIO :: Text t -> IO String

@@ -3,6 +3,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE MagicHash #-}
 
 module Haskus.Binary.Serialize.File
    ( FileGetState (..)
@@ -18,7 +19,7 @@ import Haskus.Memory.Buffer
 import Haskus.Utils.Monad
 import Haskus.Utils.Maybe
 
-import GHC.Exts (Ptr (..))
+import GHC.Exts (Ptr (..), Word(..))
 import System.IO
 import Control.Monad.Trans.State.Strict as S
 import Control.Monad.Fix
@@ -63,9 +64,9 @@ instance (MonadIO m) => GetMonad (FileGetT m) where
       getWord32      = getSomething 4 peek
       getWord64      = getSomething 8 peek
 
-      getBufferInto sz dest mdoff = getSomething sz \(Ptr addr) -> do
-         let b = BufferE addr sz
-         copyBuffer b 0 dest (fromMaybe 0 mdoff) sz
+      getBufferInto sz@(W# sz#) dest mdoff = getSomething sz \(Ptr addr) -> do
+         let b = attachExternalBuffer addr sz#
+         bufferCopy b 0 dest (fromMaybe 0 mdoff) sz
 
 
 -- | Run a getter on a file

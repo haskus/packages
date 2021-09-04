@@ -3,6 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE BlockArguments #-}
 
 -- | Embed buffers into the program
 module Haskus.Memory.Embed
@@ -14,10 +15,6 @@ module Haskus.Memory.Embed
    , embedUnpinnedBuffer
    , loadSymbol
    , loadMutableSymbol
-   , toBufferE
-   , toBufferE'
-   , toBufferME
-   , toBufferME'
    , makeEmbeddingFile
    , EmbedEntry (..)
    , SectionType (..)
@@ -43,10 +40,9 @@ import System.IO
 -- >>> let b = $$(embedBytes [72,69,76,76,79])
 -- >>> bufferSize b
 -- 5
-embedBytes :: [Word8] -> Q (TExp BufferE)
+embedBytes :: [Word8] -> Q (TExp Buffer)
 embedBytes bs = do
-   bufE <- fromMaybe (error "Please import Haskus.Memory.Embed") <$> lookupValueName "toBufferE'"
-   return $ TExp $ VarE bufE
+   return $ TExp $ VarE 'attachExternalBuffer
       `AppE` LitE (StringPrimL bs)
       `AppE` LitE (WordPrimL (fromIntegral (length bs)))
 
@@ -64,12 +60,11 @@ embedBytes bs = do
 loadSymbol :: Word -> String -> Q Exp
 loadSymbol sz sym = do
    nam <- newName sym
-   bufE <- fromMaybe (error "Please import Haskus.Memory.Embed") <$> lookupValueName "toBufferE"
    ptrTy <- [t| Ptr () |]
    addTopDecls
       [ ForeignD $ ImportF CCall unsafe ("&"++sym) nam ptrTy
       ]
-   return $ VarE bufE
+   return $ VarE 'attachExternalBufferPtr
       `AppE` VarE nam
       `AppE` LitE (WordPrimL (fromIntegral sz))
 
@@ -94,31 +89,13 @@ loadSymbol sz sym = do
 loadMutableSymbol :: Word -> String -> Q Exp
 loadMutableSymbol sz sym = do
    nam <- newName sym
-   bufE <- fromMaybe (error "Please import Haskus.Memory.Embed") <$> lookupValueName "toBufferME"
    ptrTy <- [t| Ptr () |]
    addTopDecls
       [ ForeignD $ ImportF CCall unsafe ("&"++sym) nam ptrTy
       ]
-   return $ VarE bufE
+   return $ VarE 'attachExternalBufferPtr
       `AppE` VarE nam
       `AppE` LitE (WordPrimL (fromIntegral sz))
-
-
-toBufferE :: Ptr () -> Word# -> BufferE
-{-# INLINABLE toBufferE #-}
-toBufferE (Ptr x) sz = BufferE x (W# sz)
-
-toBufferE' :: Addr# -> Word# -> BufferE
-{-# INLINABLE toBufferE' #-}
-toBufferE' x sz = BufferE x (W# sz)
-
-toBufferME :: Ptr () -> Word# -> BufferME
-{-# INLINABLE toBufferME #-}
-toBufferME (Ptr x) sz = BufferME x (W# sz)
-
-toBufferME' :: Addr# -> Word# -> BufferME
-{-# INLINABLE toBufferME' #-}
-toBufferME' x sz = BufferME x (W# sz)
 
 
 -- | Section type
@@ -187,8 +164,7 @@ embedFile
 embedFile = embedFile' False
 
 
--- | Embed a file in the executable. Return a BufferE or a BufferME depending on
--- the mutability parameter.
+-- | Embed a file in the executable.
 --
 -- `nodep` parameter is used to indicate if we want to add a dependency on the
 -- input file (e.g. we don't want to do this for temporary files TH generated).
@@ -228,7 +204,7 @@ embedFile' nodep path mutable malign moffset msize = do
 -- | Embed a pinned buffer in the executable. Return either a BufferE or a
 -- BufferME.
 embedPinnedBuffer
-   :: Buffer mut 'Pinned fin heap -- ^ Source buffer
+   :: Buffer      -- ^ Source buffer
    -> Bool        -- ^ Should the embedded buffer be mutable
    -> Maybe Word  -- ^ Alignement
    -> Maybe Word  -- ^ Offset in the buffer
@@ -236,46 +212,42 @@ embedPinnedBuffer
    -> Q Exp       -- ^ BufferE or BufferME, depending on mutability parameter
 embedPinnedBuffer buf mut malign moffset msize = do
    tmp <- qAddTempFile ".dat"
-   bsz <- bufferSizeIO buf
+   bsz <- liftIO (bufferSize buf)
    let off = fromMaybe 0 moffset
    let sz  = fromMaybe bsz msize
    when (off+sz > bsz) $
       fail "Invalid buffer offset/size combination"
 
-   liftIO $ unsafeWithBufferPtr buf $ \ptr -> do
+   liftIO $ withBufferAddr# buf \addr -> do
       withBinaryFile tmp WriteMode $ \hdl -> do
-         hPutBuf hdl (ptr `plusPtr` fromIntegral off) (fromIntegral sz)
+         hPutBuf hdl (Ptr addr `plusPtr` fromIntegral off) (fromIntegral sz)
    embedFile' True tmp mut malign Nothing Nothing
 
--- | Embed a unpinned buffer in the executable. Return either a BufferE or a
--- BufferME.
+-- | Embed a unpinned buffer in the executable. Return a Buffer.
 embedUnpinnedBuffer
-   :: Buffer mut 'NotPinned fin heap -- ^ Source buffer
+   :: Buffer      -- ^ Source buffer
    -> Bool        -- ^ Should the embedded buffer be mutable
    -> Maybe Word  -- ^ Alignement
    -> Maybe Word  -- ^ Offset in the buffer
    -> Maybe Word  -- ^ Number of Word8 to write
    -> Q Exp       -- ^ BufferE or BufferME, depending on mutability parameter
 embedUnpinnedBuffer buf mut malign moffset msize = do
-   bsz <- liftIO (bufferSizeIO buf)
+   bsz <- liftIO (bufferSize buf)
    let sz  = fromMaybe bsz msize
    let off = fromMaybe 0 moffset
-   b <- newPinnedBuffer sz
-   liftIO (copyBuffer buf off b 0 sz)
+   b <- liftIO (newPinnedBuffer sz)
+   liftIO (bufferCopy buf off b 0 sz)
    embedPinnedBuffer b mut malign Nothing Nothing
 
 -- | Embed a buffer in the executable. Return either a BufferE or a BufferME.
 embedBuffer
-   :: Buffer mut pin fin heap -- ^ Source buffer
+   :: Buffer     -- ^ Source buffer
    -> Bool       -- ^ Should the embedded buffer be mutable or not
    -> Maybe Word -- ^ Optional alignement constraint
    -> Maybe Word -- ^ Optional offset in the source buffer
    -> Maybe Word -- ^ Optional number of bytes to include
    -> Q Exp      -- ^ BufferE or BufferME, depending on mutability parameter
 embedBuffer b =
-   -- Some buffers with 'NotPinned are in fact pinned by GHC as an optimization.
-   -- We detect this with `bufferDynamicallyPinned` and we avoid the copy in
-   -- these cases.
-   case bufferDynamicallyPinned b of
-      Left ub  -> embedUnpinnedBuffer ub
-      Right pb -> embedPinnedBuffer pb
+   if bufferIsPinned b
+     then embedPinnedBuffer b
+     else embedUnpinnedBuffer b

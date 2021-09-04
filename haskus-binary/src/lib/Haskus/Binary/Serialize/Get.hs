@@ -64,14 +64,14 @@ class Monad m => GetMonad m where
    getWord64s n = replicateM (fromIntegral n) getWord64
 
    -- | Read the given amount of bytes into a new buffer
-   getBuffer     :: Word -> m BufferI
+   getBuffer     :: Word -> m Buffer
    getBuffer n = do
       xs <- replicateM (fromIntegral n) getWord8
       return (fromListN (fromIntegral n) xs)
 
    -- | Read the given amount of bytes into the specified buffer at the
    -- optionally specified offset
-   getBufferInto :: Word -> Buffer 'Mutable pin gc heap -> Maybe Word -> m ()
+   getBufferInto :: Word -> Buffer -> Maybe Word -> m ()
 
    -- | Skip the given amount of bytes
    getSkipBytes :: Word -> m ()

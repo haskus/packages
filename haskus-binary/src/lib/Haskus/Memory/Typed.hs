@@ -20,7 +20,7 @@ import GHC.Exts
 newtype PointerT (t :: k) mut fin = PointerT (Pointer mut fin)
 
 -- | Typed buffer
-newtype BufferT (t :: k) mut pin fin heap = BufferT (Buffer mut pin fin heap)
+newtype BufferT (t :: k) = BufferT Buffer
 
 -- | Typed raw pointer
 newtype PtrT (t :: k) = PtrT (Ptr ())

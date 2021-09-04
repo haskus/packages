@@ -19,7 +19,7 @@
 -- >>> xs <- forM [0..4] (bufferReadWord8IO b')
 -- >>> xs == [0x01,0x23,0x45,0x67,0x89]
 -- True
--- >>> bufferSizeIO b'
+-- >>> bufferSize b'
 -- 16
 --
 module Haskus.Binary.Serialize.Buffer
@@ -78,23 +78,23 @@ overflowBufferFail = OverflowStrategy \ex -> do
 
 -- | Buffer extend strategy: double the buffer size each time and copy the
 -- original contents in it
-overflowBufferDouble :: MonadIO m => OverflowStrategy m BufferM
+overflowBufferDouble :: OverflowStrategy IO Buffer
 overflowBufferDouble = OverflowStrategy \ex -> do
-   sz <- bufferSizeIO (overflowBuffer ex)
+   sz <- bufferSize (overflowBuffer ex)
    let off = overflowOffset   ex
        req = overflowRequired ex
        b   = overflowBuffer   ex
        makeSzs i = i*i : makeSzs (i*i) -- infinite list of doubling sizes
        newSz = head <| filter (> req+off) (makeSzs sz)
    newB <- newBuffer newSz
-   copyBuffer b 0 newB 0 off
+   bufferCopy b 0 newB 0 off
    pure (newB,off)
 
 -- | Buffer extend strategy: double the buffer size each time and copy the
 -- original contents in it
-overflowBufferDoublePinned :: MonadIO m => Maybe Word -> OverflowStrategy m BufferMP
+overflowBufferDoublePinned :: Maybe Word -> OverflowStrategy IO Buffer
 overflowBufferDoublePinned malignment = OverflowStrategy \ex -> do
-   sz <- bufferSizeIO (overflowBuffer ex)
+   sz <- bufferSize (overflowBuffer ex)
    let off = overflowOffset   ex
        req = overflowRequired ex
        b   = overflowBuffer   ex
@@ -103,28 +103,28 @@ overflowBufferDoublePinned malignment = OverflowStrategy \ex -> do
    newB <- case malignment of
       Nothing -> newPinnedBuffer newSz
       Just al -> newAlignedPinnedBuffer newSz al
-   copyBuffer b 0 newB 0 off
+   bufferCopy b 0 newB 0 off
    pure (newB,off)
 
 -- | Buffer extend strategy: add the given size each time and copy the
 -- original contents in it
-overflowBufferAdd :: MonadIO m => Word -> OverflowStrategy m BufferM
+overflowBufferAdd :: Word -> OverflowStrategy IO Buffer
 overflowBufferAdd addSz = OverflowStrategy \ex -> do
-   sz <- bufferSizeIO (overflowBuffer ex)
+   sz <- bufferSize (overflowBuffer ex)
    let off = overflowOffset   ex
        req = overflowRequired ex
        b   = overflowBuffer   ex
        makeSzs i = i+addSz : makeSzs (i+addSz) -- infinite list of added sizes
        newSz = head <| filter (> req+off) (makeSzs sz)
    newB <- newBuffer newSz
-   copyBuffer b 0 newB 0 off
+   bufferCopy b 0 newB 0 off
    pure (newB,off)
 
 -- | Buffer extend strategy: add the given size each time and copy the
 -- original contents in it
-overflowBufferAddPinned :: MonadIO m => Maybe Word -> Word -> OverflowStrategy m BufferMP
+overflowBufferAddPinned :: Maybe Word -> Word -> OverflowStrategy IO Buffer
 overflowBufferAddPinned malignment addSz = OverflowStrategy \ex -> do
-   sz <- bufferSizeIO (overflowBuffer ex)
+   sz <- bufferSize (overflowBuffer ex)
    let off = overflowOffset   ex
        req = overflowRequired ex
        b   = overflowBuffer   ex
@@ -133,7 +133,7 @@ overflowBufferAddPinned malignment addSz = OverflowStrategy \ex -> do
    newB <- case malignment of
       Nothing -> newPinnedBuffer newSz
       Just al -> newAlignedPinnedBuffer newSz al
-   copyBuffer b 0 newB 0 off
+   bufferCopy b 0 newB 0 off
    pure (newB,off)
 
 
@@ -201,9 +201,9 @@ getPutOverflowStrategy = BufferPutT (bufferPutStrat <$> S.get)
 putSomething
    :: MonadIO m
    => Word
-   -> (Buffer 'Mutable pin fin heap -> Word -> t -> m ())
+   -> (Buffer -> Word -> t -> m ())
    -> t
-   -> BufferPutT (Buffer 'Mutable pin fin heap) m ()
+   -> BufferPutT Buffer m ()
 {-# INLINABLE putSomething #-}
 putSomething sz act v = putSomeThings sz $ Just \b off -> act b off v
 
@@ -211,13 +211,13 @@ putSomething sz act v = putSomeThings sz $ Just \b off -> act b off v
 putSomeThings
    :: MonadIO m
    => Word
-   -> Maybe (Buffer 'Mutable pin fin heap -> Word -> m ())
-   -> BufferPutT (Buffer 'Mutable pin fin heap) m ()
+   -> Maybe (Buffer -> Word -> m ())
+   -> BufferPutT Buffer m ()
 {-# INLINABLE putSomeThings #-}
 putSomeThings sz mact = do
    off <- getPutOffset
    b   <- getPutBuffer
-   bs  <- liftIO (bufferSizeIO b)
+   bs  <- liftIO (bufferSize b)
    let !newOff = off+sz
 
    if (newOff > bs)
@@ -239,36 +239,33 @@ putSomeThings sz mact = do
                setPutOffset newOff
    
 
-instance
-   ( MonadIO m
-   ) => PutMonad (BufferPutT (Buffer 'Mutable pin gc heap) m)
-   where
-      putWord8  = putSomething 1 bufferWriteWord8IO
-      putWord16 = putSomething 2 bufferWriteWord16IO
-      putWord32 = putSomething 4 bufferWriteWord32IO
-      putWord64 = putSomething 8 bufferWriteWord64IO
+instance PutMonad (BufferPutT Buffer IO) where
+      putWord8  = putSomething 1 bufferWriteWord8
+      putWord16 = putSomething 2 bufferWriteWord16
+      putWord32 = putSomething 4 bufferWriteWord32
+      putWord64 = putSomething 8 bufferWriteWord64
 
       putWord8s xs = putSomeThings (fromIntegral (length xs)) $ Just \b off -> do
          forM_ ([off,(off+1)..] `zip` xs) $ \(boff,v) -> do
-            bufferWriteWord8IO b boff v
+            bufferWriteWord8 b boff v
 
       putWord16s xs = putSomeThings (2*fromIntegral (length xs)) $ Just \b off -> do
          forM_ ([off,(off+2)..] `zip` xs) $ \(boff,v) -> do
-            bufferWriteWord16IO b boff v
+            bufferWriteWord16 b boff v
 
       putWord32s xs = putSomeThings (4*fromIntegral (length xs)) $ Just \b off -> do
          forM_ ([off,(off+4)..] `zip` xs) $ \(boff,v) -> do
-            bufferWriteWord32IO b boff v
+            bufferWriteWord32 b boff v
 
       putWord64s xs = putSomeThings (8*fromIntegral (length xs)) $ Just \b off -> do
          forM_ ([off,(off+8)..] `zip` xs) $ \(boff,v) -> do
-            bufferWriteWord64IO b boff v
+            bufferWriteWord64 b boff v
 
       preAllocateAtLeast l = putSomeThings l Nothing
 
       putBuffer x = do
-         sz <- liftIO (bufferSizeIO x)
-         putSomeThings sz $ Just \b off -> copyBuffer x 0 b off sz
+         sz <- liftIO (bufferSize x)
+         putSomeThings sz $ Just \b off -> bufferCopy x 0 b off sz
 
 ----------------------------------------------------------------------
 -- BufferGet
@@ -288,21 +285,19 @@ newtype BufferGetT b m a
 
 type BufferGet b a = BufferGetT b Identity a
 
-instance
-   ( MonadIO m
-   ) => GetMonad (BufferGetT (Buffer mut pin gc heap) m)
+instance GetMonad (BufferGetT Buffer IO)
    where
       getSkipBytes n = getSomething n \_ _ -> return ()
-      getWord8       = getSomething 1 bufferReadWord8IO
-      getWord16      = getSomething 2 bufferReadWord16IO
-      getWord32      = getSomething 4 bufferReadWord32IO
-      getWord64      = getSomething 8 bufferReadWord64IO
+      getWord8       = getSomething 1 bufferReadWord8
+      getWord16      = getSomething 2 bufferReadWord16
+      getWord32      = getSomething 4 bufferReadWord32
+      getWord64      = getSomething 8 bufferReadWord64
       getBuffer sz   = getSomething sz \b off -> do
          dest <- newBuffer sz
-         copyBuffer b off dest 0 sz
-         unsafeBufferFreeze dest
+         bufferCopy b off dest 0 sz
+         pure dest
       getBufferInto sz dest mdoff = getSomething sz \b off -> do
-         copyBuffer b off dest (fromMaybe 0 mdoff) sz
+         bufferCopy b off dest (fromMaybe 0 mdoff) sz
 
 -- | Lift into BufferGetT
 liftBufferGet :: Monad m => m a -> BufferGetT b m a
@@ -342,12 +337,12 @@ getSomething ::
    ( Monad m
    , MonadIO m
    ) => Word
-     -> (Buffer mut pin gc heap -> Word -> m a)
-     -> BufferGetT (Buffer mut pin gc heap) m a
+     -> (Buffer -> Word -> m a)
+     -> BufferGetT Buffer m a
 getSomething sz act = do
    off <- getGetOffset
    b   <- getGetBuffer
-   bsz <- bufferSizeIO b
+   bsz <- liftIO (bufferSize b)
 
    let !newOff = off+sz
 

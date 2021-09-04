@@ -17,7 +17,6 @@ import Data.Char
 import Data.String
 import GHC.Exts (IsList(..))
 
-import Haskus.Number.Word
 import Haskus.Text
 import Haskus.Memory.Buffer
 import Haskus.Utils.Flow
@@ -34,17 +33,14 @@ data ASCII = ASCII
 -- | Instance for ASCII text
 --
 -- >>> :set -XOverloadedLists
--- >>> let b = [72,69,76,76,79] :: BufferI
+-- >>> let b = [72,69,76,76,79] :: Buffer
 -- >>> showText (TextBuffer b :: TextI ASCII)
 -- "HELLO"
 --
-instance ShowText ASCII (Buffer mut pin gc heap) where
-   showTextIO (TextBuffer b) = do
-      bs <- bufferToListIO b
+instance ShowText ASCII where
+   showTextIO (Text b) = do
+      bs <- bufferToList b
       return (bs ||> fromIntegral ||> chr)
-
-   showText (TextBuffer b) =
-      bufferToList b ||> fromIntegral ||> chr
 
 -- | Support ASCII text with OverloadedStrings
 --
@@ -57,8 +53,8 @@ instance ShowText ASCII (Buffer mut pin gc heap) where
 -- >>> showText badt
 -- "*** Exception: Invalid ASCII character: é
 --
-instance (IsList b, Item b ~ Word8) => IsString (TextBuffer ASCII b) where
-   fromString s = TextBuffer (fromList (fmap (toWord8 . ord) s))
+instance IsString (Text ASCII) where
+   fromString s = Text (fromList (fmap (toWord8 . ord) s))
       where
          toWord8 x
             | x >= 128  = errorWithoutStackTrace ("Invalid ASCII character: " ++ [chr x])
