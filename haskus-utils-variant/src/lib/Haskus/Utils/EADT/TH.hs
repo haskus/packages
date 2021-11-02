@@ -154,7 +154,11 @@ eadtPattern' consName patStr mEadtTy isInfix = do
             tyToTyList = AppT ListT (AppT (AppT ArrowT StarT) StarT)
 
             -- retrieve functor var in "e"
-#if MIN_VERSION_base(4,15,0)
+#if MIN_VERSION_base(4,16,0)
+            e = case last tvs of
+              KindedTV nm _ _ -> nm
+              PlainTV nm _    -> nm
+#elif MIN_VERSION_base(4,15,0)
             KindedTV e _ StarT = last tvs
 #else
             KindedTV e StarT = last tvs
