@@ -131,7 +131,12 @@ eadtPattern' consName patStr mEadtTy isInfix = do
                   xs    -> fail $ "Infix pattern should have exactly two parameters (found " ++ show (length xs) ++ ")"
 
          let pat    = PatSynD patName args ImplBidir
+#if MIN_VERSION_base(4,16,0)
+                         -- handle new field for type-applications in patterns
+                         (ConP vf [] [ConP consName [] (fmap VarP conArgs)])
+#else
                          (ConP vf [ConP consName (fmap VarP conArgs)])
+#endif
 
          let
             -- retrieve constructor type without the functor var
