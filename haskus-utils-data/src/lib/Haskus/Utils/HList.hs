@@ -36,6 +36,7 @@ where
 
 import Haskus.Utils.Tuple
 import Haskus.Utils.Types
+import qualified Data.List as List
 
 -- | Heterogeneous list
 data family HList (l :: [Type])
@@ -50,14 +51,17 @@ deriving instance (Eq x, Eq (HList xs)) => Eq (HList (x ': xs))
 deriving instance Ord (HList '[])
 deriving instance (Ord x, Ord (HList xs)) => Ord (HList (x ': xs))
 
+class ShowHList a where
+  show_hlist :: HList a -> [String]
 
-instance Show (HList '[]) where
-    show _ = "H[]"
+instance ShowHList '[] where
+    show_hlist _ = []
 
-instance (Show e, Show (HList l)) => Show (HList (e ': l)) where
-    show (HCons x l) = let 'H':'[':s = show l
-                       in "H[" ++ show x ++
-                                  (if s == "]" then s else "," ++ s)
+instance (Show e, ShowHList l) => ShowHList (e ': l) where
+    show_hlist (HCons x l) = show x : show_hlist l
+
+instance ShowHList l => Show (HList l) where
+    show l = "H[" ++ concat (List.intersperse "," (show_hlist l)) ++ "]"
 
 -- | Head
 hHead :: HList (e ': l) -> e

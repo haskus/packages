@@ -230,8 +230,8 @@ splitOn needle haystack = a : if null b then [] else splitOn needle $ drop (leng
 -- > split (== ',') "my,list,here" == ["my","list","here"]
 split :: (a -> Bool) -> [a] -> [[a]]
 split _ [] = [[]]
-split f (x:xs) | f x                   = [] : split f xs
-split f (x:xs) | ~(y:ys) <- split f xs = (x:y) : ys
+split f (x:xs) | f x              = [] : split f xs
+split f (x:xs) | ys <- split f xs = (x:head ys) : tail ys
 
 -- | Find the first instance of @needle@ in @haystack@.
 -- The first element of the returned tuple
