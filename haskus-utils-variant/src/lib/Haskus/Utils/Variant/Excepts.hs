@@ -147,8 +147,13 @@ instance (Functor m, Monad m) => Applicative (Excepts es m) where
     {-# INLINABLE (<*>) #-}
     Excepts mf <*> Excepts ma = Excepts $ do
       f <- mf
-      a <- ma
-      pure (f <*> a)
+      case f of
+        VLeft e -> return (VLeft e)
+        VRight k -> do
+          a <- ma
+          case a of
+            VLeft e -> return (VLeft e)
+            VRight x -> return (VRight (k x))
 
     {-# INLINABLE (*>) #-}
     m *> k = m >>= \_ -> k
