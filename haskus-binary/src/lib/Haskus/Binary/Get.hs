@@ -216,7 +216,7 @@ runGetOrFail g bs = case runGet g bs of
 getBitGet :: BitOrder -> BitGet a -> (a -> Get b) -> Get b
 getBitGet bo bg cont = do
    bs <- getRemaining
-   let (v,s) = runBitGetPartial bo (bg <* skipBitsToAlignOnWord8M) bs
+   let (s,v) = runBitGetPartial bo (bg <* skipBitsToAlignOnWord8M) bs
    return $ runGetOrFail (cont v) (bitGetStateInput s)
 
 -- | Apply the getter at most 'max' times

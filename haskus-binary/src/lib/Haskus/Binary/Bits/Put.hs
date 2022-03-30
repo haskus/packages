@@ -1,4 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE BlockArguments #-}
 
 -- | Bit putter
 module Haskus.Binary.Bits.Put
@@ -21,8 +23,7 @@ module Haskus.Binary.Bits.Put
    )
 where
 
-import Control.Monad.State
-import Control.Monad.Identity
+import Data.Functor.Identity
 
 import Haskus.Binary.BufferBuilder as B
 import Haskus.Binary.Buffer
@@ -131,14 +132,30 @@ getBitPutBuffer :: BitPutState -> Buffer
 getBitPutBuffer =  toBuffer . bitPutStateBuilder . flushIncomplete
 
 -- | BitPut monad transformer
-type BitPutT m a = StateT BitPutState m a
+newtype BitPutT m a
+  = BitPutT (BitPutState -> m (BitPutState, a))
+  deriving (Functor)
+
+instance Monad m => Applicative (BitPutT m) where
+  pure a = BitPutT (\s -> pure (s,a))
+  (BitPutT f) <*> (BitPutT a) =
+    BitPutT \s -> do
+      (s',f')  <- f s
+      (s'',a') <- a s'
+      pure (s'', f' a')
+
+instance Monad m => Monad (BitPutT m) where
+  BitPutT a >>= f = BitPutT \s -> do
+    (s', a') <- a s
+    case f a' of
+      BitPutT r -> r s'
 
 -- | BitPut monad
-type BitPut a    = BitPutT Identity a
+type BitPut a = BitPutT Identity a
 
 -- | Evaluate a BitPut monad
 runBitPutT :: Monad m => BitOrder -> BitPutT m a -> m Buffer
-runBitPutT bo m = getBitPutBuffer <$> execStateT m (newBitPutState bo)
+runBitPutT bo (BitPutT m) = (getBitPutBuffer . fst) <$> m (newBitPutState bo)
 
 -- | Evaluate a BitPut monad
 runBitPut :: BitOrder -> BitPut a -> Buffer
@@ -146,7 +163,7 @@ runBitPut bo m = runIdentity (runBitPutT bo m)
 
 -- | Put bits (monadic)
 putBitsM :: (Monad m, Integral a, Bits a, ReversableBits a) => Word -> a -> BitPutT m ()
-putBitsM n w = modify (putBits n w)
+putBitsM n w = BitPutT (\s -> pure (putBits n w s, ()))
 
 -- | Put a single bit (monadic)
 putBitBoolM :: (Monad m) => Bool -> BitPutT m ()
@@ -154,21 +171,25 @@ putBitBoolM b = putBitsM 1 (if b then 1 else  0 :: Word)
 
 -- | Put a Buffer (monadic)
 putBitsBufferM :: Monad m => Buffer -> BitPutT m ()
-putBitsBufferM bs = modify (putBitsBuffer bs)
+putBitsBufferM bs = BitPutT (\s -> pure (putBitsBuffer bs s, ()))
 
 -- | Change the current bit ordering
 --
 -- Be careful to change the outer bit ordering (B* to L* or the inverse) only
 -- on bytes boundaries! Otherwise, you will write the same bits more than once.
 changeBitPutOrder :: Monad m => BitOrder -> BitPutT m ()
-changeBitPutOrder bo = modify (\s -> s { bitPutStateBitOrder = bo })
+changeBitPutOrder bo = BitPutT (\s -> pure (s { bitPutStateBitOrder = bo },()))
+
+-- | Get bit order
+getBitOrder :: Applicative m => BitPutT m BitOrder
+getBitOrder = BitPutT (\s -> pure (s,bitPutStateBitOrder s))
 
 -- | Change the bit ordering for the wrapped BitPut
 --
 -- Be careful, this function uses changeBitPutOrder internally.
 withBitPutOrder :: Monad m => BitOrder -> BitPutT m a -> BitPutT m a
 withBitPutOrder bo m = do
-   bo' <- gets bitPutStateBitOrder
+   bo' <- getBitOrder
    changeBitPutOrder bo
    v <- m
    changeBitPutOrder bo'

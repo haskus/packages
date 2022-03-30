@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 -- | Bit getter
 module Haskus.Binary.Bits.Get
@@ -33,10 +35,10 @@ module Haskus.Binary.Bits.Get
 where
 
 import System.IO.Unsafe (unsafePerformIO)
-import Control.Monad.State
-import Control.Monad.Identity
+import Data.Functor.Identity
 import Foreign.Marshal.Alloc (mallocBytes)
 import Foreign.Ptr
+import Control.Monad
 
 import Haskus.Binary.Buffer
 import Haskus.Binary.Bits.Order
@@ -148,59 +150,76 @@ getBitsBuffer n (BitGetState bs o bo) =
 
 
 -- | BitGet monad transformer
-type BitGetT m a = StateT BitGetState m a
+newtype BitGetT m a
+  = BitGetT (BitGetState -> m (BitGetState, a))
+  deriving (Functor)
+
+instance Monad m => Applicative (BitGetT m) where
+  pure a = BitGetT (\s -> pure (s,a))
+  (BitGetT f) <*> (BitGetT a) =
+    BitGetT \s -> do
+      (s',f')  <- f s
+      (s'',a') <- a s'
+      pure (s'', f' a')
+
+instance Monad m => Monad (BitGetT m) where
+  BitGetT a >>= f = BitGetT \s -> do
+    (s', a') <- a s
+    case f a' of
+      BitGetT r -> r s'
 
 -- | BitGet monad
 type BitGet a    = BitGetT Identity a
 
 -- | Evaluate a BitGet monad
 runBitGetT :: Monad m => BitOrder -> BitGetT m a -> Buffer -> m a
-runBitGetT bo m bs = evalStateT m (newBitGetState bo bs)
+runBitGetT bo m bs = snd <$> runBitGetPartialT bo m bs
+
 
 -- | Evaluate a BitGet monad
 runBitGet :: BitOrder -> BitGet a -> Buffer -> a
 runBitGet bo m bs = runIdentity (runBitGetT bo m bs)
 
 -- | Evaluate a BitGet monad, return the remaining state
-runBitGetPartialT :: BitOrder -> BitGetT m a -> Buffer -> m (a, BitGetState)
-runBitGetPartialT bo m bs = runStateT m (newBitGetState bo bs)
+runBitGetPartialT :: Functor m => BitOrder -> BitGetT m a -> Buffer -> m (BitGetState,a)
+runBitGetPartialT bo (BitGetT m) bs = m (newBitGetState bo bs)
 
 -- | Evaluate a BitGet monad, return the remaining state
-runBitGetPartial :: BitOrder -> BitGet a -> Buffer -> (a, BitGetState)
+runBitGetPartial :: BitOrder -> BitGet a -> Buffer -> (BitGetState,a)
 runBitGetPartial bo m bs = runIdentity (runBitGetPartialT bo m bs)
 
 -- | Resume a BitGet evaluation
-resumeBitGetPartialT :: BitGetT m a -> BitGetState -> m (a, BitGetState)
-resumeBitGetPartialT = runStateT 
+resumeBitGetPartialT :: BitGetT m a -> BitGetState -> m (BitGetState,a)
+resumeBitGetPartialT (BitGetT m) s = m s
 
 -- | Resume a BitGet evaluation
-resumeBitGetPartial :: BitGet a -> BitGetState -> (a,BitGetState)
+resumeBitGetPartial :: BitGet a -> BitGetState -> (BitGetState,a)
 resumeBitGetPartial m s = runIdentity (resumeBitGetPartialT m s)
 
 -- | Indicate if all bits have been read
 isEmptyM :: Monad m => BitGetT m Bool
-isEmptyM = gets isEmpty
+isEmptyM = BitGetT \s -> pure (s,isEmpty s)
 
 -- | Skip the given number of bits from the input (monadic version)
 skipBitsM :: Monad m => Word -> BitGetT m ()
-skipBitsM = modify . skipBits
+skipBitsM n = BitGetT \s -> pure (skipBits n s, ())
 
 
 -- | Skip the required number of bits to be aligned on 8-bits (monadic version)
 skipBitsToAlignOnWord8M :: Monad m =>  BitGetT m ()
-skipBitsToAlignOnWord8M = modify skipBitsToAlignOnWord8
+skipBitsToAlignOnWord8M = BitGetT \s -> pure (skipBitsToAlignOnWord8 s, ())
 
 -- | Read the given number of bits and put the result in a word
 getBitsM :: (Integral a, Bits a, Monad m) => Word -> BitGetT m a
 getBitsM n = do
-   v <- gets (getBits n)
+   v <- BitGetT \s -> pure (s, getBits n s)
    skipBitsM n
    return v
 
 -- | Perform some checks before calling getBitsM
 getBitsCheckedM :: (Integral a, Bits a, ReversableBits a, Monad m) => Word -> Word -> BitGetT m a
 getBitsCheckedM m n = do
-   v <- gets (getBitsChecked m n)
+   v <- BitGetT \s -> pure (s, getBitsChecked m n s)
    skipBitsM n
    return v
 
@@ -213,7 +232,7 @@ getBitBoolM = do
 -- | Get the given number of Word8
 getBitsBSM :: (Monad m) => Word -> BitGetT m Buffer
 getBitsBSM n = do
-   bs <- gets (getBitsBuffer n)
+   bs <- BitGetT \s -> pure (s, getBitsBuffer n s)
    skipBitsM (8*n)
    return bs
 
@@ -222,14 +241,14 @@ getBitsBSM n = do
 -- Be careful to change the outer bit ordering (B* to L* or the inverse) only
 -- on bytes boundaries! Otherwise, you will read the same bits more than once.
 changeBitGetOrder :: Monad m => BitOrder -> BitGetT m ()
-changeBitGetOrder bo = modify (\s -> s { bitGetStateBitOrder = bo })
+changeBitGetOrder bo = BitGetT \s -> pure (s { bitGetStateBitOrder = bo }, ())
 
 -- | Change the bit ordering for the wrapped BitGet
 --
 -- Be careful, this function uses changeBitGetOrder internally.
 withBitGetOrder :: Monad m => BitOrder -> BitGetT m a -> BitGetT m a
 withBitGetOrder bo m = do
-   bo' <- gets bitGetStateBitOrder
+   bo' <- BitGetT \s -> pure (s, bitGetStateBitOrder s)
    changeBitGetOrder bo
    v <- m
    changeBitGetOrder bo'
