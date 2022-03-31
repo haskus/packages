@@ -91,7 +91,6 @@ library
       ,  haskus-utils              >= 1.4
       ,  cereal                    >= 0.5
       ,  bytestring                >= 0.10
-      ,  megaparsec
       ,  template-haskell
       ,  transformers
       ,  directory
