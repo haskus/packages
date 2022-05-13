@@ -17,6 +17,8 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | Variant biased towards one type
 --
@@ -100,7 +102,7 @@ pattern VRight x <- ((popVariantHead . veitherToVariant) -> Right x)
 -- >>> a == d
 -- False
 --
-deriving instance (Eq a, Eq (V es)) => Eq (VEither es a)
+deriving newtype instance (Eq (V (a ': es))) => Eq (VEither es a)
 
 
 ----------------------
@@ -116,7 +118,7 @@ deriving instance (Eq a, Eq (V es)) => Eq (VEither es a)
 -- >>> a > b
 -- True
 --
-deriving instance (Ord a, Ord (V es)) => Ord (VEither es a)
+deriving newtype instance (Ord (V (a ': es))) => Ord (VEither es a)
 
 
 ----------------------
