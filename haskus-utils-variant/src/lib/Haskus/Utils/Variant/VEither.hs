@@ -16,6 +16,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 -- | Variant biased towards one type
 --
@@ -81,6 +82,42 @@ pattern VRight x <- ((popVariantHead . veitherToVariant) -> Right x)
       VRight x = VEither (toVariantHead x)
 
 {-# COMPLETE VLeft,VRight #-}
+
+----------------------
+-- Eq instance
+----------------------
+
+-- | Check VEithers for equality
+--
+-- >>> let a = VRight "Foo" :: VEither '[Int,Double] String
+-- >>> let b = VRight "Foo" :: VEither '[Int,Double] String
+-- >>> let c = VRight "Bar" :: VEither '[Int,Double] String
+-- >>> let d = VLeft (V (1::Int) :: V '[Int, Double]) :: VEither '[Int,Double] String
+-- >>> a == b
+-- True
+-- >>> a == c
+-- False
+-- >>> a == d
+-- False
+--
+deriving instance (Eq a, Eq (V es)) => Eq (VEither es a)
+
+
+----------------------
+-- Ord instance
+----------------------
+
+-- | Compare VEithers
+--
+-- >>> let a = VRight "Foo" :: VEither '[Int,Double] String
+-- >>> let b = VRight "Bar" :: VEither '[Int,Double] String
+-- >>> a < b
+-- False
+-- >>> a > b
+-- True
+--
+deriving instance (Ord a, Ord (V es)) => Ord (VEither es a)
+
 
 ----------------------
 -- Show instance
