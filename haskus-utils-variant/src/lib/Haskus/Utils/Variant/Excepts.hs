@@ -25,6 +25,7 @@ module Haskus.Utils.Variant.Excepts
    , failureE
    , successE
    , throwE
+   , throwSomeE
    , catchE
    , catchEvalE
    , evalE
@@ -230,6 +231,11 @@ throwE :: forall e es a m. (Monad m, e :< es) => e -> Excepts es m a
 {-# INLINABLE throwE #-}
 throwE = Excepts . pure . VLeft . V
 
+-- | Throw some exception
+throwSomeE :: forall es' es a m. (Monad m, LiftVariant es' es) => V es' -> Excepts es m a
+{-# INLINABLE throwSomeE #-}
+throwSomeE = Excepts . pure . VLeft . liftVariant
+
 -- | Signal an exception value @e@.
 failureE :: forall e a m. Monad m => e -> Excepts '[e] m a
 {-# INLINABLE failureE #-}
@@ -401,6 +407,8 @@ runBothE exec f g = Excepts do
    pure (veitherProduct v1 v2)
 
 -- | Product of the sequential execution of two Excepts
+--
+-- The second one is run even if the first one failed!
 sequenceE ::
    ( KnownNat (Length (b:e2))
    , Monad m
