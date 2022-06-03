@@ -13,7 +13,7 @@ import Data.Word
 
 -- | Embed bytes in a C array, return an Addr#
 embedBytes :: [Word8] -> Q Exp
-embedBytes bs = return $ LitE (StringPrimL bs)
+embedBytes bs = pure $ LitE (StringPrimL bs)
 
 ----------------------------------------------------------------------
 -- Raw text quasiquoter (adapted from raw-strings-qq package (BSD3)
@@ -62,12 +62,9 @@ raw :: QuasiQuoter
 raw = QuasiQuoter {
     quoteExp  = return . LitE . StringL . normaliseNewlines,
 
-    quotePat  = \_ -> fail "illegal raw string QuasiQuote \
-                           \(allowed as expression only, used as a pattern)",
-    quoteType = \_ -> fail "illegal raw string QuasiQuote \
-                           \(allowed as expression only, used as a type)",
-    quoteDec  = \_ -> fail "illegal raw string QuasiQuote \
-                           \(allowed as expression only, used as a declaration)"
+    quotePat  = \_ -> fail "illegal raw string QuasiQuote (allowed as expression only, used as a pattern)",
+    quoteType = \_ -> fail "illegal raw string QuasiQuote (allowed as expression only, used as a type)",
+    quoteDec  = \_ -> fail "illegal raw string QuasiQuote (allowed as expression only, used as a declaration)"
 }
 
 -- | A variant of 'raw' that interprets the @\"|~]\"@ sequence as @\"|]\"@,
@@ -90,12 +87,9 @@ rawQ :: QuasiQuoter
 rawQ = QuasiQuoter {
     quoteExp  = return . LitE . StringL . escape_rQ . normaliseNewlines,
 
-    quotePat  = \_ -> fail "illegal raw string QuasiQuote \
-                           \(allowed as expression only, used as a pattern)",
-    quoteType = \_ -> fail "illegal raw string QuasiQuote \
-                           \(allowed as expression only, used as a type)",
-    quoteDec  = \_ -> fail "illegal raw string QuasiQuote \
-                           \(allowed as expression only, used as a declaration)"
+    quotePat  = \_ -> fail "illegal raw string QuasiQuote (allowed as expression only, used as a pattern)",
+    quoteType = \_ -> fail "illegal raw string QuasiQuote (allowed as expression only, used as a type)",
+    quoteDec  = \_ -> fail "illegal raw string QuasiQuote (allowed as expression only, used as a declaration)"
 }
 
 escape_rQ :: String -> String

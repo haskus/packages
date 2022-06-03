@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE BangPatterns #-}
 
@@ -11,6 +12,11 @@ import Haskus.Number.Word
 import Haskus.Number.Int
 import GHC.Exts
 import GHC.Num
+
+#if MIN_VERSION_GLASGOW_HASKELL (9,0,0,0)
+import GHC.Natural
+import GHC.Integer
+#endif
 
 -- | Bitwise bit operations
 class Bitwise a where

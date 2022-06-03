@@ -44,6 +44,7 @@ where
 import Haskus.Utils.Maybe
 import Haskus.Utils.Flow
 import Haskus.Utils.List
+import Haskus.Utils.Types (Type)
 import Haskus.Utils.Map.Strict (Map)
 import qualified Haskus.Utils.Map.Strict as Map
 
@@ -479,13 +480,13 @@ evalsTo s a = case createPredicateTable s (const True) of
 -- @
 class (Ord (Pred a), Ord (PredTerm a)) => Predicated a where
    -- | Error type
-   type PredErr a :: *
+   type PredErr a :: Type
 
    -- | Predicate type
-   type Pred a    :: *
+   type Pred a    :: Type
 
    -- | Terminal type
-   type PredTerm a    :: *
+   type PredTerm a :: Type
 
    -- | Build a non terminal from a terminal
    liftTerminal :: PredTerm a -> a

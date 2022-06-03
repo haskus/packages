@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
@@ -29,6 +30,9 @@ import Haskus.Utils.Monad
 
 import Data.IORef
 import System.IO.Unsafe
+#if MIN_VERSION_GLASGOW_HASKELL (9,0,0,0)
+import Unsafe.Coerce (unsafeCoerce#)
+#endif
 
 import GHC.STRef
 import GHC.IORef

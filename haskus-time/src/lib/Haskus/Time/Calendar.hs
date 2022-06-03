@@ -123,11 +123,11 @@ isLeapYear y = y .&. 3 == 0 && (r100 /= 0 || q100 .&. 3 == 0) where
 
 -- | Table of number of days in each month (as Word8)
 monthDaysTable :: Buffer
-monthDaysTable = $$(embedBytes [31,28,31,30,31,30,31,31,30,31,30,31])
+monthDaysTable = $(embedBytes [31,28,31,30,31,30,31,31,30,31,30,31])
 
 -- | Table of number of days in each month for a leap year (as Word8)
 monthDaysLeapTable :: Buffer
-monthDaysLeapTable = $$(embedBytes [31,29,31,30,31,30,31,31,30,31,30,31])
+monthDaysLeapTable = $(embedBytes [31,29,31,30,31,30,31,31,30,31,30,31])
 
 -- | Get month length
 --

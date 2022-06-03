@@ -40,9 +40,9 @@ import System.IO
 -- >>> let b = $$(embedBytes [72,69,76,76,79])
 -- >>> bufferSize b
 -- 5
-embedBytes :: [Word8] -> Q (TExp Buffer)
+embedBytes :: [Word8] -> Q Exp
 embedBytes bs = do
-   return $ TExp $ VarE 'attachExternalBuffer
+   return $ VarE 'attachExternalBuffer
       `AppE` LitE (StringPrimL bs)
       `AppE` LitE (WordPrimL (fromIntegral (length bs)))
 

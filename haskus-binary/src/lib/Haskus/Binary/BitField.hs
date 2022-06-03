@@ -80,7 +80,7 @@ import Haskus.Utils.Tuple
 import Data.Typeable
 
 -- | Bit fields on a base type b
-newtype BitFields b (f :: [*]) = BitFields b deriving (Storable)
+newtype BitFields b (f :: [Type]) = BitFields b deriving (Storable)
 
 -- | Get backing word
 bitFieldsBits :: BitFields b f -> b
@@ -101,7 +101,7 @@ type family AddOffset fs :: Nat where
    AddOffset (BitField n name s ': xs)  = n + AddOffset xs
 
 -- | Get the type of a field from its name
-type family Output name fs :: * where
+type family Output name fs :: Type where
    Output name (BitField n name  s ': xs) = s
    Output name (BitField n name2 s ': xs) = Output name xs
 

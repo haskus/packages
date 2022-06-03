@@ -41,7 +41,7 @@ import Haskus.Utils.Types
 import Haskus.Utils.Flow
 
 -- | heterogeneous array
-data HArray (types :: [*]) = forall a. HArray (Vector a)
+data HArray (types :: [Type]) = forall a. HArray (Vector a)
 
 type role HArray representational
 
@@ -54,7 +54,7 @@ singleHArray :: a -> HArray '[a]
 singleHArray = HArray . V.singleton
 
 -- | The type `t` with index `n` is indexable in the array
-type HArrayIndex (n :: Nat) t (ts :: [*]) =
+type HArrayIndex (n :: Nat) t (ts :: [Type]) =
    ( KnownNat n
    , t ~ Index n ts
    , KnownNat (Length ts)
@@ -62,19 +62,19 @@ type HArrayIndex (n :: Nat) t (ts :: [*]) =
    )
 
 -- | A type `t` is indexable in the array
-type HArrayIndexT t (ts :: [*]) =
+type HArrayIndexT t (ts :: [Type]) =
    ( CheckMember t ts
    , HArrayIndex (IndexOf t ts) t ts
    )
 
 -- | A type `t` is maybe indexable in the array
-type HArrayTryIndexT t (ts :: [*]) =
+type HArrayTryIndexT t (ts :: [Type]) =
    ( HArrayIndex (MaybeIndexOf t ts) t (t ': ts)
    )
 
 
 -- | Get an element by index
-getHArrayN :: forall (n :: Nat) (ts :: [*]) t.
+getHArrayN :: forall (n :: Nat) (ts :: [Type]) t.
    ( HArrayIndex n t ts) => HArray ts -> t
 getHArrayN (HArray as) = unsafeCoerce (as ! natValue @n)
 
@@ -83,7 +83,7 @@ getHArray0 :: (HArrayIndex 0 t ts) => HArray ts -> t
 getHArray0 = getHArrayN @0
 
 -- | Set an element by index
-setHArrayN :: forall (n :: Nat) (ts :: [*]) t.
+setHArrayN :: forall (n :: Nat) (ts :: [Type]) t.
    (HArrayIndex n t ts) => t -> HArray ts -> HArray ts
 setHArrayN a (HArray as) = HArray (as V.// [(natValue @n,unsafeCoerce a)])
 

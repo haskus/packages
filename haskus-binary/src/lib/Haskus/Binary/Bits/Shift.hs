@@ -15,6 +15,23 @@ import GHC.Num
 
 #include "MachDeps.h"
 
+#if !MIN_VERSION_GLASGOW_HASKELL (9,0,0,0)
+wordToInt# :: Word -> Int#
+wordToInt# (W# w) = word2Int# w
+
+integerShiftL :: Integer -> Word -> Integer
+integerShiftL x w = shiftLInteger x (wordToInt# w)
+
+integerShiftR :: Integer -> Word -> Integer
+integerShiftR x w = shiftRInteger x (wordToInt# w)
+
+naturalShiftL :: Natural -> Word -> Natural
+naturalShiftL x w = shiftLNatural x (fromIntegral w)
+
+naturalShiftR :: Natural -> Word -> Natural
+naturalShiftR x w = shiftRNatural x (fromIntegral w)
+#endif
+
 -- | Bit shifts
 --
 -- "Checked" means that there is an additional test to ensure that the shift
@@ -305,8 +322,8 @@ instance ShiftableBits Integer where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
-   x `shiftL` (W# i#) = shiftLInteger x (word2Int# i#)
-   x `shiftR` (W# i#) = shiftRInteger x (word2Int# i#)
+   x `shiftL` w = integerShiftL x w
+   x `shiftR` w = integerShiftR x w
 
    uncheckedShiftL = shiftL
    uncheckedShiftR = shiftR
@@ -317,8 +334,8 @@ instance ShiftableBits Natural where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
-   x `shiftL` (W# i#) = shiftLNatural x (I# (word2Int# i#))
-   x `shiftR` (W# i#) = shiftRNatural x (I# (word2Int# i#))
+   x `shiftL` w = naturalShiftL x w
+   x `shiftR` w = naturalShiftR x w
 
    uncheckedShiftL = shiftL
    uncheckedShiftR = shiftR

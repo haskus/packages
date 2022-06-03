@@ -34,14 +34,15 @@ import Control.Monad.State.Lazy
 import Control.Monad.Identity
 
 import Haskus.Utils.HArray
+import Haskus.Utils.Types
 
 -- | Multi-state monad transformer
 --
 -- States are stacked in a heterogeneous array.
-type MStateT (s :: [*]) m a = StateT (HArray s) m a
+type MStateT (s :: [Type]) m a = StateT (HArray s) m a
 
 -- | Multi-state
-type MState (s :: [*]) a = MStateT s Identity a
+type MState (s :: [Type]) a = MStateT s Identity a
 
 -- | Run MState
 runMState :: MState s a -> HArray s -> (a,HArray s)

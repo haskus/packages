@@ -75,7 +75,7 @@ import qualified Foreign.Storable as FS
 --
 -- The union is just a pointer to a buffer containing the value(s). The size of
 -- the buffer is implicitly known from the types in the list.
-newtype Union (x :: [*]) = Union (ForeignPtr ()) deriving (Show)
+newtype Union (x :: [Type]) = Union (ForeignPtr ()) deriving (Show)
 
 -- | Retrieve a union member from its type
 fromUnion :: (Storable a, Member a l) => Union l -> a

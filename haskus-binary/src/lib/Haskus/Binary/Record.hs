@@ -39,13 +39,13 @@ import Haskus.Utils.HList
 import Haskus.Utils.Types
 
 -- | Record
-newtype Record (fields :: [*]) = Record (ForeignPtr ())
+newtype Record (fields :: [Type]) = Record (ForeignPtr ())
 
 -- | Field
 data Field (name :: Symbol) typ
 
 -- | Get record size without the ending padding bytes
-type family RecordSize (fs :: [*]) (sz :: Nat) where
+type family RecordSize (fs :: [Type]) (sz :: Nat) where
    RecordSize '[] sz                    = sz
    RecordSize (Field name typ ': fs) sz = 
       RecordSize fs
@@ -56,7 +56,7 @@ type family RecordSize (fs :: [*]) (sz :: Nat) where
          + SizeOf typ
          )
 
-type family FieldOffset (name :: Symbol) (fs :: [*]) (sz :: Nat) where
+type family FieldOffset (name :: Symbol) (fs :: [Type]) (sz :: Nat) where
    -- Found
    FieldOffset name (Field name typ ': fs) sz =
       sz + Padding sz typ
@@ -65,7 +65,7 @@ type family FieldOffset (name :: Symbol) (fs :: [*]) (sz :: Nat) where
       FieldOffset name fs
          (sz + Padding sz typ + SizeOf typ)
 
-type family FieldType (name :: Symbol) (fs :: [*]) where
+type family FieldType (name :: Symbol) (fs :: [Type]) where
    FieldType name (Field name typ ': fs) = typ
    FieldType name (Field xx typ ': fs)   = FieldType name fs
 
@@ -77,21 +77,21 @@ type family FullRecordSize fs where
          (RecordAlignment fs 1)
 
 -- | Record alignment
-type family RecordAlignment (fs :: [*]) a where
+type family RecordAlignment (fs :: [Type]) a where
    RecordAlignment '[]                    a = a
    RecordAlignment (Field name typ ': fs) a =
       RecordAlignment fs
          (If (a <=? Alignment typ) (Alignment typ) a)
 
 -- | Return offset from a field path
-type family FieldPathOffset (fs :: [*]) (path :: [Symbol]) (off :: Nat) where
+type family FieldPathOffset (fs :: [Type]) (path :: [Symbol]) (off :: Nat) where
    FieldPathOffset fs '[p] off = off + FieldOffset p fs 0
    FieldPathOffset fs (p ': ps) off
       = FieldPathOffset (ExtractRecord (FieldType p fs))
             ps (off + FieldOffset p fs 0)
 
 -- | Return type from a field path
-type family FieldPathType (fs :: [*]) (path :: [Symbol]) where
+type family FieldPathType (fs :: [Type]) (path :: [Symbol]) where
    FieldPathType fs '[p] = FieldType p fs
 
    FieldPathType fs (p ': ps)
