@@ -165,6 +165,7 @@ instance Eq1 (VariantF '[]) where
 instance
    ( Eq1 f
    , Eq1 (VariantF fs)
+   , ConstraintAll1 Eq1 fs
    ) => Eq1 (VariantF (f:fs)) where
    liftEq cmp x y = case (popVariantFHead x, popVariantFHead y) of
       (Right a, Right b) -> liftEq cmp a b
@@ -177,6 +178,8 @@ instance Ord1 (VariantF '[]) where
 instance
    ( Ord1 f
    , Ord1 (VariantF fs)
+   , ConstraintAll1 Eq1 fs
+   , ConstraintAll1 Ord1 fs
    ) => Ord1 (VariantF (f:fs)) where
    liftCompare cmp x@(VariantF v1) y@(VariantF v2) =
       case (popVariantFHead x, popVariantFHead y) of
@@ -191,6 +194,7 @@ instance Show1 (VariantF '[]) where
 instance
    ( Show1 f
    , Show1 (VariantF fs)
+   , ConstraintAll1 Show1 fs
    ) => Show1 (VariantF (f:fs)) where
    liftShowsPrec shw shwl p x = case popVariantFHead x of
          Right a -> liftShowsPrec shw shwl p a
