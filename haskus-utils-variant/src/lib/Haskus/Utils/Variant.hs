@@ -112,6 +112,7 @@ import Unsafe.Coerce
 import GHC.Exts (Any)
 import Data.Typeable
 import Control.DeepSeq
+import Control.Exception
 
 import Haskus.Utils.Monad
 import Haskus.Utils.Types
@@ -270,6 +271,14 @@ instance ShowTypeList (V '[]) where
 instance (Typeable x, ShowTypeList (V xs)) => ShowTypeList (V (x ': xs)) where
    {-# INLINABLE showTypeList #-}
    showTypeList _ = showsPrec 0 (typeOf (undefined :: x)) : showTypeList (undefined :: V xs)
+
+instance Exception (V '[]) where
+
+instance
+   ( Exception x
+   , Typeable xs
+   , Exception (V xs)
+   ) => Exception (V (x ': xs))
 
 -- | Get Variant index
 --

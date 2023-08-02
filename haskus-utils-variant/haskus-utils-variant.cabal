@@ -19,6 +19,11 @@ source-repository head
   type: git
   location: git://github.com/haskus/packages.git
 
+flag unliftio
+  Description: Enable MonadUnliftIO instance
+  Manual: True
+  Default: True
+
 library
   exposed-modules:
     Haskus.Utils.ContFlow
@@ -42,6 +47,10 @@ library
    ,  haskus-utils-types        >= 1.5
    ,  haskus-utils-data         >= 1.2
    ,  mtl                       >= 2.2
+
+  if flag(unliftio)
+    build-depends: unliftio-core >= 0.2
+    cpp-options: -DENABLE_UNLIFTIO
 
   ghc-options:          -Wall
   default-language:     Haskell2010

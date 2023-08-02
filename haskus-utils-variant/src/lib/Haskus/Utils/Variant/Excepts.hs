@@ -61,6 +61,10 @@ import Control.Monad.Reader.Class
 import qualified Control.Monad.Fail
 import           Control.Monad.Fail ( MonadFail )
 #endif
+#if defined(ENABLE_UNLIFTIO)
+import Control.Monad.IO.Unlift
+import qualified Control.Exception as E
+#endif
 
 newtype Excepts es m a = Excepts (m (VEither es a))
 
@@ -419,3 +423,12 @@ sequenceE = runBothE exec
          v1 <- f
          v2 <- g
          pure (v1,v2)
+
+#if defined(ENABLE_UNLIFTIO)
+instance forall es m . (MonadCatch m, MonadUnliftIO m, Exception (V es)) => MonadUnliftIO (Excepts es m) where
+    withRunInIO exceptSToIO = Excepts $ fmap (either VLeft VRight) $ try $ do
+        withRunInIO $ \runInIO ->
+            exceptSToIO (runInIO . ((\case
+                                     VLeft v -> liftIO $ E.throwIO $ toException v
+                                     VRight a -> pure a) <=< runE))
+#endif
