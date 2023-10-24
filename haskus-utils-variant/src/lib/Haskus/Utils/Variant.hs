@@ -623,8 +623,7 @@ splitVariant = splitVariant' @as @(Complement xs as) @xs
 
 -- | A value of type "x" can be extracted from (V xs)
 type (:<) x xs =
-   ( CheckMember x xs
-   , Member x xs
+   ( Member x xs
    , x :<? xs
    )
 
@@ -678,7 +677,8 @@ fromVariantFirst = fromVariantAt @(IndexOf a l)
 -- >>> fromVariant @Double x
 -- <BLANKLINE>
 -- ... error:
--- ... `Double' is not a member of '[Int, String, Int]
+-- ... Double not found in list:
+-- ... '[Int, String, Int]
 -- ...
 --
 fromVariant :: forall a xs.
