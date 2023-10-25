@@ -72,6 +72,7 @@ import Control.DeepSeq
 -- >>> :set -XPatternSynonyms
 -- >>> :set -XDeriveFunctor
 -- >>> import Data.Functor.Classes
+-- >>> import Haskus.Utils.VariantF
 -- >>>
 -- >>> data ConsF a e = ConsF a e deriving (Functor)
 -- >>> data NilF    e = NilF      deriving (Functor)

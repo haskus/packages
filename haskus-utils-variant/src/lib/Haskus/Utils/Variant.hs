@@ -125,6 +125,7 @@ import Haskus.Utils.ContFlow
 -- >>> :set -XTypeApplications
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
+-- >>> import Haskus.Utils.Variant
 
 
 -- | A variant contains a value whose type is at the given position in the type

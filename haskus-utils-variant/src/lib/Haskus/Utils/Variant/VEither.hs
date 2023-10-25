@@ -53,6 +53,7 @@ import Data.Coerce
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
 -- >>> import Data.Foldable
+-- >>> import Haskus.Utils.Variant.VEither
 
 
 -- | Variant biased towards one type
