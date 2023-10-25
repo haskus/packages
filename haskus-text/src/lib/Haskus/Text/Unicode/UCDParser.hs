@@ -35,7 +35,8 @@ type Parser = Parsec () String
 ----------------------------------------------------------------
 
 -- | Parse a code-point value without the "U+" prefix
---
+-- >>> import UCDParser.runParser
+-- >>> import parseCodePointValue
 -- >>> runParser parseCodePointValue "" "1234"
 -- Right U+1234
 --

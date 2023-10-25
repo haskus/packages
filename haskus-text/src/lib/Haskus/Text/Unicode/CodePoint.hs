@@ -36,6 +36,7 @@ newtype CodePoint = CodePoint Word32 deriving (Eq,Lift)
 
 -- | Show instance for CodePoint
 --
+-- >>> import CodePoint
 -- >>> CodePoint 0x1234
 -- U+1234
 --
@@ -84,7 +85,7 @@ instance Show CodePointRange where
 -- | Encode a code-point into UTF-8.
 -- Extended to support any Word32 (not just 21 bits) to make the function total
 -- and useful in other contexts
---
+-- >>> import toUtf8
 -- >>> :set -XBinaryLiterals
 -- >>> let f x = toUtf8 (putStr . (++ " ") . bitsToString) x
 -- >>> f 0x24
