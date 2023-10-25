@@ -30,13 +30,15 @@ import Haskus.Utils.Flow
 
 type Parser = Parsec () String
 
+-- $setup
+-- >>> import Haskus.Text.Unicode.UCDParser
+
 ----------------------------------------------------------------
 -- Common
 ----------------------------------------------------------------
 
 -- | Parse a code-point value without the "U+" prefix
--- >>> import UCDParser.runParser
--- >>> import parseCodePointValue
+--
 -- >>> runParser parseCodePointValue "" "1234"
 -- Right U+1234
 --

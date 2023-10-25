@@ -26,7 +26,6 @@ import Language.Haskell.TH.Syntax (Lift)
 -- $setup
 -- >>> import Haskus.Text.Unicode.CodePoint
 
-
 --------------------------------------------------
 -- Code-point
 --------------------------------------------------
@@ -88,6 +87,7 @@ instance Show CodePointRange where
 -- | Encode a code-point into UTF-8.
 -- Extended to support any Word32 (not just 21 bits) to make the function total
 -- and useful in other contexts
+--
 -- >>> :set -XBinaryLiterals
 -- >>> let f x = toUtf8 (putStr . (++ " ") . bitsToString) x
 -- >>> f 0x24
