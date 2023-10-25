@@ -15,6 +15,9 @@ where
 import Data.Dynamic
 import Type.Reflection
 
+-- $setup
+-- >>> import Haskus.Utils.Dynamic
+
 -- | Dynamic type with Eq and Ord instance
 --
 -- Can be used as Map keys for instance

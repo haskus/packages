@@ -53,6 +53,7 @@ import Haskus.Utils.ContFlow
 -- >>>
 -- >>> import Data.Functor.Classes
 -- >>> import Haskus.Utils.EADT
+-- >>> import Haskus.Utils.ContFlow
 -- >>>
 -- >>> data ConsF a e = ConsF a e deriving (Functor)
 -- >>> data NilF    e = NilF      deriving (Functor)

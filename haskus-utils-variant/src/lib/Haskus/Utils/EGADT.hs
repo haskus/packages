@@ -35,7 +35,6 @@ import Haskus.Utils.Types
 -- >>> :set -XPartialTypeSignatures
 -- >>> import Haskus.Utils.Types
 -- >>> import Haskus.Utils.EGADT
--- >>>
 -- >>> :{
 -- >>> data LamF (ast :: Type -> Type) t where
 -- >>>   LamF :: ( ast a -> ast b ) -> LamF ast ( a -> b )
@@ -50,24 +49,24 @@ import Haskus.Utils.Types
 -- >>>
 -- >>> :}
 --
--- >>> let y = VF @(AST Int) (VarF "a")
+-- >>> let y = Haskus.Utils.EGADT.VF @(AST Int) (VarF "a")
 -- >>> :t y
 -- y :: EGADT '[LamF, AppF, VarF] Int
 --
 -- >>> :{
 -- >>> case y of
--- >>>   VF (VarF x) -> print x
+-- >>>   Haskus.Utils.EGADT.VF (VarF x) -> print x
 -- >>>   _           -> putStrLn "Not a VarF"
 -- >>> :}
 -- "a"
 --
 -- >>> :{
 -- >>> f :: AST Int -> AST Int
--- >>> f (VF (VarF x)) = VF (VarF "zz")
+-- >>> f (Haskus.Utils.EGADT.VF (VarF x)) = Haskus.Utils.EGADT.VF (VarF "zz")
 -- >>> f _             = error "Unhandled case"
 -- >>> :}
 --
--- >>> let z = VF (AppF (VF (LamF f)) (VF (VarF "a")))
+-- >>> let z = Haskus.Utils.EGADT.VF (AppF (Haskus.Utils.EGADT.VF (LamF f)) (Haskus.Utils.EGADT.VF (VarF "a")))
 -- >>> :t z
 -- z :: EGADT '[LamF, AppF, VarF] Int
 --
