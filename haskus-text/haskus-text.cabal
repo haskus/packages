@@ -56,5 +56,5 @@ test-suite tests
 
    build-depends:    
          base
-      ,  doctest
+      ,  doctest-parallel
       ,  transformers

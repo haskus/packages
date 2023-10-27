@@ -1,12 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
-import Test.DocTest
+import Test.DocTest (mainFromCabal)
+import System.Environment (getArgs)
 
 import Control.Exception
 import System.Exit
 
 main :: IO ()
 main = wrapTests
-   [ title "DOCTEST" $ doctest ["src/lib/"]
+   [ title "DOCTEST" $ mainFromCabal "src/lib" =<< getArgs
    ]
 
 title :: String -> IO () -> IO ()

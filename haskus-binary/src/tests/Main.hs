@@ -1,7 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
 
 import Test.Tasty
-import Test.DocTest
+import Test.DocTest (mainFromCabal)
+import System.Environment (getArgs)
 
 import Control.Exception
 import System.Exit
@@ -12,7 +13,7 @@ import Haskus.Tests.Format.Binary
 main :: IO ()
 main = wrapTests
    [ title "TASTY"   $ defaultMain testsBinary
-   , title "DOCTEST" $ doctest ["src/lib/"]
+   , title "DOCTEST" $ mainFromCabal "src/lib" =<< getArgs
    ]
 
 title :: String -> IO () -> IO ()

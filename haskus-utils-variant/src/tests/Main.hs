@@ -1,17 +1,16 @@
 {-# LANGUAGE LambdaCase #-}
 import Test.Tasty
 import Test.DocTest (mainFromCabal)
-
 import Control.Exception
 import System.Exit
-
+import System.Environment (getArgs)
 import Variant
 import EADT
 
 main :: IO ()
 main = wrapTests
    [ title "TASTY"   $ defaultMain tastyTests
-   , title "DOCTEST" $ mainFromCabal ["src/lib/"]
+   , title "DOCTEST" $ mainFromCabal "src/lib" =<< getArgs
    ]
 
 title :: String -> IO () -> IO ()

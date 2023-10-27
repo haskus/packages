@@ -55,4 +55,4 @@ test-suite tests
          base
       ,  haskus-calculus
       ,  haskus-utils-types
-      ,  doctest                 >= 0.16
+      ,  doctest-parallel

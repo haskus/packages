@@ -2,7 +2,8 @@
 
 import Haskus.Tests.Utils
 import Test.Tasty
-import Test.DocTest
+import Test.DocTest (mainFromCabal)
+import System.Environment (getArgs)
 
 import Control.Exception
 import System.Exit
@@ -11,7 +12,7 @@ import System.Exit
 main :: IO ()
 main = wrapTests
    [ title "TASTY"   $ defaultMain testsUtils
-   , title "DOCTEST" $ doctest ["src/lib/"]
+   , title "DOCTEST" $ mainFromCabal "src/lib" =<< getArgs
    ]
 
 title :: String -> IO () -> IO ()
