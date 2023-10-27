@@ -13,7 +13,7 @@ import Haskus.Tests.Format.Binary
 main :: IO ()
 main = wrapTests
    [ title "TASTY"   $ defaultMain testsBinary
-   , title "DOCTEST" $ mainFromCabal "src/lib" =<< getArgs
+   , title "DOCTEST" $ mainFromCabal "haskus-binary" =<< getArgs
    ]
 
 title :: String -> IO () -> IO ()

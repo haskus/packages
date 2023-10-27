@@ -12,7 +12,7 @@ import System.Exit
 main :: IO ()
 main = wrapTests
    [ title "TASTY"   $ defaultMain testsUtils
-   , title "DOCTEST" $ mainFromCabal "src/lib" =<< getArgs
+   , title "DOCTEST" $ mainFromCabal "haskus-utils" =<< getArgs
    ]
 
 title :: String -> IO () -> IO ()

@@ -10,7 +10,7 @@ import EADT
 main :: IO ()
 main = wrapTests
    [ title "TASTY"   $ defaultMain tastyTests
-   , title "DOCTEST" $ mainFromCabal "src/lib" =<< getArgs
+   , title "DOCTEST" $ mainFromCabal "haskus-utils-variant" =<< getArgs
    ]
 
 title :: String -> IO () -> IO ()

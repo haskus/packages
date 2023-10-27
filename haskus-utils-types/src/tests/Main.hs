@@ -7,7 +7,7 @@ import System.Exit
 
 main :: IO ()
 main = wrapTests
-   [ title "DOCTEST" $ mainFromCabal "src/lib" =<< getArgs
+   [ title "DOCTEST" $ mainFromCabal "haskus-utils-types" =<< getArgs
    ]
 
 title :: String -> IO () -> IO ()
