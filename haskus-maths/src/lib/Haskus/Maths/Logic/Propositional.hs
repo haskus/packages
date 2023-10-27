@@ -32,6 +32,7 @@ import Data.List (intersperse)
 -- >>> :set -XGADTs
 -- >>> :set -XPolyKinds
 -- >>> :set -XLambdaCase
+-- >>> import Haskus.Utils.EADT
 --
 -- >>> type F a = EADT '[FalseF,TrueF,AtomF a,NotF,AndF,OrF,ImpF,IffF]
 

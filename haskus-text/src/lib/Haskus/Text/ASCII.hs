@@ -29,7 +29,6 @@ import Haskus.Utils.Flow
 -- >>> import Haskus.Memory.Buffer
 -- >>> import Haskus.Text
 
-
 -- | ASCII character map and encoding
 data ASCII = ASCII
 

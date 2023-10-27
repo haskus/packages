@@ -243,7 +243,7 @@ bufferReadWord8 b (W# off) = withBuffer b case b of
 -- We don't check that the offset is valid
 --
 -- >>> let b = [0x12,0x34,0x56,0x78] :: Buffer
--- >>> x <- bufferReadWord16IO b 0
+-- >>> x <- bufferReadWord16 b 0
 -- >>> (x == 0x1234) || (x == 0x3412)
 -- True
 --
@@ -261,7 +261,7 @@ bufferReadWord16 b (W# off) = withBuffer b case b of
 -- We don't check that the offset is valid
 --
 -- >>> let b = [0x12,0x34,0x56,0x78] :: Buffer
--- >>> x <- bufferReadWord32IO b 0
+-- >>> x <- bufferReadWord32 b 0
 -- >>> (x == 0x12345678) || (x == 0x78563412)
 -- True
 --
@@ -302,8 +302,8 @@ withBufferAddr# b f = withBuffer b (f (bufferAddr# b))
 -- We don't check that the offset is valid
 --
 -- >>> b <- newBuffer 10
--- >>> bufferWriteWord8IO b 1 123
--- >>> bufferReadWord8IO b 1 
+-- >>> bufferWriteWord8 b 1 123
+-- >>> bufferReadWord8 b 1 
 -- 123
 --
 bufferWriteWord8 :: Buffer -> Word -> Word8 -> IO ()
@@ -318,11 +318,11 @@ bufferWriteWord8 b (W# off) (W8# v) = withBuffer b case b of
 -- >>> b <- newBuffer 10
 -- >>> let v = 1234 :: Word16
 -- >>> bufferWriteWord16IO b 1 v
--- >>> bufferReadWord16IO b 1
+-- >>> bufferReadWord16 b 1
 -- 1234
 --
--- >>> (x :: Word16) <- fromIntegral <$> bufferReadWord8IO b 1
--- >>> (y :: Word16) <- fromIntegral <$> bufferReadWord8IO b 2
+-- >>> (x :: Word16) <- fromIntegral <$> bufferReadWord8 b 1
+-- >>> (y :: Word16) <- fromIntegral <$> bufferReadWord8 b 2
 -- >>> (((x `shiftL` 8) .|. y) == v)   ||   (((y `shiftL` 8) .|. x) == v)
 -- True
 --
@@ -338,7 +338,7 @@ bufferWriteWord16 b (W# off) (W16# v) = withBuffer b case b of
 -- >>> b <- newBuffer 10
 -- >>> let v = 1234 :: Word32
 -- >>> bufferWriteWord32IO b 1 v
--- >>> bufferReadWord32IO b 1
+-- >>> bufferReadWord32 b 1
 -- 1234
 --
 bufferWriteWord32 :: Buffer -> Word -> Word32 -> IO ()

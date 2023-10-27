@@ -10,13 +10,13 @@
 -- >>> let w = do putWord8 0x01 ; putWord32BE 0x23456789 ; putWord32BE 0xAABBCCDD
 -- >>> b <- newBuffer 10
 -- >>> void $ runBufferPut b 0 overflowBufferFail w
--- >>> xs <- forM [0..4] (bufferReadWord8IO b)
+-- >>> xs <- forM [0..4] (bufferReadWord8 b)
 -- >>> xs == [0x01,0x23,0x45,0x67,0x89]
 -- True
 --
 -- >>> b <- newBuffer 2 -- small buffer
 -- >>> (_,b',_) <- runBufferPut b 0 overflowBufferDouble w
--- >>> xs <- forM [0..4] (bufferReadWord8IO b')
+-- >>> xs <- forM [0..4] (bufferReadWord8 b')
 -- >>> xs == [0x01,0x23,0x45,0x67,0x89]
 -- True
 -- >>> bufferSize b'
