@@ -26,10 +26,20 @@ module Haskus.Memory.Layout
    , CUArray (..)
    , CStruct (..)
    , CUnion (..)
+   , CSizeOf (..)
+   , CPrimitive (..)
+   , Field (..)
+   , Nat (..)
+   , CAlignment (..)
    )
 where
 
 import Haskus.Utils.Types
+
+-- $setup
+-- >>> import Haskus.Memory.Layout 
+-- >>> import Haskus.Utils.Types
+-- >>> import Haskus.Binary.Record
 
 -- | Path in a layout
 data LPath (path :: [PathElem])   = LPath

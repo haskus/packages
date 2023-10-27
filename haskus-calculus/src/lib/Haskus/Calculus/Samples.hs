@@ -15,6 +15,7 @@ import Haskus.Calculus.Lang.LC
 -- >>> import Haskus.Calculus.FreeVars
 -- >>> import Haskus.Calculus.PrettyPrint
 -- >>> import Haskus.Calculus.ReplaceVar
+-- >>> import Haskus.Calculus.Samples
 
 sampleLC1 :: LC String
 sampleLC1 = Var "inc" `App` Var "1"
