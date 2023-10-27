@@ -84,7 +84,7 @@ pattern BitNat x <- (bitNatToNatural -> x)
 -- BitNat @1 0
 --
 -- >>> bitNat @158748521123465897456465
--- BitNat @78 158748521123465897456465
+-- BitNat @78 158734232754270691668817
 --
 bitNat :: forall (v :: Nat) (n :: Nat).
    ( n ~ NatBitCount v
