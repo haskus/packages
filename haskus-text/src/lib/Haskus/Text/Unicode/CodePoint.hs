@@ -25,6 +25,7 @@ import Language.Haskell.TH.Syntax (Lift)
 
 -- $setup
 -- >>> import Haskus.Text.Unicode.CodePoint
+-- >>> import Haskus.Binary.Bits
 
 --------------------------------------------------
 -- Code-point

@@ -51,6 +51,10 @@ import Haskus.Binary.Bits.Order
 import Haskus.Binary.Bits.Mask
 import Haskus.Binary.Bits.Helper
 
+-- $setup
+-- >>> import Haskus.Binary.Bits
+
+
 type Bits a =
    ( Eq a
    , FiniteBits a

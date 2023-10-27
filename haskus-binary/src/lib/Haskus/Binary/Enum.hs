@@ -25,6 +25,9 @@ import Data.Data
 import GHC.Prim
 import GHC.Int
 
+-- $setup
+-- >>> import Haskus.Binary.Enum 
+
 -----------------------------------------------------------------------------
 -- EnumField b a: directly store the value of enum "a" as a "b"
 -----------------------------------------------------------------------------

@@ -26,6 +26,9 @@ import Haskus.Utils.Flow
 -- >>> :set -XTypeApplications
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
+-- >>> import Haskus.Text.ASCII
+-- >>> import Haskus.Memory.Buffer
+-- >>> import Haskus.Text
 
 -- | ASCII character map and encoding
 data ASCII = ASCII
