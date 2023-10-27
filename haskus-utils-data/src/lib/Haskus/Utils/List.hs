@@ -60,6 +60,9 @@ import Data.Bifunctor
 import Data.Function (on)
 import qualified Data.List as L
 
+-- $setup
+-- >>> import Haskus.Utils.List
+
 -- | Safely index into a list
 --
 -- >>> [0,1,2,3] `at` 10

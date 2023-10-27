@@ -62,6 +62,7 @@ import Numeric.Natural
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
 -- >>> :set -XScopedTypeVariables
+-- >>> import Haskus.Number.BitNat
 
 -- | A natural on `b` bits
 newtype BitNat (b :: Nat)
