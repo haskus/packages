@@ -34,6 +34,9 @@ import System.Directory (getFileSize)
 import GHC.Exts
 import System.IO
 
+-- $setup
+-- >>> import Haskus.Memory.Embed
+
 -- | Embed bytes at compile time using GHC's literal strings.
 --
 -- >>> :set -XTemplateHaskell
@@ -77,8 +80,8 @@ loadSymbol sz sym = do
 -- >> char mywrtdata[9]    = {1,2,30,40,50,6,7,8,9};
 --
 -- >> let w = $(loadMutableSymbol 9 "mywrtdata")
--- >> forM_ [0..8] (\i -> bufferWriteWord8IO w i (fromIntegral i))
--- >> print =<< forM [0..8] (bufferReadWord8IO w)
+-- >> forM_ [0..8] (\i -> bufferWriteWord8 w i (fromIntegral i))
+-- >> print =<< forM [0..8] (bufferReadWord8 w)
 -- [0,1,2,3,4,5,6,7,8]
 --
 -- Trying to write into constant memory:

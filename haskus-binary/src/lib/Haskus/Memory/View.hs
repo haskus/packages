@@ -72,6 +72,11 @@ import Haskus.Utils.Monad
 import Haskus.Number.Word
 import Haskus.Memory.Buffer
 
+
+-- $setup
+-- >>> import Haskus.Memory.Buffer
+-- >>> import Haskus.Memory.View
+
 -- | The source of a view
 --
 -- Weak views are used so that the underlying buffer can be freed by the GC.
