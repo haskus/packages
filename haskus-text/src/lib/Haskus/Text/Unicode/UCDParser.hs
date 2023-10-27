@@ -28,6 +28,10 @@ import System.FilePath
 import Haskus.Text.Unicode.CodePoint
 import Haskus.Utils.Flow
 
+-- $setup
+-- >>> import Text.Megaparsec
+
+
 type Parser = Parsec () String
 
 ----------------------------------------------------------------

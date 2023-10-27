@@ -36,7 +36,7 @@ data ASCII = ASCII
 --
 -- >>> :set -XOverloadedLists
 -- >>> let b = [72,69,76,76,79] :: Buffer
--- >>> showTextIO (TextBuffer b :: Text ASCII)
+-- >>> showTextIO (Text b :: Text ASCII)
 -- "HELLO"
 --
 instance ShowText ASCII where

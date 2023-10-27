@@ -23,6 +23,10 @@ import Numeric
 import Data.Char (toUpper)
 import Language.Haskell.TH.Syntax (Lift)
 
+-- $setup
+-- >>> import Haskus.Binary.Bits
+-- >>> import Haskus.Number.Word
+
 --------------------------------------------------
 -- Code-point
 --------------------------------------------------

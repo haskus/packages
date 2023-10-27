@@ -47,6 +47,8 @@ import GHC.Exts (toList, IsList(..), Ptr (..))
 -- >>> :set -XTypeFamilies
 -- >>> :set -XScopedTypeVariables
 -- >>> import Haskus.Binary.Bits
+-- >>> import Haskus.Utils.Monad
+-- >>> import Haskus.Number.Word
 
 -- There are different kinds of buffers:
 --  1. in managed heap: small and unpinned
@@ -278,7 +280,7 @@ bufferReadWord32 b (W# off) = withBuffer b case b of
 -- We don't check that the offset is valid
 --
 -- >>> let b = [0x12,0x34,0x56,0x78,0x9A,0xBC,0xDE,0xF0] :: Buffer
--- >>> x <- bufferReadWord64IO b 0
+-- >>> x <- bufferReadWord64 b 0
 -- >>> (x == 0x123456789ABCDEF0) || (x == 0xF0DEBC9A78563412)
 -- True
 --
@@ -317,7 +319,7 @@ bufferWriteWord8 b (W# off) (W8# v) = withBuffer b case b of
 --
 -- >>> b <- newBuffer 10
 -- >>> let v = 1234 :: Word16
--- >>> bufferWriteWord16IO b 1 v
+-- >>> bufferWriteWord16 b 1 v
 -- >>> bufferReadWord16 b 1
 -- 1234
 --
@@ -337,7 +339,7 @@ bufferWriteWord16 b (W# off) (W16# v) = withBuffer b case b of
 --
 -- >>> b <- newBuffer 10
 -- >>> let v = 1234 :: Word32
--- >>> bufferWriteWord32IO b 1 v
+-- >>> bufferWriteWord32 b 1 v
 -- >>> bufferReadWord32 b 1
 -- 1234
 --
@@ -353,8 +355,8 @@ bufferWriteWord32 b (W# off) (W32# v) = withBuffer b case b of
 --
 -- >>> b <- newBuffer 10
 -- >>> let v = 1234 :: Word64
--- >>> bufferWriteWord64IO b 1 v
--- >>> bufferReadWord64IO b 1
+-- >>> bufferWriteWord64 b 1 v
+-- >>> bufferReadWord64 b 1
 -- 1234
 --
 bufferWriteWord64 :: Buffer -> Word -> Word64 -> IO ()
