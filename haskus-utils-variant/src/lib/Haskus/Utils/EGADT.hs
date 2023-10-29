@@ -33,6 +33,7 @@ import Haskus.Utils.Types
 -- >>> :set -XGADTs
 -- >>> :set -XPolyKinds
 -- >>> :set -XPartialTypeSignatures
+-- >>> import Haskus.Utils.Types
 -- >>>
 -- >>> :{
 -- >>> data LamF (ast :: Type -> Type) t where
