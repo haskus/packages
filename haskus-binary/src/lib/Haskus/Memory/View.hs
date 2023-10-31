@@ -4,6 +4,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
 
+
+
 -- | A view (e.g. a slice) of a buffer
 --
 -- Suppose we have a big buffer B.
@@ -71,6 +73,9 @@ import Control.Concurrent
 import Haskus.Utils.Monad
 import Haskus.Number.Word
 import Haskus.Memory.Buffer
+
+-- $setup
+-- >>> import Haskus.Memory.Buffer
 
 -- | The source of a view
 --

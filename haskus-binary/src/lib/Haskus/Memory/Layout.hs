@@ -34,7 +34,6 @@ import Haskus.Utils.Types
 -- $setup
 -- >>> import Haskus.Utils.Types
 
-
 -- | Path in a layout
 data LPath (path :: [PathElem])   = LPath
 

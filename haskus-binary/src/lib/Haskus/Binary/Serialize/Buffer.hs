@@ -64,6 +64,10 @@ import Control.Monad.Trans.State.Strict as S
 import Control.Monad.Fail as F
 import Control.Monad.Fix
 
+-- $setup
+-- >>> import Haskus.Number.Word
+-- >>> import Haskus.Binary.Serialize.Put
+
 -- | Action to perform when the buffer isn't large enough to contain the
 -- required data (extend the buffer, flush the data, etc.)
 --
@@ -237,7 +241,7 @@ putSomeThings sz mact = do
             Just act -> do        -- we write something for real
                liftBufferPut (act b off)
                setPutOffset newOff
-   
+
 
 instance PutMonad (BufferPutT Buffer IO) where
       putWord8  = putSomething 1 bufferWriteWord8

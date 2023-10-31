@@ -46,6 +46,7 @@ import GHC.Exts (toList, IsList(..), Ptr (..))
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeFamilies
 -- >>> :set -XScopedTypeVariables
+-- >>> :set -XOverloadedLists
 -- >>> import Haskus.Binary.Bits
 -- >>> import Haskus.Utils.Monad
 -- >>> import Haskus.Number.Word
@@ -305,7 +306,7 @@ withBufferAddr# b f = withBuffer b (f (bufferAddr# b))
 --
 -- >>> b <- newBuffer 10
 -- >>> bufferWriteWord8 b 1 123
--- >>> bufferReadWord8 b 1 
+-- >>> bufferReadWord8 b 1
 -- 123
 --
 bufferWriteWord8 :: Buffer -> Word -> Word8 -> IO ()
