@@ -13,6 +13,7 @@ module Haskus.Number.SignedSafe
    ( Signed (..)
    , signedIsZero
    , signedIsNaN
+   , signedIsPositive
    , signedFromBitNat
    , signedNegate
    , signedPos

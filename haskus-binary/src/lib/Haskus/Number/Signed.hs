@@ -14,6 +14,7 @@ module Haskus.Number.Signed
    ( Signed (..)
    , SignedIsZero
    , signedIsZero
+   , signedIsPositive
    , SignedFromBitNat
    , signedFromBitNat
    , SignedNegate

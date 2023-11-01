@@ -5,6 +5,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 
+
+-- $setup
+-- >>> import Haskus.Number.Word
+-- >>> import Haskus.Binary.Serialize.Put
+-- >>> import Haskus.Utils.Flow
+
 -- | Serializer into a mutable buffer
 --
 -- >>> let w = do putWord8 0x01 ; putWord32BE 0x23456789 ; putWord32BE 0xAABBCCDD
@@ -26,9 +32,12 @@ module Haskus.Binary.Serialize.Buffer
    ( -- * Put
    BufferPutT (..)
    , BufferPut
+   , newBuffer
    , getPutOffset
    , getPutBuffer
    , setPutOffset
+   , putWord8
+   , putWord32BE
    , runBufferPut
    , liftBufferPut
      -- * Get
@@ -64,9 +73,6 @@ import Control.Monad.Trans.State.Strict as S
 import Control.Monad.Fail as F
 import Control.Monad.Fix
 
--- $setup
--- >>> import Haskus.Number.Word
--- >>> import Haskus.Binary.Serialize.Put
 
 -- | Action to perform when the buffer isn't large enough to contain the
 -- required data (extend the buffer, flush the data, etc.)
