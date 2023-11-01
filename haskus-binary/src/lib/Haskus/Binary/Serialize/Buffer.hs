@@ -12,7 +12,6 @@
 -- >>> import Haskus.Utils.Flow
 -- >>> import Haskus.Memory.Buffer
 -- >>> import Haskus.Utils.Monad
--- >>> import Control.Monad
 
 
 -- | Serializer into a mutable buffer
