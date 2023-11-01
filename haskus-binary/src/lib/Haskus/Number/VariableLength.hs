@@ -27,6 +27,10 @@ import Haskus.Binary.Bits.Put
 import Haskus.Binary.Bits.Order
 import Haskus.Binary.Buffer
 
+-- $setup
+-- >>> import Haskus.Number.Word
+-- >>> import Haskus.Binary.Bits
+
 -- | Convert a stream of ULEB 128 bytes into an Integral
 --
 -- >>> :set -XBinaryLiterals

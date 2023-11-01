@@ -25,6 +25,11 @@ import Haskus.Binary.Bits
 import Haskus.Utils.Types
 import Prelude hiding (isNaN)
 
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> import Haskus.Number.BitNat
+
 -- | A signed number (not in two-complement form)
 --
 -- * Bits: ddd..ddds where "s" is the sign bit

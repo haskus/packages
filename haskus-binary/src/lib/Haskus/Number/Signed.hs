@@ -29,6 +29,11 @@ import Haskus.Number.BitNat
 import Haskus.Binary.Bits
 import Haskus.Utils.Types
 
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> import Haskus.Number.BitNat
+
 -- | A signed number (not in two-complement form)
 --
 -- * Bits: ddd..ddds where "s" is the sign bit
