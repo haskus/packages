@@ -23,5 +23,6 @@ ghc-options:
 build:
    interleaved-output: true
 
-extra-deps: 
+extra-deps:
 - doctest-parallel-0.3.1@sha256:f1ec7b7044d156dacf3bc5464c9c692d12f490ec8bb933c6a9007d98c42004d5,5862
+- clay-0.14.0@sha256:a50ba73137a39c55e89f24a7792107ec40ba07320b2c5ff7932049845c50ffc9,2204

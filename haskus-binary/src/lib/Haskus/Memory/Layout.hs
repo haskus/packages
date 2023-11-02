@@ -23,11 +23,11 @@ module Haskus.Memory.Layout
    -- * Layouts
    , CPrimitive (..)
    , CArray (..)
-   , CAlignment(..)
+   , CAlignment
    , CUArray (..)
    , CStruct (..)
    , CUnion (..)
-   , CSizeOf(..)
+   , CSizeOf
    , Field (..)
    )
 where
