@@ -48,7 +48,8 @@ jobs:
     - uses: haskell/actions/setup@v2
       name: Setup Haskell Stack
       with:
-        stack-version: 'latest'
+        #ghc-version: 'ghc-9.4.7'
+        stack-version: 'lts-21.19'
         enable-stack: true
         stack-no-global: true
         stack-setup-ghc: true
