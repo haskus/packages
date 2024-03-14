@@ -5,30 +5,28 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 
+
+-- $setup
+-- >>> import Haskus.Number.Word
+-- >>> import Haskus.Binary.Serialize.Put
+-- >>> import Haskus.Utils.Flow
+-- >>> import Haskus.Memory.Buffer
+-- >>> import Haskus.Utils.Monad
+
+
 -- | Serializer into a mutable buffer
 --
--- >>> let w = do putWord8 0x01 ; putWord32BE 0x23456789 ; putWord32BE 0xAABBCCDD
--- >>> b <- newBuffer 10
--- >>> void $ runBufferPut b 0 overflowBufferFail w
--- >>> xs <- forM [0..4] (bufferReadWord8IO b)
--- >>> xs == [0x01,0x23,0x45,0x67,0x89]
--- True
---
--- >>> b <- newBuffer 2 -- small buffer
--- >>> (_,b',_) <- runBufferPut b 0 overflowBufferDouble w
--- >>> xs <- forM [0..4] (bufferReadWord8IO b')
--- >>> xs == [0x01,0x23,0x45,0x67,0x89]
--- True
--- >>> bufferSize b'
--- 16
 --
 module Haskus.Binary.Serialize.Buffer
    ( -- * Put
    BufferPutT (..)
    , BufferPut
+   , newBuffer
    , getPutOffset
    , getPutBuffer
    , setPutOffset
+   , putWord8
+   , putWord32BE
    , runBufferPut
    , liftBufferPut
      -- * Get
@@ -63,6 +61,7 @@ import Data.Functor.Identity
 import Control.Monad.Trans.State.Strict as S
 import Control.Monad.Fail as F
 import Control.Monad.Fix
+
 
 -- | Action to perform when the buffer isn't large enough to contain the
 -- required data (extend the buffer, flush the data, etc.)
@@ -237,7 +236,7 @@ putSomeThings sz mact = do
             Just act -> do        -- we write something for real
                liftBufferPut (act b off)
                setPutOffset newOff
-   
+
 
 instance PutMonad (BufferPutT Buffer IO) where
       putWord8  = putSomething 1 bufferWriteWord8

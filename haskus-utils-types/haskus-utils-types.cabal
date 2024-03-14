@@ -32,7 +32,7 @@ library
 
   other-modules:
 
-  build-depends:       
+  build-depends:
          base >= 4.11 && < 5
 
   ghc-options:          -Wall
@@ -48,4 +48,5 @@ test-suite tests
 
    build-depends:
          base >= 4.11 && < 5
-      ,  doctest >= 0.16
+      ,  doctest-parallel
+      ,  haskus-utils-types

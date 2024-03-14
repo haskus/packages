@@ -17,6 +17,8 @@ import Haskus.Maths.Geometry.Line
 
 -- $setup
 -- >>> import Haskus.Maths.Geometry.Point
+-- >>> import Linear.V2
+-- >>> import Linear.Affine
 
 -- | A segment between two points
 data Segment a

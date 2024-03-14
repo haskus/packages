@@ -14,6 +14,7 @@ module Haskus.Number.Signed
    ( Signed (..)
    , SignedIsZero
    , signedIsZero
+   , signedIsPositive
    , SignedFromBitNat
    , signedFromBitNat
    , SignedNegate
@@ -28,6 +29,11 @@ where
 import Haskus.Number.BitNat
 import Haskus.Binary.Bits
 import Haskus.Utils.Types
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> import Haskus.Number.BitNat
 
 -- | A signed number (not in two-complement form)
 --

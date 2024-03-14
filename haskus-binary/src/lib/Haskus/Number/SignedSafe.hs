@@ -13,6 +13,7 @@ module Haskus.Number.SignedSafe
    ( Signed (..)
    , signedIsZero
    , signedIsNaN
+   , signedIsPositive
    , signedFromBitNat
    , signedNegate
    , signedPos
@@ -24,6 +25,11 @@ import Haskus.Number.BitNat
 import Haskus.Binary.Bits
 import Haskus.Utils.Types
 import Prelude hiding (isNaN)
+
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> import Haskus.Number.BitNat
 
 -- | A signed number (not in two-complement form)
 --

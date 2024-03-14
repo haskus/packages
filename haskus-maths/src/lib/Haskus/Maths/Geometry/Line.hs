@@ -9,6 +9,10 @@ import Linear.V2
 import Linear.Affine
 import Linear.Metric
 
+-- $setup
+-- >>> import Linear.V2
+-- >>> import Linear.Affine
+
 -- | A line
 data Line a
    = Line !a !a -- y = ax+b

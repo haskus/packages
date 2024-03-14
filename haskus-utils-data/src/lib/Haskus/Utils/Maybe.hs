@@ -2,13 +2,12 @@
 
 -- | Utils for Maybe data type
 module Haskus.Utils.Maybe
-   ( onNothing
-   , onNothingM
-   , fromMaybeM
-   , headMaybe
-   , module Data.Maybe
-   )
-where
+  ( onNothing
+  , onNothingM
+  , fromMaybeM
+  , headMaybe
+  , module Data.Maybe
+  ) where
 
 import Data.Maybe
 
@@ -22,11 +21,12 @@ onNothingM = flip fromMaybeM
 
 -- | fromMaybe in a Monad
 fromMaybeM :: Monad m => m a -> m (Maybe a) -> m a
-fromMaybeM v f = f >>= \case
-   Nothing -> v
-   Just x  -> return x
+fromMaybeM v f =
+  f >>= \case
+    Nothing -> v
+    Just x -> return x
 
 -- | Get the head of the list if the latter is not empty
 headMaybe :: [a] -> Maybe a
-headMaybe []    = Nothing
+headMaybe [] = Nothing
 headMaybe (x:_) = Just x

@@ -50,7 +50,7 @@ import Haskus.Utils.ContFlow
 -- >>> :set -XTypeFamilies
 -- >>> :set -XPatternSynonyms
 -- >>> :set -XDeriveFunctor
--- >>>
+-- >>> import Haskus.Utils.ContFlow
 -- >>> import Data.Functor.Classes
 -- >>>
 -- >>> data ConsF a e = ConsF a e deriving (Functor)

@@ -24,6 +24,9 @@ import Haskus.Utils.Flow
 
 -- $setup
 -- >>> import Haskus.Utils.Flow
+-- >>> import Haskus.Maths.Geometry.Point
+-- >>> import Linear.V2
+-- >>> import Linear.Affine
 -- >>> :set -XTypeApplications
 
 -- | A polygon
