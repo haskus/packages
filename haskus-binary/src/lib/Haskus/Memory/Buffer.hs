@@ -139,15 +139,6 @@ attachFinalizedBuffer addr sz = IO \s ->
 -- Finalizers
 -----------------------------------------------------------------
 
--- | Insert a finalizer. Return True if there was no finalizer before
-insertFinalizer :: Finalizers# RealWorld -> IO () -> IO Bool
-insertFinalizer fin f = case fin of
-  Finalizers rfs -> do
-    atomicModifyIORef (IORef (STRef rfs)) $ \finalizers -> case finalizers of
-      [] -> ([f] , True)
-      fs -> (f:fs, False)
-  NoFinalizers   -> error "insertFinalizer: can't insert finalizer (NoFinalizers)"
-
 getFinalizers :: STBuffer s -> Finalizers# s
 getFinalizers = \case
   InBuffer _ fin    -> fin
@@ -160,12 +151,20 @@ getFinalizers = \case
 --
 addFinalizer :: Buffer -> IO () -> IO ()
 addFinalizer b f = do
-   let !fin = getFinalizers b
-   wasEmpty <- insertFinalizer fin f
-   -- add the weak reference to the finalizer IORef (not to Addr#/byteArray#/...)
-   when wasEmpty $ IO \s ->
-    case mkWeak# fin b (unIO $ runFinalizers fin) s of
-      (# s1, _wk #) -> (# s1, () #)
+  let !fin = getFinalizers b
+  case fin of
+    Finalizers rfs -> do
+      mBox <- atomicModifyIORef (IORef (STRef rfs)) $ \finalizers -> case finalizers of
+        [] -> let box = [f] in (box , Just box)
+        fs -> (f:fs, Nothing)
+      -- add the weak reference to the first cons cell of the finalizers list,
+      -- that's the only boxed thing we have.
+      case mBox of
+        Nothing  -> return ()
+        Just box ->  IO \s ->
+          case mkWeak# box b (unIO $ runFinalizers fin) s of
+            (# s1, _wk #) -> (# s1, () #) 
+    NoFinalizers   -> error "insertFinalizer: can't insert finalizer (NoFinalizers)" 
 
 -- | Internal function used to execute finalizers
 runFinalizers :: Finalizers# RealWorld -> IO ()
