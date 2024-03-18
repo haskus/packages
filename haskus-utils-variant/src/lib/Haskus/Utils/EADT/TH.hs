@@ -201,10 +201,12 @@ eadtPattern' consName patStr mEadtTy isInfix = do
                , v == e      = AppT (AppT ArrowT eadtTy) (go b)
                | otherwise   = AppT (AppT ArrowT a)      (go b)
 #if MIN_VERSION_base(4,15,0)
-            go (AppT (AppT (AppT MulArrowT m) a) b)
+            go (AppT (AppT (AppT MulArrowT _m) a) b)
                | VarT v <- a
-               , v == e      = AppT (AppT (AppT MulArrowT m) eadtTy) (go b)
-               | otherwise   = AppT (AppT (AppT MulArrowT m) a)      (go b)
+               -- Linear types don't support pattern synonyms (GHC#18806)
+               -- Use normal arrows instead.
+               , v == e      = AppT (AppT ArrowT eadtTy) (go b)
+               | otherwise   = AppT (AppT ArrowT a)      (go b)
 #endif
             go _             = eadtTy
             t'               = go tys

@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Haskus.Calculus.Concept.Literal
    ( LiteralF (..)
