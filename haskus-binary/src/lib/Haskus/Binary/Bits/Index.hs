@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE MagicHash #-}
@@ -58,13 +59,25 @@ instance IndexableBits Word where
    popCount (W# x#) = W# (popCnt# x#)
 
 instance IndexableBits Word8 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   popCount (W8# x#) = W# (popCnt8# (word8ToWord# x#))
+#else
    popCount (W8# x#) = W# (popCnt8# x#)
+#endif
 
 instance IndexableBits Word16 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   popCount (W16# x#) = W# (popCnt16# (word16ToWord# x#))
+#else
    popCount (W16# x#) = W# (popCnt16# x#)
+#endif
 
 instance IndexableBits Word32 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   popCount (W32# x#) = W# (popCnt32# (word32ToWord# x#))
+#else
    popCount (W32# x#) = W# (popCnt32# x#)
+#endif
 
 instance IndexableBits Word64 where
    popCount (W64# x#) = W# (popCnt64# x#)
@@ -73,13 +86,25 @@ instance IndexableBits Int where
    popCount (I# x#) = W# (popCnt# (int2Word# x#))
 
 instance IndexableBits Int8 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   popCount (I8# x#) = W# (popCnt8# (int2Word# (int8ToInt# x#)))
+#else
    popCount (I8# x#) = W# (popCnt8# (int2Word# x#))
+#endif
 
 instance IndexableBits Int16 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   popCount (I16# x#) = W# (popCnt16# (int2Word# (int16ToInt# x#)))
+#else
    popCount (I16# x#) = W# (popCnt16# (int2Word# x#))
+#endif
 
 instance IndexableBits Int32 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   popCount (I32# x#) = W# (popCnt32# (int2Word# (int32ToInt# x#)))
+#else
    popCount (I32# x#) = W# (popCnt32# (int2Word# x#))
+#endif
 
 instance IndexableBits Int64 where
    popCount (I64# x#) = W# (popCnt64# (int2Word# x#))

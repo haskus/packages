@@ -124,6 +124,19 @@ instance ShiftableBits Word8 where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (W8# x#) `shiftL` (W# i#)
+      | isTrue# (i# `geWord#` 8##)    = W8# (wordToWord8# 0##)
+      | otherwise                     = W8# (x# `uncheckedShiftLWord8#` word2Int# i#)
+
+   (W8# x#) `uncheckedShiftL` (W# i#) = W8# (x# `uncheckedShiftLWord8#` word2Int# i#)
+   
+   (W8# x#) `shiftR` (W# i#)
+      | isTrue# (i# `geWord#` 8##)    = W8# (wordToWord8# 0##)
+      | otherwise                     = W8# (x# `uncheckedShiftRLWord8#` word2Int# i#)
+   
+   (W8# x#) `uncheckedShiftR` (W# i#) = W8# (x# `uncheckedShiftRLWord8#` word2Int# i#)
+#else
    (W8# x#) `shiftL` (W# i#)
       | isTrue# (i# `geWord#` 8##)    = W8# 0##
       | otherwise                     = W8# (narrow8Word# (x# `uncheckedShiftL#` word2Int# i#))
@@ -135,6 +148,7 @@ instance ShiftableBits Word8 where
       | otherwise                     = W8# (x# `uncheckedShiftRL#` word2Int# i#)
    
    (W8# x#) `uncheckedShiftR` (W# i#) = W8# (x# `uncheckedShiftRL#` word2Int# i#)
+#endif
 
 instance ShiftableBits Word16 where
    {-# INLINABLE shiftR #-}
@@ -142,6 +156,19 @@ instance ShiftableBits Word16 where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (W16# x#) `shiftL` (W# i#)
+      | isTrue# (i# `geWord#` 16##)    = W16# (wordToWord16# 0##)
+      | otherwise                      = W16# (x# `uncheckedShiftLWord16#` word2Int# i#)
+
+   (W16# x#) `uncheckedShiftL` (W# i#) = W16# (x# `uncheckedShiftLWord16#` word2Int# i#)
+   
+   (W16# x#) `shiftR` (W# i#)
+      | isTrue# (i# `geWord#` 16##)    = W16# (wordToWord16# 0##)
+      | otherwise                      = W16# (x# `uncheckedShiftRLWord16#` word2Int# i#)
+   
+   (W16# x#) `uncheckedShiftR` (W# i#) = W16# (x# `uncheckedShiftRLWord16#` word2Int# i#)
+#else
    (W16# x#) `shiftL` (W# i#)
       | isTrue# (i# `geWord#` 16##)    = W16# 0##
       | otherwise                      = W16# (narrow16Word# (x# `uncheckedShiftL#` word2Int# i#))
@@ -153,6 +180,7 @@ instance ShiftableBits Word16 where
       | otherwise                      = W16# (x# `uncheckedShiftRL#` word2Int# i#)
    
    (W16# x#) `uncheckedShiftR` (W# i#) = W16# (x# `uncheckedShiftRL#` word2Int# i#)
+#endif
 
 instance ShiftableBits Word32 where
    {-# INLINABLE shiftR #-}
@@ -160,6 +188,19 @@ instance ShiftableBits Word32 where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (W32# x#) `shiftL` (W# i#)
+      | isTrue# (i# `geWord#` 32##)    = W32# (wordToWord32# 0##)
+      | otherwise                      = W32# (x# `uncheckedShiftLWord32#` word2Int# i#)
+
+   (W32# x#) `uncheckedShiftL` (W# i#) = W32# (x# `uncheckedShiftLWord32#` word2Int# i#)
+   
+   (W32# x#) `shiftR` (W# i#)
+      | isTrue# (i# `geWord#` 32##)    = W32# (wordToWord32# 0##)
+      | otherwise                      = W32# (x# `uncheckedShiftRLWord32#` word2Int# i#)
+   
+   (W32# x#) `uncheckedShiftR` (W# i#) = W32# (x# `uncheckedShiftRLWord32#` word2Int# i#)
+#else
    (W32# x#) `shiftL` (W# i#)
       | isTrue# (i# `geWord#` 32##)    = W32# 0##
       | otherwise                      = W32# (narrow32Word# (x# `uncheckedShiftL#` word2Int# i#))
@@ -171,6 +212,7 @@ instance ShiftableBits Word32 where
       | otherwise                      = W32# (x# `uncheckedShiftRL#` word2Int# i#)
    
    (W32# x#) `uncheckedShiftR` (W# i#) = W32# (x# `uncheckedShiftRL#` word2Int# i#)
+#endif
 
 instance ShiftableBits Word64 where
    {-# INLINABLE shiftR #-}
@@ -215,6 +257,19 @@ instance ShiftableBits Int8 where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (I8# x#) `shiftL`          (W# i#)
+      | isTrue# (i# `geWord#` 8##)    = I8# (intToInt8# 0#)
+      | otherwise                     = I8# (x# `uncheckedShiftLInt8#` word2Int# i#)
+
+   (I8# x#) `uncheckedShiftL` (W# i#) = I8# (x# `uncheckedShiftLInt8#` word2Int# i#)
+   
+   (I8# x#) `shiftR`          (W# i#)
+      | isTrue# (i# `geWord#` 8##)    = I8# (intToInt8# 0#)
+      | otherwise                     = I8# (x# `uncheckedShiftRLInt8#` word2Int# i#)
+
+   (I8# x#) `uncheckedShiftR` (W# i#) = I8# (x# `uncheckedShiftRLInt8#` word2Int# i#)
+#else
    (I8# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` 8##)    = I8# 0#
       | otherwise                     = I8# (narrow8Int# (x# `uncheckedIShiftL#` word2Int# i#))
@@ -226,6 +281,7 @@ instance ShiftableBits Int8 where
       | otherwise                     = I8# (word2Int# (narrow8Word# (int2Word# x#) `uncheckedShiftRL#` word2Int# i#))
 
    (I8# x#) `uncheckedShiftR` (W# i#) = I8# (word2Int# (narrow8Word# (int2Word# x#) `uncheckedShiftRL#` word2Int# i#))
+#endif
    
 
 instance ShiftableBits Int16 where
@@ -234,6 +290,19 @@ instance ShiftableBits Int16 where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (I16# x#) `shiftL`          (W# i#)
+      | isTrue# (i# `geWord#` 16##)    = I16# (intToInt16# 0#)
+      | otherwise                      = I16# (x# `uncheckedShiftLInt16#` word2Int# i#)
+
+   (I16# x#) `uncheckedShiftL` (W# i#) = I16# (x# `uncheckedShiftLInt16#` word2Int# i#)
+   
+   (I16# x#) `shiftR`          (W# i#)
+      | isTrue# (i# `geWord#` 16##)    = I16# (intToInt16# 0#)
+      | otherwise                      = I16# (x# `uncheckedShiftRLInt16#` word2Int# i#)
+
+   (I16# x#) `uncheckedShiftR` (W# i#) = I16# (x# `uncheckedShiftRLInt16#` word2Int# i#)
+#else
    (I16# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` 16##)    = I16# 0#
       | otherwise                      = I16# (narrow16Int# (x# `uncheckedIShiftL#` word2Int# i#))
@@ -245,6 +314,7 @@ instance ShiftableBits Int16 where
       | otherwise                      = I16# (word2Int# (narrow16Word# (int2Word# x#) `uncheckedShiftRL#` word2Int# i#))
 
    (I16# x#) `uncheckedShiftR` (W# i#) = I16# (word2Int# (narrow16Word# (int2Word# x#) `uncheckedShiftRL#` word2Int# i#))
+#endif
 
 
 instance ShiftableBits Int32 where
@@ -253,6 +323,19 @@ instance ShiftableBits Int32 where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (I32# x#) `shiftL`          (W# i#)
+      | isTrue# (i# `geWord#` 32##)    = I32# (intToInt32# 0#)
+      | otherwise                      = I32# (x# `uncheckedShiftLInt32#` word2Int# i#)
+
+   (I32# x#) `uncheckedShiftL` (W# i#) = I32# (x# `uncheckedShiftLInt32#` word2Int# i#)
+   
+   (I32# x#) `shiftR`          (W# i#)
+      | isTrue# (i# `geWord#` 32##)    = I32# (intToInt32# 0#)
+      | otherwise                      = I32# (x# `uncheckedShiftRLInt32#` word2Int# i#)
+
+   (I32# x#) `uncheckedShiftR` (W# i#) = I32# (x# `uncheckedShiftRLInt32#` word2Int# i#)
+#else
    (I32# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` 32##)    = I32# 0#
       | otherwise                      = I32# (narrow32Int# (x# `uncheckedIShiftL#` word2Int# i#))
@@ -264,6 +347,7 @@ instance ShiftableBits Int32 where
       | otherwise                      = I32# (word2Int# (narrow32Word# (int2Word# x#) `uncheckedShiftRL#` word2Int# i#))
 
    (I32# x#) `uncheckedShiftR` (W# i#) = I32# (word2Int# (narrow32Word# (int2Word# x#) `uncheckedShiftRL#` word2Int# i#))
+#endif
 
 instance ShiftableBits Int64 where
    {-# INLINABLE shiftR #-}
@@ -291,22 +375,43 @@ instance SignedShiftableBits Int where
    (I# x#) `uncheckedSignedShiftR` (W# i#) = I# (x# `uncheckedIShiftRA#` word2Int# i#)
 
 instance SignedShiftableBits Int8 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (I8# x#) `signedShiftL`          (W# i#) = I8# (intToInt8# (int8ToInt# x# `iShiftL#` word2Int# i#))
+   (I8# x#) `signedShiftR`          (W# i#) = I8# (intToInt8# (int8ToInt# x# `iShiftRA#` word2Int# i#))
+   (I8# x#) `uncheckedSignedShiftL` (W# i#) = I8# (x# `uncheckedShiftLInt8#` word2Int# i#)
+   (I8# x#) `uncheckedSignedShiftR` (W# i#) = I8# (x# `uncheckedShiftRAInt8#` word2Int# i#)
+#else
    (I8# x#) `signedShiftL`          (W# i#) = I8# (narrow8Int# (x# `iShiftL#` word2Int# i#))
    (I8# x#) `signedShiftR`          (W# i#) = I8# (x# `iShiftRA#` word2Int# i#)
    (I8# x#) `uncheckedSignedShiftL` (W# i#) = I8# (narrow8Int# (x# `uncheckedIShiftL#` word2Int# i#))
    (I8# x#) `uncheckedSignedShiftR` (W# i#) = I8# (x# `uncheckedIShiftRA#` word2Int# i#)
+#endif
 
 instance SignedShiftableBits Int16 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (I16# x#) `signedShiftL`          (W# i#) = I16# (intToInt16# (int16ToInt# x# `iShiftL#` word2Int# i#))
+   (I16# x#) `signedShiftR`          (W# i#) = I16# (intToInt16# (int16ToInt# x# `iShiftRA#` word2Int# i#))
+   (I16# x#) `uncheckedSignedShiftL` (W# i#) = I16# (x# `uncheckedShiftLInt16#` word2Int# i#)
+   (I16# x#) `uncheckedSignedShiftR` (W# i#) = I16# (x# `uncheckedShiftRAInt16#` word2Int# i#)
+#else
    (I16# x#) `signedShiftL`          (W# i#) = I16# (narrow16Int# (x# `iShiftL#` word2Int# i#))
    (I16# x#) `signedShiftR`          (W# i#) = I16# (x# `iShiftRA#` word2Int# i#)
    (I16# x#) `uncheckedSignedShiftL` (W# i#) = I16# (narrow16Int# (x# `uncheckedIShiftL#` word2Int# i#))
    (I16# x#) `uncheckedSignedShiftR` (W# i#) = I16# (x# `uncheckedIShiftRA#` word2Int# i#)
+#endif
 
 instance SignedShiftableBits Int32 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,2,0,0)
+   (I32# x#) `signedShiftL`          (W# i#) = I32# (intToInt32# (int32ToInt# x# `iShiftL#` word2Int# i#))
+   (I32# x#) `signedShiftR`          (W# i#) = I32# (intToInt32# (int32ToInt# x# `iShiftRA#` word2Int# i#))
+   (I32# x#) `uncheckedSignedShiftL` (W# i#) = I32# (x# `uncheckedShiftLInt32#` word2Int# i#)
+   (I32# x#) `uncheckedSignedShiftR` (W# i#) = I32# (x# `uncheckedShiftRAInt32#` word2Int# i#)
+#else
    (I32# x#) `signedShiftL`          (W# i#) = I32# (narrow32Int# (x# `iShiftL#` word2Int# i#))
    (I32# x#) `signedShiftR`          (W# i#) = I32# (x# `iShiftRA#` word2Int# i#)
    (I32# x#) `uncheckedSignedShiftL` (W# i#) = I32# (narrow32Int# (x# `uncheckedIShiftL#` word2Int# i#))
    (I32# x#) `uncheckedSignedShiftR` (W# i#) = I32# (x# `uncheckedIShiftRA#` word2Int# i#)
+#endif
 
 instance SignedShiftableBits Int64 where
    (I64# x#) `signedShiftL`          (W# i#) = I64# (x# `iShiftL#` word2Int# i#)
