@@ -220,6 +220,19 @@ instance ShiftableBits Word64 where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
+#if MIN_VERSION_GLASGOW_HASKELL (9,4,0,0)
+   (W64# x#) `shiftL` (W# i#)
+      | isTrue# (i# `geWord#` 64##)    = W64# (wordToWord64# 0##)
+      | otherwise                      = W64# (x# `uncheckedShiftL64#` word2Int# i#)
+
+   (W64# x#) `uncheckedShiftL` (W# i#) = W64# (x# `uncheckedShiftL64#` word2Int# i#)
+   
+   (W64# x#) `shiftR` (W# i#)
+      | isTrue# (i# `geWord#` 64##)    = W64# (wordToWord64# 0##)
+      | otherwise                      = W64# (x# `uncheckedShiftRL64#` word2Int# i#)
+   
+   (W64# x#) `uncheckedShiftR` (W# i#) = W64# (x# `uncheckedShiftRL64#` word2Int# i#)
+#else
    (W64# x#) `shiftL` (W# i#)
       | isTrue# (i# `geWord#` 64##)    = W64# 0##
       | otherwise                      = W64# (x# `uncheckedShiftL#` word2Int# i#)
@@ -231,6 +244,7 @@ instance ShiftableBits Word64 where
       | otherwise                      = W64# (x# `uncheckedShiftRL#` word2Int# i#)
    
    (W64# x#) `uncheckedShiftR` (W# i#) = W64# (x# `uncheckedShiftRL#` word2Int# i#)
+#endif
 
 
 instance ShiftableBits Int where
@@ -355,6 +369,19 @@ instance ShiftableBits Int64 where
    {-# INLINABLE uncheckedShiftL #-}
    {-# INLINABLE uncheckedShiftR #-}
 
+#if MIN_VERSION_GLASGOW_HASKELL (9,4,0,0)
+   (I64# x#) `shiftL`          (W# i#)
+      | isTrue# (i# `geWord#` 64##)    = I64# (intToInt64# 0#)
+      | otherwise                      = I64# (x# `uncheckedIShiftL64#` word2Int# i#)
+
+   (I64# x#) `uncheckedShiftL` (W# i#) = I64# (x# `uncheckedIShiftL64#` word2Int# i#)
+   
+   (I64# x#) `shiftR`          (W# i#)
+      | isTrue# (i# `geWord#` 64##)    = I64# (intToInt64# 0#)
+      | otherwise                      = I64# (x# `uncheckedIShiftRL64#` word2Int# i#)
+
+   (I64# x#) `uncheckedShiftR` (W# i#) = I64# (x# `uncheckedIShiftRL64#` word2Int# i#)
+#else
    (I64# x#) `shiftL`          (W# i#)
       | isTrue# (i# `geWord#` 64##)    = I64# 0#
       | otherwise                      = I64# (x# `uncheckedIShiftL#` word2Int# i#)
@@ -366,6 +393,7 @@ instance ShiftableBits Int64 where
       | otherwise                      = I64# (word2Int# (int2Word# x# `uncheckedShiftRL#` word2Int# i#))
 
    (I64# x#) `uncheckedShiftR` (W# i#) = I64# (word2Int# (int2Word# x# `uncheckedShiftRL#` word2Int# i#))
+#endif
 
 
 instance SignedShiftableBits Int where
@@ -414,10 +442,22 @@ instance SignedShiftableBits Int32 where
 #endif
 
 instance SignedShiftableBits Int64 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,4,0,0)
+   (I64# x#) `signedShiftL`          (W# i#)
+      = I64# (word64ToInt64#
+             ((int64ToWord64# (x# `uncheckedIShiftL64#` word2Int# i#)) `and64#`
+             (int64ToWord64# (intToInt64# (negateInt# (i# `ltWord#` 64##))))))
+   (I64# x#) `signedShiftR`          (W# i#)
+      | isTrue# (i# `geWord#` 64##) = I64# (intToInt64# (negateInt# (x# `ltInt64#` intToInt64# 0#)))
+      | otherwise                   = I64# (x# `uncheckedIShiftRA64#` word2Int# i#)
+   (I64# x#) `uncheckedSignedShiftL` (W# i#) = I64# (x# `uncheckedIShiftL64#` word2Int# i#)
+   (I64# x#) `uncheckedSignedShiftR` (W# i#) = I64# (x# `uncheckedIShiftRA64#` word2Int# i#)
+#else
    (I64# x#) `signedShiftL`          (W# i#) = I64# (x# `iShiftL#` word2Int# i#)
    (I64# x#) `signedShiftR`          (W# i#) = I64# (x# `iShiftRA#` word2Int# i#)
    (I64# x#) `uncheckedSignedShiftL` (W# i#) = I64# (x# `uncheckedIShiftL#` word2Int# i#)
    (I64# x#) `uncheckedSignedShiftR` (W# i#) = I64# (x# `uncheckedIShiftRA#` word2Int# i#)
+#endif
 
 
 

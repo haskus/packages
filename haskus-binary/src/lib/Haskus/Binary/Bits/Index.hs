@@ -107,7 +107,11 @@ instance IndexableBits Int32 where
 #endif
 
 instance IndexableBits Int64 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,4,0,0)
+   popCount (I64# x#) = W# (popCnt64# (int64ToWord64# x#))
+#else
    popCount (I64# x#) = W# (popCnt64# (int2Word# x#))
+#endif
 
 instance IndexableBits Integer where
    -- we don't have access to Integer primitive (we would have to conditionally

@@ -69,9 +69,15 @@ instance Bitwise Word32 where
 #endif
 
 instance Bitwise Word64 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,4,0,0)
+   (W64# x#) .&.   (W64# y#) = W64# (x# `and64#` y#)
+   (W64# x#) .|.   (W64# y#) = W64# (x# `or64#` y#)
+   (W64# x#) `xor` (W64# y#) = W64# (x# `xor64#` y#)
+#else
    (W64# x#) .&.   (W64# y#) = W64# (x# `and#` y#)
    (W64# x#) .|.   (W64# y#) = W64# (x# `or#` y#)
    (W64# x#) `xor` (W64# y#) = W64# (x# `xor#` y#)
+#endif
 
 instance Bitwise Int where
    (I# x#) .&.   (I# y#) = I# (x# `andI#` y#)
@@ -112,9 +118,15 @@ instance Bitwise Int32 where
 #endif
 
 instance Bitwise Int64 where
+#if MIN_VERSION_GLASGOW_HASKELL (9,4,0,0)
+   (I64# x#) .&.   (I64# y#) = I64# (word64ToInt64# (int64ToWord64# x# `and64#` int64ToWord64# y#))
+   (I64# x#) .|.   (I64# y#) = I64# (word64ToInt64# (int64ToWord64# x# `or64#`  int64ToWord64# y#))
+   (I64# x#) `xor` (I64# y#) = I64# (word64ToInt64# (int64ToWord64# x# `xor64#` int64ToWord64# y#))
+#else
    (I64# x#) .&.   (I64# y#) = I64# (word2Int# (int2Word# x# `and#` int2Word# y#))
    (I64# x#) .|.   (I64# y#) = I64# (word2Int# (int2Word# x# `or#`  int2Word# y#))
    (I64# x#) `xor` (I64# y#) = I64# (word2Int# (int2Word# x# `xor#` int2Word# y#))
+#endif
 
 instance Bitwise Integer where
    (.&.)      = andInteger

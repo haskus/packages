@@ -110,10 +110,17 @@ instance FiniteBits Word64 where
    type BitSize Word64          = 64
    zeroBits                     = 0
    oneBits                      = maxBound
+#if MIN_VERSION_GLASGOW_HASKELL (9,4,0,0)
+   countLeadingZeros  (W64# x#) = W# (clz64# x#)
+   countTrailingZeros (W64# x#) = W# (ctz64# x#)
+   complement (W64# x#)         = W64# (x# `xor64#` mb#)
+      where !(W64# mb#) = maxBound
+#else
    countLeadingZeros  (W64# x#) = W# (clz64# x#)
    countTrailingZeros (W64# x#) = W# (ctz64# x#)
    complement (W64# x#)         = W64# (x# `xor#` mb#)
       where !(W64# mb#) = maxBound
+#endif
 
 
 instance FiniteBits Int where
@@ -170,6 +177,12 @@ instance FiniteBits Int64 where
    type BitSize Int64           = 64
    zeroBits                     = 0
    oneBits                      = (-1)
+#if MIN_VERSION_GLASGOW_HASKELL (9,4,0,0)
+   countLeadingZeros  (I64# x#) = W# (clz64# (int64ToWord64# x#))
+   countTrailingZeros (I64# x#) = W# (ctz64# (int64ToWord64# x#))
+   complement (I64# x#)         = I64# (word64ToInt64# (int64ToWord64# x# `xor64#` int64ToWord64# (intToInt64# (-1#))))
+#else
    countLeadingZeros  (I64# x#) = W# (clz64# (int2Word# x#))
    countTrailingZeros (I64# x#) = W# (ctz64# (int2Word# x#))
    complement (I64# x#)         = I64# (word2Int# (int2Word# x# `xor#` int2Word# (-1#)))
+#endif
