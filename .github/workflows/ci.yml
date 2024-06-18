@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        ghc: ['9.10.1', '9.8.2', '9.6.4', '9.4.8', '9.2.8', '9.0.2', '8.10.7']
+        ghc: ['9.10.1', '9.8.2', '9.6.5']
 
     env:
       CONFIG: "--enable-tests --enable-benchmarks"
