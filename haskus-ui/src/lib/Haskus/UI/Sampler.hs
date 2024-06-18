@@ -127,7 +127,8 @@ linearBlender cs = weighColors <| fmap (first dist) cs
 -- | Blend colors with a weigh factor between 0.0 and 1.0.
 -- The sum of the factors must be 1.0
 affineColors :: [(ColorUnit,Color)] -> Color
-affineColors cs = affineCombo (tail cs) (snd (head cs))
+affineColors []     = error "affineColors: unexpected empty list"
+affineColors (c:cs) = affineCombo cs (snd c)
 
 -- | Blend colors with a weigh factor. The factors are automatically ajusted to
 -- be in the range (0.0,1.0) and so that their sum is equal to 1.0
