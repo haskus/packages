@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -22,8 +23,13 @@ import Haskus.Binary.Storable
 
 import Foreign.Ptr
 import Data.Data
-import GHC.Prim
 import GHC.Int
+
+#if MIN_VERSION_GLASGOW_HASKELL(9,10,0,0)
+import GHC.Magic (DataToTag,dataToTag#)
+#else
+import GHC.Prim
+#endif
 
 -----------------------------------------------------------------------------
 -- EnumField b a: directly store the value of enum "a" as a "b"
@@ -70,6 +76,9 @@ toEnumField = EnumField . fromCEnum
 --
 class CEnum a where
    fromCEnum       :: Integral b => a -> b
+#if MIN_VERSION_GLASGOW_HASKELL(9,10,0,0)
+   default fromCEnum :: (DataToTag a, Integral b) => a -> b
+#endif
    fromCEnum       = fromIntegral . dataToTag
 
    toCEnum         :: Integral b => b -> a
@@ -140,5 +149,9 @@ makeEnum x =fromConstr (indexConstr t x')
 -- >>> data D = A | B | C
 -- >>> dataToTag B
 -- 1
+#if MIN_VERSION_GLASGOW_HASKELL(9,10,0,0)
+dataToTag :: DataToTag a => a -> Int
+#else
 dataToTag :: a -> Int
+#endif
 dataToTag a = I# (dataToTag# a)
