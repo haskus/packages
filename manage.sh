@@ -25,8 +25,8 @@ function is_uploaded {
 }
 
 function package_version {
-   ver=$(cd $1 && stack query locals $1 version)
-   echo $ver | cut -d"'" -f2
+   ver=$(cd $1 && grep "^version:" $1.cabal)
+   echo $ver | cut -d":" -f2 | tr -d ' '
 }
 
 function report {
@@ -57,31 +57,41 @@ function build_all {
    echo "Building"
    echo "==============================================================="
 
-   stack test --pedantic -j1
+   cabal build all
 }
 
 function build_compat {
    set -e
 
    echo "==============================================================="
-   echo "Building for GHC 8.6"
-   echo "==============================================================="
-   stack build --stack-yaml stack-8.6.yaml
-
-   echo "==============================================================="
-   echo "Building for GHC 8.8"
-   echo "==============================================================="
-   stack build --stack-yaml stack-8.8.yaml
-
-   echo "==============================================================="
    echo "Building for GHC 8.10"
    echo "==============================================================="
-   stack build --stack-yaml stack-8.10.yaml
+   cabal build all -w ghc-8.10
 
    echo "==============================================================="
-   echo "Building for GHC 9.0.1"
+   echo "Building for GHC 9.2"
    echo "==============================================================="
-   cabal build all -w ghc-9.0.1
+   cabal build all -w ghc-9.2
+
+   echo "==============================================================="
+   echo "Building for GHC 9.4"
+   echo "==============================================================="
+   cabal build all -w ghc-9.4
+
+   echo "==============================================================="
+   echo "Building for GHC 9.6"
+   echo "==============================================================="
+   cabal build all -w ghc-9.6
+
+   echo "==============================================================="
+   echo "Building for GHC 9.8"
+   echo "==============================================================="
+   cabal build all -w ghc-9.8
+
+   echo "==============================================================="
+   echo "Building for GHC 9.10"
+   echo "==============================================================="
+   cabal build all -w ghc-9.10
 }
 
 
