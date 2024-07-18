@@ -628,7 +628,7 @@ showSymbols elf symSec ss = do
             SymbolTypeFile          -> "File"
             SymbolTypeCommonData    -> "Data (common)"
             SymbolTypeTLSData       -> "Data (TLS)"
-            SymbolTypeUnknown v     -> toHtml $ textFormat ("Unknown (" % int %")") v
+            SymbolTypeUnknown v     -> toHtml $ textFormat ("Unknown (" % int % ")") v
 
          td_ $ case symbolVisibility s of
             SymbolVisibilityDefault    -> "Default"

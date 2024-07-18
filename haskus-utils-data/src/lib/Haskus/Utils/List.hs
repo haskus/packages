@@ -1,5 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 
 -- | List utils
 module Haskus.Utils.List
@@ -59,6 +60,7 @@ import Prelude hiding (replicate, length, drop, take,splitAt)
 import Data.Bifunctor
 import Data.Function (on)
 import qualified Data.List as L
+import qualified Data.List.NonEmpty as NE
 
 -- | Safely index into a list
 --
@@ -229,9 +231,13 @@ splitOn needle haystack = a : if null b then [] else splitOn needle $ drop (leng
 -- > split (== ':') "::xyz:abc::123::" == ["","","xyz","abc","","123","",""]
 -- > split (== ',') "my,list,here" == ["my","list","here"]
 split :: (a -> Bool) -> [a] -> [[a]]
-split _ [] = [[]]
-split f (x:xs) | f x              = [] : split f xs
-split f (x:xs) | ys <- split f xs = (x:head ys) : tail ys
+split f xs = NE.toList (splitNE f xs)
+
+splitNE :: (a -> Bool) -> [a] -> NE.NonEmpty [a]
+splitNE f = \case
+  []                                  -> []    NE.:| []
+  (x:xs) | f x                        -> []    NE.:| split f xs
+         | y NE.:| ys <- splitNE f xs -> (x:y) NE.:| ys
 
 -- | Find the first instance of @needle@ in @haystack@.
 -- The first element of the returned tuple
