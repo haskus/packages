@@ -1,0 +1,82 @@
+name:                haskus-system-tools
+version:             0.8
+github:              "haskus/haskus-system"
+license:             BSD3
+author:              "Sylvain HENRY"
+maintainer:          "sylvain@haskus.fr"
+copyright:           "Sylvain HENRY 2018"
+
+extra-source-files:
+- README.rst
+
+# Metadata used when publishing your package
+synopsis:            System tools (x86 disassembler, etc.)
+category:            System
+
+description:         Please see the README on Github at <https://github.com/haskus/haskus-system/haskus-system-tools#readme>
+
+dependencies:
+- base >= 4.8 && < 5
+- haskus-system
+- haskus-utils
+- haskus-utils-data
+- haskus-utils-compat
+- haskus-web
+- haskus-binary
+- optparse-applicative
+- lucid
+- containers
+- bytestring
+- vector
+- transformers
+
+ghc-options: -Wall -O2 -threaded
+
+executables:
+   haskus-system-info:
+      main: Main
+      source-dirs: src/system-info
+      other-modules:
+         - SystemInfoCmdLine
+      dependencies: 
+         - network
+         - HTTP
+         - text
+
+   haskus-elf:
+      main: Main
+      source-dirs: src/elf
+      other-modules:       
+         - ElfCmdLine
+      dependencies: 
+         - text
+         - formatting
+
+   haskus-huffman:
+      main: Main
+      source-dirs: src/huffman
+
+   haskus-gunzip:
+      main: Main
+      source-dirs: src/gunzip
+      dependencies: 
+         - filepath
+
+   haskus-udev:
+      main: Main
+      source-dirs: src/udev
+
+   haskus-disassembler:
+      main: Main
+      source-dirs: src/disassembler
+
+   haskus-keys:
+      main: Main
+      source-dirs: src/keys
+
+   haskus-tracer:
+      main: Main
+      source-dirs: src/tracer
+      dependencies:
+        - unix
+        - haskus-utils-variant

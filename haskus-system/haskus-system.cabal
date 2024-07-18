@@ -1,0 +1,238 @@
+name:                haskus-system
+version:             0.8
+synopsis:            Haskus system
+license:             BSD3
+license-file:        LICENSE
+author:              Sylvain Henry
+maintainer:          sylvain@haskus.fr
+homepage:            http://www.haskus.org/system
+copyright:           Sylvain Henry 2018
+category:            System
+build-type:          Simple
+cabal-version:       1.20
+
+description:
+   Haskus system is a framework written in Haskell that can be used for Linux
+   system programming.
+
+source-repository head
+  type: git
+  location: git://github.com/haskus/haskus-system.git
+
+library
+  exposed-modules:
+    Paths_haskus_system
+
+    Haskus.Arch.Common.Register
+    Haskus.Arch.Common.Memory
+    Haskus.Arch.Common.Immediate
+    Haskus.Arch.Common.Solver
+
+    Haskus.Arch.X86_64.Cpuid
+
+    Haskus.Arch.X86_64.Linux.Syscall
+    Haskus.Arch.X86_64.Linux.SyscallTable
+    Haskus.Arch.X86_64.Linux.Syscalls
+
+    Haskus.Arch.X86_64.ISA.Operand
+    Haskus.Arch.X86_64.ISA.Memory
+    Haskus.Arch.X86_64.ISA.Immediate
+    Haskus.Arch.X86_64.ISA.Solver
+    Haskus.Arch.X86_64.ISA.MicroArch
+    Haskus.Arch.X86_64.ISA.Mode
+    Haskus.Arch.X86_64.ISA.Register
+    Haskus.Arch.X86_64.ISA.OpcodeMaps
+    Haskus.Arch.X86_64.ISA.Size
+    Haskus.Arch.X86_64.ISA.Decoder
+    Haskus.Arch.X86_64.ISA.Insns
+    Haskus.Arch.X86_64.ISA.Insn
+    Haskus.Arch.X86_64.ISA.Encoding
+    Haskus.Arch.X86_64.Disassembler
+
+    Haskus.System.Linux.Internals.Error
+    Haskus.System.Linux.Internals.FileSystem
+    Haskus.System.Linux.Internals.Input
+    Haskus.System.Linux.Internals.Sound
+    Haskus.System.Linux.Internals.Reboot
+    Haskus.System.Linux.Internals.Ioctl
+    Haskus.System.Linux.Internals.Fcntl
+    Haskus.System.Linux.Internals.Handle
+    Haskus.System.Linux.Internals.Arg
+    Haskus.System.Linux.Internals.Tables
+    Haskus.System.Linux.Internals.Terminal
+    Haskus.System.Linux.Internals.IfLink
+    Haskus.System.Linux.Internals.Netlink
+    Haskus.System.Linux.Internals.NetlinkRoute
+
+    Haskus.System.Linux.Devices
+    Haskus.System.Linux.Error
+    Haskus.System.Linux.ErrorCode
+    Haskus.System.Linux.EventPoll
+    Haskus.System.Linux.Handle
+    Haskus.System.Linux.FileSystem
+    Haskus.System.Linux.FileSystem.Directory
+    Haskus.System.Linux.FileSystem.Mount
+    Haskus.System.Linux.FileSystem.Notification
+    Haskus.System.Linux.FileSystem.ReadWrite
+    Haskus.System.Linux.FileSystem.SymLink
+    Haskus.System.Linux.Futex
+    Haskus.System.Linux.Info
+    Haskus.System.Linux.Input
+    Haskus.System.Linux.Ioctl
+    Haskus.System.Linux.KernelEvent
+    Haskus.System.Linux.Memory
+    Haskus.System.Linux.Modules
+    Haskus.System.Linux.Network
+    Haskus.System.Linux.Network.SendReceive
+    Haskus.System.Linux.Pipe
+    Haskus.System.Linux.Power
+    Haskus.System.Linux.Process
+    Haskus.System.Linux.Signal
+    Haskus.System.Linux.Sound.Pcm
+    Haskus.System.Linux.Syscalls
+    Haskus.System.Linux.Terminal
+    Haskus.System.Linux.Time
+    Haskus.System.Linux.Topology
+    Haskus.System.Linux.Trace
+
+    Haskus.System.Linux.Process.MemoryMap
+    Haskus.System.Linux.Process.ControlGroup
+    Haskus.System.Linux.Process.Auxiliary
+
+    Haskus.System.Linux.Graphics.Entities
+    Haskus.System.Linux.Graphics.Capability
+    Haskus.System.Linux.Graphics.Event
+    Haskus.System.Linux.Graphics.Frame
+    Haskus.System.Linux.Graphics.GenericBuffer
+    Haskus.System.Linux.Graphics.Mode
+    Haskus.System.Linux.Graphics.PixelFormat
+    Haskus.System.Linux.Graphics.Helper
+    Haskus.System.Linux.Graphics.State
+    Haskus.System.Linux.Graphics.KIO
+
+    Haskus.System.Posix.Malloc
+
+    Haskus.System
+    Haskus.System.EventLoop
+    Haskus.System.Sys
+    Haskus.System.System
+    Haskus.System.Devices
+    Haskus.System.Graphics
+    Haskus.System.Graphics.Drawing
+    Haskus.System.Graphics.Diagrams
+    Haskus.System.Graphics.Colour
+    Haskus.System.Graphics.Config
+    Haskus.System.Input
+    Haskus.System.Terminal
+    Haskus.System.Process
+    Haskus.System.Process.MemoryMap
+    Haskus.System.Power
+    Haskus.System.FileSystem
+    Haskus.System.Event
+    Haskus.System.Network
+    Haskus.System.PCI
+    Haskus.System.PCI.MakeTable
+    Haskus.System.PCI.Types
+
+    Haskus.Format.CPIO
+    Haskus.Format.String
+
+    Haskus.Format.Elf
+    Haskus.Format.Elf.PreHeader
+    Haskus.Format.Elf.Header
+    Haskus.Format.Elf.Section
+    Haskus.Format.Elf.Segment
+    Haskus.Format.Elf.Symbol
+    Haskus.Format.Elf.Relocation
+    Haskus.Format.Elf.RelocationType
+    Haskus.Format.Elf.Dynamic
+    Haskus.Format.Elf.Version
+    Haskus.Format.Elf.Note
+    Haskus.Format.Elf.Move
+    Haskus.Format.Elf.Intel
+    Haskus.Format.Elf.GHC
+
+    Haskus.Format.Dwarf
+
+    Haskus.Format.Compression.Algorithms.Huffman
+    Haskus.Format.Compression.Algorithms.LZ77
+    Haskus.Format.Compression.Algorithms.Deflate
+    Haskus.Format.Compression.GZip
+
+    Haskus.Format.FileSystem.ISO9660
+
+    Haskus.Apps.CPIO
+    Haskus.Apps.Disassembler
+
+  other-modules:
+
+  c-sources: 
+    src/lib/Haskus/Arch/X86_64/Linux/syscall.s
+    src/lib/Haskus/Arch/X86_64/cpuid.c
+
+  cc-options: -O3
+
+  build-depends:       
+         base                      >= 4.9 && <5.0
+      ,  haskus-utils              >= 1.3
+      ,  haskus-utils-data         >= 1.1
+      ,  haskus-utils-types        >= 1.3
+      ,  haskus-utils-variant      >= 2.4
+      ,  haskus-binary             >= 1.1
+      ,  haskus-utils-compat
+      ,  containers                >= 0.5
+      ,  stm                       >= 2.4
+      ,  cereal                    >= 0.5
+      ,  bytestring                >= 0.10
+      ,  text                      >= 1.2
+      ,  filepath                  >= 1.4
+      ,  vector                    >= 0.11
+      ,  directory                 >= 1.2
+      ,  megaparsec                >= 5.0
+      ,  transformers              >= 0.4
+      ,  unix                      >= 2.7
+      ,  pqueue                    >= 1.3
+      ,  mtl                       >= 2.2
+      ,  template-haskell          >= 2.10
+      ,  formatting
+      ,  diagrams-lib              >= 1.4
+      ,  diagrams-core             >= 1.4
+      ,  diagrams-rasterific       >= 1.4
+      ,  JuicyPixels               >= 3.2
+      ,  loop                      >= 0.3
+      ,  Rasterific                >= 0.6
+      ,  colour                    >= 2.3
+      ,  file-embed                >= 0.0.10
+      ,  extra                     >= 1.4
+
+  build-tools:
+  ghc-options:          -Wall -O
+  default-language:     Haskell2010
+  hs-source-dirs:       src/lib
+
+test-suite tests
+   type:                exitcode-stdio-1.0
+   main-is:             Main.hs
+   hs-source-dirs:      src/tests
+   ghc-options:         -O -Wall -threaded
+   default-language:    Haskell2010
+   other-modules:
+         Haskus.Tests
+      ,  Haskus.Tests.System
+      ,  Haskus.Tests.System.Devices
+      ,  Haskus.Tests.Arch
+      ,  Haskus.Tests.Arch.Linux
+      ,  Haskus.Tests.Arch.Linux.Input
+      ,  Haskus.Tests.Arch.Linux.ErrorCode
+      ,  Haskus.Tests.Format
+
+   build-depends:    
+         base
+      ,  haskus-system
+      ,  haskus-binary
+      ,  stm
+      ,  tasty                   >= 0.11
+      ,  tasty-quickcheck        >= 0.8
+      ,  QuickCheck              >= 2.8
+      ,  containers
+      ,  bytestring

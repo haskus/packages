@@ -1,0 +1,495 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 54c0ed275ca75faa642d60d169205055163408413236f2c554f1ff59e9e84c43
+
+name:           haskus-system-examples
+version:        0.1.0.0
+synopsis:       Examples using haskus-system
+description:    Please see the README on Github at <https://github.com/haskus/haskus-system-examples#readme>
+category:       System
+homepage:       https://github.com/haskus/haskus-system-examples#readme
+bug-reports:    https://github.com/haskus/haskus-system-examples/issues
+author:         Sylvain HENRY
+maintainer:     sylvain@haskus.fr
+copyright:      Sylvain HENRY 2018
+license:        BSD3
+build-type:     Simple
+extra-source-files:
+    README.rst
+
+source-repository head
+  type: git
+  location: https://github.com/haskus/haskus-system-examples
+
+executable Clock
+  main-is: Main.hs
+  hs-source-dirs:
+      src/clock
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      JuicyPixels
+    , base >=4.8 && <5
+    , bytestring
+    , containers
+    , formatting
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+    , lens
+    , stm
+  other-modules:
+      Clock.Render
+      Paths_haskus_system_examples
+  default-language: Haskell2010
+
+executable Demo
+  main-is: Main.hs
+  hs-source-dirs:
+      src/demo
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      FontyFruity
+    , JuicyPixels
+    , MonadRandom
+    , Rasterific
+    , base >=4.8 && <5
+    , bytestring
+    , colour
+    , containers
+    , diagrams-lib
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+    , hsnoise
+    , mtl
+    , transformers
+  other-modules:
+      Demo.Diagrams Demo.Graphics Demo.Art
+  default-language: Haskell2010
+
+executable DisplayState
+  main-is: Main.hs
+  hs-source-dirs:
+      src/display-state
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  other-modules:
+      Paths_haskus_system_examples
+  default-language: Haskell2010
+
+executable HelloWorld
+  main-is: Main.hs
+  hs-source-dirs:
+      src/helloworld
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  other-modules:
+      Paths_haskus_system_examples
+  default-language: Haskell2010
+
+executable KernelEvent
+  main-is: Main.hs
+  hs-source-dirs:
+      src/kernel-events
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  other-modules:
+      Paths_haskus_system_examples
+  default-language: Haskell2010
+
+executable ListDevices
+  main-is: Main.hs
+  hs-source-dirs:
+      src/device-list
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  other-modules:
+      Paths_haskus_system_examples
+  default-language: Haskell2010
+
+executable OpenDevice
+  main-is: Main.hs
+  hs-source-dirs:
+      src/device-open
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  other-modules:
+      Paths_haskus_system_examples
+  default-language: Haskell2010
+
+executable Sound
+  main-is: Main.hs
+  hs-source-dirs:
+      src/sound
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , filepath
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  other-modules:
+      Paths_haskus_system_examples
+  default-language: Haskell2010
+
+executable Test
+  main-is: Main.hs
+  hs-source-dirs:
+      src/test
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      JuicyPixels
+    , base >=4.8 && <5
+    , bytestring
+    , colour
+    , containers
+    , either
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+    , stm
+    , transformers
+  other-modules:
+      Paths_haskus_system_examples
+  default-language: Haskell2010
+
+executable TutDisplays
+  main-is: TutDisplays.hs
+  hs-source-dirs:
+      src/tutorial
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  default-language: Haskell2010
+
+executable TutEntitiesIDs
+  main-is: TutEntitiesIDs.hs
+  hs-source-dirs:
+      src/tutorial
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  default-language: Haskell2010
+
+executable TutFirstPipeline
+  main-is: TutFirstPipeline.hs
+  hs-source-dirs:
+      src/tutorial
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  default-language: Haskell2010
+
+executable TutFrameSwitch
+  main-is: TutFrameSwitch.hs
+  hs-source-dirs:
+      src/tutorial
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  default-language: Haskell2010
+
+executable TutGenericFrame
+  main-is: TutGenericFrame.hs
+  hs-source-dirs:
+      src/tutorial
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  default-language: Haskell2010
+
+executable TutProperties
+  main-is: TutProperties.hs
+  hs-source-dirs:
+      src/tutorial
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  default-language: Haskell2010
+
+executable TutSingleFrame
+  main-is: TutSingleFrame.hs
+  hs-source-dirs:
+      src/tutorial
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  default-language: Haskell2010
+
+executable TutTetris
+  main-is: TutTetris.hs
+  hs-source-dirs:
+      src/tutorial
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      JuicyPixels
+    , array
+    , base >=4.8 && <5
+    , clock
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+    , random
+  default-language: Haskell2010
+
+executable VDSO
+  main-is: Main.hs
+  other-modules:
+      Paths_haskus_system_examples
+  hs-source-dirs:
+      src/vdso
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+    , text
+    , vector
+  default-language: Haskell2010
+
+executable syscall_bench
+  main-is: Main.hs
+  other-modules:
+      Paths_haskus_system_examples
+  hs-source-dirs:
+      src/syscall_bench
+  ghc-options: -Wall -O2 -static -threaded
+  cc-options: -static
+  extra-lib-dirs:
+      ./.system-work/lib
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.8 && <5
+    , containers
+    , haskus-binary
+    , haskus-system
+    , haskus-ui
+    , haskus-utils
+    , haskus-utils-compat
+    , haskus-utils-data
+    , haskus-utils-types
+    , haskus-utils-variant
+  default-language: Haskell2010
