@@ -3,6 +3,4 @@
 
 This repository contains several ``haskus-*`` packages.
 
-Documentation can be found on `docs.haskus.org <https://docs.haskus.org>`_
-
-Run tests with `stack test -j1` to avoid doctest bugs.
+Documentation can be found in https://github.com/haskus/haskus-manual
