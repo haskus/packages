@@ -53,14 +53,14 @@ readSystemConfig = Yaml.decodeFileEither
 data LinuxSource
    = LinuxTarball Text  -- ^ Linux x.y.z from kernel.org tarballs
    | LinuxGit Text Text -- ^ repository/commit hash
-   deriving (Show,Generic,Hashable)
+   deriving (Eq,Show,Generic,Hashable)
 
 data LinuxOptions = LinuxOptions
    { enableOptions  :: [Text]
    , disableOptions :: [Text]
    , moduleOptions  :: [Text]
    }
-   deriving (Show,Generic,Hashable)
+   deriving (Eq,Show,Generic,Hashable)
 
 -- | Linux configuration
 data LinuxConfig = LinuxConfig
@@ -68,7 +68,7 @@ data LinuxConfig = LinuxConfig
    , linuxOptions  :: LinuxOptions -- ^ Configuration options
    , linuxMakeArgs :: Text         -- ^ Make arguments
    }
-   deriving (Show,Generic,Hashable)
+   deriving (Eq,Show,Generic,Hashable)
 
 -- | Hash Linux config
 linuxConfigHash :: LinuxConfig -> Int
@@ -116,7 +116,7 @@ instance FromJSON LinuxConfig where
 data SyslinuxConfig = SyslinuxConfig
    { syslinuxVersion  :: Text     -- ^ Syslinux version
    }
-   deriving (Show,Generic,Hashable)
+   deriving (Eq,Show,Generic,Hashable)
 
 -- | Hash Syslinux config
 syslinuxConfigHash :: SyslinuxConfig -> Int
