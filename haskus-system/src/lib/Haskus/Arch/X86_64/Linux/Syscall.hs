@@ -51,13 +51,13 @@ import GHC.Base
 -- Implementation using Haskell foreign primops
 --------------------------------------------------
 
-foreign import prim "x86_64_linux_syscall_primop6" syscall6_# :: Int# -> Int# -> Int# -> Int# -> Int# -> Int# -> Int# -> State# RealWorld -> (# State# RealWorld, Int# #)
-foreign import prim "x86_64_linux_syscall_primop5" syscall5_# :: Int# -> Int# -> Int# -> Int# -> Int# -> Int# -> State# RealWorld -> (# State# RealWorld, Int# #)
-foreign import prim "x86_64_linux_syscall_primop4" syscall4_# :: Int# -> Int# -> Int# -> Int# -> Int# -> State# RealWorld -> (# State# RealWorld, Int# #)
-foreign import prim "x86_64_linux_syscall_primop3" syscall3_# :: Int# -> Int# -> Int# -> Int# -> State# RealWorld -> (# State# RealWorld, Int# #)
-foreign import prim "x86_64_linux_syscall_primop2" syscall2_# :: Int# -> Int# -> Int# -> State# RealWorld -> (# State# RealWorld, Int# #)
-foreign import prim "x86_64_linux_syscall_primop1" syscall1_# :: Int# -> Int# -> State# RealWorld -> (# State# RealWorld, Int# #)
-foreign import prim "x86_64_linux_syscall_primop0" syscall0_# :: Int# -> State# RealWorld -> (# State# RealWorld, Int# #)
+foreign import prim "x86_64_linux_syscall_primop6" syscall6_# :: Int64# -> Int64# -> Int64# -> Int64# -> Int64# -> Int64# -> Int64# -> State# RealWorld -> (# State# RealWorld, Int64# #)
+foreign import prim "x86_64_linux_syscall_primop5" syscall5_# :: Int64# -> Int64# -> Int64# -> Int64# -> Int64# -> Int64# -> State# RealWorld -> (# State# RealWorld, Int64# #)
+foreign import prim "x86_64_linux_syscall_primop4" syscall4_# :: Int64# -> Int64# -> Int64# -> Int64# -> Int64# -> State# RealWorld -> (# State# RealWorld, Int64# #)
+foreign import prim "x86_64_linux_syscall_primop3" syscall3_# :: Int64# -> Int64# -> Int64# -> Int64# -> State# RealWorld -> (# State# RealWorld, Int64# #)
+foreign import prim "x86_64_linux_syscall_primop2" syscall2_# :: Int64# -> Int64# -> Int64# -> State# RealWorld -> (# State# RealWorld, Int64# #)
+foreign import prim "x86_64_linux_syscall_primop1" syscall1_# :: Int64# -> Int64# -> State# RealWorld -> (# State# RealWorld, Int64# #)
+foreign import prim "x86_64_linux_syscall_primop0" syscall0_# :: Int64# -> State# RealWorld -> (# State# RealWorld, Int64# #)
 
 -- | Syscall with 6 parameters
 syscall6primop' :: Int64 -> Int64 -> Int64 -> Int64 -> Int64 -> Int64 -> Int64 -> IO Int64

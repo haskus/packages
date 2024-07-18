@@ -63,8 +63,8 @@ parseLines = do
          devs  <- many device
          skipUseless
          return $ TupE
-            [ LitE $ IntegerL vid
-            , ConE (mkName "Vendor")
+            [ Just $ LitE $ IntegerL vid
+            , Just $ ConE (mkName "Vendor")
                `AppE` (LitE $ StringL $ vname)
                `AppE` (VarE (mkName "fromList")
                   `AppE` ListE devs)
@@ -78,8 +78,8 @@ parseLines = do
          dname <- anySingle `manyTill` end
          subs  <- many subdevice
          return $ TupE
-            [ LitE $ IntegerL did
-            , ConE (mkName "Device")
+            [ Just $ LitE $ IntegerL did
+            , Just $ ConE (mkName "Device")
                `AppE` (LitE $ StringL $ dname)
                `AppE` (VarE (mkName "fromList")
                   `AppE` ListE subs)
@@ -95,8 +95,8 @@ parseLines = do
          someSpace
          dname <- anySingle `manyTill` end
          return $ TupE
-            [ LitE $ IntegerL $ (vid `shiftL` 16) .|. did
-            , LitE $ StringL $ dname
+            [ Just $ LitE $ IntegerL $ (vid `shiftL` 16) .|. did
+            , Just $ LitE $ StringL $ dname
             ]
 
       classes = do
@@ -113,8 +113,8 @@ parseLines = do
          devs  <- many subclass
          skipUseless
          return $ TupE
-            [ LitE $ IntegerL cid
-            , ConE (mkName "Class")
+            [ Just $ LitE $ IntegerL cid
+            , Just $ ConE (mkName "Class")
                `AppE` (LitE $ StringL $ cname)
                `AppE` (VarE (mkName "fromList")
                   `AppE` ListE devs)
@@ -127,8 +127,8 @@ parseLines = do
          cname <- anySingle `manyTill` end
          subs  <- many progInterface
          return $ TupE
-            [ LitE $ IntegerL cid
-            , ConE (mkName "SubClass")
+            [ Just $ LitE $ IntegerL cid
+            , Just $ ConE (mkName "SubClass")
                `AppE` (LitE $ StringL $ cname)
                `AppE` (VarE (mkName "fromList")
                   `AppE` ListE subs)
@@ -142,8 +142,8 @@ parseLines = do
          someSpace
          cname <- anySingle `manyTill` end
          return $ TupE
-            [ LitE $ IntegerL $ cid
-            , LitE $ StringL $ cname
+            [ Just $ LitE $ IntegerL $ cid
+            , Just $ LitE $ StringL $ cname
             ]
 
       -- 'space' from MegaParsec also consider line-breaks as spaces...

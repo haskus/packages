@@ -201,8 +201,8 @@ fromBinary leftIsZero tree bs = rec (runBitGetPartial BB bg bs)
       -- BitGet for a single element
       bg              = makeBitGet leftIsZero tree
       -- build the list of elements lazily
-      rec (Nothing,_) = []
-      rec (Just v,s)  = v : rec (resumeBitGetPartial bg s)
+      rec (_,Nothing) = []
+      rec (s,Just v)  = v : rec (resumeBitGetPartial bg s)
 
 -- | Convert a binary sequence into a delimited token sequence
 fromBinaryLen :: Bool -> Tree a -> Int -> Buffer -> [a]
@@ -212,8 +212,8 @@ fromBinaryLen leftIsZero tree n bs = rec n (runBitGetPartial BB bg bs)
       bg                = makeBitGet leftIsZero tree
       -- build the list of elements lazily
       rec 0 _           = []
-      rec _ (Nothing,_) = []
-      rec m (Just v,s)  = v : rec (m-1) (resumeBitGetPartial bg s)
+      rec _ (_,Nothing) = []
+      rec m (s,Just v)  = v : rec (m-1) (resumeBitGetPartial bg s)
 
 
 -- | Put a code

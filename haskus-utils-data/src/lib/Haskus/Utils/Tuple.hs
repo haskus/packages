@@ -29,7 +29,7 @@ module Haskus.Utils.Tuple
    , take4
    , fromTuple4
    , module Data.Tuple
-   , Solo, pattern Solo
+   , Solo (..)
    , Tuple
    , Tuple#
    , TypeReps
@@ -46,13 +46,6 @@ import GHC.Tuple
 import GHC.Exts
 import Data.Tuple
 import Haskus.Utils.Types
-
-#if !MIN_VERSION_base(4,15,0)
-type Solo = Unit
-{-# COMPLETE Solo #-}
-pattern Solo :: a -> Solo a
-pattern Solo a = Unit a
-#endif
 
 -- | Uncurry3
 uncurry3 :: (a -> b -> c -> r) -> (a,b,c) -> r
@@ -99,7 +92,7 @@ class ExtractTuple (n :: Nat) xs where
 
 instance ExtractTuple 0 '[a] where
    {-# INLINABLE tupleN #-}
-   tupleN (Solo t) = t
+   tupleN (MkSolo t) = t
 
 instance ExtractTuple 0 '[e0,e1] where
    {-# INLINABLE tupleN #-}
@@ -254,7 +247,7 @@ class TupleTail ts ts' | ts -> ts' where
 
 instance TupleTail (a,b) (Solo b) where
    {-# INLINABLE tupleTail #-}
-   tupleTail (_,b) = Solo b
+   tupleTail (_,b) = MkSolo b
 
 instance TupleTail (a,b,c) (b,c) where
    {-# INLINABLE tupleTail #-}
@@ -279,7 +272,7 @@ class TupleCons t ts ts' | t ts -> ts' where
 
 instance TupleCons a (Solo b) (a,b) where
    {-# INLINABLE tupleCons #-}
-   tupleCons a (Solo b) = (a,b)
+   tupleCons a (MkSolo b) = (a,b)
 
 instance TupleCons a (b,c) (a,b,c) where
    {-# INLINABLE tupleCons #-}
@@ -471,7 +464,7 @@ instance TupleCon '[] where
    tupleCon = ()
 
 instance TupleCon '[a] where
-   tupleCon = Solo
+   tupleCon = MkSolo
 
 instance TupleCon '[a,b] where
    tupleCon = (,)

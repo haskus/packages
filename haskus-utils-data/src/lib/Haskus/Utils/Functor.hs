@@ -63,7 +63,6 @@ import Data.Functor.Classes
 import Data.Functor.Sum
 import Data.Functor.Product
 import Control.Monad
-import Control.Applicative
 
 import Haskus.Utils.Types (Type)
 
