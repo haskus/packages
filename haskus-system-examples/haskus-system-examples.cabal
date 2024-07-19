@@ -23,7 +23,10 @@ common static-system
   ghc-options: -Wall -O2 -static -threaded
   cc-options: -static
   extra-lib-dirs:
+      -- haskus-system-build copies libgmp.a here:
       ./.system-work/lib
+      -- Using a global directory like the following sadly doesn't work:
+      -- ~/.haskus/system/build/usr/lib
   ld-options: -static -pthread
   default-language: Haskell2010
 
