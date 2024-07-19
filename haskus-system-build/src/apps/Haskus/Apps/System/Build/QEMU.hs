@@ -52,6 +52,7 @@ qemuExec args = do
    let cmd = "qemu-system-x86_64 " ++ args
 
    showStep "Launching QEMU..."
+   showStep cmd
    shellWaitErr cmd $ failWith "Cannot execute QEMU"
 
 
@@ -65,6 +66,7 @@ qemuGetProfileConfig config =
          (concat $ intersperse " "
             [ "-enable-kvm"
             , "-machine q35"
+            , "-m 8G" -- required to avoid error: "Initramfs unpacking failed: write error"
             , "-serial stdio"
             , "-vga std"
             --, "-show-cursor"
