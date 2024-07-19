@@ -19,31 +19,24 @@ tool (in the package of the same name) is the preferred way to build systems.
 You can install it from source with:
 
 ```bash
-$ git clone https://github.com/haskus/haskus-system.git
-$ cd haskus-system
-$ stack install haskus-system-build
+$ git clone https://github.com/haskus/packages.git
+$ cd packages
+$ cabal install haskus-system-build
 ```
 
-It will install the program into ~/.local/bin. Be sure to add this path to your
+It will install the program into ~/.cabal/bin. Be sure to add this path to your
 $PATH environment variable.
 
-Then in a **new directory** do:
+Then try building and running an example:
+
 ```bash
-$ haskus-system-build init       # download default system template
-$ haskus-system-build test       # download, build and test system in QEMU
+$ cd haskus-system-examples
+$ haskus-system-build test --init Clock
 ```
+
+This should build everything required to execute qemu with the Clock example and
+run qemu for you.
 
 You may have to install missing programs (cpio, lzip, qemu, make, gcc, binutils,
 gzip, etc.) for these commands to succeed. See the
 [documentation](https://docs.haskus.org/system/building/automatic_building.html#building-and-testing).
-
-
-# Hacking on haskus-system
-
-Use ``stack`` commands to build the ``haskus-system`` package:
-
-```bash
-$ stack build # build
-$ stack test  # run tests
-$ stack bench # run benchmarks
-```

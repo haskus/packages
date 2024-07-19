@@ -13,4 +13,5 @@ dist
 cabal.sandbox.config
 .cabal-sandbox
 .stack-work
+.system-work
 dist-newstyle
