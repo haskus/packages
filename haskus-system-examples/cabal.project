@@ -1,0 +1,13 @@
+packages:
+  .
+  ../haskus-system
+  ../haskus-utils-variant
+  ../haskus-utils-types
+  ../haskus-utils-data
+  ../haskus-utils-compat
+  ../haskus-utils
+  ../haskus-binary
+  ../haskus-ui
+
+program-options
+  ghc-options: -fhide-source-paths

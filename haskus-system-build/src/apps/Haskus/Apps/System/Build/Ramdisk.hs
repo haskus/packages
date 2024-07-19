@@ -7,7 +7,7 @@ where
 
 import Haskus.Apps.System.Build.Config
 import Haskus.Apps.System.Build.Utils
-import Haskus.Apps.System.Build.Stack
+import Haskus.Apps.System.Build.Cabal
 
 import System.IO.Temp
 import System.FilePath
@@ -19,19 +19,20 @@ ramdiskMain :: RamdiskConfig -> IO ()
 ramdiskMain config = do
    rd <- ramdiskGetPath config
    let
-      rdinit = Text.unpack (ramdiskInitPath config)
+      rdinit' = ramdiskInitPath config
+      rdinit = Text.unpack rdinit'
 
-   binfp <- stackGetBinPath rdinit
+   binfp <- cabalGetBinPath rdinit'
 
    withSystemTempDirectory "haskus-system-build" $ \tmpfp -> do
       showStep "Building ramdisk..."
-      let rdfile = tmpfp </> rdinit
 
       -- create directories
-      createDirectoryIfMissing True (dropFileName rdfile)
+      createDirectoryIfMissing True tmpfp
 
       -- copy ramdisk files
-      copyFile binfp (tmpfp </> rdinit)
+      let rdfile = tmpfp </> rdinit
+      copyFile binfp rdfile
 
       -- create ramdisk
       -- TODO: use our own `cpio` and `gzip`

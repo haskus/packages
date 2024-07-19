@@ -6,7 +6,7 @@ import Haskus.Apps.System.Build.Syslinux
 import Haskus.Apps.System.Build.CmdLine
 import Haskus.Apps.System.Build.Utils
 import Haskus.Apps.System.Build.Ramdisk
-import Haskus.Apps.System.Build.Stack
+import Haskus.Apps.System.Build.Cabal
 import Haskus.Apps.System.Build.GMP
 import Haskus.Apps.System.Build.QEMU
 import Haskus.Apps.System.Build.ISO
@@ -116,7 +116,7 @@ buildCommand opts = do
    gmpMain
    linuxMain (linuxConfig config)
    _ <- syslinuxMain (syslinuxConfig config)
-   stackBuild
+   cabalBuild (ramdiskInit (ramdiskConfig config))
 
 
 testCommand :: TestOptions -> IO ()
@@ -136,7 +136,7 @@ testCommand opts = do
    showStatus config
    gmpMain
    linuxMain (linuxConfig config)
-   stackBuild
+   cabalBuild (ramdiskInit (ramdiskConfig config))
    ramdiskMain (ramdiskConfig config)
    qemuExecRamdisk config
 
@@ -153,7 +153,7 @@ showStatus config = do
                            |> ramdiskInit
                            |> Text.unpack
 
-   ghcVersion    <- stackGetGHCVersion
+   ghcVersion    <- cabalGetGHCVersion
 
    putStrLn "==================================================="
    putStrLn "       Haskus system - build config"
@@ -172,7 +172,7 @@ makeISOCommand = do
    showStatus config
    gmpMain
    linuxMain (linuxConfig config)
-   stackBuild
+   cabalBuild (ramdiskInit (ramdiskConfig config))
    ramdiskMain (ramdiskConfig config)
    _ <- isoMake config
    return ()
@@ -184,7 +184,7 @@ makeDiskCommand opts = do
    showStatus config
    gmpMain
    linuxMain (linuxConfig config)
-   stackBuild
+   cabalBuild (ramdiskInit (ramdiskConfig config))
    ramdiskMain (ramdiskConfig config)
    makeDisk config (diskOptPath opts)
 
@@ -195,7 +195,7 @@ testISOCommand = do
    showStatus config
    gmpMain
    linuxMain (linuxConfig config)
-   stackBuild
+   cabalBuild (ramdiskInit (ramdiskConfig config))
    ramdiskMain (ramdiskConfig config)
    isoFile <- isoMake config
    qemuExecISO config isoFile
@@ -207,6 +207,6 @@ makeDeviceCommand opts = do
    showStatus config
    gmpMain
    linuxMain (linuxConfig config)
-   stackBuild
+   cabalBuild (ramdiskInit (ramdiskConfig config))
    ramdiskMain (ramdiskConfig config)
    makeDevice config (deviceOptPath opts)

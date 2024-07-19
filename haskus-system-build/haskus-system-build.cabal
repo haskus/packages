@@ -26,7 +26,7 @@ executable haskus-system-build
       Haskus.Apps.System.Build.Linux
       Haskus.Apps.System.Build.Ramdisk
       Haskus.Apps.System.Build.Syslinux
-      Haskus.Apps.System.Build.Stack
+      Haskus.Apps.System.Build.Cabal
       Haskus.Apps.System.Build.CmdLine
       Haskus.Apps.System.Build.Utils
       Haskus.Apps.System.Build.GMP

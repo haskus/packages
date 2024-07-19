@@ -92,7 +92,6 @@ linuxMain config = do
                removeDirectory (tgtmod' </> "lib" </> "modules")
                removeDirectory (tgtmod' </> "lib")
                removeDirectory tgtmod'
-               removeFile (tgtmod </> "source")
                removeFile (tgtmod </> "build")
 
                showStep "Copying .config file..."
