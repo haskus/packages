@@ -27,8 +27,8 @@ import Haskus.Utils.Types
 -- List EADT
 -------------------------------
 
-data ConsF a l = ConsF a l deriving (Functor)
-data NilF    l = NilF      deriving (Functor)
+data ConsF a l = ConsF a l deriving (Eq,Ord,Show,Functor)
+data NilF    l = NilF      deriving (Eq,Ord,Show,Functor)
 
 eadtPattern 'ConsF "Cons"
 eadtPattern 'NilF  "Nil"
