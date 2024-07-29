@@ -37,7 +37,7 @@ import System.IO
 -- | Embed bytes at compile time using GHC's literal strings.
 --
 -- >>> :set -XTemplateHaskell
--- >>> let b = $$(embedBytes [72,69,76,76,79])
+-- >>> let b = $(embedBytes [72,69,76,76,79])
 -- >>> bufferSize b
 -- 5
 embedBytes :: [Word8] -> Q Exp

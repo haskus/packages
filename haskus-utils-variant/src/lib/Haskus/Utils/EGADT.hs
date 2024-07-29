@@ -50,7 +50,7 @@ import Haskus.Utils.Types
 --
 -- >>> let y = VF @(AST Int) (VarF "a")
 -- >>> :t y
--- y :: EGADT '[LamF, AppF, VarF] Int
+-- y :: EGADT [LamF, AppF, VarF] Int
 --
 -- >>> :{
 -- >>> case y of
@@ -67,7 +67,7 @@ import Haskus.Utils.Types
 --
 -- >>> let z = VF (AppF (VF (LamF f)) (VF (VarF "a")))
 -- >>> :t z
--- z :: EGADT '[LamF, AppF, VarF] Int
+-- z :: EGADT [LamF, AppF, VarF] Int
 --
 
 

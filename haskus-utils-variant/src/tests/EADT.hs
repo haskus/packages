@@ -9,6 +9,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeOperators #-}
 
 module EADT
    ( testsEADT

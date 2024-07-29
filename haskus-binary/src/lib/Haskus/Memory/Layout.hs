@@ -31,6 +31,9 @@ where
 
 import Haskus.Utils.Types
 
+-- $setup
+-- >>> import Numeric.Natural
+
 -- | Path in a layout
 data LPath (path :: [PathElem])   = LPath
 
@@ -74,11 +77,11 @@ type family CAlignment a :: Nat
 -- | Primitives
 --
 -- >>> :kind! CSizeOf (CPrimitive 8 1)
--- CSizeOf (CPrimitive 8 1) :: Nat
+-- CSizeOf (CPrimitive 8 1) :: Natural
 -- = 8
 --
 -- >>> :kind! CAlignment (CPrimitive 8 2)
--- CAlignment (CPrimitive 8 2) :: Nat
+-- CAlignment (CPrimitive 8 2) :: Natural
 -- = 2
 --
 data CPrimitive (size :: Nat) (align :: Nat)     = CPrimitive
@@ -89,11 +92,11 @@ type instance CAlignment (CPrimitive size align) = align
 --
 -- >>> type S = CArray 10 (CPrimitive 8 8)
 -- >>> :kind! CSizeOf S
--- CSizeOf S :: Nat
+-- CSizeOf S :: Natural
 -- = 80
 --
 -- >>> :kind! CAlignment S
--- CAlignment S :: Nat
+-- CAlignment S :: Natural
 -- = 8
 data CArray (n :: Nat) (a :: k)       = CArray
 type instance CSizeOf (CArray n a)    = n * (CSizeOf a)
@@ -103,11 +106,11 @@ type instance CAlignment (CArray n a) = CAlignment a
 --
 -- >>> type S = CUArray (CPrimitive 8 8)
 -- >>> :kind! CSizeOf S
--- CSizeOf S :: Nat
+-- CSizeOf S :: Natural
 -- = (TypeError ...)
 --
 -- >>> :kind! CAlignment S
--- CAlignment S :: Nat
+-- CAlignment S :: Natural
 -- = 8
 data CUArray (a :: k)                = CUArray
 type instance CSizeOf (CUArray a)    = TypeError ('Text "Cannot apply SizeOf to an unbounded array")
@@ -117,11 +120,11 @@ type instance CAlignment (CUArray a) = CAlignment a
 --
 -- >>> type S = CStruct ['Field "i8" (CPrimitive 1 1), 'Field "i32" (CPrimitive 4 4)]
 -- >>> :kind! CSizeOf S
--- CSizeOf S :: Nat
+-- CSizeOf S :: Natural
 -- = 8
 --
 -- >>> :kind! CAlignment S
--- CAlignment S :: Nat
+-- CAlignment S :: Natural
 -- = 4
 data CStruct (fs :: [Field])           = CStruct
 type instance CSizeOf (CStruct fs)     = CStructSize fs (CMaxAlignment fs 1) 0
@@ -137,11 +140,11 @@ type family CStructSize (xs :: [Field]) al sz where
 --
 -- >>> type S = CUnion ['Field "i8" (CPrimitive 1 1), 'Field "i32" (CPrimitive 4 4)]
 -- >>> :kind! CSizeOf S
--- CSizeOf S :: Nat
+-- CSizeOf S :: Natural
 -- = 4
 --
 -- >>> :kind! CAlignment S
--- CAlignment S :: Nat
+-- CAlignment S :: Natural
 -- = 4
 data CUnion (fs :: [Field])           = CUnion
 type instance CSizeOf (CUnion fs)     = CUnionSize fs (CMaxAlignment fs 1) 0

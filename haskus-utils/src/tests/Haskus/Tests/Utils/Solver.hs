@@ -13,6 +13,7 @@ where
 import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 import Data.List
+import Data.Kind (Type)
 import qualified Data.Set as Set
 
 import Haskus.Utils.Solver
@@ -36,7 +37,7 @@ type R a t = RuleT Err Predi a t
 data T
 data NT
 
-type family RuleT e p a s :: * where
+type family RuleT e p a s :: Type where
    RuleT e p a T   = a
    RuleT e p a NT  = Rule e p a
 

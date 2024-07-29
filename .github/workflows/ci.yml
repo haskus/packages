@@ -23,14 +23,75 @@ jobs:
       CONFIG: "--enable-tests --enable-benchmarks"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: haskell/actions/setup@v2
-      id: setup-haskell
-      name: Setup Haskell
+    - uses: haskell-actions/setup@v2
+      id: setup
+      name: Setup Haskell tools
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: "latest"
+        cabal-update: true
 
-    - run: cabal build all
-    - run: cabal test all -j1
+    - name: Configure the build
+      run: |
+        cabal configure --enable-tests --enable-benchmarks --disable-documentation
+        cabal build all --dry-run
+      # The last step generates dist-newstyle/cache/plan.json for the cache key.
+
+    - name: Restore cached dependencies
+      uses: actions/cache/restore@v4
+      id: cache
+      env:
+        key: ${{ runner.os }}-ghc-${{ steps.setup.outputs.ghc-version }}-cabal-${{ steps.setup.outputs.cabal-version }}
+      with:
+        path: ${{ steps.setup.outputs.cabal-store }}
+        key: ${{ env.key }}-plan-${{ hashFiles('**/plan.json') }}
+        restore-keys: ${{ env.key }}-
+
+    - name: Install dependencies
+      # If we had an exact cache hit, the dependencies will be up to date.
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: cabal build all --only-dependencies
+
+    # Cache dependencies already here, so that we do not have to rebuild them should the subsequent steps fail.
+    - name: Save cached dependencies
+      uses: actions/cache/save@v4
+      # If we had an exact cache hit, trying to save the cache would error because of key clash.
+      if: steps.cache.outputs.cache-hit != 'true'
+      with:
+        path: ${{ steps.setup.outputs.cabal-store }}
+        key: ${{ steps.cache.outputs.cache-primary-key }}
+
+    - name: Build
+      run: cabal build all
+
+    - name: Run tests
+      run: cabal test all
+
+    - name: Install doctest
+      run: cabal install --ignore-project doctest --flag cabal-doctest
+
+      # "cabal doctest all" doesn't work for now :'(
+    - name: doctest haskus-utils-data
+      working-directory: haskus-utils-data
+      run: cabal doctest
+    - name: doctest haskus-utils-types
+      working-directory: haskus-utils-types
+      run: cabal doctest
+    - name: doctest haskus-utils-variant
+      working-directory: haskus-utils-variant
+      run: cabal doctest
+    - name: doctest haskus-utils
+      working-directory: haskus-utils
+      run: cabal doctest
+    - name: doctest haskus-time
+      working-directory: haskus-time
+      run: cabal doctest
+    - name: doctest haskus-text
+      working-directory: haskus-text
+      run: cabal doctest
+      # BROKEN as of 2024-07-29 (doctest or GHC bug?)
+      #- name: doctest haskus-binary
+      #  working-directory: haskus-binary
+      #  run: cabal doctest

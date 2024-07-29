@@ -49,4 +49,3 @@ test-suite tests
 
    build-depends:
          base >= 4.11 && < 5
-      ,  doctest >= 0.16

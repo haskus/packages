@@ -56,7 +56,6 @@ test-suite main-tests
   build-depends:
       base >=4.8 && <5
     , containers
-    , doctest
     , haskus-utils
     , haskus-utils-data
     , haskus-utils-variant
