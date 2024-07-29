@@ -21,6 +21,7 @@ extra-source-files:
 source-repository head
   type: git
   location: git://github.com/haskus/packages.git
+  subdir: haskus-web
 
 library
   exposed-modules:

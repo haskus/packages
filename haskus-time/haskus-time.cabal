@@ -1,11 +1,5 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
---
--- see: https://github.com/sol/hpack
---
--- hash: 42557acddf76373fd264ed60c7956145191ddadd02eca3785a3b589c7c55e7a7
-
 name:           haskus-time
 version:        0.1
 synopsis:       Time manipulation functions
@@ -48,7 +42,6 @@ test-suite main-tests
   ghc-options: -Wall -O
   build-depends:
       base >=4.8 && <5
-    , doctest
     , haskus-binary
     , haskus-utils
   default-language: Haskell2010

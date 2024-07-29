@@ -34,7 +34,7 @@ data ASCII = ASCII
 --
 -- >>> :set -XOverloadedLists
 -- >>> let b = [72,69,76,76,79] :: Buffer
--- >>> showText (TextBuffer b :: TextI ASCII)
+-- >>> showTextIO (Text b :: Text ASCII)
 -- "HELLO"
 --
 instance ShowText ASCII where
@@ -45,13 +45,13 @@ instance ShowText ASCII where
 -- | Support ASCII text with OverloadedStrings
 --
 -- >>> :set -XOverloadedStrings
--- >>> let t = "HELLO" :: TextI ASCII
--- >>> showText t
+-- >>> let t = "HELLO" :: Text ASCII
+-- >>> showTextIO t
 -- "HELLO"
 --
--- >>> let badt = "José" :: TextI ASCII
--- >>> showText badt
--- "*** Exception: Invalid ASCII character: é
+-- >>> let badt = "José" :: Text ASCII
+-- >>> showTextIO badt
+-- *** Exception: Invalid ASCII character: é
 --
 instance IsString (Text ASCII) where
    fromString s = Text (fromList (fmap (toWord8 . ord) s))

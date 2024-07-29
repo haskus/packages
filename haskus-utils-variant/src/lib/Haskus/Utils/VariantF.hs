@@ -73,8 +73,8 @@ import Control.DeepSeq
 -- >>> :set -XDeriveFunctor
 -- >>> import Data.Functor.Classes
 -- >>>
--- >>> data ConsF a e = ConsF a e deriving (Functor)
--- >>> data NilF    e = NilF      deriving (Functor)
+-- >>> data ConsF a e = ConsF a e deriving (Eq,Ord,Show,Functor)
+-- >>> data NilF    e = NilF      deriving (Eq,Ord,Show,Functor)
 -- >>> type ListF   a = VariantF '[NilF,ConsF a]
 -- >>>
 -- >>> instance Eq a => Eq1 (ConsF a) where liftEq cmp (ConsF a e1) (ConsF b e2) = a == b && cmp e1 e2
