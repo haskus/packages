@@ -1,22 +1,23 @@
+cabal-version:       2.4
 name:                haskus-utils-types
-version:             1.5.1
+version:             1.6
 synopsis:            Haskus types utility modules
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Sylvain Henry
 maintainer:          sylvain@haskus.fr
 homepage:            https://www.haskus.org
-copyright:           Sylvain Henry 2020
+copyright:           Sylvain Henry 2024
 category:            Type
 build-type:          Simple
-cabal-version:       1.20
 
 description:
    Haskus types utility modules (Nat, List, etc.)
 
 source-repository head
   type: git
-  location: git://github.com/haskus/haskus-utils.git
+  location: git://github.com/haskus/packages.git
+  subdir: haskus-utils-types
 
 library
   exposed-modules:
