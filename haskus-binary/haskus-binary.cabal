@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                haskus-binary
-version:             1.5
+version:             1.6
 synopsis:            Haskus binary format manipulation
 license:             BSD-3-Clause
 license-file:        LICENSE
