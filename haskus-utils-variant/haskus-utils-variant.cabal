@@ -1,7 +1,8 @@
+cabal-version:       2.4
 name:                haskus-utils-variant
-version:             3.4
+version:             3.5
 synopsis:            Variant and EADT
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Sylvain Henry
 maintainer:          sylvain@haskus.fr
@@ -9,7 +10,6 @@ homepage:            https://www.haskus.org
 copyright:           Sylvain Henry 2020
 category:            System
 build-type:          Simple
-cabal-version:       1.20
 
 description:
    Variant (extensible sum type) and EADT (extensible recursive sum type)
@@ -18,6 +18,7 @@ description:
 source-repository head
   type: git
   location: git://github.com/haskus/packages.git
+  subdir: haskus-utils-variant
 
 flag unliftio
   Description: Enable MonadUnliftIO instance
