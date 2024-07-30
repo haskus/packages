@@ -56,10 +56,10 @@ import qualified Data.Set as Set
 import Prelude hiding (pred,length)
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
 
 -------------------------------------------------------
 -- Constraint

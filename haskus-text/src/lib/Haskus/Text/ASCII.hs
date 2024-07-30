@@ -22,17 +22,17 @@ import Haskus.Memory.Buffer
 import Haskus.Utils.Flow
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
 
 -- | ASCII character map and encoding
 data ASCII = ASCII
 
 -- | Instance for ASCII text
 --
--- >>> :set -XOverloadedLists
+-- >>> :seti -XOverloadedLists
 -- >>> let b = [72,69,76,76,79] :: Buffer
 -- >>> showTextIO (Text b :: Text ASCII)
 -- "HELLO"
@@ -44,7 +44,7 @@ instance ShowText ASCII where
 
 -- | Support ASCII text with OverloadedStrings
 --
--- >>> :set -XOverloadedStrings
+-- >>> :seti -XOverloadedStrings
 -- >>> let t = "HELLO" :: Text ASCII
 -- >>> showTextIO t
 -- "HELLO"

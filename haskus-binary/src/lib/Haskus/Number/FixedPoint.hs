@@ -32,7 +32,7 @@ import Data.Ratio
 -- * `i` is the number of bits for the integer part (before the radix point)
 -- * `f` is the number of bits for the fractional part (after the radix point)
 --
--- >>> :set -XDataKinds
+-- >>> :seti -XDataKinds
 -- >>> import Data.Word
 -- >>> fromIntegral 0 :: FixedPoint Word32 16 16
 -- 0 % 1

@@ -27,10 +27,10 @@ module Haskus.Utils.Types.Bool
 where
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
 -- >>> import Haskus.Utils.Types
 
 

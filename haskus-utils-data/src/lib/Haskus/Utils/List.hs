@@ -148,7 +148,7 @@ pick1 = go []
 
 -- | Get members of a bounded enum in a list
 --
--- >>> :set -XTypeApplications
+-- >>> :seti -XTypeApplications
 -- >>> data Letters = A | B | C | D deriving (Bounded,Enum,Show)
 -- >>> enumList @Letters
 -- [A,B,C,D]

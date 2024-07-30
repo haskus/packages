@@ -50,10 +50,10 @@ class MaskBits a where
    makeMaskDyn :: Word -> a
 
 instance MaskBits Natural where
-   makeMaskDyn n = mkNatural (replicate (fromIntegral q) c ++ [makeMaskFinite r])
+   makeMaskDyn n = mkNatural ([makeMaskFinite r] ++ replicate (fromIntegral q) c)
       where
          c = complement zeroBits
-         (q,r) = n `quotRem` 32
+         (q,r) = n `quotRem` bitSize n
 
 instance MaskBits Word   where makeMaskDyn = makeMaskFinite
 instance MaskBits Word8  where makeMaskDyn = makeMaskFinite

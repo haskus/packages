@@ -51,10 +51,10 @@ import Haskus.Utils.Types.Bool
 import Data.Proxy
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
 -- >>> import Haskus.Utils.Types
 
 -- | Get a Nat value

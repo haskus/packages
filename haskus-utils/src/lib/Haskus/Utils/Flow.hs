@@ -54,10 +54,10 @@ import Haskus.Utils.Monad
 import Haskus.Utils.Maybe
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
 
 -- | Compose functions
 --

@@ -33,7 +33,7 @@ embedBytes bs = pure $ LitE (StringPrimL bs)
 --
 -- Usage:
 --
--- > :set -XQuasiQuotes
+-- > :seti -XQuasiQuotes
 -- > import Haskus.Utils.Embed
 -- > let s = [raw|\\w+\@[a-zA-Z_]+?\\.[a-zA-Z]{2,3}|]
 -- > s
