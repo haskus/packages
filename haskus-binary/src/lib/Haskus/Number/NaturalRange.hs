@@ -33,11 +33,11 @@ import Haskus.Utils.Types
 import Numeric.Natural
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
--- >>> :set -XScopedTypeVariables
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
+-- >>> :seti -XScopedTypeVariables
 
 
 -- | A natural number in the specified range

@@ -43,13 +43,13 @@ import Haskus.Utils.Types
 import Haskus.Utils.ContFlow
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XTypeOperators
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
--- >>> :set -XPatternSynonyms
--- >>> :set -XDeriveFunctor
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XTypeOperators
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
+-- >>> :seti -XPatternSynonyms
+-- >>> :seti -XDeriveFunctor
 -- >>>
 -- >>> import Data.Functor.Classes
 -- >>>

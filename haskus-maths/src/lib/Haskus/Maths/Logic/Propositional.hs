@@ -22,16 +22,16 @@ import qualified Data.Set as Set
 import Data.List (intersperse)
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XTypeOperators
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
--- >>> :set -XPatternSynonyms
--- >>> :set -XDeriveFunctor
--- >>> :set -XGADTs
--- >>> :set -XPolyKinds
--- >>> :set -XLambdaCase
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XTypeOperators
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
+-- >>> :seti -XPatternSynonyms
+-- >>> :seti -XDeriveFunctor
+-- >>> :seti -XGADTs
+-- >>> :seti -XPolyKinds
+-- >>> :seti -XLambdaCase
 --
 -- >>> type F a = EADT '[FalseF,TrueF,AtomF a,NotF,AndF,OrF,ImpF,IffF]
 

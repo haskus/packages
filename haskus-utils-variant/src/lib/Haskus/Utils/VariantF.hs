@@ -64,13 +64,13 @@ import Data.Bifunctor
 import Control.DeepSeq
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XTypeOperators
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
--- >>> :set -XPatternSynonyms
--- >>> :set -XDeriveFunctor
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XTypeOperators
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
+-- >>> :seti -XPatternSynonyms
+-- >>> :seti -XDeriveFunctor
 -- >>> import Data.Functor.Classes
 -- >>>
 -- >>> data ConsF a e = ConsF a e deriving (Eq,Ord,Show,Functor)

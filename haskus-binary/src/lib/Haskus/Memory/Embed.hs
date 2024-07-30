@@ -36,7 +36,7 @@ import System.IO
 
 -- | Embed bytes at compile time using GHC's literal strings.
 --
--- >>> :set -XTemplateHaskell
+-- >>> :seti -XTemplateHaskell
 -- >>> let b = $(embedBytes [72,69,76,76,79])
 -- >>> bufferSize b
 -- 5

@@ -91,7 +91,6 @@ jobs:
     - name: doctest haskus-text
       working-directory: haskus-text
       run: cabal doctest
-      # BROKEN as of 2024-07-29 (doctest or GHC bug?)
-      #- name: doctest haskus-binary
-      #  working-directory: haskus-binary
-      #  run: cabal doctest
+    - name: doctest haskus-binary
+      working-directory: haskus-binary
+      run: cabal doctest

@@ -7,11 +7,11 @@ import Haskus.Calculus.Concept.Literal
 import Haskus.Calculus.Lang.LC
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
--- >>> :set -XScopedTypeVariables
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
+-- >>> :seti -XScopedTypeVariables
 -- >>> import Haskus.Calculus.FreeVars
 -- >>> import Haskus.Calculus.PrettyPrint
 -- >>> import Haskus.Calculus.ReplaceVar

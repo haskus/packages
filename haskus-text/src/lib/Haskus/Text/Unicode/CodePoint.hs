@@ -85,7 +85,7 @@ instance Show CodePointRange where
 -- Extended to support any Word32 (not just 21 bits) to make the function total
 -- and useful in other contexts
 --
--- >>> :set -XBinaryLiterals
+-- >>> :seti -XBinaryLiterals
 -- >>> let f x = toUtf8 (putStr . (++ " ") . bitsToString) x
 -- >>> f 0x24
 -- 00100100
@@ -134,7 +134,7 @@ toUtf8 putW8 w
 --
 -- Compared to UTF-8, NULL values are encoded in two non null bytes.
 --
--- >>> :set -XBinaryLiterals
+-- >>> :seti -XBinaryLiterals
 -- >>> let f x = toModifiedUtf8 (putStr . (++ " ") . bitsToString) x
 -- >>> f 0x24
 -- 00100100
@@ -151,7 +151,7 @@ toModifiedUtf8 putW8 w
 --
 -- We don't check that following bytes are valid.
 --
--- >>> :set -XBinaryLiterals
+-- >>> :seti -XBinaryLiterals
 -- >>> import Control.Monad.Trans.State
 -- >>> getNext = do { ~(x:xs) <- get; put xs; pure x }
 -- >>> let x = evalState (fromUtf8 getNext) [0b11110000,0b10010000,0b10001101,0b10001000]

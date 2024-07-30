@@ -24,7 +24,7 @@ import Haskus.Utils.Flow
 
 -- $setup
 -- >>> import Haskus.Utils.Flow
--- >>> :set -XTypeApplications
+-- >>> :seti -XTypeApplications
 
 -- | A polygon
 newtype Polygon a = Polygon

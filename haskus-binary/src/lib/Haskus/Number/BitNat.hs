@@ -57,11 +57,11 @@ import Haskus.Utils.Types
 import Numeric.Natural
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
--- >>> :set -XScopedTypeVariables
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
+-- >>> :seti -XScopedTypeVariables
 
 -- | A natural on `b` bits
 newtype BitNat (b :: Nat)
@@ -92,7 +92,7 @@ bitNat :: forall (v :: Nat) (n :: Nat).
    , MakeBitNat n
    , KnownNat v
    ) => BitNat n
-bitNat = BitNat @n (natValue @v)
+bitNat = BitNat' @n (natValue @v)
 
 mapW :: (BitNatWord a -> BitNatWord a) -> BitNat a -> BitNat a
 mapW f (BitNat' x) = BitNat' (f x)
@@ -101,12 +101,12 @@ zipWithW :: (BitNatWord a -> BitNatWord a -> BitNatWord b) -> BitNat a -> BitNat
 zipWithW f (BitNat' x) (BitNat' y) = BitNat' (f x y)
 
 -- | Show instance for BitNat
-instance (KnownNat b, Integral (BitNatWord b)) => Show (BitNat b) where
-   showsPrec d x = showParen (d /= 0)
+instance (KnownNat b, Show (BitNatWord b)) => Show (BitNat b) where
+   showsPrec d (BitNat' x) = showParen (d /= 0)
       $ showString "BitNat @"
       . showsPrec 0 (natValue' @b)
       . showString " "
-      . showsPrec 0 (bitNatToNatural x)
+      . showsPrec 0 x
 
 -- | BitNat backing type
 type family BitNatWord b where
@@ -165,6 +165,9 @@ safeMakeBitNat x =
       _ -> Nothing
 
 -- | Create a natural (check overflow and throw on error)
+--
+-- >>> makeW @78 158748521123465897456465
+-- BitNat @78 158748521123465897456465
 makeW :: forall a. MakeBitNat a => Natural -> BitNat a
 makeW x = case safeMakeBitNat x of
    Just y  -> y

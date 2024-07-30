@@ -342,7 +342,7 @@ viewToBuffer = go PatternFull
 
 -- | Display the state of a View
 --
--- >>> :set -XOverloadedLists
+-- >>> :seti -XOverloadedLists
 -- >>> import System.Mem
 -- >>> v <- newBufferWeakView ([10,11,12,13,14,15,16,17] :: Buffer) (Pattern1D 2 4)
 -- >>> v2 <- newViewWeakView v (Pattern1D 1 1)

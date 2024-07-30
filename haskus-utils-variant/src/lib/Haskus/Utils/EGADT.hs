@@ -23,16 +23,16 @@ import Haskus.Utils.VariantF
 import Haskus.Utils.Types
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XTypeOperators
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
--- >>> :set -XPatternSynonyms
--- >>> :set -XDeriveFunctor
--- >>> :set -XGADTs
--- >>> :set -XPolyKinds
--- >>> :set -XPartialTypeSignatures
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XTypeOperators
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
+-- >>> :seti -XPatternSynonyms
+-- >>> :seti -XDeriveFunctor
+-- >>> :seti -XGADTs
+-- >>> :seti -XPolyKinds
+-- >>> :seti -XPartialTypeSignatures
 -- >>>
 -- >>> :{
 -- >>> data LamF (ast :: Type -> Type) t where

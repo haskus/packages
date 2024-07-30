@@ -42,11 +42,11 @@ import GHC.Base
 import GHC.Exts (toList, IsList(..), Ptr (..))
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
--- >>> :set -XScopedTypeVariables
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
+-- >>> :seti -XScopedTypeVariables
 
 -- There are different kinds of buffers:
 --  1. in managed heap: small and unpinned
@@ -277,7 +277,7 @@ bufferReadWord32 b (W# off) = withBuffer b case b of
 -- We don't check that the offset is valid
 --
 -- >>> let b = [0x12,0x34,0x56,0x78,0x9A,0xBC,0xDE,0xF0] :: Buffer
--- >>> x <- bufferReadWord64IO b 0
+-- >>> x <- bufferReadWord64 b 0
 -- >>> (x == 0x123456789ABCDEF0) || (x == 0xF0DEBC9A78563412)
 -- True
 --
@@ -320,6 +320,7 @@ bufferWriteWord8 b (W# off) (W8# v) = withBuffer b case b of
 -- >>> bufferReadWord16 b 1
 -- 1234
 --
+-- >>> import Data.Bits
 -- >>> (x :: Word16) <- fromIntegral <$> bufferReadWord8 b 1
 -- >>> (y :: Word16) <- fromIntegral <$> bufferReadWord8 b 2
 -- >>> (((x `shiftL` 8) .|. y) == v)   ||   (((y `shiftL` 8) .|. x) == v)
@@ -352,8 +353,8 @@ bufferWriteWord32 b (W# off) (W32# v) = withBuffer b case b of
 --
 -- >>> b <- newBuffer 10
 -- >>> let v = 1234 :: Word64
--- >>> bufferWriteWord64IO b 1 v
--- >>> bufferReadWord64IO b 1
+-- >>> bufferWriteWord64 b 1 v
+-- >>> bufferReadWord64 b 1
 -- 1234
 --
 bufferWriteWord64 :: Buffer -> Word -> Word64 -> IO ()
@@ -365,7 +366,7 @@ bufferWriteWord64 b (W# off) (W64# v) = withBuffer b case b of
 
 -- | Support for OverloadedLists
 --
--- >>> :set -XOverloadedLists
+-- >>> :seti -XOverloadedLists
 -- >>> let b = [25,26,27,28] :: Buffer
 --
 instance IsList Buffer where

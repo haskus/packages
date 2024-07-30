@@ -121,10 +121,10 @@ import Haskus.Utils.HList
 import Haskus.Utils.ContFlow
 
 -- $setup
--- >>> :set -XDataKinds
--- >>> :set -XTypeApplications
--- >>> :set -XFlexibleContexts
--- >>> :set -XTypeFamilies
+-- >>> :seti -XDataKinds
+-- >>> :seti -XTypeApplications
+-- >>> :seti -XFlexibleContexts
+-- >>> :seti -XTypeFamilies
 
 
 -- | A variant contains a value whose type is at the given position in the type

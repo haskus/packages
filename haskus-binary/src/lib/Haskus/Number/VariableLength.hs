@@ -29,7 +29,7 @@ import Haskus.Binary.Buffer
 
 -- | Convert a stream of ULEB 128 bytes into an Integral
 --
--- >>> :set -XBinaryLiterals
+-- >>> :seti -XBinaryLiterals
 -- >>> import Control.Monad.Trans.State
 -- >>> getNext = do { ~(x:xs) <- get; put xs; pure x }
 -- >>> let x = evalState (fromULEB128 getNext) [0b10000001, 0b01111111] :: Word64
@@ -49,8 +49,8 @@ fromULEB128 getW8 = go 0 0
 
 -- | Convert an Integral into a stream of ULEB128 bytes
 --
--- >>> :set -XBinaryLiterals
--- >>> :set -XFlexibleContexts
+-- >>> :seti -XBinaryLiterals
+-- >>> :seti -XFlexibleContexts
 -- >>> let f = toULEB128 (putStr . (++ " ") . bitsToString)
 -- >>> f (0b1001001010101010 :: Word64)
 -- 10101010 10100101 00000010
