@@ -205,6 +205,9 @@ library
 
   ghc-options:          -Wall -O
   default-language:     Haskell2010
+  default-extensions:
+    LambdaCase
+    BlockArguments
   hs-source-dirs:       src/lib
 
 test-suite tests

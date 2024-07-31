@@ -24,27 +24,28 @@ import System.FilePath
 archiveFiles :: FilePath -> [FilePath] -> IO ()
 archiveFiles dest files = do
 
-   -- generate headers
-   let 
-      makeHdr n = FileDesc
-         { fileInode     = n
-         , fileMode      = fmod
-         , fileUID       = 0
-         , fileGID       = 0
-         , fileNLink     = 1
-         , fileModifTime = 0
-         , fileDevMajor  = 0
-         , fileDevMinor  = 0
-         , fileRDevMajor = 0
-         , fileRDevMinor = 0
-         }
-      fmod  = makeMode FileTypeFile (BitSet.fromList [PermUserRead]) BitSet.empty
-      hds   = fmap makeHdr [1..]
-      names = fmap (Text.pack . takeFileName) files
+  -- generate headers
+  let
+     makeRegularHdr n = FileDesc
+        { fileInode     = n
+        , fileMode      = fmod
+        , fileUID       = 0
+        , fileGID       = 0
+        , fileNLink     = 1
+        , fileModifTime = 0
+        , fileDevMajor  = 0
+        , fileDevMinor  = 0
+        , fileRDevMajor = 0
+        , fileRDevMinor = 0
+        , fileEnableCheck = False
+        }
+     fmod  = fromIntegral (makeMode FileTypeRegular (BitSet.fromList [PermUserRead]) BitSet.empty) -- FIXME: unsafe cast?
+     hds   = fmap makeRegularHdr [1..]
+     names = fmap (Text.pack . takeFileName) files
 
-   -- read files
-   bufs <- forM files bufferReadFile
+  -- read files
+  bufs <- forM files bufferReadFile
 
-   -- write output file
-   let out = runPut $ putFiles (zip3 hds names bufs)
-   bufferWriteFile dest out
+  -- write output file
+  let out = runPut $ putFiles (zip3 hds names bufs)
+  bufferWriteFile dest out
