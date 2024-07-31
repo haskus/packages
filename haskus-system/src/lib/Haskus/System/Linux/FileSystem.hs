@@ -231,7 +231,7 @@ sysSetProcessUMask mode = do
 data FileType
    = FileTypeSocket
    | FileTypeLink
-   | FileTypeFile
+   | FileTypeRegular
    | FileTypeBlockDevice
    | FileTypeCharDevice
    | FileTypeFIFO
@@ -242,7 +242,7 @@ instance Enum FileType where
    fromEnum x = case x of
       FileTypeSocket       -> 12
       FileTypeLink         -> 10
-      FileTypeFile         -> 8
+      FileTypeRegular      -> 8
       FileTypeBlockDevice  -> 6
       FileTypeCharDevice   -> 2
       FileTypeFIFO         -> 1
@@ -250,7 +250,7 @@ instance Enum FileType where
    toEnum x = case x of
       12 -> FileTypeSocket
       10 -> FileTypeLink
-      8  -> FileTypeFile
+      8  -> FileTypeRegular
       6  -> FileTypeBlockDevice
       2  -> FileTypeCharDevice
       1  -> FileTypeFIFO
