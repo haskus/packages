@@ -12,7 +12,6 @@ module Haskus.Utils.Embed.ByteString
    ( bufferToByteString
    , embedBS
    , embedBSFile
-   , embedBSFilePrefix
    , embedBSOneFileOf
    , embedBSDir
    , module Haskus.Memory.Embed
@@ -34,6 +33,7 @@ import Control.Arrow
 import Haskus.Memory.Buffer
 import Haskus.Memory.Embed
 import Haskus.Utils.Monad
+import Haskus.Utils.Embed
 
 ----------------------------------------------------------------------
 -- File embedding adapted from file-embed package (BSD3).
@@ -51,20 +51,11 @@ import Haskus.Utils.Monad
 -- > myFile :: Data.ByteString.ByteString
 -- > myFile = $(embedFile "dirName/fileName")
 embedBSFile :: FilePath -> Q Exp
-embedBSFile fp = do
-   qAddDependentFile fp
-   bs <- runIO $ BS.readFile fp
-   embedBS bs
-
-embedBSFilePrefix :: FilePath -> FilePath -> Q Exp
-embedBSFilePrefix prefix fp' = do
-   -- small hack because "stack build" and "stack repl" in the multi-package
-   -- project have different CWD
-   fp <- liftIO (doesFileExist fp') >>= \case
-            True  -> return fp'
-            False -> return (prefix </> fp')
-   embedBSFile fp
-
+embedBSFile rfp = do
+  fp <- qRelativeToCabalProjectPath rfp
+  qAddDependentFile fp
+  bs <- runIO $ BS.readFile fp
+  embedBS bs
 
 -- | Embed a single existing file in your source code
 -- out of list a list of paths supplied.

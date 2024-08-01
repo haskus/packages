@@ -22,3 +22,5 @@ packages:
 
 program-options
   ghc-options: -fhide-source-paths
+
+multi-repl: True
