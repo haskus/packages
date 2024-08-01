@@ -74,23 +74,16 @@ jobs:
 
       # "cabal doctest all" doesn't work for now :'(
     - name: doctest haskus-utils-data
-      working-directory: haskus-utils-data
-      run: cabal doctest
+      run: cabal doctest haskus-utils-data
     - name: doctest haskus-utils-types
-      working-directory: haskus-utils-types
-      run: cabal doctest
+      run: cabal doctest haskus-utils-types
     - name: doctest haskus-utils-variant
-      working-directory: haskus-utils-variant
-      run: cabal doctest
+      run: cabal doctest haskus-utils-variant
     - name: doctest haskus-utils
-      working-directory: haskus-utils
-      run: cabal doctest
+      run: cabal doctest haskus-utils
     - name: doctest haskus-time
-      working-directory: haskus-time
-      run: cabal doctest
+      run: cabal doctest haskus-time
     - name: doctest haskus-text
-      working-directory: haskus-text
-      run: cabal doctest
+      run: cabal doctest haskus-text
     - name: doctest haskus-binary
-      working-directory: haskus-binary
-      run: cabal doctest
+      run: cabal doctest haskus-binary
