@@ -1,6 +1,9 @@
 -- | Embed data into the executable binary
 module Haskus.Utils.Embed
    ( embedBytes
+   , qCabalProjectPath
+   , qRelativeToCabalProjectPath
+   , quoteRelativeFile
    -- | Raw text quasiquoter
    , raw
    , rawQ
@@ -9,11 +12,76 @@ where
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
+import Language.Haskell.TH.Syntax (qLocation, addDependentFile)
 import Data.Word
+import System.Directory (getDirectoryContents, canonicalizePath)
+import System.FilePath (isRelative, takeDirectory, takeExtension, (</>))
 
 -- | Embed bytes in a C array, return an Addr#
 embedBytes :: [Word8] -> Q Exp
 embedBytes bs = pure $ LitE (StringPrimL bs)
+
+
+-- | Get cabal project path
+--
+-- This use useful with Template Haskell to read files using paths relative to
+-- the project top-level directory. Otherwise, if the current working directory
+-- is used, it may vary depending on where `cabal build` is called (e.g. in the
+-- `cabal.project` directory or in one of the subidrs).
+qCabalProjectPath :: Q FilePath
+qCabalProjectPath = do
+  loc <- qLocation
+  runIO $ do
+    let
+      go :: FilePath -> IO (Maybe FilePath)
+      go p = do
+          let dir = takeDirectory p -- move up one level
+          if dir == p
+            then pure Nothing -- reached the root directory without finding .cabal file
+            else do
+              contents <- getDirectoryContents dir
+              if any ((==) ".cabal" . takeExtension) contents
+                then pure (Just dir)
+                else go dir
+    -- make path absolute and "simpler" (remove indirections, etc.)
+    abs_path <- canonicalizePath (loc_filename loc)
+    go abs_path >>= \case
+      Nothing  -> error "qCabalProjectPath: couldn't find `.cabal` file"
+      Just dir -> pure dir
+
+-- | Convert a FilePath to cabal project path into an absolute path
+qRelativeToCabalProjectPath :: FilePath -> Q FilePath
+qRelativeToCabalProjectPath fp =
+  if isRelative fp
+    then do
+      p <- qCabalProjectPath
+      runIO $ canonicalizePath (p </> fp)
+    else pure fp
+
+-- | 'quoteRelativeFile' takes a 'QuasiQuoter' and lifts it into one that read
+-- the data out of a file.  For example, suppose @asmq@ is an
+-- assembly-language quoter, so that you can write [asmq| ld r1, r2 |]
+-- as an expression. Then if you define @asmq_f = quoteRelativeFile asmq@, then
+-- the quote [asmq_f|foo.s|] will take input from file @"foo.s"@ instead
+-- of the inline text
+--
+-- The difference with 'quoteFile' is that the file is looked up relative to the
+-- project directory containing the ".cabal" file (using 'qCabalProjectPath').
+quoteRelativeFile :: QuasiQuoter -> QuasiQuoter
+quoteRelativeFile q = QuasiQuoter
+  { quoteExp  = get (quoteExp q)
+  , quotePat  = get (quotePat q)
+  , quoteType = get (quoteType q)
+  , quoteDec  = get (quoteDec q)
+  }
+  where
+   get :: (String -> Q a) -> String -> Q a
+   get old_quoter fp = do
+    file_name <- qRelativeToCabalProjectPath fp
+    file_cts <- runIO (readFile file_name)
+    addDependentFile file_name
+    old_quoter file_cts
+
 
 ----------------------------------------------------------------------
 -- Raw text quasiquoter (adapted from raw-strings-qq package (BSD3)

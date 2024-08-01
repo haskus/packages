@@ -5,6 +5,7 @@ module Haskus.System.PCI.MakeTable
 where
 
 import Haskus.Utils.Flow
+import Haskus.Utils.Embed
 import Haskus.Binary.Bits
 
 import Language.Haskell.TH.Quote
@@ -19,7 +20,7 @@ import Data.Void
 type Parser = Parsec Void String
 
 pcis :: QuasiQuoter
-pcis = quoteFile $ QuasiQuoter
+pcis = quoteRelativeFile $ QuasiQuoter
    { quoteDec  = makeTable
    , quoteExp  = undefined
    , quotePat  = undefined
