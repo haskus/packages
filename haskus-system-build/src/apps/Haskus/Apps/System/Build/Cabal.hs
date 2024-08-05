@@ -9,7 +9,6 @@ module Haskus.Apps.System.Build.Cabal
 where
 
 import System.Process
-import System.FilePath
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.List as L
@@ -33,7 +32,7 @@ cabalGetBinPath x = do
   case lines p of
     [] -> error "cabal list-bin returned nothing"
     -- for some reason cabal adds some \n...
-    (x:_) -> pure x
+    (l:_) -> pure l
 
 
 cabalBuild :: Text -> IO ()
