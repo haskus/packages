@@ -17,9 +17,7 @@ import Haskus.Utils.Flow
 import Options.Applicative.Simple
 import Paths_haskus_system_build
 import Data.Version
-import System.IO.Temp
 import System.Directory
-import System.FilePath
  
 
 main :: IO ()
@@ -31,10 +29,6 @@ main = do
                    "haskus-system-build"
                    "This tool lets you build systems using haskus-system framework. It manages Linux/Syslinux (download and build), it builds ramdisk, it launches QEMU, etc."
                    (pure ()) $ do
-         addCommand "init"
-                   "Create a new project from a template"
-                   initCommand
-                   initOptions
          addCommand "build"
                    "Build a project"
                    buildCommand
@@ -60,30 +54,6 @@ main = do
                    makeDeviceCommand
                    (makeDeviceOptions)
    runCmd
-
-initCommand :: InitOptions -> IO ()
-initCommand opts = do
-   let
-      template = initOptTemplate opts
-
-   cd <- getCurrentDirectory
-
-   withSystemTempDirectory "haskus-system-build" $ \fp -> do
-      -- get latest templates
-      showStep "Retrieving templates..."
-      shellInErr fp "git clone --depth=1 https://github.com/haskus/haskus-system-templates.git" $
-         failWith "Cannot retrieve templates. Check that `git` is installed and that github is reachable using https."
-
-      let fp2 = fp </> "haskus-system-templates"
-      dirs <- listDirectory fp2
-      unless (any (== template) dirs) $
-         failWith $ "Cannot find template \"" ++ template ++"\""
-
-      -- copy template
-      showStep $ "Copying \"" ++ template ++ "\" template..."
-      shellInErr fp2
-         ("cp -i -r ./" ++ template ++ "/* " ++ cd) $
-            failWith "Cannot copy the selected template"
 
 readConfig :: IO SystemConfig
 readConfig = do
