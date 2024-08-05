@@ -30,6 +30,19 @@
 // 1C2826 (black)
 // CFFFE5 (green)
 
+#set document(
+    title: "Haskus packages manual"
+  , author: "Sylvain Henry"
+  , date: auto
+)
+
+#set page(
+    numbering: "1"
+  , number-align: right
+)
+
+#outline()
+
 = How to use haskus-system
 
 *haskus-system* is a framework to develop systems based on the Linux kernel.
