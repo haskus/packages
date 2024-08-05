@@ -1,0 +1,8 @@
+linux-initramfs:
+  type: Web
+  title: initramfs buffer format
+  author:
+    - Al Viro
+    - H. Peter Anvin
+  date: 2002-01-13
+  url: https://www.kernel.org/doc/html/latest/driver-api/early-userspace/buffer-format.html
