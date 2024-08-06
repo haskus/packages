@@ -57,7 +57,7 @@ import GHC.Exts (toList, IsList(..), Ptr (..))
 -- (respectively ByteArray# and MutableByteArray#) but they are represented by
 -- the same heap objects and we can freely convert from one to the other.
 --
--- Buffers and managed heap may be pinned (i.e. may have a fixed address). GHC
+-- Buffers in managed heap may be pinned (i.e. may have a fixed address). GHC
 -- automatically pins large buffers. Buffers out of the managed heap are
 -- represented by their address, hence the latter mustn't/can't change and they
 -- behave as pinned buffers.
