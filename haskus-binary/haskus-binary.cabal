@@ -41,6 +41,7 @@ library
     Haskus.Binary.Buffer
     Haskus.Binary.BufferList
     Haskus.Binary.BufferBuilder
+    Haskus.Binary.ByteSwap
     Haskus.Binary.Char
     Haskus.Binary.Enum
     Haskus.Binary.Endianness
@@ -58,6 +59,9 @@ library
     Haskus.Binary.Serialize.Buffer
     Haskus.Binary.Serialize.File
     Haskus.Binary.CTypes
+    Haskus.Binary.Word
+    Haskus.Binary.Int
+    Haskus.Binary.Cast
 
     Haskus.Number
     Haskus.Number.Word
@@ -80,6 +84,7 @@ library
     Haskus.Memory.Ptr
     Haskus.Memory.Property
     Haskus.Memory.Typed
+    Haskus.Memory.Writer
 
   other-modules:
 
@@ -98,6 +103,14 @@ library
 
   ghc-options:          -Wall -Wno-unticked-promoted-constructors
   default-language:     Haskell2010
+  default-extensions:
+    LambdaCase
+    BlockArguments
+    MagicHash
+    UnboxedTuples
+    UnboxedSums
+    BangPatterns
+    PatternSynonyms
   hs-source-dirs:       src/lib
 
 test-suite tests
@@ -112,6 +125,7 @@ test-suite tests
       ,  Haskus.Tests.Format.Binary.Bits
       ,  Haskus.Tests.Format.Binary.GetPut
       ,  Haskus.Tests.Format.Binary.Vector
+      ,  Haskus.Tests.Format.Binary.Writer
 
    build-depends:    
          base
