@@ -11,6 +11,12 @@
   it
 }
 
+// Page break before level 1 titles
+#show heading.where(level:1): it => {
+  pagebreak(weak: true)
+  it
+}
+
 #let trivia(x) = block(
     fill: rgb("#fae1df")
   , inset: 8pt
@@ -1330,7 +1336,7 @@ The example code should display the following pattern on the screen:
 #figure(
   image("images/system/graphics_first_pipeline.png"),
   caption: [
-    First Linux Graphics pipeline
+    Pattern displayed by the example code
   ]
 )
 
