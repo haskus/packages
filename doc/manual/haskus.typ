@@ -783,8 +783,6 @@ by the Linux kernel.  To do that, use `defaultSystemInit` and
 `systemDeviceManager` as in the following code:
 
 ```haskell
-{-# LANGUAGE BlockArguments #-}
-
 import Haskus.System
 
 main :: IO ()
@@ -831,7 +829,7 @@ have multiple event sources; some event sources may be virtual (for instance the
 event sources and that is useful if you have more than one connected mouse
 devices).
 
-=== How to deal with hot-pluggable devices?
+=== How to deal with hot-pluggable devices? <devices-hotplug>
 
 We are now accustomed to (un)plug devices into computers while they are running
 and to expect them to be immediately detected and usable (i.e., without
@@ -848,8 +846,6 @@ device tree changes. The following code shows how to get and print these
 events:
 
 ```haskell
-{-# LANGUAGE BlockArguments #-}
-
 import Haskus.System
 
 main :: IO ()
@@ -955,7 +951,449 @@ have to use the low-level interface presented in this chapter if you want to
 write your own high-level interface to a device class not supported by
 `haskus-system` or if you want to extend an existing one.
 
+== How to use the logging system?
 
+Many high-level interfaces of the `haskus-system` use the `Sys` monad. It is
+basically a wrapper for the `IO` monad that adds a logging mechanism.
+
+The following code prints the system log that is implicitly maintained in the
+`Sys` monad on the kernel console.
+
+```haskell
+import Haskus.System
+
+main :: IO ()
+main = runSys do
+  term <- defaultTerminal
+  writeStrLn term "Hello World!"
+  waitForKey term
+  sysLogPrint -- print system log
+  powerOff
+```
+
+Hence, the output of this program is something like:
+
+```
+Hello World!
+
+---- Log root
+--*- FORK: Terminal input handler
+  |---- Read bytes from Handle 0 (succeeded with 1)
+  |---- readBytes /= 0 (success)
+--*- FORK: Terminal output handler
+
+[    1.818814] reboot: Power down
+```
+
+You can see that the log is hierarchical and that it supports thread forks:
+`defaultTerminal` forks 2 threads to handle asynchronous terminal
+input/output; the input thread indicates in the log that it has read 1 byte from
+the terminal input (when I have pressed the `enter` key).
+
+Note that the log entries produced by the framework functions may change in the
+future, hence the contents of the log may change and you may not get exactly the
+same output if you try to execute this code.
+
+== How to display graphics?
+
+=== Understanding the pipeline <graphics-pipeline>
+
+In this chapter, the idea is to understand the pipeline that describes where the
+video displays get their pixel colors from. Configuring the pipeline is
+explained in @graphics-pipeline-config.
+
+This pipeline directly derives from the Linux kernel API named *kernel mode
+setting* (KMS) (part of the *direct rendering manager* (DRM) interface) with
+some naming differences though.
+
+The left side of the following picture describes the relations between pipeline
+entities (or objects) and the right side shows a more visual representation of
+how an image is formed on a video display surface using the same entities.
+
+#figure(
+  image("images/system/graphics_linux_model.svg"),
+  caption: [
+    Linux Graphics pipeline model
+  ]
+)
+
+To use a video display, our task is to build such valid pipeline. There are so
+many possible hardware configurations (different graphics chipsets, different
+video displays, etc.) that the KMS interface is very generic. It lets us build a
+pipeline quite liberally and then we can test it before enabling it for real if
+it is valid.
+
+Controller and Plane entities of the graphics pipeline are invariant for each
+graphics chipset. However Connectors are *not* invariant because some
+technologies (such as
+#link("https://en.wikipedia.org/wiki/DisplayPort#Multi-Stream_Transport_(MST)")[DisplayPort
+Multi-Stream Transport])
+allow the use of connectors hubs which dynamically add additional Connector
+entities. Frames are managed by software hence they are not invariant either.
+
+*Listing entities*
+
+As our first code example in this tutorial, we will list all the entities of all
+the graphic cards we find on the system.  The whole source code can be found
+#link("https://github.com/haskus/packages/blob/master/haskus-system-examples/src/tutorial/TutEntitiesIDs.hs")[here].
+
+We load all the graphic cards with:
+
+```haskell
+sys   <- defaultSystemInit
+cards <- loadGraphicCards (systemDeviceManager sys)
+```
+
+Then we get entity identifiers with:
+
+```haskell
+mids <- runE (getEntitiesIDs card)
+```
+
+The rest of the code deals with errors and printing the results on the terminal.
+
+The best way to test this code is to use `haskus-system-build` tool (cf
+@haskus-system-build).
+
+```bash
+> git clone https://github.com/haskus/packages.git
+> cd packages/haskus-system-examples
+> haskus-system-build test --init TutEntitiesIDs
+
+===================================================
+       Haskus system - build config
+---------------------------------------------------
+GHC version:      9.6.6
+Linux version:    6.9.9
+Syslinux version: 6.03
+Init program:     TutEntitiesIDs
+===================================================
+==> Building with Cabal...
+[...]
+==> Building ramdisk...
+24986 blocs
+==> Launching QEMU...
+Card 0
+ - Connector 31
+ - Controller 35
+ - Plane 33
+[    1.026338] reboot: Power down
+```
+
+The tool should download, build and install the necessary dependencies and
+execute the resulting system into `QEMU`. You can see that it reports one
+Connector, one Controller and one Plane for the QEMU simulated graphics chipset
+(the numbers are their unique identifiers).
+
+=== Listing displays <graphics-list-displays>
+
+To list the available video displays that are connected to the computer, we just
+have to query the Connector entities and check if there is a video display
+connected to them.
+
+The whole source code for this chapter can be found
+#link("https://github.com/haskus/haskus-system/blob/master/haskus-system-examples/src/tutorial/TutDisplays.hs")[here].
+It detects the available video displays and reports information about them.
+
+- We retrieve information about all the entities for each card with `getEntities card`
+
+- Connectors (retrieved with `entitiesConnectors`) have `connectorType` and
+  `connectorByTypeIndex` fields which can be used to query the kind of connector (HDMI,
+  VGA, DVI, etc.) and the connector index for the given kind of connector.
+
+- Connectors also have a `connectorState` field which can be used to detect
+  connected display:
+
+```haskell
+case connectorState conn of
+   Disconnected      -> -- no connected display
+   ConnectionUnknown -> -- we can't know
+   Connected display -> -- we have a connected display!
+```
+
+- We get the supported modes of the display with `displayModes` field of
+  `display`, physical size in millimeters with `displayPhysicalWidth/Height`, the
+  sub-pixel layout with `displaySubPixel` (can be used to perform
+  #link("https://en.wikipedia.org/wiki/Subpixel_rendering")[sub-pixel rendering])
+  and other properties with `displayProperties`.
+
+Hint: we could have used `forEachConnectedDisplay` function to do all of this
+listing and filtering more simply.
+
+Example of run into QEMU with Linux 5.1.15:
+
+```
+> git clone https://github.com/haskus/packages.git
+> cd packages/haskus-system-examples
+> haskus-system-build test --init TutDisplays
+
+Probing Connector 33: Virtual-1
+Physical size: 0mm X 0 mm
+Sub-pixel layout: SubPixelUnknown
+Modes
+1024x768 60MHz -HSync -VSync
+        h: width 1024 start 1048 end 1184 total 1344 skew    0
+        v: width  768 start  771 end  777 total  806 scan    0
+1920x1080 60MHz -HSync -VSync
+        h: width 1920 start 2008 end 2052 total 2200 skew    0
+        v: width 1080 start 1084 end 1089 total 1125 scan    0
+1600x1200 60MHz +HSync +VSync
+        h: width 1600 start 1664 end 1856 total 2160 skew    0
+        v: width 1200 start 1201 end 1204 total 1250 scan    0
+[...]
+Properties
+    var DPMS = On :: Enum [On,Standby,Suspend,Off]
+    var link-status = Good :: Enum [Good,Bad]
+    val non-desktop = False :: Bool
+    var CRTC_ID = 0 :: Object
+```
+
+*Detecting Plugging/Unplugging*
+
+To detect when a video display is connected or disconnected, we could
+periodically list the Connectors and check their ``connectorState`` property as
+we have done above.
+
+However a better method is to use a mechanism explained in @devices-hotplug:
+when the state of a Connector changes, the kernel sends to the user-space an
+event similar to the following one:
+
+```haskell
+KernelEvent
+  { kernelEventAction = ActionChange
+  , kernelEventDevPath = "/devices/.../drm/card0"
+  , kernelEventSubSystem = "drm"
+  , kernelEventDetails = fromList
+    [("DEVNAME","drm/card0")
+    ,("MAJOR","226")
+    ,("MINOR","0")
+    ,("HOTPLUG","1")
+    ,("SEQNUM","1259")]}
+```
+
+When our system receives this event, we know it has to check the state of the
+Connectors.
+
+Also remember that Connector entities can appear and disappear at runtime.
+That's because some technologies (such as
+#link("https://en.wikipedia.org/wiki/DisplayPort#Multi-Stream_Transport_(MST)")[DisplayPort
+Multi-Stream Transport]) allow the use of connectors hubs which increases the
+number of video displays that can be connected at the same time.
+
+
+=== Generic buffers and frames <graphics-generic-buffers>
+
+The top-most elements of the graphics pipeline (@graphics-pipeline) are
+Buffers. A Buffer is a memory region accessible by the graphics chipset. In this
+case they are used to store pixel color components (e.g. 32-bit RGBA values).
+
+There are two general kinds of buffers:
+
+- driver specific buffers: they can be used to fully exploit the features of the
+  device but they use different APIs depending on the device driver.
+
+- generic buffers: these buffers use the same API for all devices supporting
+  them but they can't be used to exploit the most advanced features of the
+  device.
+
+In this chapter we present the *generic buffers* as they are simple to use and
+avalable for many graphics chipsets. The source code for this chapter can be
+found #link("https://github.com/haskus/haskus-system/blob/master/haskus-system-examples/src/tutorial/TutGenericFrame.hs")[here].
+
+*Allocating Generic Buffers*
+
+To allocate a generic buffer, we can use `createGenericBuffer` function. It
+takes a width and an height in pixels and the number of bits per pixels (must be
+a multiple of 8). 
+
+However we often want to create a Frame and the buffers according to the Frame
+format. Hence in the code example we use ``createGenericFrame`` instead which
+does all of this. Then it displays information about the allocated Frame and
+Buffers.
+
+Example of run into QEMU with Linux 5.1.15:
+
+```bash
+> git clone https://github.com/haskus/packages.git
+> cd packages/haskus-system-examples
+> haskus-system-build test --init TutCreateGenericFrame
+
+Frame 35
+  Width:  1024 pixels
+  Height: 768 pixels
+  Pixel format: XRGB8888 (LittleEndian)
+  Flags: []
+  FrameBuffer 0:
+    - Buffer handle: 1
+    - Pitch: 4096
+    - Offset: 0
+    - Modifiers: 0
+    - Buffer specific details:
+       - Type: generic buffer
+       - Width:  1024 pixels
+       - Height: 768 pixels
+       - Bits per pixels: 32
+       - Flags: 0
+       - Handle: 1
+       - Pitch: 4096 bytes
+       - Size: 3145728 bytes
+       - Address: 0x00007efd406f5000
+
+[    0.984017] reboot: Power down
+```
+
+You can see that a `GenericBuffer` object contains the effective size of the
+buffer (in bytes), the pitch (effective width of a line in bytes), an address
+(explained in the next section), etc.
+
+Hint: if we want to create a generic Frame for a full screen mode, we can pass a
+`Mode` to `createGenericFullScreenFrame`. Frame and Buffers dimensions (in
+pixels) are then obtained from the Mode.
+
+*Writing into Generic Buffers*
+
+Generic buffers have a very useful property: they can be mapped into the process
+memory. `haskus-system` automatically maps them when they are created so you
+don't have to worry about doing it.
+
+The mapped region address is stored in a `ForeignPtr` which you can use with:
+`withGenericBufferPtr` (or `withGenericFrameBufferPtr` wrapper). For example:
+
+```haskell
+-- fill the frame with a color
+withGenericFrameBufferPtr fb \ptr ->
+  forEachFramePixel frame \x y -> do
+    let off = frameBufferPixelOffset fb 4 x y -- 4 is pixel component size in bytes
+    pokeByteOff (castPtr ptr) (fromIntegral off) (color :: Word32)
+```
+
+However with generic buffers it is even easier: there is the
+`forEachGenericFramePixel` wrapper that does these tricky pointer computations
+for us. The code example uses it as follows:
+
+```haskell
+-- fill the generic frame with a color
+-- (0 is the FrameBuffer index)
+forEachGenericFramePixel frame 0 \_x _y ptr ->
+   poke ptr (0x316594 :: Word32) -- write a XRGB8888 color
+```
+
+
+=== Configuring the pipeline <graphics-pipeline-config>
+
+At this stage we already know enough things to
+#link(<graphics-list-displays>)[detect a connected video display] and to
+#link(<graphics-generic-buffers>)[allocate generic buffers and frames]. We just
+need to learn how to connect entities to build
+#link(<graphics-pipeline>)[graphics pipeline] and finally display something on
+the screen.
+
+The whole source code can be found
+#link("https://github.com/haskus/haskus-system/blob/master/haskus-system-examples/src/tutorial/TutFirstPipeline.hs")[here].
+
+We first need to find a primary plane and check the pixel formats it supports.
+Then we need a Controller that can work with the plane (obtained with
+`planePossibleControllers`). Finally we need to build the pipeline with code
+similar to the following one:
+
+```haskell
+assertLogShowErrorE "Config" <| withModeBlob card mode \modeBlobID ->
+  configureGraphics card Commit EnableVSync EnableFullModeset do
+    setConnectorSource conn ctrlID -- connector  <-> controller
+    setPlaneTarget plane ctrlID    -- controller <-> plane
+    setPlaneSource plane frame     -- plane      <-> frame
+    -- sizes and mode
+    setPlaneSize plane (frameWidth frame) (frameHeight frame)
+    setPlaneSourceSize plane (frameWidth frame) (frameHeight frame)
+    setMode ctrlID modeBlobID
+    -- enable the controller
+    enableController ctrlID True
+```
+
+We allocate a Mode blob on the graphic card with `withModeBlob`. Then we use
+`configureGraphics` to send a batch of commands to the chipset: the commands
+will either all succeed or none of them will be applied (atomicity).
+
+To test that a batch of commands is valid, you can pass `TestOnly` instead of
+`Commit` and check for errors.
+
+You can allow or disallow a full mode-setting with `EnableFullModeset` and
+`DisableFullModeset`. A full mode-setting is costly so avoid it if you can
+afford to run in a degraded mode for some time.
+
+You can enable or disable vertical synchronization (VSYNC) (cf @graphics-vsync).
+It is recommended to enable it to avoid tearing and because some drivers seem to
+require it.
+
+The example code should display the following pattern on the screen:
+
+#figure(
+  image("images/system/graphics_first_pipeline.png"),
+  caption: [
+    First Linux Graphics pipeline
+  ]
+)
+
+=== Double-bufffering and frame-switching
+
+In this section, we see that directly modyfing the frame that is displayed on
+the screen leads to tearing/flickering and that double-buffering should be used
+instead.
+
+Starting from the code of the previous section (@graphics-pipeline-config) ,
+suppose that we modify the contents of the frame continuously as we do 
+#link("https://github.com/haskus/haskus-system/blob/master/haskus-system-examples/src/tutorial/TutSingleFrame.hs")[here]:
+
+```haskell
+let render frame col = do
+     -- fill a frame with a color
+     forEachGenericFramePixel frame 0 \_x _y ptr -> do
+       poke ptr (col :: Word32)
+
+    renderLoop col = do
+      render frame col
+      renderLoop (col + 10) -- change the color for each frame
+
+sysFork "Render loop" (renderLoop 0)
+```
+
+If we try to execute this example, we see some flickering: sometimes the
+displayed frame is not fully repaint and it has two different colors, that's why
+we see some vertical line demarcating both colors.
+
+This is a common issue that can be solved either by:
+
+- only doing the rendering during the vblank period
+- using two different frames and switching them during the vblank period
+
+The first solution only requires a single buffer but your application has to
+render each frame very fast during the vblank period and before the end of the
+refresh cycle.
+
+Using double-buffering is easier. #link("https://github.com/haskus/haskus-system/blob/master/haskus-system-examples/src/tutorial/TutFrameSwitch.hs")[Source code of the modified code example
+using double-buffering].
+The change consists in allocating two frames, rendering in one when the other is
+displayed and switching the frames when the rendering is over:
+
+```haskell
+let switchFrame frame = assertLogShowErrorE "Switch frame" <| do
+      configureGraphics card Commit EnableVSync DisableFullModeset do
+        setPlaneSource plane frame
+
+frame1 <- createGenericFullScreenFrame card mode pixelFormat 0
+frame2 <- createGenericFullScreenFrame card mode pixelFormat 0
+
+let renderLoop b col = do
+      let frame = if b then frame1 else frame2
+      render frame col
+      switchFrame frame
+      renderLoop (not b) (col + 10)
+
+sysFork "Render loop" (renderLoop False 0)
+```
+
+When we execute this second example, the displayed frame is always fully
+rendered and we don't get the flickering effect.
 
 = System Internals <system-internals>
 
@@ -1130,3 +1568,165 @@ KMS/DRM history:
 - https://lwn.net/Articles/653071 and https://lwn.net/Articles/653466/
 
 
+= Computer Graphics
+
+== Human Vision
+
+
+Video display technology is based on human vision in several ways:
+
+*Color perception*
+
+The human eye uses 3 kinds of sensors (in daylight) called
+#link("https://en.wikipedia.org/wiki/Cone_cell")[cones] , each covering some
+part of the #link("https://en.wikipedia.org/wiki/Visible_spectrum")[visible
+spectrum]. Their behavior is quite complicated because their response ranges
+overlap, the count of each sensor differs, the light perception is non-linear,
+etc. For the human eye, different
+#link("https://en.wikipedia.org/wiki/Spectral_power_distribution")[spectral
+power distributions] can lead to the same perceived color
+#link("https://en.wikipedia.org/wiki/Metamerism_(color)")[metamerism] .
+
+Long story short, a video display doesn't have to be able to produce every
+frequency of the visible spectrum to reproduce colors: it just has to produce 3
+of them to trigger each kind of cone at a different level. Typically a video
+display produces color by combining different amount of red, green and blue
+lights which roughly correspond to each cone response peak.
+
+Usually video display devices can only produce a subset of the visible color
+space (or #link("https://en.wikipedia.org/wiki/Gamut")[gamut]).
+
+*Spatial integration*
+
+If several lights of different colors are emitted very closely to each other,
+our eyes can't distinguish them and we don't perceive the gap between them.
+Instead we only perceive another color which is composed of the emitted ones.
+
+Screens display an array of lights called pixels (say 1920x1080 pixels) which
+are very close one to the other so that we perceive a continuous picture without
+distinguishing the gaps between each pixel individually (at normal viewing
+distance of the video display).
+
+Screens display pixel themselves as a combination of several (at least 3 but
+sometimes more) distinct lights (red, green and blue) which are so close that we
+perceive them as a single color.
+
+
+*Temporal integration*
+
+Similarly to the spatial integration, our eyes cannot distinguish lights that
+change too fast over time. Instead we perceive an integration of the light over
+time.
+
+Screens use this to simulate continuous motion: if different images are
+displayed very quickly, our eyes don't distinguish each picture individually.
+Some video displays even emit a single line of pixels at a time or a single pixel
+at a time, or alternate between even and odd lines for each frame.
+
+Note that our peripheral vision is better at detecting motion. It explains why
+virtual reality (VR) headsets have higher refresh rates.
+
+*Summary*
+
+Rendering an image on a video display surface consists in indicating the color
+of each pixel. Note that pixels are samples of the image we would like to render
+on the video display surface if it had an infinite resolution,
+#link("http://alvyray.com/Memos/CG/Microsoft/6_pixel.pdf")[not "small squares"].
+
+We have to render many different images per seconds to simulate moving images.
+
+I recommend watching this video:
+#link("https://www.youtube.com/watch?v=3BJU2drrtCM")[How a TV works in slow
+motion]
+
+
+== Video Display
+
+A video display usually shows a rectangle of pixels. When connected to a
+computer, it is managed by a graphics chipset which indicates to the video
+display the color of each pixel of the current image to show several times per
+second.
+
+The algorithm used by the graphics chipset is roughly:
+
+```
+For each pixel in the current image
+   Read its color from memory
+   Convert the color into something intelligible for the video display
+   Send the converted pixel color to the video display
+
+Wait until it's time to send the next image (vertical blanking interval)
+```
+
+=== Refresh rates
+
+The number of images (or frames) sent to the video display depends on its
+refresh rate. Most video displays have a fixed (configurable) refresh rate. For
+instance 60Hz (60 frames per second).
+
+Newer video displays may also support variable refresh rates where the delay
+between two frames may depend on the next frame being ready (or a timeout if it
+isn't ready for too long).
+
+=== Switching between frames <graphics-vsync>
+
+If we modify the memory containing the pixel colors while the graphics chipset
+is reading it, the video display may show incoherent pixels (e.g. pixels from
+two different frames). This is called *tearing*. We usually want to avoid it.
+
+The idea is to modify the pixel colors only while the graphics chipset is
+waiting between two transfers. For historical reasons this period of time is
+called the
+#link("https://en.wikipedia.org/wiki/Vertical_blanking_interval")[vertical
+blanking interval (VBI or VBLANK)].
+
+If the software can't render a frame fast enough during the VBI, we usually want
+the previous frame to be sent again. In order to do that, we use two buffers
+(*double-buffering*): one buffer contains the current frame that is sent
+repeatedly to the video display and the other contains the frame the software is
+currently rendering. Once the next frame is ready we only have to switch the
+buffer pointer (called *page-flipping*) during the VBI to inverse the roles of
+the two buffers.
+
+If the software renders frames too fast we can either block it until
+page-flipping occurs or we can use *triple-buffering*: one buffer contains the
+current frame as before, the second contains a pending frame (if any) which is a
+frame ready to be displayed, and the third one contains the frame being rendered
+as before. When the rendering in the third buffer is done, there is a switch
+between the second and the third buffer (i.e. one of the rendered frame may not
+be displayed at all if there was already a pending frame). During the VBI, if
+there is a pending frame in the second buffer, there is a switch between the
+first and the second buffers.
+
+=== Plane composition
+
+Instead of using a single source for the pixel colors, some graphics chipsets
+allow the use of several pixel sources that are blended/composed together.
+
+A *plane* describes a portion of the video display surface that uses a specific
+source of pixel colors. Basic graphics chipsets only have a single primary plane
+that occupies the whole video display surface; other graphics chipsets may have
+several other planes with different properties (pixel formats, dimensions,
+rotation, scaling, etc.).
+
+This is particularly useful for what is called *hardware cursor*. A small cursor
+plane is dedicated to display the mouse cursor so when the mouse moves we only
+have to change the position of the cursor plane independently of the other
+planes. It makes the cursor much more responsive because this operation is very
+cheap.
+
+Planes can also be used to render hardware decoded videos, overlays, etc.
+
+*Summary*
+
+The graphics chipset sends the pixel colors from the memory to the connected
+video display several times per second (depending on the refresh rate).
+
+The graphics chipset supports at least one primary plane but it can also support
+additional planes (overlay, cursor, etc.) with additional properties (scaling,
+rotation, different pixel format, etc.).
+
+The software is responsible of producing pixel colors for each plane. To avoid
+tearing, the switch from one frame to the other must be done during the vertical
+blanking interval (VBI or VBLANK). Double- or triple-buffering can be used for
+this purpose.
