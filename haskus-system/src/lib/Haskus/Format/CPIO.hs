@@ -177,7 +177,7 @@ getNumber = do
         0x44 -> 0xD
         0x45 -> 0xE
         0x46 -> 0xF
-        c   -> error $ "getNumber: unpextected non-hexadecimal character: " ++ show (chr (fromIntegral c))
+        c   -> error $ "getNumber: unexpected non-hexadecimal character: " ++ show (chr (fromIntegral c))
 
       read_all :: Word -> Word32 -> Get Word32
       read_all 0 v = pure v
