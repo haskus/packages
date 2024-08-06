@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE CPP #-}
 
 -- | Byte order ("endianness")
 --
@@ -35,7 +36,6 @@ import Haskus.Binary.Storable
 import Haskus.Number.Word
 import Haskus.Binary.Bits
 
-import System.IO.Unsafe
 import Foreign.Ptr
 
 -- | Endianness
@@ -130,12 +130,13 @@ getHostEndianness = do
       rs <- peekArray 4 (castPtr p :: Ptr Word8)
       return $ if rs == [1,2,3,4] then BigEndian else LittleEndian
 
--- | Detected host endianness
---
--- TODO: use targetByteOrder in GHC.ByteOrder (should be introduced in GHC 8.4)
+-- | Host endianness
 hostEndianness :: Endianness
-{-# NOINLINE hostEndianness #-}
-hostEndianness = unsafePerformIO getHostEndianness
+#ifdef WORDS_BIGENDIAN
+hostEndianness = BigEndian
+#else
+hostEndianness = LittleEndian
+#endif
 
 -- | Reverse bytes in a word
 class ByteReversable w where
