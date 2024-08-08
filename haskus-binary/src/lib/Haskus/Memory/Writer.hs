@@ -1,6 +1,9 @@
 module Haskus.Memory.Writer
   ( Writer (..)
+  , WriterIO
   , SizedWriter (..)
+  , runWriter#
+  , runWriterIO
   -- * writers
   , writeWord8#
   , writeWord16#
@@ -47,6 +50,7 @@ module Haskus.Memory.Writer
 where
 
 import GHC.Exts
+import GHC.IO
 import Haskus.Binary.Endianness (hostEndianness, Endianness(..))
 import Haskus.Binary.ByteSwap
 
@@ -64,10 +68,21 @@ instance Monoid (Writer s) where
   {-# INLINE mempty #-}
   mempty = Writer \addr s -> (# s, addr #)
 
+runWriter# :: Writer s -> Addr# -> State# s -> (# State# s, Addr# #)
+runWriter# (Writer f) = f
+
+type WriterIO = Writer RealWorld
+
+runWriterIO :: Ptr a -> WriterIO -> IO (Ptr a)
+runWriterIO (Ptr addr) w = IO \s -> case runWriter# w addr s of
+  (# s', addr' #) -> (# s', Ptr addr' #)
+
 
 -- | A writer that carries the size of the written value in bytes.
-data SizedWriter s
-  = SizedWriter !Word# !(Writer s)
+data SizedWriter s = SizedWriter
+  { sizedWriterSize :: !Word#
+  , sizedWriter     :: !(Writer s)
+  }
 
 instance Semigroup (SizedWriter s) where
   SizedWriter n f <> SizedWriter m g
