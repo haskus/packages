@@ -41,6 +41,7 @@ library
     Haskus.Binary.Buffer
     Haskus.Binary.BufferList
     Haskus.Binary.BufferBuilder
+    Haskus.Binary.ByteSwap
     Haskus.Binary.Char
     Haskus.Binary.Enum
     Haskus.Binary.Endianness
