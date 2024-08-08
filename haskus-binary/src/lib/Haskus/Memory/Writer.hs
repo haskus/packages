@@ -5,54 +5,57 @@ module Haskus.Memory.Writer
   , runWriter#
   , runWriterIO
   -- * writers
-  , writeWord8#
-  , writeWord16#
-  , writeWord16BE#
-  , writeWord16LE#
-  , writeWord32#
-  , writeWord32BE#
-  , writeWord32LE#
-  , writeWord64#
-  , writeWord64BE#
-  , writeWord64LE#
-  , writeInt8#
-  , writeInt16#
-  , writeInt16BE#
-  , writeInt16LE#
-  , writeInt32#
-  , writeInt32BE#
-  , writeInt32LE#
-  , writeInt64#
-  , writeInt64BE#
-  , writeInt64LE#
+  , writeU8#
+  , writeU16#
+  , writeU16BE#
+  , writeU16LE#
+  , writeU32#
+  , writeU32BE#
+  , writeU32LE#
+  , writeU64#
+  , writeU64BE#
+  , writeU64LE#
+  , writeI8#
+  , writeI16#
+  , writeI16BE#
+  , writeI16LE#
+  , writeI32#
+  , writeI32BE#
+  , writeI32LE#
+  , writeI64#
+  , writeI64BE#
+  , writeI64LE#
   -- * Sized writers
-  , swriteWord8#
-  , swriteWord16#
-  , swriteWord16BE#
-  , swriteWord16LE#
-  , swriteWord32#
-  , swriteWord32BE#
-  , swriteWord32LE#
-  , swriteWord64#
-  , swriteWord64BE#
-  , swriteWord64LE#
-  , swriteInt8#
-  , swriteInt16#
-  , swriteInt16BE#
-  , swriteInt16LE#
-  , swriteInt32#
-  , swriteInt32BE#
-  , swriteInt32LE#
-  , swriteInt64#
-  , swriteInt64BE#
-  , swriteInt64LE#
+  , swriteU8#
+  , swriteU16#
+  , swriteU16BE#
+  , swriteU16LE#
+  , swriteU32#
+  , swriteU32BE#
+  , swriteU32LE#
+  , swriteU64#
+  , swriteU64BE#
+  , swriteU64LE#
+  , swriteI8#
+  , swriteI16#
+  , swriteI16BE#
+  , swriteI16LE#
+  , swriteI32#
+  , swriteI32BE#
+  , swriteI32LE#
+  , swriteI64#
+  , swriteI64BE#
+  , swriteI64LE#
   )
 where
 
-import GHC.Exts
+import qualified GHC.Exts as E
+import GHC.Exts (Addr#, Ptr(..), RealWorld, State#, plusAddr#, plusWord#)
 import GHC.IO
 import Haskus.Binary.Endianness (hostEndianness, Endianness(..))
 import Haskus.Binary.ByteSwap
+import Haskus.Binary.Word
+import Haskus.Binary.Int
 
 -- | A writer writes a value at the given address and return the address after
 -- the written value. The value to write is captured by the closure.
@@ -74,14 +77,14 @@ runWriter# (Writer f) = f
 type WriterIO = Writer RealWorld
 
 runWriterIO :: Ptr a -> WriterIO -> IO (Ptr a)
-runWriterIO (Ptr addr) w = IO \s -> case runWriter# w addr s of
+runWriterIO (E.Ptr addr) w = IO \s -> case runWriter# w addr s of
   (# s', addr' #) -> (# s', Ptr addr' #)
 
 
 -- | A writer that carries the size of the written value in bytes.
 data SizedWriter s = SizedWriter
-  { sizedWriterSize :: !Word#
-  , sizedWriter     :: !(Writer s)
+  { sizedWriterSize :: !U#          -- ^ Number of bytes that will be written by the writer
+  , sizedWriter     :: !(Writer s)  -- ^ Writer
   }
 
 instance Semigroup (SizedWriter s) where
@@ -106,166 +109,166 @@ instance Monoid (SizedWriter s) where
 -- Writers
 ----------------------------
 
-writeWord8# :: Word8# -> Writer s
-writeWord8# w = Writer \addr s ->
-  case writeWord8OffAddr# addr 0# w s of
+writeU8# :: U8# -> Writer s
+writeU8# w = Writer \addr s ->
+  case E.writeWord8OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 1# #)
 
-writeWord16# :: Word16# -> Writer s
-writeWord16# w = Writer \addr s ->
-  case writeWord16OffAddr# addr 0# w s of
+writeU16# :: U16# -> Writer s
+writeU16# w = Writer \addr s ->
+  case E.writeWord16OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 2# #)
 
-writeWord16BE# :: Word16# -> Writer s
-writeWord16BE# w = case hostEndianness of
-  BigEndian -> writeWord16# w
-  LittleEndian -> writeWord16# (byteSwapU16# w)
+writeU16BE# :: U16# -> Writer s
+writeU16BE# w = case hostEndianness of
+  BigEndian -> writeU16# w
+  LittleEndian -> writeU16# (byteSwapU16# w)
 
-writeWord16LE# :: Word16# -> Writer s
-writeWord16LE# w = case hostEndianness of
-  LittleEndian -> writeWord16# w
-  BigEndian -> writeWord16# (byteSwapU16# w)
+writeU16LE# :: U16# -> Writer s
+writeU16LE# w = case hostEndianness of
+  LittleEndian -> writeU16# w
+  BigEndian -> writeU16# (byteSwapU16# w)
 
-writeWord32# :: Word32# -> Writer s
-writeWord32# w = Writer \addr s ->
-  case writeWord32OffAddr# addr 0# w s of
+writeU32# :: U32# -> Writer s
+writeU32# w = Writer \addr s ->
+  case E.writeWord32OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 4# #)
 
-writeWord32BE# :: Word32# -> Writer s
-writeWord32BE# w = case hostEndianness of
-  BigEndian -> writeWord32# w
-  LittleEndian -> writeWord32# (byteSwapU32# w)
+writeU32BE# :: U32# -> Writer s
+writeU32BE# w = case hostEndianness of
+  BigEndian -> writeU32# w
+  LittleEndian -> writeU32# (byteSwapU32# w)
 
-writeWord32LE# :: Word32# -> Writer s
-writeWord32LE# w = case hostEndianness of
-  LittleEndian -> writeWord32# w
-  BigEndian -> writeWord32# (byteSwapU32# w)
+writeU32LE# :: U32# -> Writer s
+writeU32LE# w = case hostEndianness of
+  LittleEndian -> writeU32# w
+  BigEndian -> writeU32# (byteSwapU32# w)
 
-writeWord64# :: Word64# -> Writer s
-writeWord64# w = Writer \addr s ->
-  case writeWord64OffAddr# addr 0# w s of
+writeU64# :: U64# -> Writer s
+writeU64# w = Writer \addr s ->
+  case E.writeWord64OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 8# #)
 
-writeWord64BE# :: Word64# -> Writer s
-writeWord64BE# w = case hostEndianness of
-  BigEndian -> writeWord64# w
-  LittleEndian -> writeWord64# (byteSwapU64# w)
+writeU64BE# :: U64# -> Writer s
+writeU64BE# w = case hostEndianness of
+  BigEndian -> writeU64# w
+  LittleEndian -> writeU64# (byteSwapU64# w)
 
-writeWord64LE# :: Word64# -> Writer s
-writeWord64LE# w = case hostEndianness of
-  LittleEndian -> writeWord64# w
-  BigEndian -> writeWord64# (byteSwapU64# w)
+writeU64LE# :: U64# -> Writer s
+writeU64LE# w = case hostEndianness of
+  LittleEndian -> writeU64# w
+  BigEndian -> writeU64# (byteSwapU64# w)
 
-writeInt8# :: Int8# -> Writer s
-writeInt8# w = Writer \addr s ->
-  case writeInt8OffAddr# addr 0# w s of
+writeI8# :: I8# -> Writer s
+writeI8# w = Writer \addr s ->
+  case E.writeInt8OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 1# #)
 
-writeInt16# :: Int16# -> Writer s
-writeInt16# w = Writer \addr s ->
-  case writeInt16OffAddr# addr 0# w s of
+writeI16# :: I16# -> Writer s
+writeI16# w = Writer \addr s ->
+  case E.writeInt16OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 2# #)
 
-writeInt16BE# :: Int16# -> Writer s
-writeInt16BE# w = case hostEndianness of
-  BigEndian -> writeInt16# w
-  LittleEndian -> writeInt16# (byteSwapI16# w)
+writeI16BE# :: I16# -> Writer s
+writeI16BE# w = case hostEndianness of
+  BigEndian -> writeI16# w
+  LittleEndian -> writeI16# (byteSwapI16# w)
 
-writeInt16LE# :: Int16# -> Writer s
-writeInt16LE# w = case hostEndianness of
-  LittleEndian -> writeInt16# w
-  BigEndian -> writeInt16# (byteSwapI16# w)
+writeI16LE# :: I16# -> Writer s
+writeI16LE# w = case hostEndianness of
+  LittleEndian -> writeI16# w
+  BigEndian -> writeI16# (byteSwapI16# w)
 
-writeInt32# :: Int32# -> Writer s
-writeInt32# w = Writer \addr s ->
-  case writeInt32OffAddr# addr 0# w s of
+writeI32# :: I32# -> Writer s
+writeI32# w = Writer \addr s ->
+  case E.writeInt32OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 4# #)
 
-writeInt32BE# :: Int32# -> Writer s
-writeInt32BE# w = case hostEndianness of
-  BigEndian -> writeInt32# w
-  LittleEndian -> writeInt32# (byteSwapI32# w)
+writeI32BE# :: I32# -> Writer s
+writeI32BE# w = case hostEndianness of
+  BigEndian -> writeI32# w
+  LittleEndian -> writeI32# (byteSwapI32# w)
 
-writeInt32LE# :: Int32# -> Writer s
-writeInt32LE# w = case hostEndianness of
-  LittleEndian -> writeInt32# w
-  BigEndian -> writeInt32# (byteSwapI32# w)
+writeI32LE# :: I32# -> Writer s
+writeI32LE# w = case hostEndianness of
+  LittleEndian -> writeI32# w
+  BigEndian -> writeI32# (byteSwapI32# w)
 
-writeInt64# :: Int64# -> Writer s
-writeInt64# w = Writer \addr s ->
-  case writeInt64OffAddr# addr 0# w s of
+writeI64# :: I64# -> Writer s
+writeI64# w = Writer \addr s ->
+  case E.writeInt64OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 8# #)
 
-writeInt64BE# :: Int64# -> Writer s
-writeInt64BE# w = case hostEndianness of
-  BigEndian -> writeInt64# w
-  LittleEndian -> writeInt64# (byteSwapI64# w)
+writeI64BE# :: I64# -> Writer s
+writeI64BE# w = case hostEndianness of
+  BigEndian -> writeI64# w
+  LittleEndian -> writeI64# (byteSwapI64# w)
 
-writeInt64LE# :: Int64# -> Writer s
-writeInt64LE# w = case hostEndianness of
-  LittleEndian -> writeInt64# w
-  BigEndian -> writeInt64# (byteSwapI64# w)
+writeI64LE# :: I64# -> Writer s
+writeI64LE# w = case hostEndianness of
+  LittleEndian -> writeI64# w
+  BigEndian -> writeI64# (byteSwapI64# w)
 
 ----------------------------
 -- Sized Writers
 ----------------------------
 
-swriteWord8# :: Word8# -> SizedWriter s
-swriteWord8# w = SizedWriter 1## (writeWord8# w)
+swriteU8# :: U8# -> SizedWriter s
+swriteU8# w = SizedWriter 1## (writeU8# w)
 
-swriteWord16# :: Word16# -> SizedWriter s
-swriteWord16# w = SizedWriter 2## (writeWord16# w)
+swriteU16# :: U16# -> SizedWriter s
+swriteU16# w = SizedWriter 2## (writeU16# w)
 
-swriteWord16BE# :: Word16# -> SizedWriter s
-swriteWord16BE# w = SizedWriter 2## (writeWord16BE# w)
+swriteU16BE# :: U16# -> SizedWriter s
+swriteU16BE# w = SizedWriter 2## (writeU16BE# w)
 
-swriteWord16LE# :: Word16# -> SizedWriter s
-swriteWord16LE# w = SizedWriter 2## (writeWord16LE# w)
+swriteU16LE# :: U16# -> SizedWriter s
+swriteU16LE# w = SizedWriter 2## (writeU16LE# w)
 
-swriteWord32# :: Word32# -> SizedWriter s
-swriteWord32# w = SizedWriter 4## (writeWord32# w)
+swriteU32# :: U32# -> SizedWriter s
+swriteU32# w = SizedWriter 4## (writeU32# w)
 
-swriteWord32BE# :: Word32# -> SizedWriter s
-swriteWord32BE# w = SizedWriter 4## (writeWord32BE# w)
+swriteU32BE# :: U32# -> SizedWriter s
+swriteU32BE# w = SizedWriter 4## (writeU32BE# w)
 
-swriteWord32LE# :: Word32# -> SizedWriter s
-swriteWord32LE# w = SizedWriter 4## (writeWord32LE# w)
+swriteU32LE# :: U32# -> SizedWriter s
+swriteU32LE# w = SizedWriter 4## (writeU32LE# w)
 
-swriteWord64# :: Word64# -> SizedWriter s
-swriteWord64# w = SizedWriter 8## (writeWord64# w)
+swriteU64# :: U64# -> SizedWriter s
+swriteU64# w = SizedWriter 8## (writeU64# w)
 
-swriteWord64BE# :: Word64# -> SizedWriter s
-swriteWord64BE# w = SizedWriter 8## (writeWord64BE# w)
+swriteU64BE# :: U64# -> SizedWriter s
+swriteU64BE# w = SizedWriter 8## (writeU64BE# w)
 
-swriteWord64LE# :: Word64# -> SizedWriter s
-swriteWord64LE# w = SizedWriter 8## (writeWord64LE# w)
+swriteU64LE# :: U64# -> SizedWriter s
+swriteU64LE# w = SizedWriter 8## (writeU64LE# w)
 
-swriteInt8# :: Int8# -> SizedWriter s
-swriteInt8# w = SizedWriter 1## (writeInt8# w)
+swriteI8# :: I8# -> SizedWriter s
+swriteI8# w = SizedWriter 1## (writeI8# w)
 
-swriteInt16# :: Int16# -> SizedWriter s
-swriteInt16# w = SizedWriter 2## (writeInt16# w)
+swriteI16# :: I16# -> SizedWriter s
+swriteI16# w = SizedWriter 2## (writeI16# w)
 
-swriteInt16BE# :: Int16# -> SizedWriter s
-swriteInt16BE# w = SizedWriter 2## (writeInt16BE# w)
+swriteI16BE# :: I16# -> SizedWriter s
+swriteI16BE# w = SizedWriter 2## (writeI16BE# w)
 
-swriteInt16LE# :: Int16# -> SizedWriter s
-swriteInt16LE# w = SizedWriter 2## (writeInt16LE# w)
+swriteI16LE# :: I16# -> SizedWriter s
+swriteI16LE# w = SizedWriter 2## (writeI16LE# w)
 
-swriteInt32# :: Int32# -> SizedWriter s
-swriteInt32# w = SizedWriter 4## (writeInt32# w)
+swriteI32# :: I32# -> SizedWriter s
+swriteI32# w = SizedWriter 4## (writeI32# w)
 
-swriteInt32BE# :: Int32# -> SizedWriter s
-swriteInt32BE# w = SizedWriter 4## (writeInt32BE# w)
+swriteI32BE# :: I32# -> SizedWriter s
+swriteI32BE# w = SizedWriter 4## (writeI32BE# w)
 
-swriteInt32LE# :: Int32# -> SizedWriter s
-swriteInt32LE# w = SizedWriter 4## (writeInt32LE# w)
+swriteI32LE# :: I32# -> SizedWriter s
+swriteI32LE# w = SizedWriter 4## (writeI32LE# w)
 
-swriteInt64# :: Int64# -> SizedWriter s
-swriteInt64# w = SizedWriter 8## (writeInt64# w)
+swriteI64# :: I64# -> SizedWriter s
+swriteI64# w = SizedWriter 8## (writeI64# w)
 
-swriteInt64BE# :: Int64# -> SizedWriter s
-swriteInt64BE# w = SizedWriter 8## (writeInt64BE# w)
+swriteI64BE# :: I64# -> SizedWriter s
+swriteI64BE# w = SizedWriter 8## (writeI64BE# w)
 
-swriteInt64LE# :: Int64# -> SizedWriter s
-swriteInt64LE# w = SizedWriter 8## (writeInt64LE# w)
+swriteI64LE# :: I64# -> SizedWriter s
+swriteI64LE# w = SizedWriter 8## (writeI64LE# w)
