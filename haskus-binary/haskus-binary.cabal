@@ -59,6 +59,9 @@ library
     Haskus.Binary.Serialize.Buffer
     Haskus.Binary.Serialize.File
     Haskus.Binary.CTypes
+    Haskus.Binary.Word
+    Haskus.Binary.Int
+    Haskus.Binary.Cast
 
     Haskus.Number
     Haskus.Number.Word

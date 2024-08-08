@@ -119,12 +119,12 @@ writeWord16# w = Writer \addr s ->
 writeWord16BE# :: Word16# -> Writer s
 writeWord16BE# w = case hostEndianness of
   BigEndian -> writeWord16# w
-  LittleEndian -> writeWord16# (byteSwapWord16# w)
+  LittleEndian -> writeWord16# (byteSwapU16# w)
 
 writeWord16LE# :: Word16# -> Writer s
 writeWord16LE# w = case hostEndianness of
   LittleEndian -> writeWord16# w
-  BigEndian -> writeWord16# (byteSwapWord16# w)
+  BigEndian -> writeWord16# (byteSwapU16# w)
 
 writeWord32# :: Word32# -> Writer s
 writeWord32# w = Writer \addr s ->
@@ -134,12 +134,12 @@ writeWord32# w = Writer \addr s ->
 writeWord32BE# :: Word32# -> Writer s
 writeWord32BE# w = case hostEndianness of
   BigEndian -> writeWord32# w
-  LittleEndian -> writeWord32# (byteSwapWord32# w)
+  LittleEndian -> writeWord32# (byteSwapU32# w)
 
 writeWord32LE# :: Word32# -> Writer s
 writeWord32LE# w = case hostEndianness of
   LittleEndian -> writeWord32# w
-  BigEndian -> writeWord32# (byteSwapWord32# w)
+  BigEndian -> writeWord32# (byteSwapU32# w)
 
 writeWord64# :: Word64# -> Writer s
 writeWord64# w = Writer \addr s ->
@@ -149,12 +149,12 @@ writeWord64# w = Writer \addr s ->
 writeWord64BE# :: Word64# -> Writer s
 writeWord64BE# w = case hostEndianness of
   BigEndian -> writeWord64# w
-  LittleEndian -> writeWord64# (byteSwapWord64# w)
+  LittleEndian -> writeWord64# (byteSwapU64# w)
 
 writeWord64LE# :: Word64# -> Writer s
 writeWord64LE# w = case hostEndianness of
   LittleEndian -> writeWord64# w
-  BigEndian -> writeWord64# (byteSwapWord64# w)
+  BigEndian -> writeWord64# (byteSwapU64# w)
 
 writeInt8# :: Int8# -> Writer s
 writeInt8# w = Writer \addr s ->
@@ -169,12 +169,12 @@ writeInt16# w = Writer \addr s ->
 writeInt16BE# :: Int16# -> Writer s
 writeInt16BE# w = case hostEndianness of
   BigEndian -> writeInt16# w
-  LittleEndian -> writeInt16# (byteSwapInt16# w)
+  LittleEndian -> writeInt16# (byteSwapI16# w)
 
 writeInt16LE# :: Int16# -> Writer s
 writeInt16LE# w = case hostEndianness of
   LittleEndian -> writeInt16# w
-  BigEndian -> writeInt16# (byteSwapInt16# w)
+  BigEndian -> writeInt16# (byteSwapI16# w)
 
 writeInt32# :: Int32# -> Writer s
 writeInt32# w = Writer \addr s ->
@@ -184,12 +184,12 @@ writeInt32# w = Writer \addr s ->
 writeInt32BE# :: Int32# -> Writer s
 writeInt32BE# w = case hostEndianness of
   BigEndian -> writeInt32# w
-  LittleEndian -> writeInt32# (byteSwapInt32# w)
+  LittleEndian -> writeInt32# (byteSwapI32# w)
 
 writeInt32LE# :: Int32# -> Writer s
 writeInt32LE# w = case hostEndianness of
   LittleEndian -> writeInt32# w
-  BigEndian -> writeInt32# (byteSwapInt32# w)
+  BigEndian -> writeInt32# (byteSwapI32# w)
 
 writeInt64# :: Int64# -> Writer s
 writeInt64# w = Writer \addr s ->
@@ -199,12 +199,12 @@ writeInt64# w = Writer \addr s ->
 writeInt64BE# :: Int64# -> Writer s
 writeInt64BE# w = case hostEndianness of
   BigEndian -> writeInt64# w
-  LittleEndian -> writeInt64# (byteSwapInt64# w)
+  LittleEndian -> writeInt64# (byteSwapI64# w)
 
 writeInt64LE# :: Int64# -> Writer s
 writeInt64LE# w = case hostEndianness of
   LittleEndian -> writeInt64# w
-  BigEndian -> writeInt64# (byteSwapInt64# w)
+  BigEndian -> writeInt64# (byteSwapI64# w)
 
 ----------------------------
 -- Sized Writers

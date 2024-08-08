@@ -1,32 +1,43 @@
 -- | Byte swapping
 module Haskus.Binary.ByteSwap
-  ( byteSwapWord16#
-  , byteSwapWord32#
-  , byteSwapWord64#
-  , byteSwapInt16#
-  , byteSwapInt32#
-  , byteSwapInt64#
+  ( byteSwapU#
+  , byteSwapU16#
+  , byteSwapU32#
+  , byteSwapU64#
+  , byteSwapI#
+  , byteSwapI16#
+  , byteSwapI32#
+  , byteSwapI64#
   )
 where
 
 import qualified GHC.Exts as E
-import GHC.Exts hiding (byteSwap16#, byteSwap32#)
+
+import Haskus.Binary.Word
+import Haskus.Binary.Int
+import Haskus.Binary.Cast
+
+byteSwapU# :: U# -> U#
+byteSwapU# = E.byteSwap#
 
 -- TODO: fix GHC's byteSwap16/32 to take Word16#/Word32#
-byteSwapWord16# :: Word16# -> Word16#
-byteSwapWord16# w = E.wordToWord16# (E.byteSwap16# (E.word16ToWord# w))
+byteSwapU16# :: U16# -> U16#
+byteSwapU16# w = u16NarrowFromU# (E.byteSwap16# (uFromU16# w))
 
-byteSwapWord32# :: Word32# -> Word32#
-byteSwapWord32# w = E.wordToWord32# (E.byteSwap32# (E.word32ToWord# w))
+byteSwapU32# :: U32# -> U32#
+byteSwapU32# w = u32NarrowFromU# (E.byteSwap32# (uFromU32# w))
 
-byteSwapWord64# :: Word64# -> Word64#
-byteSwapWord64# = E.byteSwap64#
+byteSwapU64# :: U64# -> U64#
+byteSwapU64# = E.byteSwap64#
 
-byteSwapInt16# :: Int16# -> Int16#
-byteSwapInt16# w = E.word16ToInt16# (byteSwapWord16# (E.int16ToWord16# w))
+byteSwapI# :: I# -> I#
+byteSwapI# w = iFromU# (byteSwapU# (uFromI# w))
 
-byteSwapInt32# :: Int32# -> Int32#
-byteSwapInt32# w = E.word32ToInt32# (byteSwapWord32# (E.int32ToWord32# w))
+byteSwapI16# :: I16# -> I16#
+byteSwapI16# w = i16FromU16# (byteSwapU16# (u16FromI16# w))
 
-byteSwapInt64# :: Int64# -> Int64#
-byteSwapInt64# w = E.word64ToInt64# (byteSwapWord64# (E.int64ToWord64# w))
+byteSwapI32# :: I32# -> I32#
+byteSwapI32# w = i32FromU32# (byteSwapU32# (u32FromI32# w))
+
+byteSwapI64# :: I64# -> I64#
+byteSwapI64# w = i64FromU64# (byteSwapU64# (u64FromI64# w))
