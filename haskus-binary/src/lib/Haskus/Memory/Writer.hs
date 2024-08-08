@@ -4,6 +4,7 @@ module Haskus.Memory.Writer
   , SizedWriter (..)
   , runWriter#
   , runWriterIO
+  , runWriterST
   -- * writers
   , writeU8#
   , writeU16#
@@ -52,6 +53,8 @@ where
 import qualified GHC.Exts as E
 import GHC.Exts (Addr#, Ptr(..), RealWorld, State#, plusAddr#, plusWord#)
 import GHC.IO
+import GHC.ST
+
 import Haskus.Binary.Endianness (hostEndianness, Endianness(..))
 import Haskus.Binary.ByteSwap
 import Haskus.Binary.Word
@@ -78,6 +81,10 @@ type WriterIO = Writer RealWorld
 
 runWriterIO :: Ptr a -> WriterIO -> IO (Ptr a)
 runWriterIO (E.Ptr addr) w = IO \s -> case runWriter# w addr s of
+  (# s', addr' #) -> (# s', Ptr addr' #)
+
+runWriterST :: Ptr a -> Writer s -> ST s (Ptr a)
+runWriterST (E.Ptr addr) w = ST \s -> case runWriter# w addr s of
   (# s', addr' #) -> (# s', Ptr addr' #)
 
 
