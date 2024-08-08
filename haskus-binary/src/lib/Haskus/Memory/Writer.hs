@@ -118,7 +118,7 @@ writeWord8# w = Writer \addr s ->
 
 writeWord16# :: Word16# -> Writer s
 writeWord16# w = Writer \addr s ->
-  case writeWord8OffAddrAsWord16# addr 0# w s of
+  case writeWord16OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 2# #)
 
 writeWord16BE# :: Word16# -> Writer s
@@ -133,7 +133,7 @@ writeWord16LE# w = case hostEndianness of
 
 writeWord32# :: Word32# -> Writer s
 writeWord32# w = Writer \addr s ->
-  case writeWord8OffAddrAsWord32# addr 0# w s of
+  case writeWord32OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 4# #)
 
 writeWord32BE# :: Word32# -> Writer s
@@ -148,7 +148,7 @@ writeWord32LE# w = case hostEndianness of
 
 writeWord64# :: Word64# -> Writer s
 writeWord64# w = Writer \addr s ->
-  case writeWord8OffAddrAsWord64# addr 0# w s of
+  case writeWord64OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 8# #)
 
 writeWord64BE# :: Word64# -> Writer s
@@ -168,7 +168,7 @@ writeInt8# w = Writer \addr s ->
 
 writeInt16# :: Int16# -> Writer s
 writeInt16# w = Writer \addr s ->
-  case writeWord8OffAddrAsInt16# addr 0# w s of
+  case writeInt16OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 2# #)
 
 writeInt16BE# :: Int16# -> Writer s
@@ -183,7 +183,7 @@ writeInt16LE# w = case hostEndianness of
 
 writeInt32# :: Int32# -> Writer s
 writeInt32# w = Writer \addr s ->
-  case writeWord8OffAddrAsInt32# addr 0# w s of
+  case writeInt32OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 4# #)
 
 writeInt32BE# :: Int32# -> Writer s
@@ -198,7 +198,7 @@ writeInt32LE# w = case hostEndianness of
 
 writeInt64# :: Int64# -> Writer s
 writeInt64# w = Writer \addr s ->
-  case writeWord8OffAddrAsInt64# addr 0# w s of
+  case writeInt64OffAddr# addr 0# w s of
     s' -> (# s', plusAddr# addr 8# #)
 
 writeInt64BE# :: Int64# -> Writer s
