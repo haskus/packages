@@ -1,15 +1,15 @@
+cabal-version:       2.4
 name:                haskus-utils-data
-version:             1.4
+version:             1.5
 synopsis:            Haskus data utility modules
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Sylvain Henry
 maintainer:          sylvain@haskus.fr
 homepage:            http://www.haskus.org
-copyright:           Sylvain Henry 2020
+copyright:           Sylvain Henry 2024
 category:            Data
 build-type:          Simple
-cabal-version:       1.20
 
 description:
    Haskus data utility modules
@@ -17,6 +17,7 @@ description:
 source-repository head
   type: git
   location: git://github.com/haskus/packages.git
+  subdir:  haskus-utils-data
 
 library
   exposed-modules:
