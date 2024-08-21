@@ -90,6 +90,7 @@ library
     Haskus.Memory.Typed
     Haskus.Memory.Writer
     Haskus.Memory.Writer.SizedWriter
+    Haskus.Memory.WriterM
 
     Haskus.Utils.Types
     Haskus.Utils.Types.Bool
@@ -142,7 +143,6 @@ library
     Haskus.Utils.Maybe
     Haskus.Utils.Either
     Haskus.Utils.Tuple
-
 
   other-modules:
 
