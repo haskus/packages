@@ -61,7 +61,7 @@ parseKernelEvent bs = r
       fields = Map.fromList                      -- create Map from (key,value) tuples
              . fmap (toTuple . Text.splitOn "=") -- split "key=value"
              . filter (not . Text.null)          -- drop empty lines
-             $ tail bss                          -- drop the first line (it contains redundant info)
+             $ drop 1 bss                        -- drop the first line (it contains redundant info)
 
       action = case fields Map.! "ACTION" of
          "add"    -> ActionAdd
