@@ -1,10 +1,6 @@
 packages:
    haskus-utils-compat/
-   haskus-utils/
-   haskus-utils-types/
-   haskus-utils-data/
-   haskus-utils-variant/
-   haskus-binary/
+   haskus-base/
    haskus-web/
    haskus-text/
    haskus-locale/

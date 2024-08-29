@@ -1,8 +1,8 @@
 == Data representation
 
-``haskus-binary`` is a package containing a set of modules dedicated to the
-manipulation of binary data. It also provides data type mapping those of other
-languages such as C and even more.
+``haskus-base`` contains modules dedicated to the manipulation of binary data.
+It also provides data type mapping those of other languages such as C and even
+more.
 
 Some packages (e.g. ``haskus-system``) use these binary modules to provide
 bindings to C libraries. We don't want to rely on external tools such as C2HS to
@@ -17,7 +17,7 @@ provide bindings to C libraries because:
     - Very low-level (e.g. `#define` are not transformed into ADTs with Enum
       instances)
 
-Instead ``haskus-binary`` lets you write bindings in pure Haskell code and
+Instead ``haskus-base`` lets you write bindings in pure Haskell code and
 provides many useful things to make this process easy.
 
 === Word, Int
@@ -93,7 +93,7 @@ data StructY = StructY
 
 === Arrays (vectors)
 
-`haskus-binary` supports vectors: a fixed amount of Storable data correctly
+`haskus-base` supports vectors: a fixed amount of Storable data correctly
 aligned. You can define a vector as follows:
 
 ```haskell
@@ -232,7 +232,7 @@ We often use flags that are combined in a single word. Each flag is associated
 to a bit of the word: if the bit is set the flag is active, otherwise the flag
 isn't active.
 
-`haskus-binary` uses the `CBitSet` class to get the bit offset of each flag. By
+`haskus-base` uses the `CBitSet` class to get the bit offset of each flag. By
 default, it uses the Enum instance to get the bit offsets as in the following
 example:
 
@@ -292,7 +292,7 @@ have to choose a backing word that is large enough.
 === Unions
 
 An union provides several ways to access the same buffer of memory. To use them
-with `haskus-binary`, you need to give the list of available representations
+with `haskus-base`, you need to give the list of available representations
 in a type as follows:
 
 ```haskell

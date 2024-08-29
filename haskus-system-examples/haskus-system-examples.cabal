@@ -41,14 +41,10 @@ executable Clock
     , bytestring
     , containers
     , formatting
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
     , lens
     , stm
   other-modules:
@@ -70,14 +66,10 @@ executable Demo
     , colour
     , containers
     , diagrams-lib
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
     , hsnoise
     , mtl
     , transformers
@@ -94,14 +86,10 @@ executable DisplayState
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
   other-modules:
       Paths_haskus_system_examples
 
@@ -113,14 +101,10 @@ executable HelloWorld
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
   other-modules:
       Paths_haskus_system_examples
 
@@ -132,14 +116,10 @@ executable KernelEvent
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
   other-modules:
       Paths_haskus_system_examples
 
@@ -151,14 +131,10 @@ executable ListDevices
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
   other-modules:
       Paths_haskus_system_examples
 
@@ -170,14 +146,10 @@ executable OpenDevice
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
   other-modules:
       Paths_haskus_system_examples
 
@@ -190,14 +162,10 @@ executable Sound
       base >=4.8 && <5
     , containers
     , filepath
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
   other-modules:
       Paths_haskus_system_examples
 
@@ -213,14 +181,10 @@ executable Test
     , colour
     , containers
     , either
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
     , stm
     , transformers
   other-modules:
@@ -234,14 +198,10 @@ executable TutDisplays
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
 
 executable TutEntitiesIDs
   import: static-system
@@ -251,14 +211,10 @@ executable TutEntitiesIDs
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
 
 executable TutFirstPipeline
   import: static-system
@@ -268,14 +224,10 @@ executable TutFirstPipeline
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
 
 executable TutFrameSwitch
   import: static-system
@@ -285,14 +237,10 @@ executable TutFrameSwitch
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
 
 executable TutGenericFrame
   import: static-system
@@ -302,14 +250,10 @@ executable TutGenericFrame
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
 
 executable TutProperties
   import: static-system
@@ -319,14 +263,10 @@ executable TutProperties
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
 
 executable TutSingleFrame
   import: static-system
@@ -336,14 +276,10 @@ executable TutSingleFrame
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
 
 executable TutTetris
   import: static-system
@@ -356,14 +292,10 @@ executable TutTetris
     , base >=4.8 && <5
     , clock
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
     , random
 
 executable VDSO
@@ -375,14 +307,10 @@ executable VDSO
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
     , text
     , vector
   default-language: Haskell2010
@@ -396,12 +324,8 @@ executable syscall_bench
   build-depends:
       base >=4.8 && <5
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
     , haskus-ui
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-types
-    , haskus-utils-variant
   default-language: Haskell2010

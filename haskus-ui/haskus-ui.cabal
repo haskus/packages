@@ -46,10 +46,7 @@ library
     , bytestring
     , colour
     , containers
-    , haskus-binary
-    , haskus-utils
-    , haskus-utils-data
-    , haskus-utils-variant
+    , haskus-base
     , linear
     , random-shuffle
     , tf-random
@@ -68,11 +65,8 @@ executable haskus-ui-test
       base >=4.8 && <5
     , bytestring
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-ui
-    , haskus-utils
-    , haskus-utils-data
-    , haskus-utils-variant
     , transformers
     , vector
   default-language: Haskell2010

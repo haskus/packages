@@ -36,8 +36,7 @@ library
 
   build-depends:       
       base                      >= 4.9 && < 5
-   ,  haskus-utils-variant
-   ,  haskus-utils-types
+   ,  haskus-base
    ,  containers
 
   ghc-options:          -Wall
@@ -54,4 +53,3 @@ test-suite tests
    build-depends:
          base
       ,  haskus-calculus
-      ,  haskus-utils-types
