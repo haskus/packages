@@ -1,0 +1,240 @@
+cabal-version:       3.0
+name:                haskus-base
+version:             0.1
+synopsis:            Haskus binary format manipulation
+license:             BSD-3-Clause
+license-file:        LICENSE
+author:              Sylvain Henry
+maintainer:          sylvain@haskus.fr
+homepage:            http://www.haskus.org/system
+copyright:           Sylvain Henry 2024
+category:            System
+build-type:          Simple
+
+description:
+  Haskus standard library.
+
+source-repository head
+  type: git
+  location: git://github.com/haskus/packages.git
+  subdir: haskus-base
+
+flag unliftio
+  Description: Enable MonadUnliftIO instances
+  Manual: True
+  Default: True
+
+library
+  exposed-modules:
+
+    Haskus.Binary.Bits
+    Haskus.Binary.Bits.Finite
+    Haskus.Binary.Bits.Index
+    Haskus.Binary.Bits.Bitwise
+    Haskus.Binary.Bits.Reverse
+    Haskus.Binary.Bits.Rotate
+    Haskus.Binary.Bits.Shift
+    Haskus.Binary.Bits.Order
+    Haskus.Binary.Bits.Get
+    Haskus.Binary.Bits.Put
+    Haskus.Binary.Bits.Mask
+    Haskus.Binary.Bits.Helper
+
+    Haskus.Binary.BitSet
+    Haskus.Binary.BitField
+    Haskus.Binary.Buffer
+    Haskus.Binary.BufferList
+    Haskus.Binary.BufferBuilder
+    Haskus.Binary.ByteSwap
+    Haskus.Binary.Char
+    Haskus.Binary.Enum
+    Haskus.Binary.Endianness
+    Haskus.Binary.Get
+    Haskus.Binary.Put
+    Haskus.Binary.Vector
+    Haskus.Binary.Union
+    Haskus.Binary.Unum
+    Haskus.Binary.Record
+    Haskus.Binary.Storable
+    Haskus.Binary.Serialize
+    Haskus.Binary.Serialize.Size
+    Haskus.Binary.Serialize.Put
+    Haskus.Binary.Serialize.Get
+    Haskus.Binary.Serialize.Buffer
+    Haskus.Binary.Serialize.File
+    Haskus.Binary.CTypes
+    Haskus.Binary.Word
+    Haskus.Binary.Int
+    Haskus.Binary.Cast
+
+    Haskus.Number
+    Haskus.Number.Word
+    Haskus.Number.Int
+    Haskus.Number.Float
+    Haskus.Number.VariableLength
+    Haskus.Number.Posit
+    Haskus.Number.FixedPoint
+    Haskus.Number.BitNat
+    Haskus.Number.Signed
+    Haskus.Number.SignedSafe
+    Haskus.Number.NaturalRange
+
+    Haskus.Memory.Utils
+    Haskus.Memory.Buffer
+    Haskus.Memory.Allocator.Malloc
+    Haskus.Memory.Embed
+    Haskus.Memory.Layout
+    Haskus.Memory.View
+    Haskus.Memory.Ptr
+    Haskus.Memory.Property
+    Haskus.Memory.Typed
+    Haskus.Memory.Writer
+
+    Haskus.Utils.Types
+    Haskus.Utils.Types.Bool
+    Haskus.Utils.Types.List
+    Haskus.Utils.Types.Generics
+    Haskus.Utils.Types.Proxy
+    Haskus.Utils.Types.Nat
+    Haskus.Utils.Types.Symbol
+    Haskus.Utils.Types.Error
+    Haskus.Utils.Types.Constraint
+
+    -- variant
+    Haskus.Utils.ContFlow
+    Haskus.Utils.Variant
+    Haskus.Utils.Variant.VEither
+    Haskus.Utils.Variant.Excepts
+    Haskus.Utils.Variant.Syntax
+    Haskus.Utils.VariantF
+    Haskus.Utils.EADT
+    Haskus.Utils.EADT.TH
+    Haskus.Utils.EGADT
+
+    Haskus.Utils.Solver
+    Haskus.Utils.HArray
+    Haskus.Utils.MultiState
+    Haskus.Utils.Dynamic
+    Haskus.Utils.Embed
+    Haskus.Utils.Flow
+    Haskus.Utils.Maths
+    Haskus.Utils.MonadVar
+    Haskus.Utils.MonadFlow
+    Haskus.Utils.MonadStream
+    Haskus.Utils.TimedValue
+    Haskus.Utils.STM
+    Haskus.Utils.STM.TEq
+    Haskus.Utils.STM.TMap
+    Haskus.Utils.STM.TSet
+    Haskus.Utils.STM.TList
+    Haskus.Utils.STM.TTree
+    Haskus.Utils.STM.Future
+    Haskus.Utils.STM.TGraph
+    Haskus.Utils.STM.SnapVar
+
+    Haskus.Utils.Monad
+    Haskus.Utils.InfList
+    Haskus.Utils.HList
+    Haskus.Utils.Functor
+    Haskus.Utils.List
+    Haskus.Utils.Map
+    Haskus.Utils.Map.Strict
+    Haskus.Utils.Maybe
+    Haskus.Utils.Either
+    Haskus.Utils.Tuple
+
+
+  other-modules:
+
+  build-depends:       
+         base                      >= 4.9 && <5.0
+      ,  ghc-prim
+      ,  cereal                    >= 0.5
+      ,  bytestring                >= 0.10
+      ,  template-haskell
+      ,  transformers
+      ,  directory
+      ,  filepath
+      ,  deepseq
+      ,  exceptions
+      ,  mtl
+      ,  containers
+      ,  list-t
+      ,  stm
+      ,  stm-containers
+      ,  hashable
+      ,  free
+      ,  vector
+      ,  recursion-schemes
+
+  if flag(unliftio)
+    build-depends: unliftio-core >= 0.2
+    cpp-options: -DENABLE_UNLIFTIO
+
+  ghc-options:          -Wall -Wno-unticked-promoted-constructors
+  default-language:     Haskell2010
+  default-extensions:
+    LambdaCase
+    BlockArguments
+    MagicHash
+    UnboxedTuples
+    UnboxedSums
+    BangPatterns
+    PatternSynonyms
+  hs-source-dirs:       src/lib
+
+test-suite tests
+   type:                exitcode-stdio-1.0
+   main-is:             Main.hs
+   hs-source-dirs:      src/tests/
+   ghc-options:         -Wall -threaded
+   default-language:    Haskell2010
+   other-modules:
+         Haskus.Tests.Common
+
+      ,  Haskus.Tests.Format.Binary
+      ,  Haskus.Tests.Format.Binary.Bits
+      ,  Haskus.Tests.Format.Binary.GetPut
+      ,  Haskus.Tests.Format.Binary.Vector
+      ,  Haskus.Tests.Format.Binary.Writer
+
+      ,  Haskus.Tests.Data
+      ,  Haskus.Tests.Data.Variant
+      ,  Haskus.Tests.Data.EADT
+
+      ,  Haskus.Tests.Utils
+      ,  Haskus.Tests.Utils.HArray
+      ,  Haskus.Tests.Utils.Solver
+
+   build-depends:    
+         base
+      ,  haskus-base
+      ,  tasty                   >= 0.11
+      ,  tasty-quickcheck        >= 0.8
+      ,  QuickCheck              >= 2.8
+      ,  bytestring
+      ,  containers
+
+Benchmark bench-BitReverse
+   type:               exitcode-stdio-1.0
+   main-is:            BitReverse.hs
+   hs-source-dirs:     src/bench
+   ghc-options:         -Wall -threaded
+   default-language:     Haskell2010
+   build-depends:
+         base
+      ,  haskus-base
+      ,  criterion
+
+benchmark bench-variant
+   type:                exitcode-stdio-1.0
+   main-is:             BenchVariant.hs
+   hs-source-dirs:      src/bench
+   ghc-options:         -Wall -threaded
+   default-language:    Haskell2010
+   build-depends:
+         base
+      ,  haskus-base
+      ,  criterion
+      ,  QuickCheck
+      ,  deepseq

@@ -37,7 +37,7 @@ library
 
   build-depends:       
       base                      >= 4.9 && < 5
-   ,  haskus-utils
+   ,  haskus-base
    ,  haskus-utils-compat
    ,  bytestring
    ,  text

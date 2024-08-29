@@ -36,11 +36,9 @@ executable haskus-disassembler
       base >=4.8 && <5
     , bytestring
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
     , haskus-web
     , lucid
     , optparse-applicative
@@ -60,11 +58,9 @@ executable haskus-elf
     , bytestring
     , containers
     , formatting
-    , haskus-binary
+    , haskus-base
     , haskus-system
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
     , haskus-web
     , lucid
     , optparse-applicative
@@ -85,11 +81,9 @@ executable haskus-gunzip
     , bytestring
     , containers
     , filepath
-    , haskus-binary
+    , haskus-base
     , haskus-system
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
     , haskus-web
     , lucid
     , optparse-applicative
@@ -108,11 +102,9 @@ executable haskus-huffman
       base >=4.8 && <5
     , bytestring
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
     , haskus-web
     , lucid
     , optparse-applicative
@@ -131,11 +123,9 @@ executable haskus-keys
       base >=4.8 && <5
     , bytestring
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
     , haskus-web
     , lucid
     , optparse-applicative
@@ -155,11 +145,9 @@ executable haskus-system-info
     , base >=4.8 && <5
     , bytestring
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
     , haskus-web
     , lucid
     , network
@@ -180,12 +168,9 @@ executable haskus-tracer
       base >=4.8 && <5
     , bytestring
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
-    , haskus-utils-variant
     , haskus-web
     , lucid
     , optparse-applicative
@@ -205,11 +190,9 @@ executable haskus-udev
       base >=4.8 && <5
     , bytestring
     , containers
-    , haskus-binary
+    , haskus-base
     , haskus-system
-    , haskus-utils
     , haskus-utils-compat
-    , haskus-utils-data
     , haskus-web
     , lucid
     , optparse-applicative

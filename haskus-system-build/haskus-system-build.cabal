@@ -40,7 +40,7 @@ executable haskus-system-build
       ,  process                 >= 1.4
       ,  yaml                    >= 0.8
       ,  text                    >= 1.2
-      ,  haskus-utils            >= 0.7
+      ,  haskus-base
       ,  optparse-simple         >= 0.0
       ,  optparse-applicative    >= 0.13
       ,  temporary               >= 1.2

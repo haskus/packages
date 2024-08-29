@@ -58,12 +58,8 @@ following `cabal.project` to depend on development versions of some packages:
 packages:
   .
   ../haskus-system
-  ../haskus-utils-variant
-  ../haskus-utils-types
-  ../haskus-utils-data
+  ../haskus-base
   ../haskus-utils-compat
-  ../haskus-utils
-  ../haskus-binary
   ../haskus-ui
 
 program-options
