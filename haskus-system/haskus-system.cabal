@@ -208,6 +208,10 @@ library
   default-extensions:
     LambdaCase
     BlockArguments
+    BangPatterns
+    PatternSynonyms
+    ViewPatterns
+    MagicHash
   hs-source-dirs:       src/lib
 
 test-suite tests

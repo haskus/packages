@@ -25,6 +25,7 @@ module Haskus.Format.CPIO
 where
 
 import Data.Char (ord,chr)
+import GHC.Exts
 
 import Haskus.Number.Word
 import Haskus.Binary.Buffer
@@ -137,19 +138,18 @@ data FileDesc = FileDesc
 -- | Put a number as a 8 hexadecimal digits string padding left with zeros
 putNumber :: Word32 -> Put
 putNumber x = do
-  let put_one x' =
-        let c = x' .&. 0xF
-        in if c <= 9
-          then putWord8 $ 0x30 + fromIntegral c
-          else putWord8 $ 0x61 + fromIntegral (c - 10)
-  put_one (x `uncheckedShiftR` 28)
-  put_one (x `uncheckedShiftR` 24)
-  put_one (x `uncheckedShiftR` 20)
-  put_one (x `uncheckedShiftR` 16)
-  put_one (x `uncheckedShiftR` 12)
-  put_one (x `uncheckedShiftR` 8)
-  put_one (x `uncheckedShiftR` 4)
-  put_one x
+  let !ascii = "0123456789abcdef"#
+      to_ascii x' =
+          let !(I# offset) = fromIntegral x' .&. 0xf
+          in W8# (indexWord8OffAddr# ascii offset)
+  putWord8 $ to_ascii (x `uncheckedShiftR` 28)
+  putWord8 $ to_ascii (x `uncheckedShiftR` 24)
+  putWord8 $ to_ascii (x `uncheckedShiftR` 20)
+  putWord8 $ to_ascii (x `uncheckedShiftR` 16)
+  putWord8 $ to_ascii (x `uncheckedShiftR` 12)
+  putWord8 $ to_ascii (x `uncheckedShiftR` 8)
+  putWord8 $ to_ascii (x `uncheckedShiftR` 4)
+  putWord8 $ to_ascii x
 
 -- | Read a number stored as a 8-characters hexadecimal string
 getNumber :: Get Word32
