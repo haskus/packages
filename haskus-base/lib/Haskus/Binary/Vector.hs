@@ -296,7 +296,7 @@ instance
              go _ 0 _       = []
              go 0 k xs      = List.take k xs
              go s k xs
-                | s >= sa   = go (s-sa) k (List.tail xs)
+                | s >= sa   = go (s-sa) k (List.drop 1 xs)
                 | otherwise =
                    let (x:y:zs) = xs
                    in ((x `shiftL` s) .|. (y `shiftR` (sa-s))) : go s (k-1) (y:zs)
@@ -306,7 +306,7 @@ instance
          let n  = natValue @n
              sa = natValue @(BitSize a)
              go _ 0 _       = []
-             go 0 k xs      = List.take k (List.tail xs)
+             go 0 k xs      = List.take k (List.drop 1 xs)
              go s k xs
                 | s >= sa   = zeroBits : go (s-sa) (k-1) xs
                 | otherwise =

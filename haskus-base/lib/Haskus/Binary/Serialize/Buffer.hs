@@ -58,6 +58,8 @@ import Haskus.Memory.Buffer
 import Haskus.Utils.Monad
 import Haskus.Utils.Flow
 import Haskus.Utils.Maybe
+import qualified Haskus.Utils.InfList as Inf
+import Haskus.Utils.InfList (InfList(..))
 
 import Data.Functor.Identity
 import Control.Monad.Trans.State.Strict as S
@@ -84,8 +86,8 @@ overflowBufferDouble = OverflowStrategy \ex -> do
    let off = overflowOffset   ex
        req = overflowRequired ex
        b   = overflowBuffer   ex
-       makeSzs i = i*i : makeSzs (i*i) -- infinite list of doubling sizes
-       newSz = head <| filter (> req+off) (makeSzs sz)
+       makeSzs i = i*i :> makeSzs (i*i) -- infinite list of doubling sizes
+       newSz = Inf.head <| Inf.filter (> req+off) (makeSzs sz)
    newB <- newBuffer newSz
    bufferCopy b 0 newB 0 off
    pure (newB,off)
@@ -98,8 +100,8 @@ overflowBufferDoublePinned malignment = OverflowStrategy \ex -> do
    let off = overflowOffset   ex
        req = overflowRequired ex
        b   = overflowBuffer   ex
-       makeSzs i = i*i : makeSzs (i*i) -- infinite list of doubling sizes
-       newSz = head <| filter (> req+off) (makeSzs sz)
+       makeSzs i = i*i :> makeSzs (i*i) -- infinite list of doubling sizes
+       newSz = Inf.head <| Inf.filter (> req+off) (makeSzs sz)
    newB <- case malignment of
       Nothing -> newPinnedBuffer newSz
       Just al -> newAlignedPinnedBuffer newSz al
@@ -114,8 +116,8 @@ overflowBufferAdd addSz = OverflowStrategy \ex -> do
    let off = overflowOffset   ex
        req = overflowRequired ex
        b   = overflowBuffer   ex
-       makeSzs i = i+addSz : makeSzs (i+addSz) -- infinite list of added sizes
-       newSz = head <| filter (> req+off) (makeSzs sz)
+       makeSzs i = i+addSz :> makeSzs (i+addSz) -- infinite list of added sizes
+       newSz = Inf.head <| Inf.filter (> req+off) (makeSzs sz)
    newB <- newBuffer newSz
    bufferCopy b 0 newB 0 off
    pure (newB,off)
@@ -128,8 +130,8 @@ overflowBufferAddPinned malignment addSz = OverflowStrategy \ex -> do
    let off = overflowOffset   ex
        req = overflowRequired ex
        b   = overflowBuffer   ex
-       makeSzs i = i+addSz : makeSzs (i+addSz) -- infinite list of added sizes
-       newSz = head <| filter (> req+off) (makeSzs sz)
+       makeSzs i = i+addSz :> makeSzs (i+addSz) -- infinite list of added sizes
+       newSz = Inf.head <| Inf.filter (> req+off) (makeSzs sz)
    newB <- case malignment of
       Nothing -> newPinnedBuffer newSz
       Just al -> newAlignedPinnedBuffer newSz al
