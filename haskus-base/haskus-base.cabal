@@ -89,6 +89,7 @@ library
     Haskus.Memory.Property
     Haskus.Memory.Typed
     Haskus.Memory.Writer
+    Haskus.Memory.Writer.SizedWriter
 
     Haskus.Utils.Types
     Haskus.Utils.Types.Bool
@@ -180,6 +181,7 @@ library
     UnboxedSums
     BangPatterns
     PatternSynonyms
+    ViewPatterns
   hs-source-dirs:       lib
 
 test-suite tests

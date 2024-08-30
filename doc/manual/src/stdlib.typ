@@ -9,3 +9,4 @@ some common data structures.
 #include "stdlib/variant.typ"
 #include "stdlib/eadt.typ"
 #include "stdlib/binary.typ"
+#include "stdlib/writer.typ"
