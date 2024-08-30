@@ -37,8 +37,8 @@ import Haskus.UI.Object
 import Haskus.UI.Object.Plane
 import Haskus.UI.Common
 import Haskus.Utils.Flow
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH
 
 
 data RenderObject d c

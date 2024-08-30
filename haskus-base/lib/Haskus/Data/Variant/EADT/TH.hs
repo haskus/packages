@@ -5,7 +5,7 @@
 {-# LANGUAGE CPP #-}
 
 -- | Template-Haskell helpers for EADTs
-module Haskus.Utils.EADT.TH
+module Haskus.Data.Variant.EADT.TH
    ( eadtPattern
    , eadtInfixPattern
    , eadtPatternT
@@ -15,7 +15,7 @@ where
 
 import Language.Haskell.TH
 import Control.Monad
-import Haskus.Utils.EADT
+import Haskus.Data.Variant.EADT
 
 -- | Create a pattern synonym for an EADT constructor
 --
@@ -122,7 +122,7 @@ eadtPattern' consName patStr mEadtTy isInfix = do
              conArity = getConArity tys
          conArgs <- replicateM conArity (newName "c")
 
-         let vf     = mkName "Haskus.Utils.EADT.VF"
+         let vf     = mkName "Haskus.Data.Variant.EADT.VF"
 
          args <- if not isInfix
             then return (PrefixPatSyn conArgs)

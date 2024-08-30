@@ -42,14 +42,14 @@ module Haskus.Utils.Flow
    , forLoopM_
    , forLoop
    -- * Variant based operators
-   , module Haskus.Utils.Variant.Excepts
+   , module Haskus.Data.Variant.Excepts
    -- * Monad transformers
    , lift
    )
 where
 
-import Haskus.Utils.Variant
-import Haskus.Utils.Variant.Excepts
+import Haskus.Data.Variant
+import Haskus.Data.Variant.Excepts
 import Haskus.Utils.Monad
 import Haskus.Utils.Maybe
 

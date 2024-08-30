@@ -15,7 +15,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Haskus.Utils.Variant.Excepts
+module Haskus.Data.Variant.Excepts
    ( Excepts (..)
    , runE
    , runE_
@@ -47,13 +47,13 @@ module Haskus.Utils.Variant.Excepts
    , sequenceE
    , runBothE
    -- * Reexport
-   , module Haskus.Utils.Variant.VEither
+   , module Haskus.Data.Variant.VEither
    )
 where
 
 import Haskus.Utils.Monad
 import Haskus.Utils.Types
-import Haskus.Utils.Variant.VEither
+import Haskus.Data.Variant.VEither
 
 import Control.Monad.Catch
 import Control.Monad.Reader.Class

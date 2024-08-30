@@ -6,7 +6,7 @@ import Haskus.UI.Color
 import Haskus.UI.Picture
 import Haskus.UI.Canvas
 
-import Haskus.Utils.EADT
+import Haskus.Data.Variant.EADT
 import Haskus.Utils.Flow
 
 

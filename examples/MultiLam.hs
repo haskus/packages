@@ -7,8 +7,8 @@
 
 module MultiLam where
 
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH
 import Haskus.Utils.ContFlow
 
 import qualified Data.List as List

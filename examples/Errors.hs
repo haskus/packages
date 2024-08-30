@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE RebindableSyntax #-}
 
-import Haskus.Utils.Variant
-import Haskus.Utils.Variant.Syntax
+import Haskus.Data.Variant
+import Haskus.Data.Variant.Syntax
 
 import Prelude hiding (head,lookup,(>>=),(>>),return)
 import qualified Prelude

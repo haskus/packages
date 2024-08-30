@@ -100,17 +100,16 @@ library
     Haskus.Utils.Types.Error
     Haskus.Utils.Types.Constraint
 
-    -- variant
-    Haskus.Utils.ContFlow
-    Haskus.Utils.Variant
-    Haskus.Utils.Variant.VEither
-    Haskus.Utils.Variant.Excepts
-    Haskus.Utils.Variant.Syntax
-    Haskus.Utils.VariantF
-    Haskus.Utils.EADT
-    Haskus.Utils.EADT.TH
-    Haskus.Utils.EGADT
+    Haskus.Data.Variant
+    Haskus.Data.Variant.VEither
+    Haskus.Data.Variant.Excepts
+    Haskus.Data.Variant.Syntax
+    Haskus.Data.Variant.VariantF
+    Haskus.Data.Variant.EADT
+    Haskus.Data.Variant.EADT.TH
+    Haskus.Data.Variant.EGADT
 
+    Haskus.Utils.ContFlow
     Haskus.Utils.Solver
     Haskus.Utils.HArray
     Haskus.Utils.MultiState
@@ -181,12 +180,12 @@ library
     UnboxedSums
     BangPatterns
     PatternSynonyms
-  hs-source-dirs:       src/lib
+  hs-source-dirs:       lib
 
 test-suite tests
    type:                exitcode-stdio-1.0
    main-is:             Main.hs
-   hs-source-dirs:      src/tests/
+   hs-source-dirs:      tests
    ghc-options:         -Wall -threaded
    default-language:    Haskell2010
    other-modules:
@@ -218,7 +217,7 @@ test-suite tests
 Benchmark bench-BitReverse
    type:               exitcode-stdio-1.0
    main-is:            BitReverse.hs
-   hs-source-dirs:     src/bench
+   hs-source-dirs:     bench
    ghc-options:         -Wall -threaded
    default-language:     Haskell2010
    build-depends:
@@ -229,7 +228,7 @@ Benchmark bench-BitReverse
 benchmark bench-variant
    type:                exitcode-stdio-1.0
    main-is:             BenchVariant.hs
-   hs-source-dirs:      src/bench
+   hs-source-dirs:      bench
    ghc-options:         -Wall -threaded
    default-language:    Haskell2010
    build-depends:

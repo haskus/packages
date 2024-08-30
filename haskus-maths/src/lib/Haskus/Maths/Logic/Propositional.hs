@@ -15,8 +15,8 @@
 
 module Haskus.Maths.Logic.Propositional where
 
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.List (intersperse)

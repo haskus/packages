@@ -18,7 +18,7 @@
 {-# LANGUAGE PolyKinds #-}
 
 -- | VariantF functor
-module Haskus.Utils.VariantF
+module Haskus.Data.Variant.VariantF
    ( VariantF (..)
    , ApplyAll
    , pattern FV
@@ -53,7 +53,7 @@ module Haskus.Utils.VariantF
    )
 where
 
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
 import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
 import Haskus.Utils.Types.Constraint

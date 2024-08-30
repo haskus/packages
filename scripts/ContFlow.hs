@@ -9,7 +9,7 @@ module TestCont where
 
 import Haskus.Utils.ContFlow
 import Haskus.Utils.Monad
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
 import Data.Char
 
 -- | Explicit CPS

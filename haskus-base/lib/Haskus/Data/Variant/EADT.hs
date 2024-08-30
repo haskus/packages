@@ -16,7 +16,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | Extensible ADT
-module Haskus.Utils.EADT
+module Haskus.Data.Variant.EADT
    ( EADT (..)
    , (:<:)
    , (:<<:)
@@ -30,12 +30,12 @@ module Haskus.Utils.EADT
    , eadtShow
    -- * Reexport
    , module Haskus.Utils.Functor
-   , module Haskus.Utils.VariantF
+   , module Haskus.Data.Variant.VariantF
    )
 where
 
-import Haskus.Utils.VariantF
-import Haskus.Utils.Variant
+import Haskus.Data.Variant.VariantF
+import Haskus.Data.Variant
 import Haskus.Utils.Functor
 import Haskus.Utils.Types.List
 import Haskus.Utils.Types.Constraint

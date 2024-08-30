@@ -13,7 +13,7 @@ module Haskus.Calculus.PrettyPrint
 where
 
 import Haskus.Utils.Types
-import Haskus.Utils.EADT
+import Haskus.Data.Variant.EADT
 
 withParen :: Bool -> String -> String
 withParen True s  = "("++s++")"

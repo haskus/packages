@@ -16,7 +16,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 import Data.Either
 
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
 import Haskus.Utils.ContFlow
 
 data A = A deriving (Show,Eq)

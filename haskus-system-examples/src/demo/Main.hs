@@ -20,7 +20,7 @@ import Haskus.System.Graphics.Drawing
 import Haskus.System.Graphics.Diagrams (mkWidth, rasterizeDiagram)
 import Haskus.Utils.Embed.ByteString
 import Haskus.Utils.STM
-import Haskus.Utils.EADT
+import Haskus.Data.Variant.EADT
 import Haskus.Utils.Maybe
 import Haskus.Format.String
 import qualified Haskus.Utils.Map as Map

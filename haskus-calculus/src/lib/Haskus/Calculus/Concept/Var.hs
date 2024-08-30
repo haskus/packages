@@ -13,8 +13,8 @@ module Haskus.Calculus.Concept.Var
    )
 where
 
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH
 
 import Haskus.Calculus.PrettyPrint
 import Haskus.Calculus.FreeVars
