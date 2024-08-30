@@ -8,7 +8,7 @@ module Haskus.Calculus.Lang.LC
    )
 where
 
-import Haskus.Utils.EADT
+import Haskus.Data.Variant.EADT
 
 import Haskus.Calculus.Concept.App
 import Haskus.Calculus.Concept.Var

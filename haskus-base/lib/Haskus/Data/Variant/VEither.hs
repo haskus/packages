@@ -24,7 +24,7 @@
 --
 -- This allows definition of common type classes (Functor, etc.) that can't  be
 -- provided for Variant
-module Haskus.Utils.Variant.VEither
+module Haskus.Data.Variant.VEither
    ( VEither
    , pattern VLeft
    , pattern VRight
@@ -39,11 +39,11 @@ module Haskus.Utils.Variant.VEither
    , veitherCont
    , veitherToEither
    , veitherProduct
-   , module Haskus.Utils.Variant
+   , module Haskus.Data.Variant
    )
 where
 
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
 import Haskus.Utils.Types
 import Data.Coerce
 

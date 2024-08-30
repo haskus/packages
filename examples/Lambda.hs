@@ -14,8 +14,8 @@
 
 module Lambda where
 
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH
 
 data AppF   a e = AppF a e e deriving (Functor)
 data LamF n a e = LamF a n e deriving (Functor)

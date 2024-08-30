@@ -14,8 +14,8 @@ module Haskus.UI.Object.Colored
 where
 
 import Haskus.Utils.Flow
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH
 
 import Haskus.UI.Object
 import Haskus.UI.Common

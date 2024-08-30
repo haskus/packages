@@ -4,14 +4,14 @@
 {-# LANGUAGE DataKinds #-}
 
 -- | Rebindable syntax for Variant
-module Haskus.Utils.Variant.Syntax
+module Haskus.Data.Variant.Syntax
    ( (>>=)
    , (>>)
    , return
    )
 where
 
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
 import Haskus.Utils.Types
 
 import Prelude hiding ((>>=),(>>),return)

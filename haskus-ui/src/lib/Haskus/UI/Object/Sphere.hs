@@ -14,8 +14,8 @@ module Haskus.UI.Object.Sphere
    )
 where
 
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH
 
 import Haskus.UI.Maths.Linear
 import Haskus.UI.Object

@@ -13,13 +13,13 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Haskus.Utils.EGADT where
+module Haskus.Data.Variant.EGADT where
 
 import Unsafe.Coerce
 
 import Haskus.Utils.Monad
-import Haskus.Utils.Variant
-import Haskus.Utils.VariantF
+import Haskus.Data.Variant
+import Haskus.Data.Variant.VariantF
 import Haskus.Utils.Types
 
 -- $setup

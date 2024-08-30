@@ -7,7 +7,7 @@ different types. For instance in the following code `x` is a variant whose value
 can be an `Int`, a `Float` or a `String`:
 
 ```haskell   
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
    
 x :: V [Int,Float,String]
 ```
@@ -107,7 +107,7 @@ To use `Variant`:
 - add a dependency to the
 #link("https://hackage.haskell.org/package/haskus-utils-variant")[haskus-utils-variant]>
 package
-- use the following import: `import Haskus.Utils.Variant`
+- use the following import: `import Haskus.Data.Variant`
 
 You may need to enable some language extensions:
 
@@ -939,8 +939,8 @@ by using do-notation:
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE RebindableSyntax #-}
 
-import Haskus.Utils.Variant
-import Haskus.Utils.Variant.Syntax
+import Haskus.Data.Variant
+import Haskus.Data.Variant.Syntax
 
 import Prelude hiding (head,lookup,(>>=),(>>),return)
 import qualified Prelude
@@ -1074,7 +1074,7 @@ wraps a `Either e a` value, we can use a `Excepts es m a` newtype to wraps a
 Example:
 
 ```haskell
-import Haskus.Utils.Variant.Excepts
+import Haskus.Data.Variant.Excepts
 
 import Prelude hiding (head,lookup)
 import qualified Prelude

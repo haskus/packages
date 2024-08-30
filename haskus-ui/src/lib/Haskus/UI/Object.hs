@@ -10,8 +10,8 @@ module Haskus.UI.Object
    )
 where
 
-import Haskus.Utils.VariantF
-import Haskus.Utils.EADT
+import Haskus.Data.Variant.VariantF
+import Haskus.Data.Variant.EADT
 
 import Haskus.UI.Ray
 

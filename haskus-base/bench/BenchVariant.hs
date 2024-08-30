@@ -15,7 +15,7 @@
 module Main (main) where
 
 
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
 import Haskus.Utils.ContFlow
 
 import Criterion

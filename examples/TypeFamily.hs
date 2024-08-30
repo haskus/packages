@@ -5,7 +5,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
 
 import Data.Char
 

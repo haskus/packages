@@ -13,7 +13,7 @@ module Haskus.Calculus.FreeVars
 where
 
 import Haskus.Utils.Types
-import Haskus.Utils.EADT
+import Haskus.Data.Variant.EADT
 import Data.Set
 
 class FreeVarsF n (f :: Type -> Type) where

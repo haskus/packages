@@ -15,7 +15,7 @@ module Haskus.Calculus.ReplaceVar
 where
 
 import Haskus.Utils.Types
-import Haskus.Utils.EADT
+import Haskus.Data.Variant.EADT
 
 class ReplaceVarF n fs (f :: Type -> Type) where
    replaceVarF :: n -> EADT fs -> TopDownStopT (EADT fs) f

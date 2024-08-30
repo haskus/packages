@@ -8,7 +8,7 @@ module Main where
 import System.Posix.Process
 import Haskus.System.Linux.Trace
 import Haskus.System.Linux.Process
-import Haskus.Utils.Variant.Excepts
+import Haskus.Data.Variant.Excepts
 import System.Exit
 import System.Environment
 

@@ -8,7 +8,7 @@
 
 import Data.Aeson
 import GHC.Generics
-import Haskus.Utils.Variant
+import Haskus.Data.Variant
 
 ------------- Boilerplate --------------
 class ToJSON' x where

@@ -17,7 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Open sum type
-module Haskus.Utils.Variant
+module Haskus.Data.Variant
    ( V (..)
    , variantIndex
    , variantSize
