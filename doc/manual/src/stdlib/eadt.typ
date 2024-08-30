@@ -104,8 +104,8 @@ The same example with EADTs would be written as follows. First we define the
 EADTs:
 
 ```haskell
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH
 
 data LambdaF n e = LambdaF n e deriving Functor
 data VarF    n e = VarF    n   deriving Functor
@@ -161,15 +161,13 @@ sampleAnn = Ann "Double its input" (liftEADT sampleDouble)
 
 === EADT basics <eadt-basics>
 
-EADTs can be found in the
-#link("https://hackage.haskell.org/package/haskus-utils-variant")[haskus-utils-variant]
-package.
+EADTs can be found in the `haskus-base` package.
 
 You need the following imports in your source:
 
 ```haskell
-import Haskus.Utils.EADT
-import Haskus.Utils.EADT.TH -- template-haskell helpers
+import Haskus.Data.Variant.EADT
+import Haskus.Data.Variant.EADT.TH -- template-haskell helpers
 ```
 
 ==== Defining constructors
@@ -214,7 +212,7 @@ with:
 ```haskell
 {-# LANGUAGE TemplateHaskell #-}
 
-import Haskus.Utils.EADT.TH
+import Haskus.Data.Variant.EADT.TH
 
 eadtPattern 'ConsF "Cons"
 eadtPattern 'NilF  "Nil"
