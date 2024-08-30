@@ -104,9 +104,7 @@ value.
 
 To use `Variant`:
 
-- add a dependency to the
-#link("https://hackage.haskell.org/package/haskus-utils-variant")[haskus-utils-variant]>
-package
+- add a dependency to the `haskus-base` package
 - use the following import: `import Haskus.Data.Variant`
 
 You may need to enable some language extensions:
