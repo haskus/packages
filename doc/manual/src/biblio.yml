@@ -6,3 +6,19 @@ linux-initramfs:
     - H. Peter Anvin
   date: 2002-01-13
   url: https://www.kernel.org/doc/html/latest/driver-api/early-userspace/buffer-format.html
+
+agner-forwardcom:
+  type: Web
+  title: "ForwardCom: An open-standard instruction set for high-performance microprocessors"
+  author:
+    - Agner Fog
+  date: 2024-08-11
+  url: https://www.forwardcom.info/
+
+agner-fog:
+  type: Web
+  title: Agner Fog personal website
+  author:
+    - Agner Fog
+  date: 2024-08-11
+  url: https://www.agner.org

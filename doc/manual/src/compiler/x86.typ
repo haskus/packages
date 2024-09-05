@@ -1,6 +1,43 @@
-== x86 assembly
+== x86 assembler
 
-Notes on x86 in ``haskus-system`` and in general.
+The x86 architecture is a more than 50-year-old instruction set architecture
+(ISA). It is an evolution of Intel's 8-bit 8080 microprocessor from 1974. It has
+gradually evolved to support new modes (16-bit, 32-bit, 64-bit), new
+instructions, new and larger registers (SIMD registers), etc.
+
+Evolving a complex design to account for new constraints or to provide new
+features while staying backward compatible is understandably difficult.
+In the case of the x86 architecture, however, it didn't help that there was a
+hidden war between Intel and its competitors (AMD, Via...). It is hidden because
+it's only visible to low-level system or compiler programmers.
+
+Many changes were made with opaque decision processes and driven by commercial
+outcomes, hence without foresight for future changes. As a result many mistakes
+were made repeatedly and the architecture is complex and inconsistent.
+
+Agner Fog @agner-fog ---one of the most recognized non-Intel/AMD x86
+experts---has been designing a new architecture called ForwardCom to compete
+with x86 on high-end devices. In the introduction of the ForwardCom manual he writes:
+
+#quote(block:true, attribution: [ForwardCom manual, section 1.2 Background @agner-forwardcom])[
+Some commonly used instruction sets are poorly designed from the beginning. These systems
+have been augmented many times with extensions and patches. One of the worst cases is the
+widely used x86 instruction set and its many extensions. The x86 instruction set is the result of a
+long history of short-sighted extensions and patches. The result of this development history is a
+very complicated architecture with thousands of different instruction codes, which is very difficult
+and costly to decode in a microprocessor. We need to learn from past mistakes in order to make
+better choices when designing a new instruction set architecture and the software that supports
+it.
+]
+
+The only reason to continue to use the x86 architecture is that it is still the
+most widespread one for high-end devices. Note that Intel indirectly
+acknowledged that this architecture was bad by designing the Itanium 64-bit
+architecture as a replacement in 2001. However the latter was a commercial
+failure and since then we have been stuck with the 64-bit incarnation of the x86
+architecture on high-end devices, while other devices have already switched to
+other architectures like ARM, RISC-V, etc.
+
 
 === Instruction list
 
