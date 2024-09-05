@@ -300,12 +300,10 @@ encSupportHLE a e = case filter isHLE (encProperties e) of
 
 -- | Test if an encoding is supported in a given mode
 encSupportMode :: X86Mode -> Encoding -> Bool
-encSupportMode mode enc = case mode of
-   LongMode Long64bitMode     -> LongModeSupport   `elem` props
-   LongMode CompatibilityMode -> LegacyModeSupport `elem` props
-   LegacyMode _               -> LegacyModeSupport `elem` props
-   where
-      props = encProperties enc
+encSupportMode mode enc = p `elem` encProperties enc
+  where p = case mode of
+              Mode64    -> LongModeSupport
+              _         -> LegacyModeSupport
 
 -- | Get required extensions for the encoding
 encRequiredExtensions :: Encoding -> [X86Extension]

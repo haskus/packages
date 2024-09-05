@@ -262,7 +262,7 @@ getModeRegisters :: X86Mode -> Set X86Reg
 getModeRegisters mode = Set.unions $ fmap Set.fromList regSets
    where
       regSets = case mode of
-         LongMode Long64bitMode ->
+         Mode64 ->
             [ regsL64,regsH,regsX64,regsE64,regsR -- General purpose registers (GPRs)
             , regsFPU, regsMMX                    -- 64 bit Media and Floating-Point registers
             , regsXMM 16, regsYMM 16              -- SSE Media registers
@@ -270,7 +270,7 @@ getModeRegisters mode = Set.unions $ fmap Set.fromList regSets
             , [R_Flags64]                         -- Flags
             , [R_CS,R_FS,R_GS]                    -- Segments
             ]
-         LongMode CompatibilityMode ->
+         Mode64_32 ->
             [ regsL,regsH,regsX,regsE             -- General purpose registers (GPRs)
             , regsFPU, regsMMX                    -- 64 bit Media and Floating-Point registers
             , regsXMM 8, regsYMM 8                -- SSE Media registers
@@ -278,7 +278,7 @@ getModeRegisters mode = Set.unions $ fmap Set.fromList regSets
             , [R_Flags32]                         -- Flags
             , regSegs32                           -- Segments
             ]
-         LegacyMode ProtectedMode ->
+         Mode32 ->
             [ regsL,regsH,regsX,regsE             -- General purpose registers (GPRs)
             , regsFPU, regsMMX                    -- 64 bit Media and Floating-Point registers
             , regsXMM 8, regsYMM 8                -- SSE Media registers
@@ -286,14 +286,14 @@ getModeRegisters mode = Set.unions $ fmap Set.fromList regSets
             , [R_Flags32]                         -- Flags
             , regSegs32                           -- Segments
             ]
-         LegacyMode Virtual8086Mode ->
+         Mode32_16 ->
             [ regsL,regsH,regsX                   -- General purpose registers (GPRs)
             , regsFPU, regsMMX                    -- 64 bit Media and Floating-Point registers
             , [R_IP]                              -- Instruction pointer
             , [R_Flags16]                         -- Flags
             , regSegs16                           -- Segments
             ]
-         LegacyMode RealMode ->
+         Mode16 ->
             [ regsL,regsH,regsX                   -- General purpose registers (GPRs)
             , regsFPU                             -- 64 bit Media and Floating-Point registers
             , [R_IP]                              -- Instruction pointer

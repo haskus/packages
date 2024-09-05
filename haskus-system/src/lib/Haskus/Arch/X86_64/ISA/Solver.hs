@@ -121,16 +121,16 @@ oracleImplications =
    ++
    [
      -- CS.D doesn't make sense in real-mode and virtual 8086 mode
-      (  [ (ContextPred (Mode (LegacyMode RealMode))       , SetPred)]
-      ,  [ (ContextPred CS_D                               , InvalidPred)]
+      (  [ (ContextPred (Mode Mode16)   , SetPred)]
+      ,  [ (ContextPred CS_D            , InvalidPred)]
       )
-   ,  (  [ (ContextPred (Mode (LegacyMode Virtual8086Mode)), SetPred)]
-      ,  [ (ContextPred CS_D                               , InvalidPred)]
+   ,  (  [ (ContextPred (Mode Mode32_16), SetPred)]
+      ,  [ (ContextPred CS_D            , InvalidPred)]
       )
 
    , -- CS.D can't be 1 in long 64-bit mode.
-      (  [ (ContextPred (Mode (LongMode Long64bitMode)), SetPred)]
-      ,  [ (ContextPred CS_D                           , UnsetPred)]
+      (  [ (ContextPred (Mode Mode64), SetPred)]
+      ,  [ (ContextPred CS_D         , UnsetPred)]
       )
 
    ,  -- REX prefix only valid with a legacy encoding
@@ -139,31 +139,31 @@ oracleImplications =
       )
 
    , -- W doesn't make sense in real-mode and virtual 8086 mode
-      ( [ (PrefixPred PrefixW                             , SetPred)]
-      , [ (ContextPred (Mode (LegacyMode RealMode))       , UnsetPred)]
+      ( [ (PrefixPred PrefixW          , SetPred)]
+      , [ (ContextPred (Mode Mode16)   , UnsetPred)]
       )
-   ,  ( [ (PrefixPred PrefixW                             , SetPred)]
-      , [ (ContextPred (Mode (LegacyMode Virtual8086Mode)), UnsetPred)]
+   ,  ( [ (PrefixPred PrefixW          , SetPred)]
+      , [ (ContextPred (Mode Mode32_16), UnsetPred)]
       )
-   ,  ( [ (ContextPred (Mode (LegacyMode RealMode))       , SetPred)]
-      , [ (PrefixPred PrefixW                             , InvalidPred)]
+   ,  ( [ (ContextPred (Mode Mode16)   , SetPred)]
+      , [ (PrefixPred PrefixW          , InvalidPred)]
       )
-   ,  ( [ (ContextPred (Mode (LegacyMode Virtual8086Mode)), SetPred)]
-      , [ (PrefixPred PrefixW                             , InvalidPred)]
+   ,  ( [ (ContextPred (Mode Mode32_16), SetPred)]
+      , [ (PrefixPred PrefixW          , InvalidPred)]
       )
 
    , -- L doesn't make sense in real-mode and virtual 8086 mode
-      ( [ (PrefixPred PrefixL                             , SetPred)]
-      , [ (ContextPred (Mode (LegacyMode RealMode))       , UnsetPred)]
+      ( [ (PrefixPred PrefixL          , SetPred)]
+      , [ (ContextPred (Mode Mode16)   , UnsetPred)]
       )
-   ,  ( [ (PrefixPred PrefixL                             , SetPred)]
-      , [ (ContextPred (Mode (LegacyMode Virtual8086Mode)), UnsetPred)]
+   ,  ( [ (PrefixPred PrefixL          , SetPred)]
+      , [ (ContextPred (Mode Mode32_16), UnsetPred)]
       )
-   ,  ( [ (ContextPred (Mode (LegacyMode RealMode))       , SetPred)]
-      , [ (PrefixPred PrefixL                             , InvalidPred)]
+   ,  ( [ (ContextPred (Mode Mode16)   , SetPred)]
+      , [ (PrefixPred PrefixL          , InvalidPred)]
       )
-   ,  ( [ (ContextPred (Mode (LegacyMode Virtual8086Mode)), SetPred)]
-      , [ (PrefixPred PrefixL                             , InvalidPred)]
+   ,  ( [ (ContextPred (Mode Mode32_16), SetPred)]
+      , [ (PrefixPred PrefixL          , InvalidPred)]
       )
 
    ]
@@ -191,13 +191,13 @@ oracleIncompatibilities =
 
       -- W isn't invalid in 64-bit/protected/compat modes
       ++ [[(PrefixPred PrefixW, InvalidPred)
-          ,(ContextPred (Mode (LongMode Long64bitMode)), SetPred)
+          ,(ContextPred (Mode Mode64), SetPred)
           ]
          ,[(PrefixPred PrefixW, InvalidPred)
-          ,(ContextPred (Mode (LongMode CompatibilityMode)), SetPred)
+          ,(ContextPred (Mode Mode64_32), SetPred)
           ]
          ,[(PrefixPred PrefixW, InvalidPred)
-          ,(ContextPred (Mode (LegacyMode ProtectedMode)), SetPred)
+          ,(ContextPred (Mode Mode32), SetPred)
           ]
          ]
 
@@ -252,7 +252,7 @@ pLegacy8bitRegs = And [ Predicate (EncodingPred PLegacyEncoding)
 
 -- | 64-bit long mode predicate
 pMode64bit :: X86Constraint
-pMode64bit = pMode (LongMode Long64bitMode)
+pMode64bit = pMode Mode64
 
 -- | Exclusive mode predicate
 pMode :: X86Mode -> X86Constraint
@@ -333,11 +333,11 @@ pOverriddenAddressSize t = rOverriddenAddressSize `evalsTo` t
 -- | Default operation size (DOS)
 rDefaultOperationSize :: X86Rule OperandSize
 rDefaultOperationSize = NonTerminal
-      [ (pMode (LegacyMode RealMode)           , Terminal OpSize16)
-      , (pMode (LegacyMode Virtual8086Mode)    , Terminal OpSize16)
-      , (pMode (LegacyMode ProtectedMode)      , s16o32)
-      , (pMode (LongMode   CompatibilityMode)  , s16o32)
-      , (pMode (LongMode   Long64bitMode)      , s32oFail)
+      [ (pMode Mode16   , Terminal OpSize16)
+      , (pMode Mode32_16, Terminal OpSize16)
+      , (pMode Mode32   , s16o32)
+      , (pMode Mode64_32, s16o32)
+      , (pMode Mode64   , s32oFail)
       ]
    where
       s16o32   = NonTerminal
@@ -351,11 +351,11 @@ rDefaultOperationSize = NonTerminal
 -- | Default address size (DAS)
 rDefaultAddressSize :: X86Rule AddressSize
 rDefaultAddressSize = NonTerminal
-      [ (pMode (LegacyMode RealMode)           , Terminal AddrSize16)
-      , (pMode (LegacyMode Virtual8086Mode)    , Terminal AddrSize16)
-      , (pMode (LegacyMode ProtectedMode)      , s16o32)
-      , (pMode (LongMode   CompatibilityMode)  , s16o32)
-      , (pMode (LongMode   Long64bitMode)      , s32oFail)
+      [ (pMode Mode16   , Terminal AddrSize16)
+      , (pMode Mode32_16, Terminal AddrSize16)
+      , (pMode Mode32   , s16o32)
+      , (pMode Mode64_32, s16o32)
+      , (pMode Mode64   , s32oFail)
       ]
    where
       s16o32   = NonTerminal

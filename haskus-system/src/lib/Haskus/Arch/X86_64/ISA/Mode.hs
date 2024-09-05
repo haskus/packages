@@ -1,12 +1,10 @@
 -- | X86 architectures support several operating modes.
 -- This module gives information for each mode
 module Haskus.Arch.X86_64.ISA.Mode
-   ( X86Mode (..)
-   , LongSubMode (..)
-   , LegacySubMode (..)
-   , X86Extension(..)
+   (
+   -- * Operating mode
+     X86Mode (..)
    , allModes
-   , allExtensions
    , ModeInfo (..)
    , getModeInfo
    , is64bitMode
@@ -22,6 +20,9 @@ module Haskus.Arch.X86_64.ISA.Mode
    , overriddenOperationSize64
    , defaultStackSize
    , hasExtension
+   -- * Extensions
+   , X86Extension(..)
+   , allExtensions
    )
 where
 
@@ -30,39 +31,25 @@ import Haskus.Arch.X86_64.ISA.Size
 
 -- | X86 and X86-64 operating mode
 data X86Mode
-   = LongMode LongSubMode     -- ^ x86-64 long mode
-   | LegacyMode LegacySubMode -- ^ x86-32 mode
-   deriving (Show,Eq,Ord)
-
--- | Sub-mode for x86-64
-data LongSubMode
-   = Long64bitMode
-   | CompatibilityMode
-   deriving (Show,Eq,Ord)
-
--- | Sub-mode for x86-32 (legacy)
-data LegacySubMode
-   = ProtectedMode
-   | Virtual8086Mode
-   | RealMode
-   deriving (Show,Eq,Ord)
+  = Mode64    -- ^ 64-bit mode ("long 64-bit mode")
+  | Mode64_32 -- ^ 64-bit sub mode: compat with 32-bit code ("long compatibility mode")
+  | Mode32    -- ^ 32-bit mode ("protected mode")
+  | Mode32_16 -- ^ 32-bit sub mode: compat with 16-bit code ("virtual-8086 mode")
+  | Mode16    -- ^ 16-bit mode ("real mode")
+  deriving (Show,Eq,Ord,Enum,Bounded)
 
 -- | All the X86 modes
 allModes :: [X86Mode]
-allModes  = [ LongMode Long64bitMode
-            , LongMode CompatibilityMode
-            , LegacyMode RealMode
-            , LegacyMode Virtual8086Mode
-            , LegacyMode ProtectedMode
-            ]
+allModes  = [ Mode16 .. Mode64]
 
 -- | Return the mode name
 modeName :: X86Mode -> String
-modeName (LongMode Long64bitMode)     = "Long 64-bit mode"
-modeName (LongMode CompatibilityMode) = "Long compatibility mode"
-modeName (LegacyMode RealMode)        = "Real-mode"
-modeName (LegacyMode Virtual8086Mode) = "Virtual 8086 mode"
-modeName (LegacyMode ProtectedMode)   = "Protected mode"
+modeName = \case
+  Mode64    -> "Long 64-bit mode"
+  Mode64_32 -> "Long compatibility mode"
+  Mode32    -> "Protected mode"
+  Mode32_16 -> "Virtual-8086 mode"
+  Mode16    -> "Real-mode"
 
 data X86Extension
    = VEX             -- ^ VEX encoded instruction support
@@ -106,6 +93,10 @@ data X86Extension
 allExtensions :: [X86Extension]
 allExtensions = [minBound .. maxBound]
 
+-- | Indicate if an extension is enabled
+hasExtension :: ExecMode -> X86Extension -> Bool
+hasExtension mode ext = ext `elem` extensions mode
+
 -- | IP-relative addressing support
 data RelativeAddressing
    = FullRelativeAddressing      -- ^ Supported by all instructions
@@ -119,43 +110,32 @@ data ModeInfo = ModeInfo
 
 -- | Return information for the selected mode
 getModeInfo :: X86Mode -> ModeInfo
-getModeInfo mode = case mode of
-
-   LongMode Long64bitMode     -> ModeInfo {
-      relativeAddressing         = FullRelativeAddressing
-   }
-
-   LongMode CompatibilityMode -> ModeInfo {
-      relativeAddressing         = ControlRelativeAddressing
-   }
-
-   LegacyMode ProtectedMode   -> ModeInfo {
-      relativeAddressing         = ControlRelativeAddressing
-   }
-
-   LegacyMode Virtual8086Mode -> ModeInfo {
-      relativeAddressing         = ControlRelativeAddressing
-   }
-
-   LegacyMode RealMode        -> ModeInfo {
-      relativeAddressing         = ControlRelativeAddressing
-   }
+getModeInfo = \case
+   Mode64    -> ModeInfo FullRelativeAddressing
+   Mode64_32 -> ModeInfo ControlRelativeAddressing
+   Mode32    -> ModeInfo ControlRelativeAddressing
+   Mode32_16 -> ModeInfo ControlRelativeAddressing
+   Mode16    -> ModeInfo ControlRelativeAddressing
 
 -- | Indicate if it is 64 bit mode
 is64bitMode :: X86Mode -> Bool
-is64bitMode (LongMode Long64bitMode) = True
-is64bitMode _                        = False
+is64bitMode = \case
+  Mode64 -> True
+  _      -> False
 
 -- | Indicate if it is 32 bit mode
 is32bitMode :: X86Mode -> Bool
-is32bitMode (LongMode CompatibilityMode) = True
-is32bitMode (LegacyMode ProtectedMode)   = True
-is32bitMode _                            = False
+is32bitMode = \case
+  Mode64_32 -> True
+  Mode32    -> True
+  _         -> False
 
 -- | Indicate if it is Long mode
 isLongMode :: X86Mode -> Bool
-isLongMode (LongMode _) = True
-isLongMode _            = False
+isLongMode = \case
+  Mode64    -> True
+  Mode64_32 -> True
+  _         -> False
 
 
 -- | Execution mode
@@ -166,89 +146,74 @@ data ExecMode = ExecMode
    , extensions         :: [X86Extension] -- ^ Enabled extensions
    }
 
--- | Default address size (DAS)
+-- | Default address size
 defaultAddressSize :: ExecMode -> AddressSize
 defaultAddressSize mode = case x86Mode mode of
-   LegacyMode RealMode          -> AddrSize16
-   LegacyMode Virtual8086Mode   -> AddrSize16
-   LegacyMode ProtectedMode     -> s16o32
-   LongMode   CompatibilityMode -> s16o32
-   LongMode   Long64bitMode
-      | csDescriptorFlagD mode  ->
-         error "#GP: D flag in CS descriptor must be 0 in 64-bit mode"
-      | otherwise               -> AddrSize64
-   where
-      s16o32 = if csDescriptorFlagD mode
-                  then AddrSize32
-                  else AddrSize16
+  Mode64                    -> AddrSize64
+  Mode64_32
+   | csDescriptorFlagD mode -> AddrSize32
+   | otherwise              -> AddrSize16
+  Mode32
+   | csDescriptorFlagD mode -> AddrSize32
+   | otherwise              -> AddrSize16
+  Mode32_16                 -> AddrSize16
+  Mode16                    -> AddrSize16
 
--- | Default operation size (DOS)
+-- | Default operation size
 defaultOperationSize :: ExecMode -> OperandSize
 defaultOperationSize mode = case x86Mode mode of
-   LegacyMode RealMode          -> OpSize16
-   LegacyMode Virtual8086Mode   -> OpSize16
-   LegacyMode ProtectedMode     -> s16o32
-   LongMode   CompatibilityMode -> s16o32
-   LongMode   Long64bitMode
-      | csDescriptorFlagD mode  ->
-         error "#GP: D flag in CS descriptor must be 0 in 64-bit mode"
-      | otherwise               -> OpSize32
-   where
-      s16o32 = if csDescriptorFlagD mode
-                  then OpSize32
-                  else OpSize16
+  Mode64                    -> OpSize32
+  Mode64_32
+   | csDescriptorFlagD mode -> OpSize32
+   | otherwise              -> OpSize16
+  Mode32
+   | csDescriptorFlagD mode -> OpSize32
+   | otherwise              -> OpSize16
+  Mode32_16                 -> OpSize16
+  Mode16                    -> OpSize16
 
--- | Default stack size (DSS)
+-- | Default stack size
 defaultStackSize :: ExecMode -> AddressSize
 defaultStackSize mode = case x86Mode mode of
-   LegacyMode RealMode          -> AddrSize16
-   LegacyMode Virtual8086Mode   -> AddrSize16
-   LegacyMode ProtectedMode     -> s16o32
-   LongMode   CompatibilityMode -> s16o32
-   LongMode   Long64bitMode
-      | ssDescriptorFlagB mode  ->
-         error "#GP: B flag in SS descriptor must be 0 in 64-bit mode"
-      | otherwise               -> AddrSize32
-   where
-      s16o32 = if ssDescriptorFlagB mode
-                  then AddrSize32
-                  else AddrSize16
+  Mode64                     -> AddrSize32
+  Mode64_32
+    | ssDescriptorFlagB mode -> AddrSize32
+    | otherwise              -> AddrSize16
+  Mode32
+    | ssDescriptorFlagB mode -> AddrSize32
+    | otherwise              -> AddrSize16
+  Mode32_16                  -> AddrSize16
+  Mode16                     -> AddrSize16
 
--- | Compute the overridden address size (OAS), given the presence or not of the
--- 0x67 prefix
+-- | Compute the overridden address size, given the presence or not of the 0x67
+-- prefix
 overriddenAddressSize :: Bool -> ExecMode -> AddressSize
 overriddenAddressSize False mode = defaultAddressSize mode
 overriddenAddressSize True  mode =
-   case defaultAddressSize mode of
-      AddrSize16 -> AddrSize32
-      AddrSize32 -> AddrSize16
-      AddrSize64 -> AddrSize32
+  case defaultAddressSize mode of
+     AddrSize16 -> AddrSize32
+     AddrSize32 -> AddrSize16
+     AddrSize64 -> AddrSize32
 
--- | Compute the overridden operation size (OOS), given the presence or not of
--- the 0x66 prefix
+-- | Compute the overridden operation size, given the presence or not of the
+-- 0x66 prefix
 overriddenOperationSize :: Bool -> ExecMode -> OperandSize
 overriddenOperationSize False mode = defaultOperationSize mode
 overriddenOperationSize True  mode =
-   case defaultOperationSize mode of
-      OpSize16 -> OpSize32
-      _        -> OpSize16
+  case defaultOperationSize mode of
+     OpSize16 -> OpSize32
+     _        -> OpSize16
 
--- | Compute the overridden operation size in 64-bit (OOS64), given the presence
--- or not of the 0x66 prefix, the presence of the W prefix and whether the
--- instruction defaults to 64-bit operation size
+-- | Compute the overridden operation size in 64-bit, given the presence or not
+-- of the 0x66 prefix, the presence of the W prefix and whether the instruction
+-- defaults to 64-bit operation size
 overriddenOperationSize64 :: Bool -> Bool -> Bool -> ExecMode -> OperandSize
 overriddenOperationSize64 p66 pW p64 mode =
-   case x86Mode mode of
-      -- in 64-bit mode, most 64-bit instructions default to 32-bit operand
-      -- size, except those with the DefaultOperandSize64 property.
-      -- REX.W/VEX.W/XOP.W can be used to set a 64-bit operand size (it has
-      -- precedence over the 0x66 legacy prefix)
-      LongMode Long64bitMode
-         | p64 || pW -> OpSize64
-      _              -> overriddenOperationSize p66 mode
-
--- | Indicate if an extension is enabled
-hasExtension :: ExecMode -> X86Extension -> Bool
-hasExtension mode ext = ext `elem` extensions mode
-
-
+  case x86Mode mode of
+     -- in 64-bit mode, most 64-bit instructions default to 32-bit operand
+     -- size, except those with the DefaultOperandSize64 property.
+     -- REX.W/VEX.W/XOP.W can be used to set a 64-bit operand size (it has
+     -- precedence over the 0x66 legacy prefix)
+     Mode64
+        | p64 || pW -> OpSize64
+     _              -> overriddenOperationSize p66 mode
