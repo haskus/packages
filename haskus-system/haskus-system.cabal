@@ -174,6 +174,17 @@ library
 
   cc-options: -O3
 
+  default-language:     Haskell2010
+  default-extensions:
+    LambdaCase
+    BlockArguments
+    MagicHash
+    UnboxedTuples
+    UnboxedSums
+    BangPatterns
+    PatternSynonyms
+    ViewPatterns
+
   build-depends:       
          base                      >= 4.9 && <5.0
       ,  haskus-base
@@ -204,32 +215,40 @@ library
       ,  extra                     >= 1.4
 
   ghc-options:          -Wall -O
-  default-language:     Haskell2010
   hs-source-dirs:       src/lib
 
 test-suite tests
-   type:                exitcode-stdio-1.0
-   main-is:             Main.hs
-   hs-source-dirs:      src/tests
-   ghc-options:         -O -Wall -threaded
-   default-language:    Haskell2010
-   other-modules:
-         Haskus.Tests
-      ,  Haskus.Tests.System
-      ,  Haskus.Tests.System.Devices
-      ,  Haskus.Tests.Arch
-      ,  Haskus.Tests.Arch.Linux
-      ,  Haskus.Tests.Arch.Linux.Input
-      ,  Haskus.Tests.Arch.Linux.ErrorCode
-      ,  Haskus.Tests.Format
+  type:                exitcode-stdio-1.0
+  main-is:             Main.hs
+  hs-source-dirs:      src/tests
+  ghc-options:         -O -Wall -threaded
+  default-language:     Haskell2010
+  default-extensions:
+    LambdaCase
+    BlockArguments
+    MagicHash
+    UnboxedTuples
+    UnboxedSums
+    BangPatterns
+    PatternSynonyms
+    ViewPatterns
+  other-modules:
+        Haskus.Tests
+     ,  Haskus.Tests.System
+     ,  Haskus.Tests.System.Devices
+     ,  Haskus.Tests.Arch
+     ,  Haskus.Tests.Arch.Linux
+     ,  Haskus.Tests.Arch.Linux.Input
+     ,  Haskus.Tests.Arch.Linux.ErrorCode
+     ,  Haskus.Tests.Format
 
-   build-depends:    
-         base
-      ,  haskus-system
-      ,  haskus-base
-      ,  stm
-      ,  tasty                   >= 0.11
-      ,  tasty-quickcheck        >= 0.8
-      ,  QuickCheck              >= 2.8
-      ,  containers
-      ,  bytestring
+  build-depends:    
+        base
+     ,  haskus-system
+     ,  haskus-base
+     ,  stm
+     ,  tasty                   >= 0.11
+     ,  tasty-quickcheck        >= 0.8
+     ,  QuickCheck              >= 2.8
+     ,  containers
+     ,  bytestring

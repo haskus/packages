@@ -18,7 +18,7 @@ main = do
 
    let 
       m = ExecMode
-            { x86Mode            = LongMode Long64bitMode
+            { x86Mode            = Mode64
             , csDescriptorFlagD  = False
             , ssDescriptorFlagB  = False
             , extensions         = allExtensions

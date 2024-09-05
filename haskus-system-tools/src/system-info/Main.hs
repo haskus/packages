@@ -409,14 +409,7 @@ showPredTable moracle showValue a = do
                       (val,oracle) = case head group of
                         (_,v,o) -> (v,o)
                   intersperseM_ " / " modes \mode -> case mode of
-                     ContextPred (Mode m) -> case m of
-                        LongMode x -> case x of
-                           Long64bitMode     -> "64-bit mode"
-                           CompatibilityMode -> "Compat mode"
-                        LegacyMode x -> case x of
-                           ProtectedMode     -> "Protected mode"
-                           Virtual8086Mode   -> "Virtual 8086 mode"
-                           RealMode          -> "Real mode"
+                     ContextPred (Mode m) -> toHtml (modeName m)
                      _ -> pure ()
                   showPredTable (Just oracle) showValue val
             else showPredicateTable @a showValue (getPredicates a) rs
@@ -495,22 +488,18 @@ showMnemo mnemo = do
 showRegs :: Html ()
 showRegs = do
 
-   h1_ "Registers"
+  h1_ "Registers"
 
-   let
-      showMode :: X86Mode -> Html ()
-      showMode mode = do
-         h2_ (toHtml (show mode))
-         let
-            regs  = Set.toList $ X86.getModeRegisters mode
-            f x y = registerBank x == registerBank y
-            regs' = List.groupBy f regs
+  let
+     showMode :: X86Mode -> Html ()
+     showMode mode = do
+        h2_ (toHtml (show mode))
+        let
+           regs  = Set.toList $ X86.getModeRegisters mode
+           f x y = registerBank x == registerBank y
+           regs' = List.groupBy f regs
 
-         ul_ $ forM_ regs' $ \rs -> li_ $
-            toHtml (mconcat (List.intersperse "," (fmap X86.registerName rs)))
+        ul_ $ forM_ regs' $ \rs -> li_ $
+           toHtml (mconcat (List.intersperse "," (fmap X86.registerName rs)))
 
-   showMode (LongMode Long64bitMode)
-   showMode (LongMode CompatibilityMode)
-   showMode (LegacyMode ProtectedMode)
-   showMode (LegacyMode Virtual8086Mode)
-   showMode (LegacyMode RealMode)
+  mapM_ showMode allModes
