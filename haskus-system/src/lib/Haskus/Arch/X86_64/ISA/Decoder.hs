@@ -11,7 +11,7 @@ module Haskus.Arch.X86_64.ISA.Decoder
    )
 where
 
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Register
 import Haskus.Arch.X86_64.ISA.Memory
 import Haskus.Arch.Common.Immediate
@@ -44,17 +44,17 @@ import Control.Applicative
 -- ===========================================================================
 
 
-getInstruction :: ExecMode -> Get Insn
-getInstruction mode = consumeAtMost 15 $ do
+getInstruction :: Context -> Get Insn
+getInstruction ctx = consumeAtMost 15 $ do
    -- An instruction is at most 15 bytes long
 
    ps  <- readLegacyPrefixes False -- don't fail on redundant prefixes
-   rex <- readRexPrefix mode
+   rex <- readRexPrefix ctx
 
    -- read opcode
-   oc <- readVexXopOpcode mode ps rex >>= \case
+   oc <- readVexXopOpcode ctx ps rex >>= \case
       Just op -> return op
-      Nothing -> readLegacyOpcode mode rex
+      Nothing -> readLegacyOpcode ctx rex
 
    case opcodeMap oc of
 
@@ -62,7 +62,7 @@ getInstruction mode = consumeAtMost 15 $ do
       -- instruction and the operand encoding is predefined (not opcode
       -- specific)
       MapLegacy Map3DNow -> do
-         ops <- readOperands mode ps oc amd3DNowEncoding
+         ops <- readOperands ctx ps oc amd3DNowEncoding
          -- read opcode byte
          let OpLegacy rx ocm _ = oc
          oc' <- OpLegacy rx ocm <$> getWord8
@@ -151,12 +151,12 @@ getInstruction mode = consumeAtMost 15 $ do
          -- Filter out invalid enabled extensions
          -- and invalid execution mode
          let
-            cs5 = filter (encSupportExecMode mode . entryEncoding) cs4
+            cs5 = filter (ctxSupportEncoding ctx . entryEncoding) cs4
                
          when (null cs5) $ do
             -- get disabled extensions that may have filtered out the expected
             -- encoding
-            let es = nub (concatMap (encRequiredExtensions . entryEncoding) cs4) \\ extensions mode
+            let es = nub (concatMap (encRequiredExtensions . entryEncoding) cs4) \\ ctxExtensions ctx
 
             if null es
                then fail ("No candidate instruction found.")
@@ -168,7 +168,7 @@ getInstruction mode = consumeAtMost 15 $ do
             xs  -> fail ("More than one instruction found (opcode table bug?): " ++ show (fmap (insnMnemonic . entryInsn) xs))
 
          -- Read params
-         ops <- readOperands mode ps oc enc
+         ops <- readOperands ctx ps oc enc
 
          -- Variants
          let
@@ -306,11 +306,11 @@ readLegacyPrefixes failOnRedundantPrefixes = do
 ---------------------------------------------------------------------------
 
 -- | Read optional REX prefix
-readRexPrefix :: ExecMode -> Get (Maybe Rex)
-readRexPrefix mode =
+readRexPrefix :: Context -> Get (Maybe Rex)
+readRexPrefix ctx =
    
    -- REX is only supported in 64-bit mode
-   if is64bitMode (x86Mode mode)
+   if is64bitMode (ctxMode ctx)
       then lookAheadM $ do
          x <- getWord8
          return $ if isRexPrefix x
@@ -332,11 +332,11 @@ readRexPrefix mode =
 ---------------------------------------------------------------------------
 
 -- | Read legacy opcode
-readLegacyOpcode :: ExecMode -> Maybe Rex -> Get Opcode
+readLegacyOpcode :: Context -> Maybe Rex -> Get Opcode
 readLegacyOpcode mode rex = do
 
    let
-      is3DNowAllowed = mode `hasExtension` AMD3DNow
+      is3DNowAllowed = extensionAvailable mode AMD3DNow
       ret m x = return (OpLegacy rex m x)
 
    getWord8 >>= \case
@@ -366,11 +366,11 @@ readLegacyOpcode mode rex = do
 ---------------------------------------------------------------------------
 
 -- | Read VEX/XOP encoded opcode
-readVexXopOpcode :: ExecMode -> [LegacyPrefix] -> Maybe Rex -> Get (Maybe Opcode)
-readVexXopOpcode mode ps rex = do
+readVexXopOpcode :: Context -> [LegacyPrefix] -> Maybe Rex -> Get (Maybe Opcode)
+readVexXopOpcode ctx ps rex = do
    let
-      isXOPAllowed = mode `hasExtension` XOP
-      isVEXAllowed = mode `hasExtension` VEX
+      isXOPAllowed = extensionAvailable ctx XOP
+      isVEXAllowed = extensionAvailable ctx VEX
 
       -- VEX prefixes are supported in 32-bit and 16-bit modes
       -- They overload LES and LDS opcodes so that the first two bits
@@ -379,7 +379,7 @@ readVexXopOpcode mode ps rex = do
       testMod w    = w `uncheckedShiftR` 6 == 0x03
 
       isVexMode act = do
-         c <- if is64bitMode (x86Mode mode)
+         c <- if is64bitMode (ctxMode ctx)
                   then return True
                   else testMod <$> lookAhead getWord8
          if c
@@ -417,8 +417,8 @@ readVexXopOpcode mode ps rex = do
 -- ===========================================================================
 
 -- | Read instruction operands
-readOperands :: ExecMode -> [LegacyPrefix] -> Opcode -> Encoding -> Get [Operand]
-readOperands mode ps oc enc = do
+readOperands :: Context -> [LegacyPrefix] -> Opcode -> Encoding -> Get [Operand]
+readOperands ctx ps oc enc = do
 
    -- read ModRM
    modrm <- if encRequireModRM enc
@@ -431,7 +431,7 @@ readOperands mode ps oc enc = do
       --    * the default address size
       --    * the presence of the 0x67 legacy prefix
       hasPrefix67 = LegacyPrefix67 `elem` ps
-      addressSize = overriddenAddressSize hasPrefix67 mode
+      addressSize = overriddenAddressSize hasPrefix67 ctx
 
       -- we determine the effective operand size. It depends on:
       --   * the mode of execution
@@ -457,7 +457,7 @@ readOperands mode ps oc enc = do
          Just b | testBit (opcodeByte oc) b -> True
          _                                  -> False
 
-      is64bitMode' = is64bitMode (x86Mode mode)
+      is64bitMode' = is64bitMode (ctxMode ctx)
       isRegModRM   = case modrm of
          Nothing -> False
          Just m  -> rmRegMode m
@@ -465,20 +465,20 @@ readOperands mode ps oc enc = do
       -- predicate oracle
       oracle = makeOracle <|
          [ (ContextPred (Mode m), UnsetPred) | m <- allModes
-                                             , m /= x86Mode mode]
+                                             , m /= ctxMode ctx]
          ++
-         [ (ContextPred (Mode (x86Mode mode)), SetPred)
-         , (ContextPred CS_D         , if | is64bitMode'           -> UnsetPred
-                                          | csDescriptorFlagD mode -> SetPred
-                                          | otherwise              -> UnsetPred)
-         , (ContextPred SS_B         , if | ssDescriptorFlagB mode -> SetPred
-                                          | otherwise              -> UnsetPred)
-         , (PrefixPred Prefix66      , if | hasPrefix66            -> SetPred
-                                          | otherwise              -> UnsetPred)
-         , (PrefixPred Prefix67      , if | hasPrefix67            -> SetPred
-                                          | otherwise              -> UnsetPred)
-         , (PrefixPred PrefixW       , if | opcodeW oc             -> SetPred
-                                          | otherwise              -> UnsetPred)
+         [ (ContextPred (Mode (ctxMode ctx)), SetPred)
+         , (ContextPred CS_D         , if | is64bitMode' -> UnsetPred
+                                          | ctxCS_D ctx  -> SetPred
+                                          | otherwise    -> UnsetPred)
+         , (ContextPred SS_B         , if | ctxSS_B ctx  -> SetPred
+                                          | otherwise    -> UnsetPred)
+         , (PrefixPred Prefix66      , if | hasPrefix66  -> SetPred
+                                          | otherwise    -> UnsetPred)
+         , (PrefixPred Prefix67      , if | hasPrefix67  -> SetPred
+                                          | otherwise    -> UnsetPred)
+         , (PrefixPred PrefixW       , if | opcodeW oc   -> SetPred
+                                          | otherwise    -> UnsetPred)
          , (PrefixPred PrefixL       , case opcodeL oc of
                                           Nothing    -> UndefPred
                                           Just True  -> SetPred

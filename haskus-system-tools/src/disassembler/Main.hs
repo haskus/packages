@@ -6,7 +6,7 @@ import System.Environment
 import Control.Monad (forM_)
 
 import Haskus.Binary.Buffer
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Insn
 import Haskus.Arch.X86_64.Disassembler
 import qualified Data.Set as Set
@@ -17,13 +17,6 @@ main = do
    bs  <- bufferReadFile f
 
    let 
-      m = ExecMode
-            { x86Mode            = Mode64
-            , csDescriptorFlagD  = False
-            , ssDescriptorFlagB  = False
-            , extensions         = allExtensions
-            }
-
       showInsn o b cmt = putStrLn str
          where
             o'     = show o
@@ -36,7 +29,7 @@ main = do
                   ++ cmt
 
    let
-      ds = linearDisass m bs
+      ds = linearDisass defaultContext64 bs
       showDisass = \case
          RawBytes    offset buf errs -> showInsn offset buf ("; Failed: " ++ show errs)
          Instruction offset buf ins  -> showInsn offset buf d

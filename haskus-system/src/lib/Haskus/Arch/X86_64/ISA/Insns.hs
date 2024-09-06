@@ -794,7 +794,7 @@ where
 
 import Haskus.Utils.List ((\\))
 import Haskus.Arch.X86_64.ISA.MicroArch
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Arch.X86_64.ISA.Encoding
 import Haskus.Arch.X86_64.ISA.Insn

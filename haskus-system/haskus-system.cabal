@@ -36,12 +36,14 @@ library
 
     Haskus.Arch.X86_64.ISA.Operand
     Haskus.Arch.X86_64.ISA.Memory
+    Haskus.Arch.X86_64.ISA.Extension
     Haskus.Arch.X86_64.ISA.Immediate
     Haskus.Arch.X86_64.ISA.Solver
     Haskus.Arch.X86_64.ISA.MicroArch
-    Haskus.Arch.X86_64.ISA.Mode
+    Haskus.Arch.X86_64.ISA.Context
     Haskus.Arch.X86_64.ISA.Register
     Haskus.Arch.X86_64.ISA.OpcodeMaps
+    Haskus.Arch.X86_64.ISA.OperatingMode
     Haskus.Arch.X86_64.ISA.Size
     Haskus.Arch.X86_64.ISA.Decoder
     Haskus.Arch.X86_64.ISA.Insns

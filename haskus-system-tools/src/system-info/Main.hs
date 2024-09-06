@@ -27,7 +27,7 @@ import qualified Haskus.Arch.X86_64.ISA.Memory           as X86
 import qualified Haskus.Arch.X86_64.ISA.Size             as X86
 import qualified Haskus.Arch.X86_64.ISA.Solver           as X86
 import qualified Haskus.Arch.X86_64.ISA.Immediate        as X86
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Solver
 import Haskus.Arch.Common.Register
 import Haskus.Arch.Common.Memory
@@ -491,7 +491,7 @@ showRegs = do
   h1_ "Registers"
 
   let
-     showMode :: X86Mode -> Html ()
+     showMode :: Mode -> Html ()
      showMode mode = do
         h2_ (toHtml (show mode))
         let

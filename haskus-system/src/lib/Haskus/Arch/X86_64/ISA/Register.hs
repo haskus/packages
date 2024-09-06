@@ -157,7 +157,7 @@ where
 import Haskus.Arch.Common.Register
 import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Arch.X86_64.ISA.Solver
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Utils.Solver
 import qualified Haskus.Utils.List as List
 import Haskus.Utils.Text (Text,tshow)
@@ -258,7 +258,7 @@ setRegFamId useExtRegs rawId fam = fam
 ---------------------------------------------------------------------
 
 -- | Return X86 registers for the selected mode
-getModeRegisters :: X86Mode -> Set X86Reg
+getModeRegisters :: Mode -> Set X86Reg
 getModeRegisters mode = Set.unions $ fmap Set.fromList regSets
    where
       regSets = case mode of

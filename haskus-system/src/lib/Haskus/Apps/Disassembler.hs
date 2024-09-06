@@ -10,7 +10,7 @@ import Prelude hiding (replicate,length)
 import qualified Haskus.Utils.Text as Text
 import Haskus.Utils.Text (Text)
 import Haskus.Binary.Buffer
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Arch.X86_64.ISA.Insn
 import Haskus.Arch.X86_64.ISA.Encoding
@@ -34,15 +34,10 @@ disassX86_64 :: Maybe Word -> Buffer -> Text
 disassX86_64 initOffset buffer = LT.toStrict (toLazyText bld)
    where
       -- disassembled buffer
-      ds = linearDisass m buffer
+      ds = linearDisass ctx buffer
 
-      -- arch mode
-      m = ExecMode
-            { x86Mode            = Mode64
-            , csDescriptorFlagD  = False
-            , ssDescriptorFlagB  = False
-            , extensions         = allExtensions
-            }
+      -- context
+      ctx = defaultContext64
 
       -- builder
       bld = mconcat (fmap (fromText . showDisass) ds)
