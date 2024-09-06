@@ -11,7 +11,7 @@ module Haskus.Arch.X86_64.Disassembler
 import Haskus.Binary.Get as G
 import Haskus.Binary.Buffer
 import Haskus.Arch.X86_64.ISA.Insn
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Decoder
 import Haskus.Utils.List (intersect)
 
@@ -21,11 +21,11 @@ data Disass
    deriving (Show)
 
 -- | Disassemble a whole buffer linearly
-linearDisass :: ExecMode -> Buffer -> [Disass]
-linearDisass m = go 0 emptyBuffer []
+linearDisass :: Context -> Buffer -> [Disass]
+linearDisass ctx = go 0 emptyBuffer []
 
    where 
-      g  = G.countBytes $ getInstruction m
+      g  = G.countBytes $ getInstruction ctx
 
       go offset fb fbs b
          | isBufferEmpty b && isBufferEmpty fb = []

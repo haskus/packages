@@ -22,7 +22,7 @@ module Haskus.Arch.X86_64.ISA.Encoding
    , encSupportMode
    , encRequiredExtensions
    , encSupportExtensions
-   , encSupportExecMode
+   , ctxSupportEncoding
    , encSupportPrefix
    , encValidModRMMode
    , encAllowPrefix66
@@ -99,7 +99,7 @@ import Haskus.Binary.Bits
 import Haskus.Number.Word
 import Haskus.Binary.BitField hiding (Size)
 import Haskus.Arch.X86_64.ISA.MicroArch
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Arch.X86_64.ISA.Solver
 import Haskus.Arch.X86_64.ISA.Register
@@ -173,7 +173,7 @@ data EncodingProperties
    | DefaultOperandSize64     -- ^ Default operand size is 64-bits for this
                               --   instruction in LongMode
    | NoOperandSize64          -- ^ 64-bit operand size not supported
-   | Extension X86Extension   -- ^ Required CPU extension
+   | Extension Extension      -- ^ Required CPU extension
    | Arch X86Arch             -- ^ Instruction added starting at the given arch
    | DefaultSegment X86Reg    -- ^ Default register
    | HLE HLEAction            -- ^ Hardware-lock elision (HLE) prefix support
@@ -299,14 +299,14 @@ encSupportHLE a e = case filter isHLE (encProperties e) of
       isHLE _       = False
 
 -- | Test if an encoding is supported in a given mode
-encSupportMode :: X86Mode -> Encoding -> Bool
+encSupportMode :: Mode -> Encoding -> Bool
 encSupportMode mode enc = p `elem` encProperties enc
   where p = case mode of
               Mode64    -> LongModeSupport
               _         -> LegacyModeSupport
 
 -- | Get required extensions for the encoding
-encRequiredExtensions :: Encoding -> [X86Extension]
+encRequiredExtensions :: Encoding -> [Extension]
 encRequiredExtensions enc =
    mapMaybe extractExt (encProperties enc)
    where
@@ -315,16 +315,16 @@ encRequiredExtensions enc =
 
 -- | Indicate if an encoding is supported given a set of extensions.
 -- For now, check if the required extensions are enabled.
-encSupportExtensions :: [X86Extension] -> Encoding -> Bool
+encSupportExtensions :: ExtensionSet -> Encoding -> Bool
 encSupportExtensions exts enc =
    -- FIXME: don't use a list, use (Bit)Set ops
    null (encRequiredExtensions enc \\ exts)
 
--- | Test if an encoding is supported in a given execution mode
-encSupportExecMode :: ExecMode -> Encoding -> Bool
-encSupportExecMode mode enc =
-   encSupportMode (x86Mode mode) enc
-   && encSupportExtensions (extensions mode) enc
+-- | Test if an encoding is supported in a given execution context
+ctxSupportEncoding :: Context -> Encoding -> Bool
+ctxSupportEncoding ctx enc =
+   encSupportMode (ctxMode ctx) enc
+   && encSupportExtensions (ctxExtensions ctx) enc
 
 
 -- | Some instructions store flags and values into the opcode byte. This method
@@ -715,7 +715,7 @@ modField (ModRM x) = extractField @"mode" x
 
 
 -- | Mode for pattern matching
-data Mode
+data ModField
    = Mode00
    | Mode01
    | Mode10
@@ -723,7 +723,7 @@ data Mode
    deriving (Show,Eq,Enum)
 
 -- | Get mod field in ModRM
-modeField :: ModRM -> Mode
+modeField :: ModRM -> ModField
 modeField = toEnum . fromIntegral . modField
 
 -- | Get the tree fields (mod,reg,rm)

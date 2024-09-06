@@ -19,7 +19,7 @@ import Haskus.Format.Elf.GHC
 
 import Haskus.Format.Dwarf
 
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Arch.X86_64.ISA.Insn
 import Haskus.Arch.X86_64.ISA.Encoding
@@ -430,12 +430,7 @@ showSectionAsm elf s = do
    -- TODO: add configuration for default operand/address size in 32-bit case
    let 
       bs = getSectionContentBuffer elf s
-      m = ExecMode
-            { x86Mode            = Mode64
-            , csDescriptorFlagD  = False
-            , ssDescriptorFlagB  = False
-            , extensions         = allExtensions
-            }
+      ctx = defaultContext64
 
    table_ $ do
       tr_ $ do
@@ -443,7 +438,7 @@ showSectionAsm elf s = do
          th_ "Binary"
          th_ "Instruction"
          th_ "Comment"
-      forM_ (linearDisass m bs) $ \d -> tr_ $ do
+      forM_ (linearDisass ctx bs) $ \d -> tr_ $ do
          case d of
             RawBytes    offset buf errs -> do
                td_ (toHtml (show offset))

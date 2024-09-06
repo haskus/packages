@@ -43,14 +43,14 @@ module Haskus.Arch.X86_64.ISA.Solver
 where
 
 import Haskus.Arch.X86_64.ISA.Size
-import Haskus.Arch.X86_64.ISA.Mode
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Utils.Solver
 import Haskus.Utils.Maybe
 import qualified Haskus.Utils.List as List
 
 -- | Context predicate
 data ContextPred
-   = Mode X86Mode -- ^ Execution mode
+   = Mode Mode    -- ^ Execution mode
    | CS_D         -- ^ CS.D segment descriptor flag
    | SS_B         -- ^ SS.B segment descriptor flag
    deriving (Show,Eq,Ord)
@@ -255,7 +255,7 @@ pMode64bit :: X86Constraint
 pMode64bit = pMode Mode64
 
 -- | Exclusive mode predicate
-pMode :: X86Mode -> X86Constraint
+pMode :: Mode -> X86Constraint
 pMode = Predicate . ContextPred . Mode
 
 -- | Check if a predicate is a Mode predicate
