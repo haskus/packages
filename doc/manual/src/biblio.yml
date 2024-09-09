@@ -22,3 +22,44 @@ agner-fog:
     - Agner Fog
   date: 2024-08-11
   url: https://www.agner.org
+
+university-physics:
+  type: book
+  title: University Physics
+  author:
+    - Samuel J. Ling
+    - William Moebs
+    - Jeff Sanny
+  date: 2024-09-09
+  url: https://openstax.org/details/books/university-physics-volume-2
+  volume-total: 3
+
+university-physics-volume2:
+  type: book
+  title: "University Physics II: Thermodynamics, Electricity, and Magnetism"
+  author:
+    - Samuel J. Ling
+    - William Moebs
+    - Jeff Sanny
+  date: 2024-07-23
+  url: https://openstax.org/details/books/university-physics-volume-2
+  volume: 2
+
+university-physics-volume3:
+  type: book
+  title: "University Physics III: Optics and Modern Physics"
+  author:
+    - Samuel J. Ling
+    - Jeff Sanny
+    - William Moebs
+  date: 2024-07-23
+  url: https://openstax.org/details/books/university-physics-volume-3
+  volume: 3
+
+feynman-lectures-31:
+  type: chapter
+  title: "Lecture on Physics 32: The Origin of the Refractive Index"
+  author: Richard Feynman
+  date: 1963
+  volume: 1
+  url: https://www.feynmanlectures.caltech.edu/I_31.html
