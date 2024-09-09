@@ -5,7 +5,7 @@ computer for:
 
 - image digitalization: what is a digital image and how do we store it
 - image compression: how to compress digital images (with or without loss of
-  information
+  information)
 - image printing
 - image display: video display technologies
 - image processing: transforming images
@@ -50,37 +50,92 @@ interpreted as colors.
   )
 )
 
-In physics there are two common models to describe electromagnetic radiations,
-their travels and their interactions:
-- at our scale, we can use the model of *electromagnetic waves*
-- at the atomic scale, *quantum electrodynamics* (with photon particles) is a
-  better model
+In physics there are two models to describe electromagnetic radiations:
+- at our scale, we use the model of *electromagnetic waves*
+- at the atomic scale, we use *quantum electrodynamics* (with photon "particles")
 
 === Electromagnetic waves
 
-The speed of an electromagnetic radiation is determined by the medium/material
-it is in. In vacuum, this speed is 299,792,458 m/s (the well known "speed of
-light" constant, denoted with $c_0$). $c_0$ is the upper limit for the speed of an
-electromagnetic radiation.
+In the _electromagnetic waves_ model, an electromagnetic radiation is a periodic
+oscillation of the electric and magnetic fields. These two fields affect each
+other in a particular way described by Maxwell's equations and oscillate in
+phase. However we don't need to dig that deep to understand colors! We only need
+to know about some of the properties of these oscillations.
 
-TODO: optical frequency $v$ is constant for a monochromatic wave.
-https://www.rp-photonics.com/wavelength.html
+The main property of an electromagnetic radiation is its *frequency* usually
+noted _f_ and expressed in _hertz_: it's the number of oscillations of the
+fields per second.
 
-To avoid manipulating large speed numbers, the speed $v$ in other materials is
-often given with the *refractive index* $n$ of the material, defined as: $n =
-c_0/v$
+The amplitudes of the electric and magnetic fields are also important
+properties, but we won't use them directly. Instead we use them to derive the
+_energy flux_ of the wave: the energy $S(x,t)$ transmitted by the wave at a
+distance $x$ and at time $t$. However we don't even use the energy flux
+directly. Instead we compute and (this time!) use an average of the energy flux
+called the *Intensity*. Intensity is denoted _I_ and is expressed in watts per
+squared meters ($W"/"m^2$).
 
+#quote(block:true, attribution: [Section 16.4 of @university-physics-volume2: Energy Carried
+by Electromagnetic Waves])[Because the frequency of visible light is very high,
+of the order of $10^14$Hz, the energy flux for visible light through any area is
+an extremely rapidly varying quantity. Most measuring devices, including our
+eyes, detect only an average over many cycles. The time average of the energy
+flux is the intensity _I_ of the electromagnetic wave and is the power per unit
+area.]
 
+The *speed of travel* of an electromagnetic radiation depends on the medium it
+is travelling in and on the frequency _f_ of the electromagnetic radiation. We
+denote it with $c_"medium" (f)$ where _c_ stands for _celeritas_ in Latin,
+meaning _speed_. Speed of travel is expressed in meters per second ($m"/"s$).
+
+Propagation in vacuum is a special case as the speed of travel doesn't depend on
+the electromagnetic radiation frequency _f_. As such we can write $c_"vacuum" =
+299,792,458 m"/"s$ for the well-known "speed of light" constant.The speed of
+travel through matter is less than it is in a vacuum because the radiation
+interacts with atoms in the material. Hence $c_"vacuum"$ is the upper limit for
+the speed of an electromagnetic radiation.
+
+To avoid manipulating large speed numbers, we prefer using the *refractive
+index* $n$ of a medium, defined as:
+
+$ n_"medium" (f) = c_"vacuum"/(c_"medium" (f)) >= 1 $
+
+Similarly, to avoid manipulating large numbers for frequencies it is common to
+use the wavelength $#sym.lambda$ defined as follow and to express it in a small
+meter unit, e.g. nanometres ($"nm"$) for visible light:
+
+$ #sym.lambda (f) = c_"vacuum" / f $
+
+#figure(
+  caption: [Refractive index of some media for some wavelengths.
+  From Section 1.6 of @university-physics-volume3
+  ],
+  align(center,[
 #table(
-  columns: (auto, auto, auto),
-  align: (left,center,right),
+  columns: (auto, auto, auto, auto, auto, auto, auto),
+  align: (left,center,center,center,center,center,center),
   table.header(
-    [*Material*], [*Refractive index $n$*], [*Phase velocity (m/s)* $v$]
+    [*Medium*], [*Red \ 660 nm*], [*Orange \ 610 nm*], [*Yellow \ 580 nm*],
+    [*Green \ 550 nm*], [*Blue \ 470 nm*], [*Violet \ 410 nm*]
   ),
-  [Vacuum], [1], [299,792,458],
-  [Glass], [1,5], [\~200,000,000],
+  [$n_"water"$], [1.331], [1.332], [1.333], [1.335], [1.338], [1.342],
+  [$n_"diamond"$], [2.410], [2.415], [2.417], [2.426], [2.444], [2.458],
+  [$n_"glass, crown"$], [1.512], [1.514], [1.518], [1.519], [1.524], [1.530],
+  [$n_"glass, flint"$], [1.662], [1.665], [1.667], [1.674], [1.684], [1.698],
+  [$n_"polystyrene"$], [1.488], [1.490], [1.492], [1.493], [1.499], [1.506],
+  [$n_"quartz, fused"$], [1.455], [1.456], [1.458], [1.459], [1.462], [1.468],
 )
+]))
 
+
+TODO:
+- dispersion: angle of refraction
+- attenuation: intensity attenuation through a medium. Also depends on the wave frequency
+- another property: polarization
+- spectrum
+
+A thorough explanation of the origin of the refractive index is out of the scope
+of this book. On this topic, the interested reader may read Richard Feynman
+@feynman-lectures-31.
 
 
 
