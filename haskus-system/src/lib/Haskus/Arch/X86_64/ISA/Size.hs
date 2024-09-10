@@ -9,6 +9,7 @@ module Haskus.Arch.X86_64.ISA.Size
    , toSizedValue
    , fromSizedValue
    , writeSizedValueLE
+   , sizedValueSizeInBytes
    , OperandSize(..)
    , opSizeInBits
    , getSize
@@ -81,6 +82,14 @@ writeSizedValueLE = \case
    SizedValue16 v -> W.writeU16LE v
    SizedValue32 v -> W.writeU32LE v
    SizedValue64 v -> W.writeU64LE v
+
+-- | Size of a sized value
+sizedValueSizeInBytes :: SizedValue -> Word
+sizedValueSizeInBytes = \case
+   SizedValue8  {} -> 1
+   SizedValue16 {} -> 2
+   SizedValue32 {} -> 4
+   SizedValue64 {} -> 8
 
 -- | Operand size
 data OperandSize
