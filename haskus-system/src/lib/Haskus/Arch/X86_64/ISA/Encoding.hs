@@ -111,7 +111,7 @@ import Control.Applicative
 -- | Instruction encoding
 data Encoding = Encoding
    { encOpcodeEncoding  :: !OpcodeEncoding       -- ^ Opcode encoding
-   , encMandatoryPrefix :: !(Maybe LegacyPrefix) -- ^ Mandatory prefix
+   , encMandatoryPrefix :: !(Maybe Prefix)       -- ^ Mandatory prefix
    , encOpcodeMap       :: !OpcodeMap            -- ^ Map
    , encOpcode          :: {-# UNPACK #-} !Word8 -- ^ Opcode
    , encOpcodeExt       :: !(Maybe Word8)        -- ^ Opcode extension in ModRM.reg
@@ -280,7 +280,7 @@ encPredicates enc = encOperands enc
 -- | Indicate if prefix 66 (override operand-size) can be used
 encAllowPrefix66 :: Encoding -> Bool
 encAllowPrefix66 e =
-   encMandatoryPrefix e == Just LegacyPrefix66
+   encMandatoryPrefix e == Just P_66
    || PrefixPred Prefix66 `elem` encPredicates e
 
 -- | Test if an encoding support the given Hardware-Lock Elision prefix
@@ -360,35 +360,31 @@ encGenerateOpcodes e = nub ocs
                else ocs'
 
 -- | Test if an encoding support a given prefix
-encSupportPrefix :: Encoding -> LegacyPrefix -> Bool
+encSupportPrefix :: Encoding -> Prefix -> Bool
 encSupportPrefix e x =
    Just x == encMandatoryPrefix e || case x of
       -- operand-size prefix
-      LegacyPrefix66 -> encAllowPrefix66 e
+      P_66 -> encAllowPrefix66 e
       -- address-size prefix
-      LegacyPrefix67 -> encMayHaveMemoryOperand e
+      P_67 -> encMayHaveMemoryOperand e
       -- CS segment override / Branch not taken hint
-      LegacyPrefix2E -> encMayHaveMemoryOperand e
-                        || encBranchHintable e
+      P_2E -> encMayHaveMemoryOperand e || encBranchHintable e
       -- DS segment override / Branch taken hint
-      LegacyPrefix3E -> encMayHaveMemoryOperand e
-                        || encBranchHintable e
+      P_3E -> encMayHaveMemoryOperand e || encBranchHintable e
       -- ES segment override
-      LegacyPrefix26 -> encMayHaveMemoryOperand e
+      P_26 -> encMayHaveMemoryOperand e
       -- FS segment override
-      LegacyPrefix64 -> encMayHaveMemoryOperand e
+      P_64 -> encMayHaveMemoryOperand e
       -- GS segment override
-      LegacyPrefix65 -> encMayHaveMemoryOperand e
+      P_65 -> encMayHaveMemoryOperand e
       -- SS segment override
-      LegacyPrefix36 -> encMayHaveMemoryOperand e
+      P_36 -> encMayHaveMemoryOperand e
       -- LOCK prefix
-      LegacyPrefixF0 -> encLockable e
+      P_F0 -> encLockable e
       -- REPZ / XRELEASE
-      LegacyPrefixF3 -> encRepeatable e
-                        || encSupportHLE XRelease e
+      P_F3 -> encRepeatable e || encSupportHLE XRelease e
       -- REPNZ / XACQUIRE
-      LegacyPrefixF2 -> encRepeatable e
-                        || encSupportHLE XAcquire e
+      P_F2 -> encRepeatable e || encSupportHLE XAcquire e
 
 -------------------------------------------------------------------
 -- Generic opcode
@@ -509,12 +505,12 @@ vexPP :: Vex -> Word8
 vexPP (Vex2 x)   = x .&. 0x03
 vexPP (Vex3 _ x) = x .&. 0x03
 
-vexPrefix :: Vex -> Maybe LegacyPrefix
+vexPrefix :: Vex -> Maybe Prefix
 vexPrefix v = case vexPP v of
    0x00 -> Nothing
-   0x01 -> Just LegacyPrefix66
-   0x02 -> Just LegacyPrefixF3
-   0x03 -> Just LegacyPrefixF2
+   0x01 -> Just P_66
+   0x02 -> Just P_F3
+   0x03 -> Just P_F2
    _    -> error "Invalid VEX.pp"
 
 vexMMMMM :: Vex -> Word8
@@ -650,7 +646,7 @@ baseField (SIB x) = x .&. 0x07
 -- | Set a memory address from ModRM/SIB
 --
 -- TODO: replace this function with a predicated stuff
-setAddrFam :: Bool -> [LegacyPrefix] -> Opcode -> AddressSize -> Bool -> ModRM -> Maybe SIB -> Maybe Size -> Maybe Word64 -> AddrFam -> AddrFam
+setAddrFam :: Bool -> [Prefix] -> Opcode -> AddressSize -> Bool -> ModRM -> Maybe SIB -> Maybe Size -> Maybe Word64 -> AddrFam -> AddrFam
 setAddrFam is64bitMode' ps oc addressSize useExtRegs modrm msib mdispSize mdisp fam = fam
       { addrFamSeg      = FixedSeg <$> seg'
       , addrFamBase     = base
@@ -661,14 +657,14 @@ setAddrFam is64bitMode' ps oc addressSize useExtRegs modrm msib mdispSize mdisp 
       }
    where
       -- segment override prefixes
-      segOverride = case filter ((== 3) . legacyPrefixGroup) ps of
-         []               -> Nothing
-         [LegacyPrefix2E] -> Just R_CS
-         [LegacyPrefix3E] -> Just R_DS
-         [LegacyPrefix26] -> Just R_ES
-         [LegacyPrefix64] -> Just R_FS
-         [LegacyPrefix65] -> Just R_GS
-         [LegacyPrefix36] -> Just R_SS
+      segOverride = case filter ((== 3) . prefixGroup) ps of
+         []     -> Nothing
+         [P_2E] -> Just R_CS
+         [P_3E] -> Just R_DS
+         [P_26] -> Just R_ES
+         [P_64] -> Just R_FS
+         [P_65] -> Just R_GS
+         [P_36] -> Just R_SS
          xs -> error ("More than one segment-override prefix: "++show xs)
 
       sib' = fromJust msib

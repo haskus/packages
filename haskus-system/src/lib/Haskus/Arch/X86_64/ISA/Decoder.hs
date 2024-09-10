@@ -48,7 +48,7 @@ getInstruction :: Context -> Get Insn
 getInstruction ctx = consumeAtMost 15 $ do
    -- An instruction is at most 15 bytes long
 
-   ps  <- readLegacyPrefixes False -- don't fail on redundant prefixes
+   ps  <- readPrefixes False -- don't fail on redundant prefixes
    rex <- readRexPrefix ctx
 
    -- read opcode
@@ -173,32 +173,32 @@ getInstruction ctx = consumeAtMost 15 $ do
          -- Variants
          let
             -- lock prefix
-            vlocked  = if encLockable enc && LegacyPrefixF0 `elem` ps
+            vlocked  = if encLockable enc && P_F0 `elem` ps
                         then Set.singleton Locked
                         else Set.empty
 
             -- repeat prefixes
             vrepeat  = if encRepeatable enc
-                        then if LegacyPrefixF3 `elem` ps
+                        then if P_F3 `elem` ps
                            then Set.singleton RepeatZero
-                           else if LegacyPrefixF2 `elem` ps
+                           else if P_F2 `elem` ps
                               then Set.singleton RepeatNonZero
                               else Set.empty
                         else Set.empty
 
             -- hardware lock elision (HLE)
-            vacquire  = if encSupportHLE XAcquire enc && LegacyPrefixF2 `elem` ps
+            vacquire  = if encSupportHLE XAcquire enc && P_F2 `elem` ps
                            then Set.singleton LockElisionAcquire
                            else Set.empty
-            vrelease  = if encSupportHLE XRelease enc && LegacyPrefixF3 `elem` ps
+            vrelease  = if encSupportHLE XRelease enc && P_F3 `elem` ps
                            then Set.singleton LockElisionRelease
                            else Set.empty
 
             -- branch hint prefixes
             vbranchhint = if encBranchHintable enc
-                        then if LegacyPrefix3E `elem` ps
+                        then if P_3E `elem` ps
                            then Set.singleton BranchHintTaken
-                           else if LegacyPrefix2E `elem` ps
+                           else if P_2E `elem` ps
                               then Set.singleton BranchHintNotTaken
                               else Set.empty
                         else Set.empty
@@ -222,7 +222,7 @@ getInstruction ctx = consumeAtMost 15 $ do
 
             vlegprefixes = if null ps
                then Set.empty
-               else Set.singleton (LegacyPrefixes ps)
+               else Set.singleton (Prefixes ps)
 
             variants = Set.unions
                [ vreverse
@@ -245,31 +245,31 @@ getInstruction ctx = consumeAtMost 15 $ do
 -- Legacy encoding
 -- ===========================================================================
 
--- | Read legacy prefixes (up to 5)
-readLegacyPrefixes :: Bool -> Get [LegacyPrefix]
-readLegacyPrefixes failOnRedundantPrefixes = do
+-- | Read prefixes (up to 5)
+readPrefixes :: Bool -> Get [Prefix]
+readPrefixes failOnRedundantPrefixes = do
    let
-      readLegacyPrefix :: Get (Maybe LegacyPrefix)
-      readLegacyPrefix = lookAheadM (toLegacyPrefix <$> getWord8)
+      readPrefix :: Get (Maybe Prefix)
+      readPrefix = lookAheadM (toPrefix <$> getWord8)
 
-      -- | Check that legacy prefixes belong to different groups
-      checkLegacyPrefixes :: [LegacyPrefix] -> Bool
-      checkLegacyPrefixes ps =
-         length ps == length (nub (map legacyPrefixGroup ps))
+      -- | Check that prefixes belong to different groups
+      checkPrefixes :: [Prefix] -> Bool
+      checkPrefixes ps =
+         length ps == length (nub (map prefixGroup ps))
 
-   -- read at most 5 legacy prefixes
-   ws <- getManyAtMost 5 readLegacyPrefix
+   -- read at most 5 prefixes
+   ws <- getManyAtMost 5 readPrefix
 
-   -- check that legacy prefixes are valid (group-wise)
-   if not failOnRedundantPrefixes || checkLegacyPrefixes ws
+   -- check that prefixes are valid (group-wise)
+   if not failOnRedundantPrefixes || checkPrefixes ws
       then return ws
-      else fail ("Invalid legacy prefixes: " ++ show ws)
+      else fail ("Invalid prefixes: " ++ show ws)
    
 ---------------------------------------------------------------------------
 -- REX prefix
 -- ~~~~~~~~~~
 --
--- In 64-bit mode, a REX prefix can be used after the legacy prefixes. A REX
+-- In 64-bit mode, a REX prefix can be used after the prefixes. A REX
 -- prefix contains several fields, hence it ranges from 0x40 to 0x4F. In
 -- non-64-bit mode, this range is used by the short variants of the INC/DEC
 -- instructions, hence these forms are not usable in 64-bit mode.
@@ -285,7 +285,7 @@ readLegacyPrefixes failOnRedundantPrefixes = do
 -- Its fields indicate:
 --    - the use of the extended registers (one additional bit per register)
 --    - the use of a 64-bit operand size (ignoring the operand-size overriding
---    legacy prefix)
+--      prefix)
 --
 -- Some instructions have default or fixed operand size set to 64bits in 64-bit
 -- mode, hence they don't require the REX prefix.
@@ -361,12 +361,12 @@ readLegacyOpcode mode rex = do
 -- existing instructions but add new ones (new opcode maps). Moreover they are
 -- mutually exclusive with the REX prefix as they subsume it.
 --
--- Some legacy prefixes are supported: address-size and segment override.
+-- Some prefixes are supported: address-size and segment override.
 --
 ---------------------------------------------------------------------------
 
 -- | Read VEX/XOP encoded opcode
-readVexXopOpcode :: Context -> [LegacyPrefix] -> Maybe Rex -> Get (Maybe Opcode)
+readVexXopOpcode :: Context -> [Prefix] -> Maybe Rex -> Get (Maybe Opcode)
 readVexXopOpcode ctx ps rex = do
    let
       isXOPAllowed = extensionAvailable ctx XOP
@@ -390,13 +390,13 @@ readVexXopOpcode ctx ps rex = do
       -- VEX/XOP encoding. REX prefix isn't supported either.
       -- This function checks this
       checkVexPrefixes act = do
-         let ps' = filter (\x -> legacyPrefixGroup x /= 2 
-                              && legacyPrefixGroup x /= 3) ps
+         let ps' = filter (\x -> prefixGroup x /= 2
+                              && prefixGroup x /= 3) ps
          case ps' of
             [] -> case rex of
                Nothing -> Just <$> act
                _       -> fail "REX prefix found with VEX/XOP opcode"
-            _  -> fail ("Invalid legacy prefixes found with VEX/XOP opcode: "
+            _  -> fail ("Invalid prefixes found with VEX/XOP opcode: "
                            ++ show ps')
 
    lookAheadM $ getWord8 >>= \case
@@ -417,7 +417,7 @@ readVexXopOpcode ctx ps rex = do
 -- ===========================================================================
 
 -- | Read instruction operands
-readOperands :: Context -> [LegacyPrefix] -> Opcode -> Encoding -> Get [Operand]
+readOperands :: Context -> [Prefix] -> Opcode -> Encoding -> Get [Operand]
 readOperands ctx ps oc enc = do
 
    -- read ModRM
@@ -429,18 +429,18 @@ readOperands ctx ps oc enc = do
    let
       -- we compute the overriden address size. It depends on:
       --    * the default address size
-      --    * the presence of the 0x67 legacy prefix
-      hasPrefix67 = LegacyPrefix67 `elem` ps
+      --    * the presence of the 0x67 prefix
+      hasPrefix67 = P_67 `elem` ps
       addressSize = overriddenAddressSize hasPrefix67 ctx
 
       -- we determine the effective operand size. It depends on:
       --   * the mode of execution
-      --   * the presence of the 0x66 legacy prefix
+      --   * the presence of the 0x66 prefix
       --   * the default operand size of the instruction in 64-bit mode (64-bit
       --   or not)
       --   * the value of the ForceNo8bit bit in the opcode (if applicable)
       --   * the value of REX.W/VEX.W/XOP.W (if applicable)
-      hasPrefix66     = LegacyPrefix66 `elem` ps
+      hasPrefix66     = P_66 `elem` ps
       hasDefaultOp64  = DefaultOperandSize64 `elem` encProperties enc
 
       --finally we take into account the NoForce8bit bit in the opcode

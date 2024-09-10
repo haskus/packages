@@ -117,7 +117,7 @@ overriddenOperationSize64 p66 pW p64 ctx =
      -- in 64-bit mode, most 64-bit instructions default to 32-bit operand
      -- size, except those with the DefaultOperandSize64 property.
      -- REX.W/VEX.W/XOP.W can be used to set a 64-bit operand size (it has
-     -- precedence over the 0x66 legacy prefix)
+     -- precedence over the 0x66 prefix)
      Mode64
         | p64 || pW -> OpSize64
      _              -> overriddenOperationSize p66 ctx

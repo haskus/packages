@@ -30,22 +30,22 @@ data Insn = Insn
 
 -- | Instruction behavior modifier
 data Modifier
-   = Locked                   -- ^ Locked memory access
-   | RepeatZero               -- ^ REP(Z) prefix
-   | RepeatNonZero            -- ^ REPNZ prefix
-   | LockElisionAcquire       -- ^ XACQUIRE prefix
-   | LockElisionRelease       -- ^ XRELEASE prefix
-   | BranchHintTaken          -- ^ Branch hint (branch taken)
-   | BranchHintNotTaken       -- ^ Branch hint (not taken)
-   deriving (Show,Eq,Ord)
+  = Locked                   -- ^ Locked memory access
+  | RepeatZero               -- ^ REP(Z) prefix
+  | RepeatNonZero            -- ^ REPNZ prefix
+  | LockElisionAcquire       -- ^ XACQUIRE prefix
+  | LockElisionRelease       -- ^ XRELEASE prefix
+  | BranchHintTaken          -- ^ Branch hint (branch taken)
+  | BranchHintNotTaken       -- ^ Branch hint (not taken)
+  deriving (Show,Eq,Ord)
 
 -- | Encoding variant: the encoding changes but not the behavior of the
 -- instruction
 data EncodingVariant
-   = Reversed                      -- ^ Parameters are reversed (useful when some instructions have two valid encodings, e.g. CMP reg8, reg8)
-   | ExplicitParam                 -- ^ A variant exists with an implicit parameter, but the explicit variant is used (FIXME: redundant with the associated encoding and we need to know all the other encodings... Not great. We could store if params are implicit or explicit instead)
-   | LegacyPrefixes [LegacyPrefix] -- ^ Legacy prefixes in front position
-   deriving (Show,Eq,Ord)
+  = Reversed                 -- ^ Parameters are reversed (useful when some instructions have two valid encodings, e.g. CMP reg8, reg8)
+  | ExplicitParam            -- ^ A variant exists with an implicit parameter, but the explicit variant is used (FIXME: redundant with the associated encoding and we need to know all the other encodings... Not great. We could store if params are implicit or explicit instead)
+  | Prefixes [Prefix]        -- ^ Prefixes in front position
+  deriving (Show,Eq,Ord)
 
 
 -- | X86 instruction
