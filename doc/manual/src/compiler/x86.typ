@@ -19,16 +19,16 @@ Agner Fog @agner-fog ---one of the most recognized non-Intel/AMD x86
 experts---has been designing a new architecture called ForwardCom to compete
 with x86 on high-end devices. In the introduction of the ForwardCom manual he writes:
 
-#quote(block:true, attribution: [ForwardCom manual, section 1.2 Background @agner-forwardcom])[
-Some commonly used instruction sets are poorly designed from the beginning. These systems
-have been augmented many times with extensions and patches. One of the worst cases is the
-widely used x86 instruction set and its many extensions. The x86 instruction set is the result of a
-long history of short-sighted extensions and patches. The result of this development history is a
-very complicated architecture with thousands of different instruction codes, which is very difficult
-and costly to decode in a microprocessor. We need to learn from past mistakes in order to make
-better choices when designing a new instruction set architecture and the software that supports
-it.
-]
+#quote(block:true, attribution: [ForwardCom manual, section 1.2 Background
+@agner-forwardcom])[ Some commonly used instruction sets are poorly designed
+from the beginning. These systems have been augmented many times with extensions
+and patches. One of the worst cases is the widely used x86 instruction set and
+its many extensions. The x86 instruction set is the result of a long history of
+short-sighted extensions and patches. The result of this development history is
+a very complicated architecture with thousands of different instruction codes,
+which is very difficult and costly to decode in a microprocessor. We need to
+learn from past mistakes in order to make better choices when designing a new
+instruction set architecture and the software that supports it. ]
 
 The only reason to continue to use the x86 architecture is that it is still the
 most widespread one for high-end devices. Note that Intel indirectly
