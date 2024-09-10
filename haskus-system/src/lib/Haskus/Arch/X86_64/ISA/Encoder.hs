@@ -50,11 +50,12 @@ isLegacyOpcode = \case
   Op_Xop  {} -> False
 
 data EncError
-  = TooManyPrefixes !Int        -- ^ More than 5 prefixes
+  = TooManyPrefixes !Word       -- ^ More than 5 prefixes
   | RexNotAllowed               -- ^ Rex prefix not allowed with the given opcode encoding
   | PrefixNotAllowed [Prefix]   -- ^ Prefix not allowed with the given opcode encoding
   | Imm64NotAllowed             -- ^ 64-bit immediate not allowed with displacement
   | Disp64NotAllowed            -- ^ 64-bit displacement not allowed with immediate
+  | TooManyBytes !Word          -- ^ More than 15-byte long encoding
   deriving (Show,Eq,Ord)
 
 -- | Check the validity of an encoding
@@ -62,7 +63,7 @@ check :: Enc -> [EncError]
 check Enc{..} = concat
   [ 
     -- at most 5 prefixes
-    let n = length encPrefixes in wh (n > 5) (TooManyPrefixes n)
+    let n = fromIntegral (length encPrefixes) in wh (n > 5) (TooManyPrefixes n)
 
     -- REX only allowed with legacy opcode encoding
   , wh (isJust encRex && not (isLegacyOpcode encOpcode)) RexNotAllowed
@@ -81,6 +82,29 @@ check Enc{..} = concat
           _                      -> False
     in wh (is_size64 encImm && isJust encDisp) Imm64NotAllowed
        <> wh (is_size64 encDisp && isJust encImm) Disp64NotAllowed
+
+    -- Instruction size <= 15 bytes
+  , let sz_maybe = \case
+          Nothing -> 0
+          Just _  -> 1
+        sz_opcode = \case
+          Op      {} -> 1
+          Op_0F   {} -> 2
+          Op_0F38 {} -> 3
+          Op_0F3A {} -> 3
+          Op_0F0F {} -> 3
+          Op_Vex2 {} -> 2
+          Op_Vex3 {} -> 3
+          Op_Xop  {} -> 3
+        sz_sized = maybe 0 sizedValueSizeInBytes
+        full_size = fromIntegral (length encPrefixes)
+                      + sz_maybe encRex
+                      + sz_opcode encOpcode
+                      + sz_maybe encModRM
+                      + sz_maybe encSIB
+                      + sz_sized encDisp
+                      + sz_sized encImm
+      in wh (full_size >= 15) (TooManyBytes full_size)
   ]
   where
     wh c e = if c then [e] else []
