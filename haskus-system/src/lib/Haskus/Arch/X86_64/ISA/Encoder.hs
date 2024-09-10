@@ -1,137 +1,69 @@
 module Haskus.Arch.X86_64.ISA.Encoder
-  ( Enc(..)
-  , Opcode (..)
-  , EncError (..)
-  , check
-  , encode
+  ( encodeInsn
+  , InsnEncErr (..)
+  , Operation (..)
+  , Operand (..)
   )
 where
 
-import Haskus.Binary.Word
-import Haskus.Memory.Writer
-import Haskus.Arch.X86_64.ISA.Encoding.Prefix
-import Haskus.Arch.X86_64.ISA.Encoding.Rex
+import Haskus.Arch.X86_64.ISA.Encoding.Enc
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 
-import Data.Maybe
-
--- | Instruction encoding specification
-data Enc = Enc
-  { encPrefixes :: [Prefix]            -- ^ Prefixes (up to 5)
-  , encRex      :: !(Maybe Rex)        -- ^ Rex prefix
-  , encOpcode   :: !Opcode             -- ^ Opcode
-  , encModRM    :: !(Maybe U8)         -- ^ ModRM
-  , encSIB      :: !(Maybe U8)         -- ^ SIB
-  , encDisp     :: !(Maybe SizedValue) -- ^ Displacement
-  , encImm      :: !(Maybe SizedValue) -- ^ Immediate
-  }
-
--- | Instruction opcode
-data Opcode
-  = Op      !U8         -- ^ Primary opcode map
-  | Op_0F   !U8         -- ^ Secondary opcode map
-  | Op_0F38 !U8         -- ^ 0F_38 opcode map
-  | Op_0F3A !U8         -- ^ 0F_3A opcode map
-  | Op_0F0F !U8         -- ^ 3DNow! opcode map
-  | Op_Vex2 !U8 !U8     -- ^ Vex 2-byte opcode
-  | Op_Vex3 !U8 !U8 !U8 -- ^ Vex 3-byte opcode
-  | Op_Xop  !U8 !U8 !U8 -- ^ Xop 3-byte opcode
+data Operation
+  -- Binary-coded-decimal (BCD) operations
+  = AdjustAfterAddition    -- ^ AAA
+  | AdjustAfterSubtraction -- ^ AAS
+  | AdjustBeforeDivision   -- ^ AAD
+  | AdjustAfterMultiply    -- ^ AAM
   deriving (Show,Eq,Ord)
 
-isLegacyOpcode :: Opcode -> Bool
-isLegacyOpcode = \case
-  Op      {} -> True
-  Op_0F   {} -> True
-  Op_0F38 {} -> True
-  Op_0F3A {} -> True
-  Op_0F0F {} -> True
-  Op_Vex2 {} -> False
-  Op_Vex3 {} -> False
-  Op_Xop  {} -> False
-
-data EncError
-  = TooManyPrefixes !Word       -- ^ More than 5 prefixes
-  | RexNotAllowed               -- ^ Rex prefix not allowed with the given opcode encoding
-  | PrefixNotAllowed [Prefix]   -- ^ Prefix not allowed with the given opcode encoding
-  | Imm64NotAllowed             -- ^ 64-bit immediate not allowed with displacement
-  | Disp64NotAllowed            -- ^ 64-bit displacement not allowed with immediate
-  | TooManyBytes !Word          -- ^ More than 15-byte long encoding
+data Operand
+  = Imm !SizedValue
   deriving (Show,Eq,Ord)
 
--- | Check the validity of an encoding
-check :: Enc -> [EncError]
-check Enc{..} = concat
-  [ 
-    -- at most 5 prefixes
-    let n = fromIntegral (length encPrefixes) in wh (n > 5) (TooManyPrefixes n)
+data InsnEncErr
+  = OpNotAllowedIn64bitMode   -- ^ Operation not allowed in 64-bit mode
+  | OpAllowedOnlyIn64bitMode  -- ^ Operation only allowed in 64-bit mode
+  | InvalidOperands [Operand] -- ^ Invalid operands
+  | UnknownEncodingError      -- ^ Unknown encoding error. Most likely a missed case in the assembler. Report it!
+  deriving (Show,Eq,Ord)
 
-    -- REX only allowed with legacy opcode encoding
-  , wh (isJust encRex && not (isLegacyOpcode encOpcode)) RexNotAllowed
+-- | Get the encoding specification of an instruction and its operands
+encodeInsn :: Context -> Operation -> [Operand] -> Either InsnEncErr Enc
+encodeInsn ctx op args = do
+  let mode64 = is64bitMode (ctxMode ctx)
+      assert_mode64 = if mode64 then Right () else Left OpAllowedOnlyIn64bitMode
+      assert_not_mode64 = if not mode64 then Right () else Left OpNotAllowedIn64bitMode
 
-    -- Non-legacy encodings only support prefixes from groups 2 and 3
-  , let g2o3 p = case prefixGroup p of
-          2 -> True
-          3 -> True
-          _ -> False
-        ps = filter (not . g2o3) encPrefixes
-    in wh (null ps || isLegacyOpcode encOpcode) (PrefixNotAllowed ps)
+      assert_no_args = if null args then Right () else invalid_operands args
+      invalid_operands xs = Left (InvalidOperands xs)
+      imm8_arg = case args of
+        [Imm (SizedValue8 x)] -> Right x
+        _                     -> invalid_operands args
+      
+      primary   oc = emptyEnc { encOpcode = Just (Op oc) }
+      secondary oc = emptyEnc { encOpcode = Just (Op_0F oc) }
 
-    -- Instructions with 64-bit immediate have no displacement, and vice versa
-  , let is_size64 = \case
-          Just (SizedValue64 {}) -> True
-          _                      -> False
-    in wh (is_size64 encImm && isJust encDisp) Imm64NotAllowed
-       <> wh (is_size64 encDisp && isJust encImm) Disp64NotAllowed
+      primary_imm8 oc i = (primary oc) { encImm = Just (SizedValue8 i) }
 
-    -- Instruction size <= 15 bytes
-  , let sz_maybe = \case
-          Nothing -> 0
-          Just _  -> 1
-        sz_opcode = \case
-          Op      {} -> 1
-          Op_0F   {} -> 2
-          Op_0F38 {} -> 3
-          Op_0F3A {} -> 3
-          Op_0F0F {} -> 3
-          Op_Vex2 {} -> 2
-          Op_Vex3 {} -> 3
-          Op_Xop  {} -> 3
-        sz_sized = maybe 0 sizedValueSizeInBytes
-        full_size = fromIntegral (length encPrefixes)
-                      + sz_maybe encRex
-                      + sz_opcode encOpcode
-                      + sz_maybe encModRM
-                      + sz_maybe encSIB
-                      + sz_sized encDisp
-                      + sz_sized encImm
-      in wh (full_size >= 15) (TooManyBytes full_size)
-  ]
-  where
-    wh c e = if c then [e] else []
+  case op of
+    AdjustAfterAddition -> do
+      assert_not_mode64
+      assert_no_args
+      pure (primary 0x37)
 
--- | Encode an instruction.
---
--- Assumres that 15 bytes of memory are available (maximum instruction size).
-encode :: Enc -> Writer s
-encode Enc{..} = mconcat
-  [ mconcat (map (writeU8 . fromPrefix) encPrefixes) -- prefixes
-  , maybe mempty (writeU8 . rexU8)      encRex       -- REX
-  , case encOpcode of
-      Op      oc       -> writeU8 oc
-      Op_0F   oc       -> writeU8 0x0F <> writeU8 oc
-      Op_0F38 oc       -> writeU8 0x0F <> writeU8 0x38 <> writeU8 oc
-      Op_0F3A oc       -> writeU8 0x0F <> writeU8 0x3A <> writeU8 oc
-      Op_0F0F _oc      -> writeU8 0x0F <> writeU8 0x0F -- 3DNow! opcode goes after the operands
-      Op_Vex2 v1 oc    -> writeU8 0xC5 <> writeU8 v1   <> writeU8 oc
-      Op_Vex3 v1 v2 oc -> writeU8 0xC4 <> writeU8 v1   <> writeU8 v2 <> writeU8 oc
-      Op_Xop  v1 v2 oc -> writeU8 0x8F <> writeU8 v1   <> writeU8 v2 <> writeU8 oc
-  
-  , maybe mempty writeU8 encModRM
-  , maybe mempty writeU8 encSIB
-  , maybe mempty writeSizedValueLE encDisp
-  , maybe mempty writeSizedValueLE encImm
-    
-  , case encOpcode of
-      Op_0F0F oc       -> writeU8 oc -- 3DNow! opcode goes after the operands
-      _                -> mempty
-  ]
+    AdjustAfterSubtraction -> do
+      assert_not_mode64
+      assert_no_args
+      pure (primary 0x3F)
+
+    AdjustBeforeDivision -> do
+      assert_not_mode64
+      x <- imm8_arg
+      pure (primary_imm8 0xD5 x)
+
+    AdjustAfterMultiply -> do
+      assert_not_mode64
+      x <- imm8_arg
+      pure (primary_imm8 0xD4 x)
