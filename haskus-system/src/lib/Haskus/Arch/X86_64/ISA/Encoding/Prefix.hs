@@ -1,9 +1,9 @@
 -- | Instruction prefixes
 module Haskus.Arch.X86_64.ISA.Encoding.Prefix
-  ( LegacyPrefix (..)
-  , toLegacyPrefix
-  , fromLegacyPrefix
-  , legacyPrefixGroup
+  ( Prefix (..)
+  , toPrefix
+  , fromPrefix
+  , prefixGroup
   )
 where
 
@@ -13,7 +13,7 @@ import Haskus.Number.Word
 -- Note [Prefixes]
 -- ~~~~~~~~~~~~~~~
 -- 
--- An instruction optionally begins with up to four legacy prefixes, in any
+-- An instruction optionally begins with up to five prefixes, in any
 -- order. These prefixes can:
 --    1) modify the instruction's default address size
 --    2) modify the instruction's default operand size
@@ -25,13 +25,13 @@ import Haskus.Number.Word
 -- Note: the effective sizes of the operands may not be the same: the shorter
 -- may be sign-extended or zero-extended.
 --
--- Legacy prefixes that are used as opcode extensions are mandatory.
+-- Prefixes that are used as opcode extensions are mandatory.
 --
 --
 -- Note [Prefix groups]
 -- ~~~~~~~~~~~~~~~~~~~~
 --
--- Legacy prefixes are organized in five groups. An instruction may include
+-- Prefixes are organized in five groups. An instruction may include
 -- at most one prefix from each group. The result of using multiple prefixes
 -- from a single group is undefined.
 --
@@ -50,67 +50,66 @@ import Haskus.Number.Word
 -- G5: 0xF3 (repeat while zero)
 --     0xF2 (repeat while non-zero)
 --
--- New opcode encodings (VEX, XOP, etc.) only support legacy prefixes from
--- groups G2 and G3.
+-- New opcode encodings (VEX, XOP, etc.) only support prefixes from groups G2
+-- and G3.
 ---------------------------------------------------------------------------
 
 
--- | Legacy prefixes
-data LegacyPrefix
-   = LegacyPrefix66
-   | LegacyPrefix67
-   | LegacyPrefix2E
-   | LegacyPrefix3E
-   | LegacyPrefix26
-   | LegacyPrefix64
-   | LegacyPrefix65
-   | LegacyPrefix36
-   | LegacyPrefixF0
-   | LegacyPrefixF3
-   | LegacyPrefixF2
-   deriving (Show,Eq,Ord)
+-- | Prefixes
+data Prefix
+  = P_66
+  | P_67
+  | P_2E
+  | P_3E
+  | P_26
+  | P_64
+  | P_65
+  | P_36
+  | P_F0
+  | P_F3
+  | P_F2
+  deriving (Show,Eq,Ord)
 
-toLegacyPrefix :: Word8 -> Maybe LegacyPrefix
-toLegacyPrefix = \case
-   0x66 -> Just LegacyPrefix66
-   0x67 -> Just LegacyPrefix67
-   0x2E -> Just LegacyPrefix2E
-   0x3E -> Just LegacyPrefix3E
-   0x26 -> Just LegacyPrefix26
-   0x64 -> Just LegacyPrefix64
-   0x65 -> Just LegacyPrefix65
-   0x36 -> Just LegacyPrefix36
-   0xF0 -> Just LegacyPrefixF0
-   0xF3 -> Just LegacyPrefixF3
-   0xF2 -> Just LegacyPrefixF2
-   _    -> Nothing
+toPrefix :: Word8 -> Maybe Prefix
+toPrefix = \case
+  0x66 -> Just P_66
+  0x67 -> Just P_67
+  0x2E -> Just P_2E
+  0x3E -> Just P_3E
+  0x26 -> Just P_26
+  0x64 -> Just P_64
+  0x65 -> Just P_65
+  0x36 -> Just P_36
+  0xF0 -> Just P_F0
+  0xF3 -> Just P_F3
+  0xF2 -> Just P_F2
+  _    -> Nothing
 
-fromLegacyPrefix :: LegacyPrefix -> Word8
-fromLegacyPrefix = \case
-   LegacyPrefix66 -> 0x66
-   LegacyPrefix67 -> 0x67
-   LegacyPrefix2E -> 0x2E
-   LegacyPrefix3E -> 0x3E
-   LegacyPrefix26 -> 0x26
-   LegacyPrefix64 -> 0x64
-   LegacyPrefix65 -> 0x65
-   LegacyPrefix36 -> 0x36
-   LegacyPrefixF0 -> 0xF0
-   LegacyPrefixF3 -> 0xF3
-   LegacyPrefixF2 -> 0xF2
+fromPrefix :: Prefix -> Word8
+fromPrefix = \case
+  P_66 -> 0x66
+  P_67 -> 0x67
+  P_2E -> 0x2E
+  P_3E -> 0x3E
+  P_26 -> 0x26
+  P_64 -> 0x64
+  P_65 -> 0x65
+  P_36 -> 0x36
+  P_F0 -> 0xF0
+  P_F3 -> 0xF3
+  P_F2 -> 0xF2
 
--- | Get the legacy prefix group
-legacyPrefixGroup :: LegacyPrefix -> Int
-legacyPrefixGroup = \case
-   LegacyPrefix66  -> 1
-   LegacyPrefix67  -> 2
-   LegacyPrefix2E  -> 3
-   LegacyPrefix3E  -> 3
-   LegacyPrefix26  -> 3
-   LegacyPrefix64  -> 3
-   LegacyPrefix65  -> 3
-   LegacyPrefix36  -> 3
-   LegacyPrefixF0  -> 4
-   LegacyPrefixF3  -> 5
-   LegacyPrefixF2  -> 5
-
+-- | Get the prefix group
+prefixGroup :: Prefix -> Int
+prefixGroup = \case
+  P_66  -> 1
+  P_67  -> 2
+  P_2E  -> 3
+  P_3E  -> 3
+  P_26  -> 3
+  P_64  -> 3
+  P_65  -> 3
+  P_36  -> 3
+  P_F0  -> 4
+  P_F3  -> 5
+  P_F2  -> 5
