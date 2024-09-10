@@ -8,6 +8,7 @@ module Haskus.Arch.X86_64.ISA.Size
    , SizedValue(..)
    , toSizedValue
    , fromSizedValue
+   , writeSizedValueLE
    , OperandSize(..)
    , opSizeInBits
    , getSize
@@ -17,6 +18,7 @@ module Haskus.Arch.X86_64.ISA.Size
 
 import Haskus.Binary.Get
 import Haskus.Number.Word
+import qualified Haskus.Memory.Writer as W
 
 -- | Size
 data Size
@@ -71,6 +73,14 @@ fromSizedValue = \case
    SizedValue16 v -> fromIntegral v
    SizedValue32 v -> fromIntegral v
    SizedValue64 v -> v
+
+-- | Write a SizedValue (little-endian)
+writeSizedValueLE :: SizedValue -> W.Writer s
+writeSizedValueLE = \case
+   SizedValue8  v -> W.writeU8 v
+   SizedValue16 v -> W.writeU16LE v
+   SizedValue32 v -> W.writeU32LE v
+   SizedValue64 v -> W.writeU64LE v
 
 -- | Operand size
 data OperandSize

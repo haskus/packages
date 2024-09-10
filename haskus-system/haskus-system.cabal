@@ -48,6 +48,7 @@ library
     Haskus.Arch.X86_64.ISA.Decoder
     Haskus.Arch.X86_64.ISA.Insns
     Haskus.Arch.X86_64.ISA.Insn
+    Haskus.Arch.X86_64.ISA.Encoder
     Haskus.Arch.X86_64.ISA.Encoding
     Haskus.Arch.X86_64.ISA.Encoding.Prefix
     Haskus.Arch.X86_64.ISA.Encoding.Rex
@@ -188,6 +189,7 @@ library
     BangPatterns
     PatternSynonyms
     ViewPatterns
+    RecordWildCards
 
   build-depends:       
          base                      >= 4.9 && <5.0

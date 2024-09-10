@@ -6,6 +6,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Rex
   , rexX
   , rexB
   , isRexPrefix
+  , rexU8
   )
 where
 
@@ -35,4 +36,6 @@ rexB (Rex v) = if testBit v 0 then 1 else 0
 isRexPrefix :: Word8 -> Bool
 isRexPrefix w = w .&. 0xF0 == 0x40
 
-
+-- | Get Rex byte
+rexU8 :: Rex -> Word8
+rexU8 (Rex v) = v
