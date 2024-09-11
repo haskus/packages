@@ -107,47 +107,47 @@ EADTs:
 import Haskus.Data.Variant.EADT
 import Haskus.Data.Variant.EADT.TH
 
-data LambdaF n e = LambdaF n e deriving Functor
-data VarF    n e = VarF    n   deriving Functor
-data AppF      e = AppF    e e deriving Functor
-data AnnF    a e = AnnF    a e deriving Functor
+data AbsF n e = AbsF n e deriving Functor
+data VarF n e = VarF n   deriving Functor
+data AppF   e = AppF e e deriving Functor
+data AnnF a e = AnnF a e deriving Functor
 
-eadtPattern 'LambdaF "Lambda"
-eadtPattern 'VarF    "Var"
-eadtPattern 'AppF    "App"
-eadtPattern 'AnnF    "Ann"
+eadtPattern 'AbsF "Abs"
+eadtPattern 'VarF "Var"
+eadtPattern 'AppF "App"
+eadtPattern 'AnnF "Ann"
 
-type Expr    n = EADT [LambdaF n, VarF n, AppF]
-type AExpr a n = EADT [LambdaF n, VarF n, AppF, AnnF a]
+type Expr    n = EADT [AbsF n, VarF n, AppF]
+type AExpr a n = EADT [AbsF n, VarF n, AppF, AnnF a]
 ```
 
 Then we define the `prettyPrint` operation by using type classes:
 
 ```haskell
 class PrettyPrint f where
-   prettyPrint' :: f String -> String
+   prettyPrintF :: f String -> String
 
 instance Show n => PrettyPrint (VarF n) where
-   prettyPrint' (VarF n) = show n
+   prettyPrintF (VarF n) = show n
 
-instance Show n => PrettyPrint (LambdaF n) where
-   prettyPrint' (LambdaF n e) = mconcat ["\\",show n,".",e]
+instance Show n => PrettyPrint (AbsF n) where
+   prettyPrintF (AbsF n e) = mconcat ["\\",show n,".",e]
 
 instance PrettyPrint AppF where
-   prettyPrint' (AppF e1 e2) = mconcat ["(",e1,") (",e2,")"]
+   prettyPrintF (AppF e1 e2) = mconcat ["(",e1,") (",e2,")"]
 
 instance Show a => PrettyPrint (AnnF a) where
-   prettyPrint' (AnnF a e) = mconcat ["{",show a,"} ",e]
+   prettyPrintF (AnnF a e) = mconcat ["{",show a,"} ",e]
 
-prettyPrint :: BottomUp PrettyPrint xs String => EADT xs -> String
-prettyPrint e = bottomUp (toBottomUp @PrettyPrint prettyPrint') e
+prettyPrint :: BottomUpF PrettyPrint xs => EADT xs -> String
+prettyPrint e = bottomUp (toBottomUp @PrettyPrint prettyPrintF) e
 ```
 
 We can test it with:
 
 ```haskell
 sampleDouble :: Expr String
-sampleDouble = Lambda "x" (Var "+" `App` Var "x" `App` Var "x")
+sampleDouble = Abs "x" (Var "+" `App` Var "x" `App` Var "x")
 
 sampleAnn :: AExpr String String
 sampleAnn = Ann "Double its input" (liftEADT sampleDouble)
@@ -636,7 +636,7 @@ See also: https://bartoszmilewski.com/2013/06/10/understanding-f-algebras/
 Suppose we rewrite our `Show` class like this:
 
 ```haskell
-class FunctorShow (f :: * -> *) where
+class FunctorShow (f :: Type -> Type) where
   functorShow :: f String -> String
 ```
 
@@ -816,7 +816,7 @@ r` with the `(>:>)` operator. Then we can safely provide a function per
 constructor as in a pattern-matching.
 
 
-==== xplicit recursion example
+==== Explicit recursion example
 
 ```haskell
 import Haskus.Utils.ContFlow
