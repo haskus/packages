@@ -2,6 +2,8 @@ module Haskus.Arch.X86_64.ISA.Encoding.Enc
   ( Enc(..)
   , emptyEnc
   , encSize
+  , encImmOffset
+  , encDispOffset
   , Opcode (..)
   , EncError (..)
   , check
@@ -35,27 +37,45 @@ emptyEnc = Enc [] Nothing Nothing Nothing Nothing Nothing Nothing
 encSize :: Enc -> Word
 encSize Enc{..} = full_size
   where
-    sz_maybe = \case
-      Nothing -> 0
-      Just _  -> 1
-    sz_opcode = \case
-      Nothing           -> 0
-      Just (Op      {}) -> 1
-      Just (Op_0F   {}) -> 2
-      Just (Op_0F38 {}) -> 3
-      Just (Op_0F3A {}) -> 3
-      Just (Op_0F0F {}) -> 3
-      Just (Op_Vex2 {}) -> 2
-      Just (Op_Vex3 {}) -> 3
-      Just (Op_Xop  {}) -> 3
-    sz_sized = maybe 0 sizedValueSizeInBytes
-    full_size = fromIntegral (length encPrefixes)
-                  + sz_maybe encRex
+    sz_maybe_u8 = maybe 0 (const 1)
+    sz_opcode   = maybe 0 opcodeSize
+    sz_sized    = maybe 0 sizedValueSizeInBytes
+    full_size   = fromIntegral (length encPrefixes)
+                  + sz_maybe_u8 encRex
                   + sz_opcode encOpcode
-                  + sz_maybe encModRM
-                  + sz_maybe encSIB
+                  + sz_maybe_u8 encModRM
+                  + sz_maybe_u8 encSIB
                   + sz_sized encDisp
                   + sz_sized encImm
+
+-- | Offset of the immediate (if any)
+encImmOffset :: Enc -> Maybe Word
+encImmOffset Enc{..} = maybe Nothing (const (Just imm_offset)) encImm
+  where
+    sz_maybe_u8 = maybe 0 (const 1)
+    sz_opcode   = maybe 0 opcodeSize
+    sz_sized    = maybe 0 sizedValueSizeInBytes
+    imm_offset  = fromIntegral (length encPrefixes)
+                  + sz_maybe_u8 encRex
+                  + sz_opcode encOpcode
+                  + sz_maybe_u8 encModRM
+                  + sz_maybe_u8 encSIB
+                  + sz_sized encDisp
+
+-- | Offset of the displacement (if any)
+encDispOffset :: Enc -> Maybe Word
+encDispOffset Enc{..} = maybe Nothing (const (Just disp_offset)) encDisp
+  where
+    sz_maybe_u8 = maybe 0 (const 1)
+    sz_opcode   = maybe 0 opcodeSize
+    disp_offset = fromIntegral (length encPrefixes)
+                  + sz_maybe_u8 encRex
+                    -- 3DNow! opcode is in the immediate position, after the
+                    -- displacement
+                  + (if maybe False is3DNowOpcode encOpcode then 0 else sz_opcode encOpcode)
+                  + sz_maybe_u8 encModRM
+                  + sz_maybe_u8 encSIB
+
 
 -- | Instruction opcode
 data Opcode
@@ -69,6 +89,17 @@ data Opcode
   | Op_Xop  !U8 !U8 !U8 -- ^ Xop 3-byte opcode
   deriving (Show,Eq,Ord)
 
+opcodeSize :: Opcode -> Word
+opcodeSize = \case
+  Op      {} -> 1
+  Op_0F   {} -> 2
+  Op_0F38 {} -> 3
+  Op_0F3A {} -> 3
+  Op_0F0F {} -> 3
+  Op_Vex2 {} -> 2
+  Op_Vex3 {} -> 3
+  Op_Xop  {} -> 3
+
 isLegacyOpcode :: Maybe Opcode -> Bool
 isLegacyOpcode = \case
   Nothing           -> True
@@ -81,6 +112,11 @@ isLegacyOpcode = \case
   Just (Op_Vex3 {}) -> False
   Just (Op_Xop  {}) -> False
 
+is3DNowOpcode :: Opcode -> Bool
+is3DNowOpcode = \case
+  Op_0F0F {} -> True
+  _          -> False
+
 data EncError
   = TooManyPrefixes !Word       -- ^ More than 5 prefixes
   | RexNotAllowed               -- ^ Rex prefix not allowed with the given opcode encoding
@@ -88,6 +124,7 @@ data EncError
   | Imm64NotAllowed             -- ^ 64-bit immediate not allowed with displacement
   | Disp64NotAllowed            -- ^ 64-bit displacement not allowed with immediate
   | TooManyBytes !Word          -- ^ More than 15-byte long encoding
+  | ImmNotAllowedWith3DNow      -- ^ Immediate operand not allowed with 3DNow! instructions
   deriving (Show,Eq,Ord)
 
 -- | Check the validity of an encoding
@@ -118,6 +155,9 @@ check e@Enc{..} = concat
     -- Instruction size <= 15 bytes
   , let full_size = encSize e
     in wh (full_size > 15) (TooManyBytes full_size)
+
+    -- Immediate operand not allowed with 3DNow! instructions
+  , wh (maybe False is3DNowOpcode encOpcode && isJust encImm) ImmNotAllowedWith3DNow
   ]
   where
     wh c err = if c then [err] else []
