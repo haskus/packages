@@ -2,6 +2,7 @@
 module Haskus.Arch.X86_64.ISA.Encoding.Reg
   ( Reg
   , regCode
+  , regCodeX
   , regSize
   , regREX
   , regNO_REX
@@ -45,6 +46,12 @@ newtype Reg
 regCode :: Reg -> U8
 regCode (Reg w) = w .&. 0b0000_1111
 
+-- | Code with the MSB extracted to be put in REX.X for example
+regCodeX :: Reg -> (Bool, U8)
+regCodeX r = (testBit c 3, c .&. 0b0111)
+  where
+    !c = regCode r
+
 regREX :: Reg -> Bool
 regREX (Reg w) = w .&. 0b0001_0000 /= 0
 
@@ -62,7 +69,7 @@ regSize (Reg w) = case w `shiftR` 6 of
 compatibleRegs :: Reg -> Reg -> Bool
 compatibleRegs (Reg a) (Reg b) = not (regREX r && regNO_REX r)
   where
-    r = Reg (a .|. b)
+    !r = Reg (a .|. b)
 
 
 
