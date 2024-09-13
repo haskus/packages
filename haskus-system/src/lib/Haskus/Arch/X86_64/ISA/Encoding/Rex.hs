@@ -17,6 +17,8 @@ module Haskus.Arch.X86_64.ISA.Encoding.Rex
   , isRexPrefix
   , rexU8
   , rexW
+  , rexB
+  , rexWB
   )
 where
 
@@ -27,6 +29,9 @@ import Haskus.Binary.Bits
 newtype Rex
   = Rex U8
   deriving (Show,Eq,Ord)
+
+instance Semigroup Rex where
+  Rex a <> Rex b = Rex (a .|. b)
 
 -- | Test W bit of REX prefix
 testRexW :: Rex -> Bool
@@ -81,3 +86,9 @@ unsetRexB (Rex w) = Rex (w .&. 0b1111_1110)
 
 rexW :: Rex
 rexW = setRexW emptyRex
+
+rexB :: Rex
+rexB = setRexB emptyRex
+
+rexWB :: Rex
+rexWB = setRexB rexW

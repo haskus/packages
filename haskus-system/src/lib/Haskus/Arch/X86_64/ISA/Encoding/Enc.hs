@@ -15,6 +15,7 @@ import Haskus.Binary.Word
 import Haskus.Memory.Writer
 import Haskus.Arch.X86_64.ISA.Encoding.Prefix
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
+import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Size
 
 import Data.Maybe
@@ -24,7 +25,7 @@ data Enc = Enc
   { encPrefixes :: [Prefix]            -- ^ Prefixes (up to 5)
   , encRex      :: !(Maybe Rex)        -- ^ Rex prefix
   , encOpcode   :: !(Maybe Opcode)     -- ^ Opcode (optional to allow naked prefixes)
-  , encModRM    :: !(Maybe U8)         -- ^ ModRM
+  , encModRM    :: !(Maybe ModRM)      -- ^ ModRM
   , encSIB      :: !(Maybe U8)         -- ^ SIB
   , encDisp     :: !(Maybe SizedValue) -- ^ Displacement
   , encImm      :: !(Maybe SizedValue) -- ^ Immediate
@@ -180,7 +181,7 @@ encode Enc{..} = mconcat
       Just (Op_Vex3 v1 v2 oc) -> writeU8 0xC4 <> writeU8 v1   <> writeU8 v2 <> writeU8 oc
       Just (Op_Xop  v1 v2 oc) -> writeU8 0x8F <> writeU8 v1   <> writeU8 v2 <> writeU8 oc
   
-  , maybe mempty writeU8 encModRM
+  , maybe mempty (writeU8 . modrmU8) encModRM
   , maybe mempty writeU8 encSIB
   , maybe mempty writeSizedValueLE encDisp
   , maybe mempty writeSizedValueLE encImm
