@@ -8,6 +8,7 @@ where
 
 import Haskus.Arch.X86_64.ISA.Encoding.Enc
 import Haskus.Arch.X86_64.ISA.Encoding.Prefix
+import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
@@ -22,20 +23,6 @@ data Operation
   | AdjustAfterMultiply    -- ^ AAM
   | AddWithCarry           -- ^ ADC
   | Add                    -- ^ ADD
-  deriving (Show,Eq,Ord)
-
-data Reg
-  = R_AL  | R_AX | R_EAX | R_RAX
-  | R_BL  | R_BX | R_EBX | R_RBX
-  | R_CL  | R_CX | R_ECX | R_RCX
-  | R_DL  | R_DX | R_EDX | R_RDX
-  | R_DIL | R_DI | R_EDI | R_RDI
-  | R_SIL | R_SI | R_ESI | R_RSI
-  | R_BPL | R_BP | R_EBP | R_RBP
-  | R_SPL | R_SP | R_ESP | R_RSP
-
-  -- legacy uppeer 8-bit registers
-  | R_AH | R_BH | R_CH | R_DH
   deriving (Show,Eq,Ord)
 
 data Mem
@@ -120,7 +107,7 @@ encodeInsn ctx op args = do
         Nothing -> e { encRex = Just rexW }
         Just r  -> e { encRex = Just (setRexW r) }
 
-      -- several instructions have special encoding for the rAX, immN case
+      -- several instructions have special encodings for the rAX, immN cases
       -- (ADD, ADC, etc.). We handle them here.
       handle_acc_imm oc = case args of
         OPS_RM8_I8 (RM_Reg R_AL) i
@@ -157,7 +144,7 @@ encodeInsn ctx op args = do
       pure (primary_imm8 0xD4 i)
 
     -- TODO: handle lock. Maybe a different instruction to avoid considering
-    -- modifiers every time?
+    -- modifiers every time? Or apply modifiers to an Enc afterwards
     AddWithCarry
       | Just r <- handle_acc_imm 0x14 -> r
       | otherwise -> invalid_operands
