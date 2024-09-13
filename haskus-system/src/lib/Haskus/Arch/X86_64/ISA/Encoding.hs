@@ -432,7 +432,7 @@ opcodeB :: Opcode -> Word8
 opcodeB = \case
    OpVex v _               -> if vexB v then 1 else 0
    OpXop v _               -> if vexB v then 1 else 0
-   OpLegacy (Just rex) _ _ -> rexB rex
+   OpLegacy (Just rex) _ _ -> if testRexB rex then 1 else 0
    OpLegacy Nothing    _ _ -> 0
 
 -- | Reg extension
@@ -440,7 +440,7 @@ opcodeR :: Opcode -> Word8
 opcodeR = \case
    OpVex v _               -> if vexR v then 1 else 0
    OpXop v _               -> if vexR v then 1 else 0
-   OpLegacy (Just rex) _ _ -> rexR rex
+   OpLegacy (Just rex) _ _ -> if testRexR rex then 1 else 0
    OpLegacy Nothing    _ _ -> 0
 
 -- | Index extension
@@ -448,7 +448,7 @@ opcodeX :: Opcode -> Word8
 opcodeX = \case
    OpVex v _               -> if vexX v then 1 else 0
    OpXop v _               -> if vexX v then 1 else 0
-   OpLegacy (Just rex) _ _ -> rexX rex
+   OpLegacy (Just rex) _ _ -> if testRexX rex then 1 else 0
    OpLegacy Nothing    _ _ -> 0
 
 -- | W (64-bit operand size)
@@ -456,7 +456,7 @@ opcodeW :: Opcode -> Bool
 opcodeW = \case
    OpVex v _               -> vexW v
    OpXop v _               -> vexW v
-   OpLegacy (Just rex) _ _ -> rexW rex
+   OpLegacy (Just rex) _ _ -> testRexW rex
    OpLegacy Nothing    _ _ -> False
 
 -- | Get vector length (stored in VEX.L, XOP.L, etc.)

@@ -191,6 +191,9 @@ library
     PatternSynonyms
     ViewPatterns
     RecordWildCards
+    EmptyDataDeriving
+    BinaryLiterals
+    NumericUnderscores
 
   build-depends:       
          base                      >= 4.9 && <5.0

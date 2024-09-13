@@ -1,41 +1,83 @@
 -- | REX prefix
 module Haskus.Arch.X86_64.ISA.Encoding.Rex
   ( Rex (..)
-  , rexW
-  , rexR
-  , rexX
-  , rexB
+  , testRexW
+  , testRexR
+  , testRexX
+  , testRexB
+  , setRexW
+  , setRexR
+  , setRexX
+  , setRexB
+  , unsetRexW
+  , unsetRexR
+  , unsetRexX
+  , unsetRexB
+  , emptyRex
   , isRexPrefix
   , rexU8
+  , rexW
   )
 where
 
-import Haskus.Number.Word
+import Haskus.Binary.Word
 import Haskus.Binary.Bits
 
 -- | Rex prefix
-newtype Rex = Rex Word8 deriving (Show,Eq,Ord)
+newtype Rex
+  = Rex U8
+  deriving (Show,Eq,Ord)
 
 -- | Test W bit of REX prefix
-rexW :: Rex -> Bool
-rexW (Rex v) = testBit v 3
+testRexW :: Rex -> Bool
+testRexW (Rex v) = testBit v 3
 
 -- | Test R bit of REX prefix
-rexR :: Rex -> Word8
-rexR (Rex v) = if testBit v 2 then 1 else 0
+testRexR :: Rex -> Bool
+testRexR (Rex v) = testBit v 2
 
 -- | Test X bit of REX prefix
-rexX :: Rex -> Word8
-rexX (Rex v) = if testBit v 1 then 1 else 0
+testRexX :: Rex -> Bool
+testRexX (Rex v) = testBit v 1
 
 -- | Test B bit of REX prefix
-rexB :: Rex -> Word8
-rexB (Rex v) = if testBit v 0 then 1 else 0
+testRexB :: Rex -> Bool
+testRexB (Rex v) = testBit v 0
 
 -- | Test for a REX prefix
-isRexPrefix :: Word8 -> Bool
+isRexPrefix :: U8 -> Bool
 isRexPrefix w = w .&. 0xF0 == 0x40
 
 -- | Get Rex byte
-rexU8 :: Rex -> Word8
+rexU8 :: Rex -> U8
 rexU8 (Rex v) = v
+
+emptyRex :: Rex
+emptyRex = Rex 0b0100_0000
+
+setRexW :: Rex -> Rex
+setRexW (Rex w) = Rex (w .|. 0b1000)
+
+setRexR :: Rex -> Rex
+setRexR (Rex w) = Rex (w .|. 0b0100)
+
+setRexX :: Rex -> Rex
+setRexX (Rex w) = Rex (w .|. 0b0010)
+
+setRexB :: Rex -> Rex
+setRexB (Rex w) = Rex (w .|. 0b0010)
+
+unsetRexW :: Rex -> Rex
+unsetRexW (Rex w) = Rex (w .&. 0b1111_0111)
+
+unsetRexR :: Rex -> Rex
+unsetRexR (Rex w) = Rex (w .&. 0b1111_1011)
+
+unsetRexX :: Rex -> Rex
+unsetRexX (Rex w) = Rex (w .&. 0b1111_1101)
+
+unsetRexB :: Rex -> Rex
+unsetRexB (Rex w) = Rex (w .&. 0b1111_1110)
+
+rexW :: Rex
+rexW = setRexW emptyRex
