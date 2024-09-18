@@ -149,6 +149,35 @@ encodeInsn ctx op args = do
             pure $ set_opsize64 $ set_ext_reg (primary_imm8 oc i) ext r
         _ -> Nothing
 
+      -- handle reg:ModRM.rm, reg:ModRM.reg cases
+      handle_regs_rm_reg oc = case args of
+        OPS_RM8_R8   (RM_Reg r1) r2
+          -> Just $ pure $ set_regs_rm_reg (primary oc) r1 r2
+        OPS_RM16_R16 (RM_Reg r1) r2
+          -> Just $ pure $ set_opsize16 $ set_regs_rm_reg (primary (oc+1)) r1 r2
+        OPS_RM32_R32 (RM_Reg r1) r2
+          -> Just $ pure $ set_opsize32 $ set_regs_rm_reg (primary (oc+1)) r1 r2
+        OPS_RM64_R64 (RM_Reg r1) r2
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_regs_rm_reg (primary (oc+1)) r1 r2
+        _ -> Nothing
+
+      -- handle reg:ModRM.reg, reg:ModRM.rm cases
+      handle_regs_reg_rm oc = case args of
+        OPS_R8_RM8   r1 (RM_Reg r2)
+          -> Just $ pure $ set_regs_reg_rm (primary oc) r1 r2
+        OPS_R16_RM16 r1 (RM_Reg r2)
+          -> Just $ pure $ set_opsize16 $ set_regs_reg_rm (primary (oc+1)) r1 r2
+        OPS_R32_RM32 r1 (RM_Reg r2)
+          -> Just $ pure $ set_opsize32 $ set_regs_reg_rm (primary (oc+1)) r1 r2
+        OPS_R64_RM64 r1 (RM_Reg r2)
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_regs_reg_rm (primary (oc+1)) r1 r2
+        _ -> Nothing
+
+      -- store ext in ModRM.reg and reg in ModRM.rm
       set_ext_reg enc ext r =
         let !(xc,c) = regCodeX r
             -- handle registers that require REX
@@ -158,6 +187,25 @@ encodeInsn ctx op args = do
         in enc { encRex   = mrex1 <> mrex2
                , encModRM = Just (mkModRM_ext_reg ext c)
                }
+
+      -- store r1 in ModRM.reg and r2 in ModRM.rm
+      set_regs_reg_rm enc r1 r2
+        | not (compatibleRegs r1 r2) = error "Trying to encode incompatible registers"
+        | otherwise =
+        let 
+            -- handle registers that require REX
+            mrex1 = if regREX r1 || regREX r2 then Just emptyRex else Nothing
+            -- ModRM.rm extension in REX.B; ModRM.reg extension in REX.R
+            !(xr,r) = regCodeX r1
+            !(xm,m) = regCodeX r2
+            mrex2 = if xr then Just rexR else Nothing
+            mrex3 = if xm then Just rexB else Nothing
+        in enc { encRex   = mrex1 <> mrex2 <> mrex3
+               , encModRM = Just (mkModRM_regs_reg_rm r m)
+               }
+
+      -- store r1 in ModRM.rm and r2 in ModRM.reg
+      set_regs_rm_reg enc r1 r2 = set_regs_reg_rm enc r2 r1
 
 
   case op of
@@ -187,10 +235,14 @@ encodeInsn ctx op args = do
       | Just r <- handle_acc_imm  0x14     -> r
       | Just r <- handle_reg_imm  0x80 0x2 -> r
       | Just r <- handle_reg_imm8 0x83 0x2 -> r
+      | Just r <- handle_regs_rm_reg 0x10  -> r
+      | Just r <- handle_regs_reg_rm 0x12  -> r
       | otherwise -> invalid_operands
 
     Add
       | Just r <- handle_acc_imm  0x04     -> r
       | Just r <- handle_reg_imm  0x80 0x0 -> r
       | Just r <- handle_reg_imm8 0x83 0x0 -> r
+      | Just r <- handle_regs_rm_reg 0x00  -> r
+      | Just r <- handle_regs_reg_rm 0x02  -> r
       | otherwise -> invalid_operands

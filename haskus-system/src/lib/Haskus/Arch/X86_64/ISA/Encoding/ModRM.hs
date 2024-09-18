@@ -4,6 +4,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.ModRM
   , modrmU8
   , mkModRM
   , mkModRM_ext_reg
+  , mkModRM_regs_reg_rm
   )
 where
 
@@ -23,3 +24,6 @@ mkModRM m r a = ModRM ((m `shiftL` 6) .|. (r `shiftL` 3) .|. a)
 
 mkModRM_ext_reg :: U8 -> U8 -> ModRM
 mkModRM_ext_reg ext r = ModRM (0b11_000_000 .|. (ext `shiftL` 3) .|. r)
+
+mkModRM_regs_reg_rm :: U8 -> U8 -> ModRM
+mkModRM_regs_reg_rm r m = ModRM (0b11_000_000 .|. (r `shiftL` 3) .|. m)
