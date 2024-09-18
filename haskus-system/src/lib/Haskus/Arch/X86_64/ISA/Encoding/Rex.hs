@@ -17,6 +17,8 @@ module Haskus.Arch.X86_64.ISA.Encoding.Rex
   , isRexPrefix
   , rexU8
   , rexW
+  , rexR
+  , rexX
   , rexB
   , rexWB
   )
@@ -89,6 +91,12 @@ rexW = setRexW emptyRex
 
 rexB :: Rex
 rexB = setRexB emptyRex
+
+rexR :: Rex
+rexR = setRexR emptyRex
+
+rexX :: Rex
+rexX = setRexX emptyRex
 
 rexWB :: Rex
 rexWB = setRexB rexW
