@@ -3,10 +3,12 @@ module Haskus.Binary.Cast
     uFromI#
   , u8FromI8#
   , u16FromI16#
+  , u16FromI16
   , u32FromI32#
   , u64FromI64#
   , iFromU#
   , i8FromU8#
+  , i8FromU8
   , i16FromU16#
   , i32FromU32#
   , i64FromU64#
@@ -21,6 +23,8 @@ module Haskus.Binary.Cast
   , iFromI8#
   , iFromI16#
   , iFromI32#
+  , i16FromI8#
+  , i16FromI8
   , i64FromI#
   , i64FromI8#
   , i64FromI16#
@@ -56,6 +60,10 @@ u8FromI8# = E.int8ToWord8#
 u16FromI16# :: I16# -> U16#
 u16FromI16# = E.int16ToWord16#
 
+{-# INLINE u16FromI16 #-}
+u16FromI16 :: I16 -> U16
+u16FromI16 (I16 x) = U16 (u16FromI16# x)
+
 {-# INLINE u32FromI32# #-}
 u32FromI32# :: I32# -> U32#
 u32FromI32# = E.int32ToWord32#
@@ -71,6 +79,10 @@ iFromU# = E.word2Int#
 {-# INLINE i8FromU8# #-}
 i8FromU8# :: U8# -> I8#
 i8FromU8# = E.word8ToInt8#
+
+{-# INLINE i8FromU8 #-}
+i8FromU8 :: U8 -> I8
+i8FromU8 (U8 x) = I8 (i8FromU8# x)
 
 {-# INLINE i16FromU16# #-}
 i16FromU16# :: U16# -> I16#
@@ -128,6 +140,14 @@ iFromI16# = E.int16ToInt#
 {-# INLINE iFromI32# #-}
 iFromI32# :: I32# -> I#
 iFromI32# = E.int32ToInt#
+
+{-# INLINE i16FromI8# #-}
+i16FromI8# :: I8# -> I16#
+i16FromI8# x = i16NarrowFromI# (iFromI8# x)
+
+{-# INLINE i16FromI8 #-}
+i16FromI8 :: I8 -> I16
+i16FromI8 (I8 x) = I16 (i16FromI8# x)
 
 {-# INLINE i64FromI# #-}
 i64FromI# :: I# -> I64#
