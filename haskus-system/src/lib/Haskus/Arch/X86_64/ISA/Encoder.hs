@@ -11,6 +11,7 @@ import Haskus.Arch.X86_64.ISA.Encoding.Prefix
 import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
+import Haskus.Arch.X86_64.ISA.Encoding.Mem
 import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 
@@ -24,9 +25,6 @@ data Operation
   | AdjustAfterMultiply    -- ^ AAM
   | AddWithCarry           -- ^ ADC
   | Add                    -- ^ ADD
-  deriving (Show,Eq,Ord)
-
-data Mem
   deriving (Show,Eq,Ord)
 
 data Operand
@@ -237,6 +235,9 @@ encodeInsn ctx op args = do
       | Just r <- handle_reg_imm8 0x83 0x2 -> r
       | Just r <- handle_regs_rm_reg 0x10  -> r
       | Just r <- handle_regs_reg_rm 0x12  -> r
+      -- TODO: mem, imm
+      -- TODO: mem, reg
+      -- TODO: reg, mem
       | otherwise -> invalid_operands
 
     Add
@@ -245,4 +246,7 @@ encodeInsn ctx op args = do
       | Just r <- handle_reg_imm8 0x83 0x0 -> r
       | Just r <- handle_regs_rm_reg 0x00  -> r
       | Just r <- handle_regs_reg_rm 0x02  -> r
+      -- TODO: mem, imm
+      -- TODO: mem, reg
+      -- TODO: reg, mem
       | otherwise -> invalid_operands

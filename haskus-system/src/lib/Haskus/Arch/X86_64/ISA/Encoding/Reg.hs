@@ -25,6 +25,24 @@ module Haskus.Arch.X86_64.ISA.Encoding.Reg
   , pattern R_R13B, pattern R_R13W, pattern R_R13D, pattern R_R13
   , pattern R_R14B, pattern R_R14W, pattern R_R14D, pattern R_R14
   , pattern R_R15B, pattern R_R15W, pattern R_R15D, pattern R_R15
+  -- * Just patterns
+  , pattern JR_AL,   pattern JR_AX,   pattern JR_EAX,  pattern JR_RAX
+  , pattern JR_BL,   pattern JR_BX,   pattern JR_EBX,  pattern JR_RBX
+  , pattern JR_CL,   pattern JR_CX,   pattern JR_ECX,  pattern JR_RCX
+  , pattern JR_DL,   pattern JR_DX,   pattern JR_EDX,  pattern JR_RDX
+  , pattern JR_SIL,  pattern JR_SI,   pattern JR_ESI,  pattern JR_RSI
+  , pattern JR_DIL,  pattern JR_DI,   pattern JR_EDI,  pattern JR_RDI
+  , pattern JR_BPL,  pattern JR_BP,   pattern JR_EBP,  pattern JR_RBP
+  , pattern JR_SPL,  pattern JR_SP,   pattern JR_ESP,  pattern JR_RSP
+  , pattern JR_AH,   pattern JR_BH,   pattern JR_CH,   pattern JR_DH
+  , pattern JR_R8B,  pattern JR_R8W,  pattern JR_R8D,  pattern JR_R8
+  , pattern JR_R9B,  pattern JR_R9W,  pattern JR_R9D,  pattern JR_R9
+  , pattern JR_R10B, pattern JR_R10W, pattern JR_R10D, pattern JR_R10
+  , pattern JR_R11B, pattern JR_R11W, pattern JR_R11D, pattern JR_R11
+  , pattern JR_R12B, pattern JR_R12W, pattern JR_R12D, pattern JR_R12
+  , pattern JR_R13B, pattern JR_R13W, pattern JR_R13D, pattern JR_R13
+  , pattern JR_R14B, pattern JR_R14W, pattern JR_R14D, pattern JR_R14
+  , pattern JR_R15B, pattern JR_R15W, pattern JR_R15D, pattern JR_R15
   )
 where
 
@@ -247,3 +265,89 @@ instance Show Reg where
     R_R15W  -> "R15W"
     R_R15D  -> "R15D"
     R_R15   -> "R15"
+
+pattern JR_AL  = Just R_AL
+pattern JR_AX  = Just R_AX
+pattern JR_EAX = Just R_EAX
+pattern JR_RAX = Just R_RAX
+
+pattern JR_BL  = Just R_BL  
+pattern JR_BX  = Just R_BX  
+pattern JR_EBX = Just R_EBX 
+pattern JR_RBX = Just R_RBX 
+                      
+pattern JR_CL  = Just R_CL  
+pattern JR_CX  = Just R_CX  
+pattern JR_ECX = Just R_ECX 
+pattern JR_RCX = Just R_RCX 
+                      
+pattern JR_DL  = Just R_DL  
+pattern JR_DX  = Just R_DX  
+pattern JR_EDX = Just R_EDX 
+pattern JR_RDX = Just R_RDX 
+                      
+pattern JR_SIL = Just R_SIL 
+pattern JR_SI  = Just R_SI  
+pattern JR_ESI = Just R_ESI 
+pattern JR_RSI = Just R_RSI 
+                      
+pattern JR_DIL = Just R_DIL 
+pattern JR_DI  = Just R_DI  
+pattern JR_EDI = Just R_EDI 
+pattern JR_RDI = Just R_RDI 
+                      
+pattern JR_BPL = Just R_BPL 
+pattern JR_BP  = Just R_BP  
+pattern JR_EBP = Just R_EBP 
+pattern JR_RBP = Just R_RBP 
+                      
+pattern JR_SPL = Just R_SPL 
+pattern JR_SP  = Just R_SP  
+pattern JR_ESP = Just R_ESP 
+pattern JR_RSP = Just R_RSP 
+
+-- legacy uppeer 8-bit registers
+pattern JR_AH = Just R_AH 
+pattern JR_BH = Just R_BH 
+pattern JR_CH = Just R_CH 
+pattern JR_DH = Just R_DH 
+
+pattern JR_R8B = Just R_R8B 
+pattern JR_R8W = Just R_R8W 
+pattern JR_R8D = Just R_R8D 
+pattern JR_R8  = Just R_R8  
+                      
+pattern JR_R9B = Just R_R9B 
+pattern JR_R9W = Just R_R9W 
+pattern JR_R9D = Just R_R9D 
+pattern JR_R9  = Just R_R9  
+
+pattern JR_R10B = Just R_R10B 
+pattern JR_R10W = Just R_R10W 
+pattern JR_R10D = Just R_R10D 
+pattern JR_R10  = Just R_R10  
+                        
+pattern JR_R11B = Just R_R11B 
+pattern JR_R11W = Just R_R11W 
+pattern JR_R11D = Just R_R11D 
+pattern JR_R11  = Just R_R11  
+                        
+pattern JR_R12B = Just R_R12B 
+pattern JR_R12W = Just R_R12W 
+pattern JR_R12D = Just R_R12D 
+pattern JR_R12  = Just R_R12  
+                        
+pattern JR_R13B = Just R_R13B 
+pattern JR_R13W = Just R_R13W 
+pattern JR_R13D = Just R_R13D 
+pattern JR_R13  = Just R_R13  
+                        
+pattern JR_R14B = Just R_R14B 
+pattern JR_R14W = Just R_R14W 
+pattern JR_R14D = Just R_R14D 
+pattern JR_R14  = Just R_R14  
+                        
+pattern JR_R15B = Just R_R15B 
+pattern JR_R15W = Just R_R15W 
+pattern JR_R15D = Just R_R15D 
+pattern JR_R15  = Just R_R15  

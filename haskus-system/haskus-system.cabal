@@ -52,9 +52,11 @@ library
     Haskus.Arch.X86_64.ISA.Encoding
     Haskus.Arch.X86_64.ISA.Encoding.Enc
     Haskus.Arch.X86_64.ISA.Encoding.ModRM
+    Haskus.Arch.X86_64.ISA.Encoding.Mem
     Haskus.Arch.X86_64.ISA.Encoding.Prefix
     Haskus.Arch.X86_64.ISA.Encoding.Reg
     Haskus.Arch.X86_64.ISA.Encoding.Rex
+    Haskus.Arch.X86_64.ISA.Encoding.SIB
     Haskus.Arch.X86_64.Disassembler
 
     Haskus.System.Linux.Internals.Error
