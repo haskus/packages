@@ -125,18 +125,40 @@ encodeInsn ctx op args = do
 
       -- handle regN, immN cases (reg in ModRM.rm field)
       handle_reg_imm oc ext = case args of
-        OPS_RM8_I8 (RM_Reg r) i
+        OPS_RM8_I8   (RM_Reg r) i
+          -> Just $ pure $ set_ext_reg (primary_imm8 oc i) ext r
+        OPS_RM16_I16 (RM_Reg r) i
+          -> Just $ pure $ set_opsize16 $ set_ext_reg (primary_imm16 (oc+1) i) ext r
+        OPS_RM32_I32 (RM_Reg r) i
+          -> Just $ pure $ set_opsize32 $ set_ext_reg (primary_imm32 (oc+1) i) ext r
+        OPS_RM64_I32 (RM_Reg r) i
           -> Just $ do
-               let !(xc,c) = regCodeX r
-                   mrex1 = if regREX r then Just emptyRex else Nothing
-                   mrex2 = if xc       then Just rexB     else Nothing
-                   mrex  = mrex1 <> mrex2
-                   mo    = mkModRM_ext_reg ext c
-               pure $ (primary_imm8 oc i)
-                        { encRex   = mrex
-                        , encModRM = Just mo
-                        }
-        -- TODO: handle other cases
+            assert_mode64
+            pure $ set_opsize64 $ set_ext_reg (primary_imm32 (oc+1) i) ext r
+        _ -> Nothing
+
+      -- handle regN, imm8 cases (reg in ModRM.rm field)
+      handle_reg_imm8 oc ext = case args of
+        OPS_RM16_I8 (RM_Reg r) i
+          -> Just $ pure $ set_opsize16 $ set_ext_reg (primary_imm8 oc i) ext r
+        OPS_RM32_I8 (RM_Reg r) i
+          -> Just $ pure $ set_opsize32 $ set_ext_reg (primary_imm8 oc i) ext r
+        OPS_RM64_I8 (RM_Reg r) i
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_ext_reg (primary_imm8 oc i) ext r
+        _ -> Nothing
+
+      set_ext_reg enc ext r =
+        let !(xc,c) = regCodeX r
+            -- handle registers that require REX
+            mrex1 = if regREX r then Just emptyRex else Nothing
+            -- register extension in REX.B
+            mrex2 = if xc       then Just rexB     else Nothing
+        in enc { encRex   = mrex1 <> mrex2
+               , encModRM = Just (mkModRM_ext_reg ext c)
+               }
+
 
   case op of
     AdjustAfterAddition -> do
@@ -162,11 +184,13 @@ encodeInsn ctx op args = do
     -- TODO: handle lock. Maybe a different instruction to avoid considering
     -- modifiers every time? Or apply modifiers to an Enc afterwards
     AddWithCarry
-      | Just r <- handle_acc_imm 0x14     -> r
-      | Just r <- handle_reg_imm 0x80 0x2 -> r
+      | Just r <- handle_acc_imm  0x14     -> r
+      | Just r <- handle_reg_imm  0x80 0x2 -> r
+      | Just r <- handle_reg_imm8 0x83 0x2 -> r
       | otherwise -> invalid_operands
 
     Add
-      | Just r <- handle_acc_imm 0x04     -> r
-      | Just r <- handle_reg_imm 0x80 0x0 -> r
+      | Just r <- handle_acc_imm  0x04     -> r
+      | Just r <- handle_reg_imm  0x80 0x0 -> r
+      | Just r <- handle_reg_imm8 0x83 0x0 -> r
       | otherwise -> invalid_operands
