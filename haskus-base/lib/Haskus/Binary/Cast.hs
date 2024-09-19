@@ -25,6 +25,10 @@ module Haskus.Binary.Cast
   , iFromI32#
   , i16FromI8#
   , i16FromI8
+  , i32FromI8#
+  , i32FromI8
+  , i32FromI16#
+  , i32FromI16
   , i64FromI#
   , i64FromI8#
   , i64FromI16#
@@ -148,6 +152,22 @@ i16FromI8# x = i16NarrowFromI# (iFromI8# x)
 {-# INLINE i16FromI8 #-}
 i16FromI8 :: I8 -> I16
 i16FromI8 (I8 x) = I16 (i16FromI8# x)
+
+{-# INLINE i32FromI8# #-}
+i32FromI8# :: I8# -> I32#
+i32FromI8# x = i32NarrowFromI# (iFromI8# x)
+
+{-# INLINE i32FromI8 #-}
+i32FromI8 :: I8 -> I32
+i32FromI8 (I8 x) = I32 (i32FromI8# x)
+
+{-# INLINE i32FromI16# #-}
+i32FromI16# :: I16# -> I32#
+i32FromI16# x = i32NarrowFromI# (iFromI16# x)
+
+{-# INLINE i32FromI16 #-}
+i32FromI16 :: I16 -> I32
+i32FromI16 (I16 x) = I32 (i32FromI16# x)
 
 {-# INLINE i64FromI# #-}
 i64FromI# :: I# -> I64#
