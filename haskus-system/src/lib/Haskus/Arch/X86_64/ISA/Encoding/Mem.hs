@@ -150,8 +150,18 @@ encodeMem32 = \cases
   _       Nothing Nothing (Disp32 d)  -> r 0b00 0b101 Nothing (Disp32 d)
   _       Nothing Nothing (Disp8 d)   -> r 0b00 0b101 Nothing (Disp32 (i32FromI8 d))
 
-  -- scaled index + base
-  -- TODO
+  -- scaled index, no base, disp32
+  sc (scaled_index -> Just i) Nothing (Disp32 d) -> r 0b00 0b100 (s sc i 0b101) (Disp32 d)
+
+  -- scaled index, base, disp
+  sc (scaled_index -> Just i) (base -> Just b) (Disp8 d)  -> r 0b01 0b100 (s sc i b) (Disp8 d)
+  sc (scaled_index -> Just i) (base -> Just b) (Disp32 d) -> r 0b10 0b100 (s sc i b) (Disp32 d)
+
+  -- scaled index without base:
+  --  - if scale=2, try 1*r+r
+  --  - otherwise use Disp32=0
+  Scale2  i       Nothing d           -> encodeMem32 Scale1 i i       d
+  sc      i       Nothing NoDisp      -> encodeMem32 sc     i Nothing (Disp32 0)
 
   -- any disp16 can be handled as a disp32
   sc      i       b       (Disp16 d)  -> encodeMem32 sc i b (Disp32 (i32FromI16 d))
@@ -159,3 +169,23 @@ encodeMem32 = \cases
   where
     r a b c d = Just (a,b,c,d)
     s a b c   = Just (mkSIB a b c)
+    base = \case
+      JR_EAX  -> Just 0b000
+      JR_ECX  -> Just 0b001
+      JR_EDX  -> Just 0b010
+      JR_EBX  -> Just 0b011
+      JR_ESP  -> Just 0b100
+      JR_EBP  -> Just 0b101
+      JR_ESI  -> Just 0b110
+      JR_EDI  -> Just 0b111
+      _       -> Nothing
+    scaled_index = \case
+      JR_EAX  -> Just 0b000
+      JR_ECX  -> Just 0b001
+      JR_EDX  -> Just 0b010
+      JR_EBX  -> Just 0b011
+      Nothing -> Just 0b100
+      JR_EBP  -> Just 0b101
+      JR_ESI  -> Just 0b110
+      JR_EDI  -> Just 0b111
+      _       -> Nothing
