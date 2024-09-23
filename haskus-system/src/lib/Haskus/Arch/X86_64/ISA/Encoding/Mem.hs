@@ -90,78 +90,49 @@ encodeMem16 = \cases
     r a b c = Just (a,b,c)
 
 -- | Return (mod,rm,disp) for the given 32-bit addressing form scale-index-base-disp
-encodeMem32 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (U8,U8,Maybe SIB,Disp)
+encodeMem32 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (U8,U8,Disp,Maybe SIB)
 encodeMem32 = \cases
-  -- single unscaled register, no displacement
-  Scale1  JR_EAX  Nothing NoDisp      -> r 0b00 0b000 Nothing NoDisp
-  _       Nothing JR_EAX  NoDisp      -> r 0b00 0b000 Nothing NoDisp
-  Scale1  JR_ECX  Nothing NoDisp      -> r 0b00 0b001 Nothing NoDisp
-  _       Nothing JR_ECX  NoDisp      -> r 0b00 0b001 Nothing NoDisp
-  Scale1  JR_EDX  Nothing NoDisp      -> r 0b00 0b010 Nothing NoDisp
-  _       Nothing JR_EDX  NoDisp      -> r 0b00 0b010 Nothing NoDisp
-  Scale1  JR_EBX  Nothing NoDisp      -> r 0b00 0b011 Nothing NoDisp
-  _       Nothing JR_EBX  NoDisp      -> r 0b00 0b011 Nothing NoDisp
-  Scale1  JR_ESI  Nothing NoDisp      -> r 0b00 0b110 Nothing NoDisp
-  _       Nothing JR_ESI  NoDisp      -> r 0b00 0b110 Nothing NoDisp
-  Scale1  JR_EDI  Nothing NoDisp      -> r 0b00 0b111 Nothing NoDisp
-  _       Nothing JR_EDI  NoDisp      -> r 0b00 0b111 Nothing NoDisp
-  Scale1  JR_EBP  Nothing NoDisp      -> r 0b01 0b101 Nothing (Disp8 0)
-  _       Nothing JR_EBP  NoDisp      -> r 0b01 0b101 Nothing (Disp8 0)
-  Scale1  JR_ESP  Nothing NoDisp      -> r 0b00 0b100 (s Scale1 0b100 0b100) NoDisp
-  _       Nothing JR_ESP  NoDisp      -> r 0b00 0b100 (s Scale1 0b100 0b100) NoDisp
+  -- no scaled index, base, no displacement
+  _       Nothing JR_EAX  NoDisp      -> r 0b00 0b000 NoDisp    Nothing
+  _       Nothing JR_ECX  NoDisp      -> r 0b00 0b001 NoDisp    Nothing
+  _       Nothing JR_EDX  NoDisp      -> r 0b00 0b010 NoDisp    Nothing
+  _       Nothing JR_EBX  NoDisp      -> r 0b00 0b011 NoDisp    Nothing
+  _       Nothing JR_EBP  NoDisp      -> r 0b01 0b101 (Disp8 0) Nothing
+  _       Nothing JR_ESI  NoDisp      -> r 0b00 0b110 NoDisp    Nothing
+  _       Nothing JR_EDI  NoDisp      -> r 0b00 0b111 NoDisp    Nothing
+  _       Nothing JR_ESP  NoDisp      -> r 0b00 0b100 NoDisp    (s Scale1 0b100 0b100)
 
-  -- single unscaled register, disp8
-  Scale1  JR_EAX  Nothing (Disp8 d)   -> r 0b01 0b000 Nothing (Disp8 d)
-  _       Nothing JR_EAX  (Disp8 d)   -> r 0b01 0b000 Nothing (Disp8 d)
-  Scale1  JR_ECX  Nothing (Disp8 d)   -> r 0b01 0b001 Nothing (Disp8 d)
-  _       Nothing JR_ECX  (Disp8 d)   -> r 0b01 0b001 Nothing (Disp8 d)
-  Scale1  JR_EDX  Nothing (Disp8 d)   -> r 0b01 0b010 Nothing (Disp8 d)
-  _       Nothing JR_EDX  (Disp8 d)   -> r 0b01 0b010 Nothing (Disp8 d)
-  Scale1  JR_EBX  Nothing (Disp8 d)   -> r 0b01 0b011 Nothing (Disp8 d)
-  _       Nothing JR_EBX  (Disp8 d)   -> r 0b01 0b011 Nothing (Disp8 d)
-  Scale1  JR_EBP  Nothing (Disp8 d)   -> r 0b01 0b101 Nothing (Disp8 d)
-  _       Nothing JR_EBP  (Disp8 d)   -> r 0b01 0b101 Nothing (Disp8 d)
-  Scale1  JR_ESI  Nothing (Disp8 d)   -> r 0b01 0b110 Nothing (Disp8 d)
-  _       Nothing JR_ESI  (Disp8 d)   -> r 0b01 0b110 Nothing (Disp8 d)
-  Scale1  JR_EDI  Nothing (Disp8 d)   -> r 0b01 0b111 Nothing (Disp8 d)
-  _       Nothing JR_EDI  (Disp8 d)   -> r 0b01 0b111 Nothing (Disp8 d)
-  Scale1  JR_ESP  Nothing (Disp8 d)   -> r 0b01 0b100 (s Scale1 0b100 0b100) (Disp8 d)
-  _       Nothing JR_ESP  (Disp8 d)   -> r 0b01 0b100 (s Scale1 0b100 0b100) (Disp8 d)
+  -- no scaled index, base, disp8
+  _       Nothing JR_EAX  (Disp8 d)   -> r 0b01 0b000 (Disp8 d) Nothing
+  _       Nothing JR_ECX  (Disp8 d)   -> r 0b01 0b001 (Disp8 d) Nothing
+  _       Nothing JR_EDX  (Disp8 d)   -> r 0b01 0b010 (Disp8 d) Nothing
+  _       Nothing JR_EBX  (Disp8 d)   -> r 0b01 0b011 (Disp8 d) Nothing
+  _       Nothing JR_EBP  (Disp8 d)   -> r 0b01 0b101 (Disp8 d) Nothing
+  _       Nothing JR_ESI  (Disp8 d)   -> r 0b01 0b110 (Disp8 d) Nothing
+  _       Nothing JR_EDI  (Disp8 d)   -> r 0b01 0b111 (Disp8 d) Nothing
+  _       Nothing JR_ESP  (Disp8 d)   -> r 0b01 0b100 (Disp8 d) (s Scale1 0b100 0b100)
 
-  -- single unscaled register, disp32
-  Scale1  JR_EAX  Nothing (Disp32 d)  -> r 0b10 0b000 Nothing (Disp32 d)
-  _       Nothing JR_EAX  (Disp32 d)  -> r 0b10 0b000 Nothing (Disp32 d)
-  Scale1  JR_ECX  Nothing (Disp32 d)  -> r 0b10 0b001 Nothing (Disp32 d)
-  _       Nothing JR_ECX  (Disp32 d)  -> r 0b10 0b001 Nothing (Disp32 d)
-  Scale1  JR_EDX  Nothing (Disp32 d)  -> r 0b10 0b010 Nothing (Disp32 d)
-  _       Nothing JR_EDX  (Disp32 d)  -> r 0b10 0b010 Nothing (Disp32 d)
-  Scale1  JR_EBX  Nothing (Disp32 d)  -> r 0b10 0b011 Nothing (Disp32 d)
-  _       Nothing JR_EBX  (Disp32 d)  -> r 0b10 0b011 Nothing (Disp32 d)
-  Scale1  JR_EBP  Nothing (Disp32 d)  -> r 0b10 0b101 Nothing (Disp32 d)
-  _       Nothing JR_EBP  (Disp32 d)  -> r 0b10 0b101 Nothing (Disp32 d)
-  Scale1  JR_ESI  Nothing (Disp32 d)  -> r 0b10 0b110 Nothing (Disp32 d)
-  _       Nothing JR_ESI  (Disp32 d)  -> r 0b10 0b110 Nothing (Disp32 d)
-  Scale1  JR_EDI  Nothing (Disp32 d)  -> r 0b10 0b111 Nothing (Disp32 d)
-  _       Nothing JR_EDI  (Disp32 d)  -> r 0b10 0b111 Nothing (Disp32 d)
-  Scale1  JR_ESP  Nothing (Disp32 d)  -> r 0b10 0b100 (s Scale1 0b100 0b100) (Disp32 d)
-  _       Nothing JR_ESP  (Disp32 d)  -> r 0b10 0b100 (s Scale1 0b100 0b100) (Disp32 d)
+  -- no scaled index, base, disp32
+  _       Nothing JR_EAX  (Disp32 d)  -> r 0b10 0b000 (Disp32 d) Nothing
+  _       Nothing JR_ECX  (Disp32 d)  -> r 0b10 0b001 (Disp32 d) Nothing
+  _       Nothing JR_EDX  (Disp32 d)  -> r 0b10 0b010 (Disp32 d) Nothing
+  _       Nothing JR_EBX  (Disp32 d)  -> r 0b10 0b011 (Disp32 d) Nothing
+  _       Nothing JR_EBP  (Disp32 d)  -> r 0b10 0b101 (Disp32 d) Nothing
+  _       Nothing JR_ESI  (Disp32 d)  -> r 0b10 0b110 (Disp32 d) Nothing
+  _       Nothing JR_EDI  (Disp32 d)  -> r 0b10 0b111 (Disp32 d) Nothing
+  _       Nothing JR_ESP  (Disp32 d)  -> r 0b10 0b100 (Disp32 d) (s Scale1 0b100 0b100)
 
   -- disp alone
-  _       Nothing Nothing (Disp32 d)  -> r 0b00 0b101 Nothing (Disp32 d)
-  _       Nothing Nothing (Disp8 d)   -> r 0b00 0b101 Nothing (Disp32 (i32FromI8 d))
+  _       Nothing Nothing (Disp32 d)  -> r 0b00 0b101 (Disp32 d)             Nothing
+  _       Nothing Nothing (Disp8 d)   -> r 0b00 0b101 (Disp32 (i32FromI8 d)) Nothing
 
-  -- scaled index, no base, disp32
-  sc (scaled_index -> Just i) Nothing (Disp32 d) -> r 0b00 0b100 (s sc i 0b101) (Disp32 d)
-
-  -- scaled index, base, disp
-  sc (scaled_index -> Just i) (base -> Just b) (Disp8 d)  -> r 0b01 0b100 (s sc i b) (Disp8 d)
-  sc (scaled_index -> Just i) (base -> Just b) (Disp32 d) -> r 0b10 0b100 (s sc i b) (Disp32 d)
-
-  -- scaled index without base:
-  --  - if scale=2, try 1*r+r
-  --  - otherwise use Disp32=0
-  Scale2  i       Nothing d           -> encodeMem32 Scale1 i i       d
-  sc      i       Nothing NoDisp      -> encodeMem32 sc     i Nothing (Disp32 0)
+  -- scaled index
+  Scale1  i                        Nothing          d          -> encodeMem32 Scale1 i Nothing d
+  sc      (scaled_index -> Just i) Nothing          (Disp32 d) -> r 0b00 0b100 (Disp32 d) (s sc i 0b101)
+  sc      (scaled_index -> Just i) (base -> Just b) (Disp8 d)  -> r 0b01 0b100 (Disp8 d)  (s sc i b)
+  sc      (scaled_index -> Just i) (base -> Just b) (Disp32 d) -> r 0b10 0b100 (Disp32 d) (s sc i b)
+  Scale2  i                        Nothing          d          -> encodeMem32 Scale1 i i d
+  sc      i                        Nothing          NoDisp     -> encodeMem32 sc     i Nothing (Disp32 0)
 
   -- any disp16 can be handled as a disp32
   sc      i       b       (Disp16 d)  -> encodeMem32 sc i b (Disp32 (i32FromI16 d))
