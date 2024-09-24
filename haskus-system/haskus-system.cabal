@@ -50,6 +50,7 @@ library
     Haskus.Arch.X86_64.ISA.Insn
     Haskus.Arch.X86_64.ISA.Encoder
     Haskus.Arch.X86_64.ISA.Encoding
+    Haskus.Arch.X86_64.ISA.Encoding.Disp
     Haskus.Arch.X86_64.ISA.Encoding.Enc
     Haskus.Arch.X86_64.ISA.Encoding.ModRM
     Haskus.Arch.X86_64.ISA.Encoding.Mem
