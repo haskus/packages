@@ -62,7 +62,7 @@ newtype Reg
   deriving (Eq,Ord)
 
 regCode :: Reg -> U8
-regCode (Reg w) = w .&. 0b0000_1111
+regCode (Reg w) = w .&. 0b00_0_0_1111
 
 -- | Code with the MSB extracted to be put in REX.X for example
 regCodeX :: Reg -> (Bool, U8)
@@ -71,10 +71,10 @@ regCodeX r = (testBit c 3, c .&. 0b0111)
     !c = regCode r
 
 regREX :: Reg -> Bool
-regREX (Reg w) = w .&. 0b0001_0000 /= 0
+regREX (Reg w) = w .&. 0b00_0_1_0000 /= 0
 
 regNO_REX :: Reg -> Bool
-regNO_REX (Reg w) = w .&. 0b0010_0000 /= 0
+regNO_REX (Reg w) = w .&. 0b00_1_0_0000 /= 0
 
 regSize :: Reg -> OperandSize
 regSize (Reg w) = case w `shiftR` 6 of
@@ -137,45 +137,45 @@ pattern R_BH = Reg 0b00_1_0_0011
 pattern R_CH = Reg 0b00_1_0_0001
 pattern R_DH = Reg 0b00_1_0_0010
 
-pattern R_R8B = Reg 0b00_0_0_1000
-pattern R_R8W = Reg 0b01_0_0_1000
-pattern R_R8D = Reg 0b10_0_0_1000
-pattern R_R8  = Reg 0b11_0_0_1000
+pattern R_R8B = Reg 0b00_0_1_1000
+pattern R_R8W = Reg 0b01_0_1_1000
+pattern R_R8D = Reg 0b10_0_1_1000
+pattern R_R8  = Reg 0b11_0_1_1000
 
-pattern R_R9B = Reg 0b00_0_0_1001
-pattern R_R9W = Reg 0b01_0_0_1001
-pattern R_R9D = Reg 0b10_0_0_1001
-pattern R_R9  = Reg 0b11_0_0_1001
+pattern R_R9B = Reg 0b00_0_1_1001
+pattern R_R9W = Reg 0b01_0_1_1001
+pattern R_R9D = Reg 0b10_0_1_1001
+pattern R_R9  = Reg 0b11_0_1_1001
 
-pattern R_R10B = Reg 0b00_0_0_1010
-pattern R_R10W = Reg 0b01_0_0_1010
-pattern R_R10D = Reg 0b10_0_0_1010
-pattern R_R10  = Reg 0b11_0_0_1010
+pattern R_R10B = Reg 0b00_0_1_1010
+pattern R_R10W = Reg 0b01_0_1_1010
+pattern R_R10D = Reg 0b10_0_1_1010
+pattern R_R10  = Reg 0b11_0_1_1010
 
-pattern R_R11B = Reg 0b00_0_0_1011
-pattern R_R11W = Reg 0b01_0_0_1011
-pattern R_R11D = Reg 0b10_0_0_1011
-pattern R_R11  = Reg 0b11_0_0_1011
+pattern R_R11B = Reg 0b00_0_1_1011
+pattern R_R11W = Reg 0b01_0_1_1011
+pattern R_R11D = Reg 0b10_0_1_1011
+pattern R_R11  = Reg 0b11_0_1_1011
 
-pattern R_R12B = Reg 0b00_0_0_1100
-pattern R_R12W = Reg 0b01_0_0_1100
-pattern R_R12D = Reg 0b10_0_0_1100
-pattern R_R12  = Reg 0b11_0_0_1100
+pattern R_R12B = Reg 0b00_0_1_1100
+pattern R_R12W = Reg 0b01_0_1_1100
+pattern R_R12D = Reg 0b10_0_1_1100
+pattern R_R12  = Reg 0b11_0_1_1100
 
-pattern R_R13B = Reg 0b00_0_0_1101
-pattern R_R13W = Reg 0b01_0_0_1101
-pattern R_R13D = Reg 0b10_0_0_1101
-pattern R_R13  = Reg 0b11_0_0_1101
+pattern R_R13B = Reg 0b00_0_1_1101
+pattern R_R13W = Reg 0b01_0_1_1101
+pattern R_R13D = Reg 0b10_0_1_1101
+pattern R_R13  = Reg 0b11_0_1_1101
 
-pattern R_R14B = Reg 0b00_0_0_1110
-pattern R_R14W = Reg 0b01_0_0_1110
-pattern R_R14D = Reg 0b10_0_0_1110
-pattern R_R14  = Reg 0b11_0_0_1110
+pattern R_R14B = Reg 0b00_0_1_1110
+pattern R_R14W = Reg 0b01_0_1_1110
+pattern R_R14D = Reg 0b10_0_1_1110
+pattern R_R14  = Reg 0b11_0_1_1110
 
-pattern R_R15B = Reg 0b00_0_0_1111
-pattern R_R15W = Reg 0b01_0_0_1111
-pattern R_R15D = Reg 0b10_0_0_1111
-pattern R_R15  = Reg 0b11_0_0_1111
+pattern R_R15B = Reg 0b00_0_1_1111
+pattern R_R15W = Reg 0b01_0_1_1111
+pattern R_R15D = Reg 0b10_0_1_1111
+pattern R_R15  = Reg 0b11_0_1_1111
 
 {-# COMPLETE R_AL, R_AX, R_EAX, R_RAX,
              R_BL, R_BX, R_EBX, R_RBX,
