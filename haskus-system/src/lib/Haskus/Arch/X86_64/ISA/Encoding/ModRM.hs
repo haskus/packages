@@ -1,7 +1,7 @@
 -- | ModRM byte
 module Haskus.Arch.X86_64.ISA.Encoding.ModRM
   ( ModRM
-  , modrmU8
+  , writeModRM
   , mkModRM
   , mkModRM_ext_reg
   , mkModRM_regs_reg_rm
@@ -11,6 +11,7 @@ where
 
 import Haskus.Binary.Word
 import Haskus.Binary.Bits
+import qualified Haskus.Memory.Writer as W
 
 -- | ModRM byte: mm_rrr_aaa
 newtype ModRM
@@ -23,9 +24,6 @@ instance Semigroup ModRM where
 instance Monoid ModRM where
   mempty = ModRM 0
 
-modrmU8 :: ModRM -> U8
-modrmU8 (ModRM w) = w
-
 mkModRM :: U8 -> U8 -> U8 -> ModRM
 mkModRM m r a = ModRM ((m `shiftL` 6) .|. (r `shiftL` 3) .|. a)
 
@@ -37,3 +35,7 @@ mkModRM_regs_reg_rm r m = ModRM (0b11_000_000 .|. (r `shiftL` 3) .|. m)
 
 mkModRM_mod_rm :: U8 -> U8 -> ModRM
 mkModRM_mod_rm m rm = ModRM (m `shiftL` 6 .|. rm)
+
+-- | Write a ModRM byte
+writeModRM :: ModRM -> W.Writer s
+writeModRM (ModRM u) = W.writeU8 u

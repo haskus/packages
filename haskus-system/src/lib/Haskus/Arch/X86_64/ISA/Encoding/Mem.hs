@@ -1,8 +1,5 @@
 module Haskus.Arch.X86_64.ISA.Encoding.Mem
-  ( Disp (..)
-  , Scale (..)
-  , Mem (..)
-  , encodeMem16
+  ( encodeMem16
   , encodeMem32
   , encodeMem64
   , encodeMemRel
@@ -10,30 +7,13 @@ module Haskus.Arch.X86_64.ISA.Encoding.Mem
 where
 
 import Prelude hiding (mod)
+import Haskus.Arch.X86_64.ISA.Encoding.Disp
 import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Size
-import Haskus.Binary.Word
-import Haskus.Binary.Int
 import Haskus.Binary.Cast
-
--- | Displacement
-data Disp
-  = NoDisp
-  | Disp8  !I8
-  | Disp16 !I16
-  | Disp32 !I32
-  deriving (Show,Eq,Ord)
-
--- | Memory addressing
-data Mem
-  = M_16        !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 16-bit index-base-disp
-  | M_32 !Scale !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 32-bit scaled-index-base-disp
-  | M_64 !Scale !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 64-bit scaled-index-base-disp
-  | M_Rel !Disp                                 -- ^ RIP-relative displacement
-  deriving (Show,Eq,Ord)
 
 -- | Return (modrm,disp) for the given 16-bit addressing form base-index-disp.
 --
@@ -242,10 +222,12 @@ encodeMem64 = \cases
       Disp32 d -> (0b10, Disp32 d)
 
 
--- | Return (mod,rm,disp) for the given 64-bit RIP-relative addressing form RIP+disp
-encodeMemRel :: Disp -> Maybe (U8,U8,Disp)
-encodeMemRel = \case
-  NoDisp   -> Just (0b00,0b101,Disp32 0)
-  Disp32 d -> Just (0b00,0b101,Disp32 d)
-  Disp16 d -> Just (0b00,0b101,Disp32 (i32FromI16 d))
-  Disp8  d -> Just (0b00,0b101,Disp32 (i32FromI8 d))
+-- | Return (modrm,disp) for the given 64-bit RIP-relative addressing form RIP+disp
+encodeMemRel :: Disp -> Maybe (ModRM,Disp)
+encodeMemRel disp =
+  let !disp' = case disp of
+                NoDisp   -> 0
+                Disp32 d -> d
+                Disp16 d -> (i32FromI16 d)
+                Disp8  d -> (i32FromI8 d)
+  in Just (mkModRM_mod_rm 0b00 0b101, Disp32 disp')
