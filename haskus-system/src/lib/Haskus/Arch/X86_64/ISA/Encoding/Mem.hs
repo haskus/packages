@@ -13,6 +13,7 @@ import Prelude hiding (mod)
 import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
+import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Binary.Word
 import Haskus.Binary.Int
@@ -34,9 +35,11 @@ data Mem
   | M_Rel !Disp                                 -- ^ RIP-relative displacement
   deriving (Show,Eq,Ord)
 
-
--- | Return (mod,rm,disp) for the given 16-bit addressing form base-index-disp
-encodeMem16 :: Maybe Reg -> Maybe Reg -> Disp -> Maybe (U8,U8,Disp)
+-- | Return (modrm,disp) for the given 16-bit addressing form base-index-disp.
+--
+-- modrm.reg is set to 0
+--
+encodeMem16 :: Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp)
 encodeMem16 = \cases
   JR_BX   JR_SI   NoDisp      -> r 0b00 0b000 NoDisp
   JR_SI   JR_BX   NoDisp      -> r 0b00 0b000 NoDisp
@@ -92,12 +95,12 @@ encodeMem16 = \cases
   Nothing Nothing (Disp8 d)   -> r 0b00 0b100 (Disp16 (i16FromI8 d))
   _       _       _           -> Nothing
   where
-    r a b c = Just (a,b,c)
+    r a b c = Just (mkModRM_mod_rm a b,c)
 
 
 
--- | Return (mod,rm,disp,sib) for the given 32-bit addressing form scale-index-base-disp
-encodeMem32 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (U8,U8,Disp,Maybe SIB)
+-- | Return (modrm,disp,sib) for the given 32-bit addressing form scale-index-base-disp
+encodeMem32 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp,Maybe SIB)
 encodeMem32 = \cases
   -- only support 32-bit registers that don't require REX
   _  (Just r) _ _ | regSize r /= OpSize32 || regREX r -> Nothing
@@ -153,7 +156,7 @@ encodeMem32 = \cases
     -> ret_sib mod disp (s scale (regCode i) (regCode b))
 
   where
-    ret a b c d = Just (a,b,c,d)
+    ret a b c d = Just (mkModRM_mod_rm a b,c,d)
     ret_sib a c d = ret a 0b100 c d
     ret_disp32 d = ret 0b00 0b101 (Disp32 d) Nothing
     s a b c   = Just (mkSIB a b c)
@@ -163,8 +166,8 @@ encodeMem32 = \cases
       Disp16 d -> (0b10, Disp32 (i32FromI16 d))
       Disp32 d -> (0b10, Disp32 d)
 
--- | Return (mod,rm,disp,sib,rex) for the given 64-bit addressing form scale-index-base-disp
-encodeMem64 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (U8,U8,Disp,Maybe SIB,Maybe Rex)
+-- | Return (modrm,disp,sib,rex) for the given 64-bit addressing form scale-index-base-disp
+encodeMem64 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp,Maybe SIB,Maybe Rex)
 encodeMem64 = \cases
   -- only support 64-bit registers (with or without REX)
   _  (Just r) _ _ | regSize r /= OpSize64 -> Nothing
@@ -224,7 +227,7 @@ encodeMem64 = \cases
     -> ret_sib mod disp (s scale i b) (rex1 <> rex2)
 
   where
-    ret a b c d e   = Just (a,b,c,d,e)
+    ret a b c d e   = Just (mkModRM_mod_rm a b,c,d,e)
     ret_sib a c d e = ret a 0b100 c d e
     -- in 64-bit mode, disp32-only form must be encoded with a SIB (the no-SIB
     -- form is taken for RIP-relative addressing)

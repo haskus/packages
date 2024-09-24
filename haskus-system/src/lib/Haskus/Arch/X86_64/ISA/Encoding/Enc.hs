@@ -16,6 +16,7 @@ import Haskus.Memory.Writer
 import Haskus.Arch.X86_64.ISA.Encoding.Prefix
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
+import Haskus.Arch.X86_64.ISA.Encoding.Disp
 import Haskus.Arch.X86_64.ISA.Size
 
 import Data.Maybe
@@ -27,12 +28,12 @@ data Enc = Enc
   , encOpcode   :: !(Maybe Opcode)     -- ^ Opcode (optional to allow naked prefixes)
   , encModRM    :: !(Maybe ModRM)      -- ^ ModRM
   , encSIB      :: !(Maybe U8)         -- ^ SIB
-  , encDisp     :: !(Maybe SizedValue) -- ^ Displacement
+  , encDisp     :: !Disp               -- ^ Displacement
   , encImm      :: !(Maybe SizedValue) -- ^ Immediate
   }
 
 emptyEnc :: Enc
-emptyEnc = Enc [] Nothing Nothing Nothing Nothing Nothing Nothing
+emptyEnc = Enc [] Nothing Nothing Nothing Nothing NoDisp Nothing
 
 -- | Encoding size in bytes
 encSize :: Enc -> Word
@@ -46,7 +47,7 @@ encSize Enc{..} = full_size
                   + sz_opcode encOpcode
                   + sz_maybe_u8 encModRM
                   + sz_maybe_u8 encSIB
-                  + sz_sized encDisp
+                  + dispSizeInBytes encDisp
                   + sz_sized encImm
 
 -- | Offset of the immediate (if any)
@@ -55,17 +56,18 @@ encImmOffset Enc{..} = maybe Nothing (const (Just imm_offset)) encImm
   where
     sz_maybe_u8 = maybe 0 (const 1)
     sz_opcode   = maybe 0 opcodeSize
-    sz_sized    = maybe 0 sizedValueSizeInBytes
     imm_offset  = fromIntegral (length encPrefixes)
                   + sz_maybe_u8 encRex
                   + sz_opcode encOpcode
                   + sz_maybe_u8 encModRM
                   + sz_maybe_u8 encSIB
-                  + sz_sized encDisp
+                  + dispSizeInBytes encDisp
 
 -- | Offset of the displacement (if any)
 encDispOffset :: Enc -> Maybe Word
-encDispOffset Enc{..} = maybe Nothing (const (Just disp_offset)) encDisp
+encDispOffset Enc{..} = case encDisp of
+    NoDisp -> Nothing
+    _      -> Just disp_offset
   where
     sz_maybe_u8 = maybe 0 (const 1)
     sz_opcode   = maybe 0 opcodeSize
@@ -123,7 +125,6 @@ data EncError
   | RexNotAllowed               -- ^ Rex prefix not allowed with the given opcode encoding
   | PrefixNotAllowed [Prefix]   -- ^ Prefix not allowed with the given opcode encoding
   | Imm64NotAllowed             -- ^ 64-bit immediate not allowed with displacement
-  | Disp64NotAllowed            -- ^ 64-bit displacement not allowed with immediate
   | TooManyBytes !Word          -- ^ More than 15-byte long encoding
   | ImmNotAllowedWith3DNow      -- ^ Immediate operand not allowed with 3DNow! instructions
   deriving (Show,Eq,Ord)
@@ -150,8 +151,7 @@ check e@Enc{..} = concat
   , let is_size64 = \case
           Just (SizedValue64 {}) -> True
           _                      -> False
-    in wh (is_size64 encImm && isJust encDisp) Imm64NotAllowed
-       <> wh (is_size64 encDisp && isJust encImm) Disp64NotAllowed
+    in wh (is_size64 encImm && hasDisp encDisp) Imm64NotAllowed
 
     -- Instruction size <= 15 bytes
   , let full_size = encSize e
@@ -183,7 +183,7 @@ encode Enc{..} = mconcat
   
   , maybe mempty (writeU8 . modrmU8) encModRM
   , maybe mempty writeU8 encSIB
-  , maybe mempty writeSizedValueLE encDisp
+  , writeDisp encDisp
   , maybe mempty writeSizedValueLE encImm
     
   , case encOpcode of
