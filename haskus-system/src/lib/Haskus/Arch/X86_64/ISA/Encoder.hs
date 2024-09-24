@@ -3,6 +3,7 @@ module Haskus.Arch.X86_64.ISA.Encoder
   , InsnEncErr (..)
   , Operation (..)
   , Operand (..)
+  , Mem(..)
   )
 where
 
@@ -12,6 +13,8 @@ import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Encoding.Mem
+import Haskus.Arch.X86_64.ISA.Encoding.Disp
+import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 
@@ -61,6 +64,43 @@ data Operands
   | OPS_R32_RM32 !Reg    !RegMem  -- ^ reg32, reg/mem32
   | OPS_R64_RM64 !Reg    !RegMem  -- ^ reg64, reg/mem64
   deriving (Show,Eq,Ord)
+
+-- | Memory addressing
+data Mem
+  = M_16        !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 16-bit index-base-disp
+  | M_32 !Scale !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 32-bit scaled-index-base-disp
+  | M_64 !Scale !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 64-bit scaled-index-base-disp
+  | M_Rel !Disp                                 -- ^ RIP-relative displacement
+  deriving (Show,Eq,Ord)
+
+-- | Encode a memory operand. Return Nothing in case of failure to encode.
+encodeMem :: Mem -> Enc -> Maybe Enc
+encodeMem mem e = case mem of
+  M_16 i b d
+    | Just (modrm,disp) <- encodeMem16 i b d
+    -> Just $ e { encModRM = encModRM e <> Just modrm
+                , encDisp  = disp
+                }
+  M_32 sc i b d
+    | Just (modrm,disp,sib) <- encodeMem32 sc i b d
+    -> Just $ e { encModRM = encModRM e <> Just modrm
+                , encDisp  = disp
+                , encSIB   = sib
+                }
+  M_64 sc i b d
+    | Just (modrm,disp,sib,rex) <- encodeMem64 sc i b d
+    -> Just $ e { encModRM = encModRM e <> Just modrm
+                , encDisp  = disp
+                , encSIB   = sib
+                , encRex   = encRex e <> rex
+                }
+  M_Rel d
+    | Just (modrm,disp) <- encodeMemRel d
+    -> Just $ e { encModRM = encModRM e <> Just modrm
+                , encDisp  = disp
+                }
+  _ -> Nothing
+
 
 data InsnEncErr
   = OpNotAllowedIn64bitMode   -- ^ Operation not allowed in 64-bit mode

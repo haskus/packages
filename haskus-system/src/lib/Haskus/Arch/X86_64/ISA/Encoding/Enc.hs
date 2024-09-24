@@ -17,6 +17,7 @@ import Haskus.Arch.X86_64.ISA.Encoding.Prefix
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Encoding.Disp
+import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Size
 
 import Data.Maybe
@@ -27,7 +28,7 @@ data Enc = Enc
   , encRex      :: !(Maybe Rex)        -- ^ Rex prefix
   , encOpcode   :: !(Maybe Opcode)     -- ^ Opcode (optional to allow naked prefixes)
   , encModRM    :: !(Maybe ModRM)      -- ^ ModRM
-  , encSIB      :: !(Maybe U8)         -- ^ SIB
+  , encSIB      :: !(Maybe SIB)        -- ^ SIB
   , encDisp     :: !Disp               -- ^ Displacement
   , encImm      :: !(Maybe SizedValue) -- ^ Immediate
   }
@@ -181,8 +182,8 @@ encode Enc{..} = mconcat
       Just (Op_Vex3 v1 v2 oc) -> writeU8 0xC4 <> writeU8 v1   <> writeU8 v2 <> writeU8 oc
       Just (Op_Xop  v1 v2 oc) -> writeU8 0x8F <> writeU8 v1   <> writeU8 v2 <> writeU8 oc
   
-  , maybe mempty (writeU8 . modrmU8) encModRM
-  , maybe mempty writeU8 encSIB
+  , maybe mempty writeModRM encModRM
+  , maybe mempty writeSIB   encSIB
   , writeDisp encDisp
   , maybe mempty writeSizedValueLE encImm
     
