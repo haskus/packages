@@ -350,13 +350,11 @@ encodeInsn ctx op args = do
 
     AAD -> do
       assert_not_mode64
-      i <- imm8_arg
-      pure $ primary_imm8 0xD5 i
+      primary_imm8 0xD5 <$> imm8_arg
 
     AAM -> do
       assert_not_mode64
-      i <- imm8_arg
-      pure $ primary_imm8 0xD4 i
+      primary_imm8 0xD4 <$> imm8_arg
 
     ADC -> asum
       [ handle_acc_imm  0x14
