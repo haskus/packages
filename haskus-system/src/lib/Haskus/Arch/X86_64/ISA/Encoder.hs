@@ -23,15 +23,189 @@ import Haskus.Binary.Word
 import Control.Applicative
 
 data Operation
+  ---------------------------------------
+  -- General-purpose instructions
+  ---------------------------------------
+
   -- Binary-coded-decimal (BCD) operations
   = AAA     -- ^ Adjust AL after addition
   | AAS     -- ^ Adjust AL after subtraction
   | AAD     -- ^ Adjust AX before division
   | AAM     -- ^ Adjust AX after multiply
+  | DAA     -- ^ Decimal adjust after addition
+  | DAS     -- ^ Decimal adjust after subtraction
+
+  -- Arithmetic
   | ADC     -- ^ Add with carry: DEST := DEST + SRC + CF
   | ADD     -- ^ Add: DEST := DEST + SRC
-  | ADCX    -- ^ Unsigned add with carry: CF:DEST := DEST + SRC + CF
+  | ADCX    -- ^ Unsigned add with carry flag: CF:DEST := DEST + SRC + CF
+  | ADOX    -- ^ Unsigned add with overflow flag: OF:DEST := DEST + SRC + OF
+  -- DEC
+  -- DIV
+  -- IDIV
+  -- IMUL
+  -- INC
+  -- MUL
+  -- MULX
+  -- NEG
+  -- SBB
+  -- SUB
+
+  -- Conversions
+  -- CBW -- ^ Sign extension of rAX in rAX
+  -- CWD -- ^ Sign-extension in rAX in rDX
+
+  -- Moves
+  -- CMOV
+  -- IN
+  -- INS, INSB, INSW, INSD
+  -- LDS, LES, LFS, LGS, LSS
+  -- LEA
+  -- LODSB, LODSW, LODSD, LODSQ
+  -- MOV
+  -- MOVBE
+  -- MOVD
+  -- MOVNTI
+  -- MOVSB, MOVSW, MOVSD, MOVSQ
+  -- MOVSX
+  -- MOVSXD
+  -- MOVZX
+  -- OUT
+  -- OUTSB, OUTSW, OUTSD
+  -- POP
+  -- POPA, POPAD
+  -- PUSH
+  -- PUSHA, PUSHAD
+  -- SETcc
+  -- STOSB, STOSW, STOSD, STOSQ
+  -- XADD
+  -- XCHG
+  -- XLAT
+
+  -- Comparisons
+  -- CMP
+  -- CMPSB, CMPSW, CMPSD, CMPSQ
+  -- CMPXCHG
+  -- CMPXCHG8B
+  -- CMPXCHG16B
+  -- SCASB, SCASW, SCASD, SCASQ
+
+  -- Binary
+  | AND
+  -- ANDN
+  -- BEXTR
+  -- BLCFILL
+  -- BLCI
+  -- BLCIC
+  -- BLCMSK
+  -- BLCS
+  -- BLSFILL
+  -- BLSI
+  -- BLSIC
+  -- BLSMSK
+  -- BLSR
+  -- BSF
+  -- BSR
+  -- BSWAP
+  -- BT
+  -- BTC
+  -- BTR
+  -- BTS
+  -- BZHI
+  -- LZCNT
+  -- NOT
+  -- OR
+  -- PDEP
+  -- PEXT
+  -- POPCNT
+  -- RCL
+  -- RCR
+  -- ROL
+  -- ROR
+  -- RORX
+  -- SAL
+  -- SHL
+  -- SAR
+  -- SARX
+  -- SHLD
+  -- SHLX
+  -- SHR
+  -- SHRD
+  -- SHRX
+  -- T1MSKC
+  -- TEST
+  -- TZCNT
+  -- TZMSK
+  -- XOR
+
+  -- Control-flow
+  -- CALL
+  -- ENTER
+  -- INT
+  -- INTO
+  -- JCC
+  -- JCXZ, jECXZ, JRCXZ
+  -- JMP
+  -- LEAVE
+  -- LOOP
+  -- RET
+  -- UD0, UD1, UD2
+
+  -- Flags
+  -- CLC
+  -- CLD
+  -- CMC
+  -- LAHF
+  -- POPF, POPFD, POPFQ
+  -- PUSHF, PUSHFD, PUSHFQ
+  -- SAHF
+  -- STC
+  -- STD
+
+  -- Cache management and memory barriers
+  -- CLFLUSH
+  -- CLFLUSHOPT
+  -- CLWB
+  -- CLZERO
+  -- LFENCE
+  -- MFENCE
+  -- SFENCE
+  -- MCOMMIT
+  -- PREFETCH, PREFETCHW, PREFETCHn
+
+  -- Misc instructions
+  -- BOUND
+  -- CPUID
+  -- CRC32
+  -- LLWPCB
+  -- LWPINS
+  -- LWPVAL
+  -- MONITORX
+  -- MWAITX
+  -- NOP
+  -- PAUSE
+  -- RDRAND
+  -- RDSEED
+  -- SLWPCB
+
+  ---------------------------------------
+  -- System instructions
+  ---------------------------------------
+  -- RDFSBASE
+  -- RDGSBASE
+  -- WRFSBASE
+  -- WRGSBASE
+  -- RDPID
+  -- RDPRU
+  --
+
+  ---------------------------------------
+  -- Vector instructions
+  ---------------------------------------
   | ADDPD   -- ^ Parallel add 2 rightmost doubles; other leftmost doubles unmodified (SSE)
+  -- MOVMSKPD
+  -- MOVMSKPS
+
   deriving (Show,Eq,Ord)
 
 data Operand
@@ -146,12 +320,14 @@ encodeInsn ctx op args = do
         _        -> Nothing
       
       primary   oc = emptyEnc { encOpcode = Just (Op oc) }
-      map_0f    oc = emptyEnc { encOpcode = Just (Op_0F oc) }
-      map_0f38  oc = emptyEnc { encOpcode = Just (Op_0F38 oc) }
+      map_0F    oc = emptyEnc { encOpcode = Just (Op_0F oc) }
+      map_0F38  oc = emptyEnc { encOpcode = Just (Op_0F38 oc) }
 
       prefix_66 e  = e { encPrefixes = P_66 : encPrefixes e }
-      map_66_0f   oc = prefix_66 $ map_0f   oc
-      map_66_0f38 oc = prefix_66 $ map_0f38 oc
+      prefix_F3 e  = e { encPrefixes = P_F3 : encPrefixes e }
+      map_66_0F   oc = prefix_66 $ map_0F   oc
+      map_66_0F38 oc = prefix_66 $ map_0F38 oc
+      map_F3_0F38 oc = prefix_F3 $ map_0F38 oc
 
       primary_imm8  oc i = set_imm (SizedValue8 i)  $ primary oc
       primary_imm16 oc i = set_imm (SizedValue16 i) $ primary oc
@@ -388,6 +564,16 @@ encodeInsn ctx op args = do
       assert_not_mode64
       primary_imm8 0xD4 <$> imm8_arg
 
+    DAA -> do
+      assert_not_mode64
+      assert_no_args
+      pure $ primary 0x27
+
+    DAS -> do
+      assert_not_mode64
+      assert_no_args
+      pure $ primary 0x2F
+
     ADC -> asum
       [ handle_acc_imm  0x14
       , handle_rm_imm   0x80 0x2
@@ -400,15 +586,15 @@ encodeInsn ctx op args = do
       has_extension ADX
       case args of
         OPS_R32_RM32 r (RM_Mem m) -> do
-          pure $ set_rm_reg_mem r m $ map_66_0f38 0xF6
+          pure $ set_rm_reg_mem r m $ map_66_0F38 0xF6
         OPS_R64_RM64 r (RM_Mem m) -> do
           assert_mode64
-          pure $ set_opsize64 $ set_rm_reg_mem r m $ map_66_0f38 0xF6
+          pure $ set_opsize64 $ set_rm_reg_mem r m $ map_66_0F38 0xF6
         OPS_R32_RM32 r (RM_Reg rm) -> do
-          pure $ set_rm_reg_reg r rm $ map_66_0f38 0xF6
+          pure $ set_rm_reg_reg r rm $ map_66_0F38 0xF6
         OPS_R64_RM64 r (RM_Reg rm) -> do
           assert_mode64
-          pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_66_0f38 0xF6
+          pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_66_0F38 0xF6
         _ -> Nothing
 
     ADD -> asum
@@ -419,12 +605,36 @@ encodeInsn ctx op args = do
       , handle_reg_rm   0x02
       ]
 
+    ADOX -> do
+      has_extension ADX
+      case args of
+        OPS_R32_RM32 r (RM_Mem m) -> do
+          pure $ set_rm_reg_mem r m $ map_F3_0F38 0xF6
+        OPS_R64_RM64 r (RM_Mem m) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_rm_reg_mem r m $ map_F3_0F38 0xF6
+        OPS_R32_RM32 r (RM_Reg rm) -> do
+          pure $ set_rm_reg_reg r rm $ map_F3_0F38 0xF6
+        OPS_R64_RM64 r (RM_Reg rm) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_F3_0F38 0xF6
+        _ -> Nothing
+
+    AND -> asum
+      [ handle_acc_imm  0x24
+      , handle_rm_imm   0x80 0x4
+      , handle_rm_imm8  0x83 0x4
+      , handle_rm_reg   0x20
+      , handle_reg_rm   0x22
+      ]
+
+
     ADDPD -> 
       case args of
         OPS_V128_VM128 v (VM_Mem m) -> do
           has_extension SSE2
-          pure $ set_rm_vec_mem v m $ map_66_0f 0x58
+          pure $ set_rm_vec_mem v m $ map_66_0F 0x58
         OPS_V128_VM128 v1 (VM_Vec v2) -> do
           has_extension SSE2
-          pure $ set_rm_vec_vec v1 v2 $ map_66_0f 0x58
+          pure $ set_rm_vec_vec v1 v2 $ map_66_0F 0x58
         _ -> Nothing
