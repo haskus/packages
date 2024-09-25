@@ -29,6 +29,7 @@ data Operation
   | AAM     -- ^ Adjust AX after multiply
   | ADC     -- ^ Add with carry: DEST := DEST + SRC + CF
   | ADD     -- ^ Add: DEST := DEST + SRC
+  | ADCX    -- ^ Unsigned add with carry: CF:DEST := DEST + SRC + CF
   deriving (Show,Eq,Ord)
 
 data Operand
@@ -126,6 +127,7 @@ encodeInsn ctx op args = do
   let mode64            = is64bitMode (ctxMode ctx)
       assert_mode64     = if mode64     then Just () else Nothing
       assert_not_mode64 = if not mode64 then Just () else Nothing
+      has_extension x   = if extensionAvailable ctx x then Just () else Nothing
 
       assert_no_args = case args of
         NoOperand -> Just ()
@@ -137,6 +139,8 @@ encodeInsn ctx op args = do
       
       primary   oc = emptyEnc { encOpcode = Just (Op oc) }
       secondary oc = emptyEnc { encOpcode = Just (Op_0F oc) }
+      map_0f38  oc = emptyEnc { encOpcode   = Just (Op_0F38 oc) }
+      map_66_0f38 oc = (map_0f38 oc) { encPrefixes = [P_66] }
 
       primary_imm8  oc i = set_imm (SizedValue8 i)  $ primary oc
       primary_imm16 oc i = set_imm (SizedValue16 i) $ primary oc
@@ -188,6 +192,9 @@ encodeInsn ctx op args = do
                , encModRM = encModRM enc <> Just (mkModRM_reg c)
                }
 
+      set_reg_mem r   m e = set_reg r   $ set_mem m e
+      set_ext_mem ext m e = set_ext ext $ set_mem m e
+
       -- store r1 in ModRM.reg and r2 in ModRM.rm
       set_regs_reg_rm r1 r2 enc
         | not (compatibleRegs r1 r2) = error "Trying to encode incompatible registers"
@@ -207,129 +214,118 @@ encodeInsn ctx op args = do
       -- store r1 in ModRM.rm and r2 in ModRM.reg
       set_regs_rm_reg r1 r2 enc = set_regs_reg_rm r2 r1 enc
 
-
-
       -- several instructions have special encodings for the rAX, immN cases
       -- (ADD, ADC, etc.). We handle them here.
       handle_acc_imm oc = case args of
-        OPS_RM8_I8 (RM_Reg R_AL) i
-          -> pure $ primary_imm8 oc i
-        OPS_RM16_I16 (RM_Reg R_AX) i
-          -> pure $ set_opsize16 $ primary_imm16 (oc+1) i
-        OPS_RM32_I32 (RM_Reg R_EAX) i
-          -> pure $ set_opsize32 $ primary_imm32 (oc+1) i
-        OPS_RM64_I32 (RM_Reg R_RAX) i
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ primary_imm32 (oc+1) i
+        OPS_RM8_I8 (RM_Reg R_AL) i -> do
+          pure $ primary_imm8 oc i
+        OPS_RM16_I16 (RM_Reg R_AX) i -> do
+          pure $ set_opsize16 $ primary_imm16 (oc+1) i
+        OPS_RM32_I32 (RM_Reg R_EAX) i -> do
+          pure $ set_opsize32 $ primary_imm32 (oc+1) i
+        OPS_RM64_I32 (RM_Reg R_RAX) i -> do
+          assert_mode64
+          pure $ set_opsize64 $ primary_imm32 (oc+1) i
         _ -> Nothing
 
       -- handle regN, immN cases (reg in ModRM.rm field)
       handle_reg_imm oc ext = case args of
-        OPS_RM8_I8   (RM_Reg r) i
-          -> pure $ set_ext_reg ext r $ primary_imm8 oc i
-        OPS_RM16_I16 (RM_Reg r) i
-          -> pure $ set_opsize16 $ set_ext_reg ext r $ primary_imm16 (oc+1) i
-        OPS_RM32_I32 (RM_Reg r) i
-          -> pure $ set_opsize32 $ set_ext_reg ext r $ primary_imm32 (oc+1) i
-        OPS_RM64_I32 (RM_Reg r) i
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ set_ext_reg ext r $ primary_imm32 (oc+1) i
+        OPS_RM8_I8   (RM_Reg r) i -> do
+          pure $ set_ext_reg ext r $ primary_imm8 oc i
+        OPS_RM16_I16 (RM_Reg r) i -> do
+          pure $ set_opsize16 $ set_ext_reg ext r $ primary_imm16 (oc+1) i
+        OPS_RM32_I32 (RM_Reg r) i -> do
+          pure $ set_opsize32 $ set_ext_reg ext r $ primary_imm32 (oc+1) i
+        OPS_RM64_I32 (RM_Reg r) i -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_ext_reg ext r $ primary_imm32 (oc+1) i
         _ -> Nothing
 
       -- handle regN, imm8 cases (reg in ModRM.rm field)
       handle_reg_imm8 oc ext = case args of
-        OPS_RM16_I8 (RM_Reg r) i
-          -> pure $ set_opsize16 $ set_ext_reg ext r $ primary_imm8 oc i
-        OPS_RM32_I8 (RM_Reg r) i
-          -> pure $ set_opsize32 $ set_ext_reg ext r $ primary_imm8 oc i
-        OPS_RM64_I8 (RM_Reg r) i
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ set_ext_reg ext r $ primary_imm8 oc i
+        OPS_RM16_I8 (RM_Reg r) i -> do
+          pure $ set_opsize16 $ set_ext_reg ext r $ primary_imm8 oc i
+        OPS_RM32_I8 (RM_Reg r) i -> do
+          pure $ set_opsize32 $ set_ext_reg ext r $ primary_imm8 oc i
+        OPS_RM64_I8 (RM_Reg r) i -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_ext_reg ext r $ primary_imm8 oc i
         _ -> Nothing
 
       -- handle memN, immN cases
       handle_mem_imm oc ext = case args of
-        OPS_RM8_I8   (RM_Mem m) i
-          -> pure $ set_mem m $ set_ext ext $ primary_imm8 oc i
-        OPS_RM16_I16 (RM_Mem m) i
-          -> pure $ set_opsize16 $ set_mem m $ set_ext ext $ primary_imm16 (oc+1) i
-        OPS_RM32_I32 (RM_Mem m) i
-          -> pure $ set_opsize32 $ set_mem m $ set_ext ext $ primary_imm32 (oc+1) i
-        OPS_RM64_I32 (RM_Mem m) i
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ set_mem m $ set_ext ext $ primary_imm32 (oc+1) i
+        OPS_RM8_I8   (RM_Mem m) i -> do
+          pure $ set_ext_mem ext m $ primary_imm8 oc i
+        OPS_RM16_I16 (RM_Mem m) i -> do
+          pure $ set_opsize16 $ set_ext_mem ext m $ primary_imm16 (oc+1) i
+        OPS_RM32_I32 (RM_Mem m) i -> do
+          pure $ set_opsize32 $ set_ext_mem ext m $ primary_imm32 (oc+1) i
+        OPS_RM64_I32 (RM_Mem m) i -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_ext_mem ext m $ primary_imm32 (oc+1) i
         _ -> Nothing
 
       -- handle memN, imm8 cases
       handle_mem_imm8 oc ext = case args of
-        OPS_RM16_I8 (RM_Mem m) i
-          -> pure $ set_opsize16 $ set_mem m $ set_ext ext $ primary_imm8 oc i
-        OPS_RM32_I8 (RM_Mem m) i
-          -> pure $ set_opsize32 $ set_mem m $ set_ext ext $ primary_imm8 oc i
-        OPS_RM64_I8 (RM_Mem m) i
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ set_mem m $ set_ext ext $ primary_imm8 oc i
+        OPS_RM16_I8 (RM_Mem m) i -> do
+          pure $ set_opsize16 $ set_ext_mem ext m $ primary_imm8 oc i
+        OPS_RM32_I8 (RM_Mem m) i -> do
+          pure $ set_opsize32 $ set_ext_mem ext m $ primary_imm8 oc i
+        OPS_RM64_I8 (RM_Mem m) i -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_ext_mem ext m $ primary_imm8 oc i
         _ -> Nothing
 
       -- handle reg:ModRM.rm, reg:ModRM.reg cases
       handle_regs_rm_reg oc = case args of
-        OPS_RM8_R8   (RM_Reg r1) r2
-          -> pure $ set_regs_rm_reg r1 r2 $ primary oc
-        OPS_RM16_R16 (RM_Reg r1) r2
-          -> pure $ set_opsize16 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
-        OPS_RM32_R32 (RM_Reg r1) r2
-          -> pure $ set_opsize32 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
-        OPS_RM64_R64 (RM_Reg r1) r2
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
+        OPS_RM8_R8   (RM_Reg r1) r2 -> do
+          pure $ set_regs_rm_reg r1 r2 $ primary oc
+        OPS_RM16_R16 (RM_Reg r1) r2 -> do
+          pure $ set_opsize16 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
+        OPS_RM32_R32 (RM_Reg r1) r2 -> do
+          pure $ set_opsize32 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
+        OPS_RM64_R64 (RM_Reg r1) r2 -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
         _ -> Nothing
 
       -- handle reg:ModRM.reg, reg:ModRM.rm cases
       handle_regs_reg_rm oc = case args of
-        OPS_R8_RM8   r1 (RM_Reg r2)
-          -> pure $ set_regs_reg_rm r1 r2 $ primary oc
-        OPS_R16_RM16 r1 (RM_Reg r2)
-          -> pure $ set_opsize16 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
-        OPS_R32_RM32 r1 (RM_Reg r2)
-          -> pure $ set_opsize32 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
-        OPS_R64_RM64 r1 (RM_Reg r2)
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
+        OPS_R8_RM8   r1 (RM_Reg r2) -> do
+          pure $ set_regs_reg_rm r1 r2 $ primary oc
+        OPS_R16_RM16 r1 (RM_Reg r2) -> do
+          pure $ set_opsize16 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
+        OPS_R32_RM32 r1 (RM_Reg r2) -> do
+          pure $ set_opsize32 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
+        OPS_R64_RM64 r1 (RM_Reg r2) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
         _ -> Nothing
 
       -- handle mem:ModRM.rm, reg:ModRM.reg cases
       handle_mem_reg oc = case args of
-        OPS_RM8_R8   (RM_Mem m) r
-          -> pure $ set_reg r $ set_mem m $ primary oc
-        OPS_RM16_R16 (RM_Mem m) r
-          -> pure $ set_opsize16 $ set_reg r $ set_mem m $ primary (oc+1)
-        OPS_RM32_R32 (RM_Mem m) r
-          -> pure $ set_opsize32 $ set_reg r $ set_mem m $ primary (oc+1)
-        OPS_RM64_R64 (RM_Mem m) r
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ set_reg r $ set_mem m $ primary (oc+1)
+        OPS_RM8_R8   (RM_Mem m) r -> do
+          pure $ set_reg_mem r m $ primary oc
+        OPS_RM16_R16 (RM_Mem m) r -> do
+          pure $ set_opsize16 $ set_reg_mem r m $ primary (oc+1)
+        OPS_RM32_R32 (RM_Mem m) r -> do
+          pure $ set_opsize32 $ set_reg_mem r m $ primary (oc+1)
+        OPS_RM64_R64 (RM_Mem m) r -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_reg_mem r m $ primary (oc+1)
         _ -> Nothing
 
       -- handle reg:ModRM.reg, mem:ModRM.rm cases
       handle_reg_mem oc = case args of
-        OPS_R8_RM8   r (RM_Mem m)
-          -> pure $ set_reg r $ set_mem m $ primary oc
-        OPS_R16_RM16 r (RM_Mem m)
-          -> pure $ set_opsize16 $ set_reg r $ set_mem m $ primary (oc+1)
-        OPS_R32_RM32 r (RM_Mem m)
-          -> pure $ set_opsize32 $ set_reg r $ set_mem m $ primary (oc+1)
-        OPS_R64_RM64 r (RM_Mem m)
-          -> do
-            assert_mode64
-            pure $ set_opsize64 $ set_reg r $ set_mem m $ primary (oc+1)
+        OPS_R8_RM8   r (RM_Mem m) -> do
+          pure $ set_reg_mem r m $ primary oc
+        OPS_R16_RM16 r (RM_Mem m) -> do
+          pure $ set_opsize16 $ set_reg_mem r m $ primary (oc+1)
+        OPS_R32_RM32 r (RM_Mem m) -> do
+          pure $ set_opsize32 $ set_reg_mem r m $ primary (oc+1)
+        OPS_R64_RM64 r (RM_Mem m) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_reg_mem r m $ primary (oc+1)
         _ -> Nothing
 
       handle_rm_imm  oc ext = handle_reg_imm oc ext  <|> handle_mem_imm oc ext
@@ -371,3 +367,18 @@ encodeInsn ctx op args = do
       , handle_rm_reg   0x00
       , handle_reg_rm   0x02
       ]
+
+    ADCX -> do
+      has_extension ADX
+      case args of
+        OPS_R32_RM32 r (RM_Mem m) -> do
+          pure $ set_reg_mem r m $ map_66_0f38 0xF6
+        OPS_R64_RM64 r (RM_Mem m) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_reg_mem r m $ map_66_0f38 0xF6
+        OPS_R32_RM32 r (RM_Reg rm) -> do
+          pure $ set_regs_reg_rm r rm $ map_66_0f38 0xF6
+        OPS_R64_RM64 r (RM_Reg rm) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_regs_reg_rm r rm $ map_66_0f38 0xF6
+        _ -> Nothing
