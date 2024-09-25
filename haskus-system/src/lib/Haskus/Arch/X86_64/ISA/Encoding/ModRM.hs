@@ -3,6 +3,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.ModRM
   ( ModRM
   , writeModRM
   , mkModRM
+  , mkModRM_ext
   , mkModRM_ext_reg
   , mkModRM_regs_reg_rm
   , mkModRM_mod_rm
@@ -27,8 +28,13 @@ instance Monoid ModRM where
 mkModRM :: U8 -> U8 -> U8 -> ModRM
 mkModRM m r a = ModRM ((m `shiftL` 6) .|. (r `shiftL` 3) .|. a)
 
+-- | Store opcode extension in ModRM.reg and register in ModRM.rm
 mkModRM_ext_reg :: U8 -> U8 -> ModRM
 mkModRM_ext_reg ext r = ModRM (0b11_000_000 .|. (ext `shiftL` 3) .|. r)
+
+-- | Store opcode extension in ModRM.reg
+mkModRM_ext :: U8 -> ModRM
+mkModRM_ext ext = ModRM (ext `shiftL` 3)
 
 mkModRM_regs_reg_rm :: U8 -> U8 -> ModRM
 mkModRM_regs_reg_rm r m = ModRM (0b11_000_000 .|. (r `shiftL` 3) .|. m)
