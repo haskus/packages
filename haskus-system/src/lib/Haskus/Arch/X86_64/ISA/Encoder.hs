@@ -146,9 +146,11 @@ encodeInsn ctx op args = do
       primary   oc = emptyEnc { encOpcode = Just (Op oc) }
       secondary oc = emptyEnc { encOpcode = Just (Op_0F oc) }
 
-      primary_imm8  oc i = (primary oc) { encImm = Just (SizedValue8 i) }
-      primary_imm16 oc i = (primary oc) { encImm = Just (SizedValue16 i) }
-      primary_imm32 oc i = (primary oc) { encImm = Just (SizedValue32 i) }
+      primary_imm8  oc i = set_imm (SizedValue8 i)  $ primary oc
+      primary_imm16 oc i = set_imm (SizedValue16 i) $ primary oc
+      primary_imm32 oc i = set_imm (SizedValue32 i) $ primary oc
+
+      set_imm imm e = e { encImm = Just imm }
 
       set_opsize16 e = case defaultOperationSize ctx of
         OpSize16 -> e
@@ -160,81 +162,20 @@ encodeInsn ctx op args = do
         OpSize16 -> e { encPrefixes = P_66 : encPrefixes e }
         opsize   -> error $ "set_opsize32: invalid operand size: " ++ show opsize
 
-      set_opsize64 e = case encRex e of
-        Nothing -> e { encRex = Just rexW }
-        Just r  -> e { encRex = Just (setRexW r) }
+      set_opsize64 e = e { encRex = encRex e <> Just rexW }
 
-      -- several instructions have special encodings for the rAX, immN cases
-      -- (ADD, ADC, etc.). We handle them here.
-      handle_acc_imm oc = case args of
-        OPS_RM8_I8 (RM_Reg R_AL) i
-          -> Just $ pure (primary_imm8 oc i)
-        OPS_RM16_I16 (RM_Reg R_AX) i
-          -> Just $ pure (set_opsize16 (primary_imm16 (oc+1) i))
-        OPS_RM32_I32 (RM_Reg R_EAX) i
-          -> Just $ pure (set_opsize32 (primary_imm32 (oc+1) i))
-        OPS_RM64_I32 (RM_Reg R_RAX) i
-          -> Just do
-            assert_mode64
-            pure (set_opsize64 (primary_imm32 (oc+1) i))
-        _ -> Nothing
+      -- store opcode extension in ModRM.reg
+      set_ext ext e = e { encModRM = encModRM e <> Just (mkModRM_ext ext) }
 
-      -- handle regN, immN cases (reg in ModRM.rm field)
-      handle_reg_imm oc ext = case args of
-        OPS_RM8_I8   (RM_Reg r) i
-          -> Just $ pure $ set_ext_reg (primary_imm8 oc i) ext r
-        OPS_RM16_I16 (RM_Reg r) i
-          -> Just $ pure $ set_opsize16 $ set_ext_reg (primary_imm16 (oc+1) i) ext r
-        OPS_RM32_I32 (RM_Reg r) i
-          -> Just $ pure $ set_opsize32 $ set_ext_reg (primary_imm32 (oc+1) i) ext r
-        OPS_RM64_I32 (RM_Reg r) i
-          -> Just $ do
-            assert_mode64
-            pure $ set_opsize64 $ set_ext_reg (primary_imm32 (oc+1) i) ext r
-        _ -> Nothing
+      -- encode memory operand
+      -- TODO: we should check that the addressing mode is valid in the current
+      -- execution context
+      set_mem mem e = case encodeMem mem e of
+        Nothing -> error $ "Couldn't encode memory operand: " ++ show mem
+        Just e' -> e'
 
-      -- handle regN, imm8 cases (reg in ModRM.rm field)
-      handle_reg_imm8 oc ext = case args of
-        OPS_RM16_I8 (RM_Reg r) i
-          -> Just $ pure $ set_opsize16 $ set_ext_reg (primary_imm8 oc i) ext r
-        OPS_RM32_I8 (RM_Reg r) i
-          -> Just $ pure $ set_opsize32 $ set_ext_reg (primary_imm8 oc i) ext r
-        OPS_RM64_I8 (RM_Reg r) i
-          -> Just $ do
-            assert_mode64
-            pure $ set_opsize64 $ set_ext_reg (primary_imm8 oc i) ext r
-        _ -> Nothing
-
-      -- handle reg:ModRM.rm, reg:ModRM.reg cases
-      handle_regs_rm_reg oc = case args of
-        OPS_RM8_R8   (RM_Reg r1) r2
-          -> Just $ pure $ set_regs_rm_reg (primary oc) r1 r2
-        OPS_RM16_R16 (RM_Reg r1) r2
-          -> Just $ pure $ set_opsize16 $ set_regs_rm_reg (primary (oc+1)) r1 r2
-        OPS_RM32_R32 (RM_Reg r1) r2
-          -> Just $ pure $ set_opsize32 $ set_regs_rm_reg (primary (oc+1)) r1 r2
-        OPS_RM64_R64 (RM_Reg r1) r2
-          -> Just $ do
-            assert_mode64
-            pure $ set_opsize64 $ set_regs_rm_reg (primary (oc+1)) r1 r2
-        _ -> Nothing
-
-      -- handle reg:ModRM.reg, reg:ModRM.rm cases
-      handle_regs_reg_rm oc = case args of
-        OPS_R8_RM8   r1 (RM_Reg r2)
-          -> Just $ pure $ set_regs_reg_rm (primary oc) r1 r2
-        OPS_R16_RM16 r1 (RM_Reg r2)
-          -> Just $ pure $ set_opsize16 $ set_regs_reg_rm (primary (oc+1)) r1 r2
-        OPS_R32_RM32 r1 (RM_Reg r2)
-          -> Just $ pure $ set_opsize32 $ set_regs_reg_rm (primary (oc+1)) r1 r2
-        OPS_R64_RM64 r1 (RM_Reg r2)
-          -> Just $ do
-            assert_mode64
-            pure $ set_opsize64 $ set_regs_reg_rm (primary (oc+1)) r1 r2
-        _ -> Nothing
-
-      -- store ext in ModRM.reg and reg in ModRM.rm
-      set_ext_reg enc ext r =
+      -- store opcode extension in ModRM.reg and reg in ModRM.rm
+      set_ext_reg ext r enc =
         let !(xc,c) = regCodeX r
             -- handle registers that require REX
             mrex1 = if regREX r then Just emptyRex else Nothing
@@ -245,10 +186,10 @@ encodeInsn ctx op args = do
                }
 
       -- store r1 in ModRM.reg and r2 in ModRM.rm
-      set_regs_reg_rm enc r1 r2
+      set_regs_reg_rm r1 r2 enc
         | not (compatibleRegs r1 r2) = error "Trying to encode incompatible registers"
         | otherwise =
-        let 
+        let
             -- handle registers that require REX
             mrex1 = if regREX r1 || regREX r2 then Just emptyRex else Nothing
             -- ModRM.rm extension in REX.B; ModRM.reg extension in REX.R
@@ -261,8 +202,104 @@ encodeInsn ctx op args = do
                }
 
       -- store r1 in ModRM.rm and r2 in ModRM.reg
-      set_regs_rm_reg enc r1 r2 = set_regs_reg_rm enc r2 r1
+      set_regs_rm_reg r1 r2 enc = set_regs_reg_rm r2 r1 enc
 
+
+
+      -- several instructions have special encodings for the rAX, immN cases
+      -- (ADD, ADC, etc.). We handle them here.
+      handle_acc_imm oc = case args of
+        OPS_RM8_I8 (RM_Reg R_AL) i
+          -> Just $ pure $ primary_imm8 oc i
+        OPS_RM16_I16 (RM_Reg R_AX) i
+          -> Just $ pure $ set_opsize16 $ primary_imm16 (oc+1) i
+        OPS_RM32_I32 (RM_Reg R_EAX) i
+          -> Just $ pure $ set_opsize32 $ primary_imm32 (oc+1) i
+        OPS_RM64_I32 (RM_Reg R_RAX) i
+          -> Just do
+            assert_mode64
+            pure $ set_opsize64 $ primary_imm32 (oc+1) i
+        _ -> Nothing
+
+      -- handle regN, immN cases (reg in ModRM.rm field)
+      handle_reg_imm oc ext = case args of
+        OPS_RM8_I8   (RM_Reg r) i
+          -> Just $ pure $ set_ext_reg ext r $ primary_imm8 oc i
+        OPS_RM16_I16 (RM_Reg r) i
+          -> Just $ pure $ set_opsize16 $ set_ext_reg ext r $ primary_imm16 (oc+1) i
+        OPS_RM32_I32 (RM_Reg r) i
+          -> Just $ pure $ set_opsize32 $ set_ext_reg ext r $ primary_imm32 (oc+1) i
+        OPS_RM64_I32 (RM_Reg r) i
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_ext_reg ext r $ primary_imm32 (oc+1) i
+        _ -> Nothing
+
+      -- handle regN, imm8 cases (reg in ModRM.rm field)
+      handle_reg_imm8 oc ext = case args of
+        OPS_RM16_I8 (RM_Reg r) i
+          -> Just $ pure $ set_opsize16 $ set_ext_reg ext r $ primary_imm8 oc i
+        OPS_RM32_I8 (RM_Reg r) i
+          -> Just $ pure $ set_opsize32 $ set_ext_reg ext r $ primary_imm8 oc i
+        OPS_RM64_I8 (RM_Reg r) i
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_ext_reg ext r $ primary_imm8 oc i
+        _ -> Nothing
+
+      -- handle memN, immN cases
+      handle_mem_imm oc ext = case args of
+        OPS_RM8_I8   (RM_Mem m) i
+          -> Just $ pure $ set_mem m $ set_ext ext $ primary_imm8 oc i
+        OPS_RM16_I16 (RM_Mem m) i
+          -> Just $ pure $ set_opsize16 $ set_mem m $ set_ext ext $ primary_imm16 (oc+1) i
+        OPS_RM32_I32 (RM_Mem m) i
+          -> Just $ pure $ set_opsize32 $ set_mem m $ set_ext ext $ primary_imm32 (oc+1) i
+        OPS_RM64_I32 (RM_Mem m) i
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_mem m $ set_ext ext $ primary_imm32 (oc+1) i
+        _ -> Nothing
+
+      -- handle memN, imm8 cases
+      handle_mem_imm8 oc ext = case args of
+        OPS_RM16_I8 (RM_Mem m) i
+          -> Just $ pure $ set_opsize16 $ set_mem m $ set_ext ext $ primary_imm8 oc i
+        OPS_RM32_I8 (RM_Mem m) i
+          -> Just $ pure $ set_opsize32 $ set_mem m $ set_ext ext $ primary_imm8 oc i
+        OPS_RM64_I8 (RM_Mem m) i
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_mem m $ set_ext ext $ primary_imm8 oc i
+        _ -> Nothing
+
+      -- handle reg:ModRM.rm, reg:ModRM.reg cases
+      handle_regs_rm_reg oc = case args of
+        OPS_RM8_R8   (RM_Reg r1) r2
+          -> Just $ pure $ set_regs_rm_reg r1 r2 $ primary oc
+        OPS_RM16_R16 (RM_Reg r1) r2
+          -> Just $ pure $ set_opsize16 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
+        OPS_RM32_R32 (RM_Reg r1) r2
+          -> Just $ pure $ set_opsize32 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
+        OPS_RM64_R64 (RM_Reg r1) r2
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_regs_rm_reg r1 r2 $ primary (oc+1)
+        _ -> Nothing
+
+      -- handle reg:ModRM.reg, reg:ModRM.rm cases
+      handle_regs_reg_rm oc = case args of
+        OPS_R8_RM8   r1 (RM_Reg r2)
+          -> Just $ pure $ set_regs_reg_rm r1 r2 $ primary oc
+        OPS_R16_RM16 r1 (RM_Reg r2)
+          -> Just $ pure $ set_opsize16 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
+        OPS_R32_RM32 r1 (RM_Reg r2)
+          -> Just $ pure $ set_opsize32 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
+        OPS_R64_RM64 r1 (RM_Reg r2)
+          -> Just $ do
+            assert_mode64
+            pure $ set_opsize64 $ set_regs_reg_rm r1 r2 $ primary (oc+1)
+        _ -> Nothing
 
   case op of
     AAA -> do
@@ -285,15 +322,14 @@ encodeInsn ctx op args = do
       i <- imm8_arg
       pure $ primary_imm8 0xD4 i
 
-    -- TODO: handle lock. Maybe a different instruction to avoid considering
-    -- modifiers every time? Or apply modifiers to an Enc afterwards
     ADC
       | Just r <- handle_acc_imm  0x14     -> r
       | Just r <- handle_reg_imm  0x80 0x2 -> r
       | Just r <- handle_reg_imm8 0x83 0x2 -> r
       | Just r <- handle_regs_rm_reg 0x10  -> r
       | Just r <- handle_regs_reg_rm 0x12  -> r
-      -- TODO: mem, imm
+      | Just r <- handle_mem_imm  0x80 0x2 -> r
+      | Just r <- handle_mem_imm8 0x83 0x2 -> r
       -- TODO: mem, reg
       -- TODO: reg, mem
       | otherwise -> invalid_operands
@@ -304,7 +340,8 @@ encodeInsn ctx op args = do
       | Just r <- handle_reg_imm8 0x83 0x0 -> r
       | Just r <- handle_regs_rm_reg 0x00  -> r
       | Just r <- handle_regs_reg_rm 0x02  -> r
-      -- TODO: mem, imm
+      | Just r <- handle_mem_imm  0x80 0x0 -> r
+      | Just r <- handle_mem_imm8 0x83 0x0 -> r
       -- TODO: mem, reg
       -- TODO: reg, mem
       | otherwise -> invalid_operands
