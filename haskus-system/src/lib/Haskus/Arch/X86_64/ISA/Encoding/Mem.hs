@@ -120,6 +120,9 @@ encodeMem32 = \cases
   -- 1-scale without base: use the index as base
   Scale1 i Nothing d -> encodeMem32 Scale1 Nothing i d
 
+  -- 2-scale without base and disp: transform 2*r ==> r+r to avoid requiring a 0 disp
+  Scale2 i Nothing NoDisp -> encodeMem32 Scale1 i i NoDisp
+
   -- ESP can't be scaled. Try to switch with base if 1-scaled
   Scale1 JR_ESP (Just b) d
     | b /= R_ESP -> encodeMem32 Scale1 (Just b) JR_ESP d
@@ -127,9 +130,9 @@ encodeMem32 = \cases
   -- otherwise bailout
   _ JR_ESP _ _ -> Nothing
 
-  -- no-base case
-  scale (Just i) Nothing (disp_mod -> (mod,disp))
-    -> ret_sib mod disp (s scale (regCode i) 0b101)
+  -- no-base case: we need a disp32
+  scale (Just i) Nothing (disp32 -> disp)
+    -> ret_sib 0b00 disp (s scale (regCode i) 0b101)
 
   -- base case
   scale (Just i) (Just b) (disp_mod -> (mod,disp))
@@ -145,6 +148,11 @@ encodeMem32 = \cases
       Disp8 d  -> (0b01, Disp8 d)
       Disp16 d -> (0b10, Disp32 (i32FromI16 d))
       Disp32 d -> (0b10, Disp32 d)
+    disp32 = \case
+      NoDisp   -> Disp32 0
+      Disp8 d  -> Disp32 (i32FromI8 d)
+      Disp16 d -> Disp32 (i32FromI16 d)
+      Disp32 d -> Disp32 d
 
 -- | Return (modrm,disp,sib,rex) for the given 64-bit addressing form scale-index-base-disp
 encodeMem64 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp,Maybe SIB,Maybe Rex)
@@ -191,6 +199,9 @@ encodeMem64 = \cases
   -- 1-scale without base: use the index as base
   Scale1 i Nothing d -> encodeMem64 Scale1 Nothing i d
 
+  -- 2-scale without base and disp: transform 2*r ==> r+r to avoid requiring a 0 disp
+  Scale2 i Nothing NoDisp -> encodeMem64 Scale1 i i NoDisp
+
   -- RSP can't be scaled. Try to switch with base if 1-scaled
   Scale1 JR_RSP (Just b) d
     | b /= R_RSP -> encodeMem64 Scale1 (Just b) JR_RSP d
@@ -198,9 +209,9 @@ encodeMem64 = \cases
   -- otherwise bailout
   _ JR_RSP _ _ -> Nothing
 
-  -- no-base case
-  scale (Just (reg_index -> (rex,i))) Nothing (disp_mod -> (mod,disp))
-    -> ret_sib mod disp (s scale i 0b101) rex
+  -- no-base case: we need a disp32
+  scale (Just (reg_index -> (rex,i))) Nothing (disp32 -> disp)
+    -> ret_sib 0b00 disp (s scale i 0b101) rex
 
   -- base case
   scale (Just (reg_index -> (rex1,i))) (Just (reg_base -> (rex2,b))) (disp_mod -> (mod,disp))
@@ -220,6 +231,11 @@ encodeMem64 = \cases
       Disp8 d  -> (0b01, Disp8 d)
       Disp16 d -> (0b10, Disp32 (i32FromI16 d))
       Disp32 d -> (0b10, Disp32 d)
+    disp32 = \case
+      NoDisp   -> Disp32 0
+      Disp8 d  -> Disp32 (i32FromI8 d)
+      Disp16 d -> Disp32 (i32FromI16 d)
+      Disp32 d -> Disp32 d
 
 
 -- | Return (modrm,disp) for the given 64-bit RIP-relative addressing form RIP+disp
