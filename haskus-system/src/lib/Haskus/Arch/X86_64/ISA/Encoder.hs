@@ -22,12 +22,12 @@ import Haskus.Binary.Word
 
 data Operation
   -- Binary-coded-decimal (BCD) operations
-  = AdjustAfterAddition    -- ^ AAA
-  | AdjustAfterSubtraction -- ^ AAS
-  | AdjustBeforeDivision   -- ^ AAD
-  | AdjustAfterMultiply    -- ^ AAM
-  | AddWithCarry           -- ^ ADC
-  | Add                    -- ^ ADD
+  = AAA     -- ^ Adjust AL after addition
+  | AAS     -- ^ Adjust AL after subtraction
+  | AAD     -- ^ Adjust AX before division
+  | AAM     -- ^ Adjust AX after multiply
+  | ADC     -- ^ Add with carry: DEST := DEST + SRC + CF
+  | ADD     -- ^ Add: DEST := DEST + SRC
   deriving (Show,Eq,Ord)
 
 data Operand
@@ -247,29 +247,29 @@ encodeInsn ctx op args = do
 
 
   case op of
-    AdjustAfterAddition -> do
+    AAA -> do
       assert_not_mode64
       assert_no_args
       pure $ primary 0x37
 
-    AdjustAfterSubtraction -> do
+    AAS -> do
       assert_not_mode64
       assert_no_args
       pure $ primary 0x3F
 
-    AdjustBeforeDivision -> do
+    AAD -> do
       assert_not_mode64
       i <- imm8_arg
       pure $ primary_imm8 0xD5 i
 
-    AdjustAfterMultiply -> do
+    AAM -> do
       assert_not_mode64
       i <- imm8_arg
       pure $ primary_imm8 0xD4 i
 
     -- TODO: handle lock. Maybe a different instruction to avoid considering
     -- modifiers every time? Or apply modifiers to an Enc afterwards
-    AddWithCarry
+    ADC
       | Just r <- handle_acc_imm  0x14     -> r
       | Just r <- handle_reg_imm  0x80 0x2 -> r
       | Just r <- handle_reg_imm8 0x83 0x2 -> r
@@ -280,7 +280,7 @@ encodeInsn ctx op args = do
       -- TODO: reg, mem
       | otherwise -> invalid_operands
 
-    Add
+    ADD
       | Just r <- handle_acc_imm  0x04     -> r
       | Just r <- handle_reg_imm  0x80 0x0 -> r
       | Just r <- handle_reg_imm8 0x83 0x0 -> r
