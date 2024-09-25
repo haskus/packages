@@ -59,6 +59,7 @@ library
     Haskus.Arch.X86_64.ISA.Encoding.Rex
     Haskus.Arch.X86_64.ISA.Encoding.Segment
     Haskus.Arch.X86_64.ISA.Encoding.SIB
+    Haskus.Arch.X86_64.ISA.Encoding.Vec
     Haskus.Arch.X86_64.Disassembler
 
     Haskus.System.Linux.Internals.Error

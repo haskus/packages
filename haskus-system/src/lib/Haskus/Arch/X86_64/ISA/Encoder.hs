@@ -15,6 +15,7 @@ import Haskus.Arch.X86_64.ISA.Encoding.Mem
 import Haskus.Arch.X86_64.ISA.Encoding.Disp
 import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Encoding.Segment
+import Haskus.Arch.X86_64.ISA.Encoding.Vec
 import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 
@@ -30,6 +31,7 @@ data Operation
   | ADC     -- ^ Add with carry: DEST := DEST + SRC + CF
   | ADD     -- ^ Add: DEST := DEST + SRC
   | ADCX    -- ^ Unsigned add with carry: CF:DEST := DEST + SRC + CF
+  | ADDPD   -- ^ Parallel add 2 rightmost doubles; other leftmost doubles unmodified (SSE)
   deriving (Show,Eq,Ord)
 
 data Operand
@@ -43,28 +45,34 @@ data RegMem
   | RM_Mem !Mem
   deriving (Show,Eq,Ord)
 
+data VecMem
+  = VM_Vec !Vec
+  | VM_Mem !Mem
+  deriving (Show,Eq,Ord)
+
 -- | Only some operands are valid together (not for every operation of course)
 data Operands
   = NoOperand
-  | OPS_I8       !U8              -- ^ imm8
-  | OPS_I16      !U16             -- ^ imm16
-  | OPS_I32      !U32             -- ^ imm32
-  | OPS_I64      !U64             -- ^ imm64
-  | OPS_RM8_I8   !RegMem !U8      -- ^ reg/mem8, imm8
-  | OPS_RM16_I16 !RegMem !U16     -- ^ reg/mem16, imm16
-  | OPS_RM32_I32 !RegMem !U32     -- ^ reg/mem32, imm32
-  | OPS_RM64_I32 !RegMem !U32     -- ^ reg/mem64, imm32 (sign-extended)
-  | OPS_RM16_I8  !RegMem !U8      -- ^ reg/mem16, imm8 (sign-extended)
-  | OPS_RM32_I8  !RegMem !U8      -- ^ reg/mem32, imm8 (sign-extended)
-  | OPS_RM64_I8  !RegMem !U8      -- ^ reg/mem64, imm8 (sign-extended)
-  | OPS_RM8_R8   !RegMem !Reg     -- ^ reg/mem8, reg8
-  | OPS_RM16_R16 !RegMem !Reg     -- ^ reg/mem16, reg16
-  | OPS_RM32_R32 !RegMem !Reg     -- ^ reg/mem32, reg32
-  | OPS_RM64_R64 !RegMem !Reg     -- ^ reg/mem64, reg64
-  | OPS_R8_RM8   !Reg    !RegMem  -- ^ reg8, reg/mem8
-  | OPS_R16_RM16 !Reg    !RegMem  -- ^ reg16, reg/mem16
-  | OPS_R32_RM32 !Reg    !RegMem  -- ^ reg32, reg/mem32
-  | OPS_R64_RM64 !Reg    !RegMem  -- ^ reg64, reg/mem64
+  | OPS_I8         !U8              -- ^ imm8
+  | OPS_I16        !U16             -- ^ imm16
+  | OPS_I32        !U32             -- ^ imm32
+  | OPS_I64        !U64             -- ^ imm64
+  | OPS_RM8_I8     !RegMem !U8      -- ^ reg/mem8, imm8
+  | OPS_RM16_I16   !RegMem !U16     -- ^ reg/mem16, imm16
+  | OPS_RM32_I32   !RegMem !U32     -- ^ reg/mem32, imm32
+  | OPS_RM64_I32   !RegMem !U32     -- ^ reg/mem64, imm32 (sign-extended)
+  | OPS_RM16_I8    !RegMem !U8      -- ^ reg/mem16, imm8 (sign-extended)
+  | OPS_RM32_I8    !RegMem !U8      -- ^ reg/mem32, imm8 (sign-extended)
+  | OPS_RM64_I8    !RegMem !U8      -- ^ reg/mem64, imm8 (sign-extended)
+  | OPS_RM8_R8     !RegMem !Reg     -- ^ reg/mem8, reg8
+  | OPS_RM16_R16   !RegMem !Reg     -- ^ reg/mem16, reg16
+  | OPS_RM32_R32   !RegMem !Reg     -- ^ reg/mem32, reg32
+  | OPS_RM64_R64   !RegMem !Reg     -- ^ reg/mem64, reg64
+  | OPS_R8_RM8     !Reg    !RegMem  -- ^ reg8, reg/mem8
+  | OPS_R16_RM16   !Reg    !RegMem  -- ^ reg16, reg/mem16
+  | OPS_R32_RM32   !Reg    !RegMem  -- ^ reg32, reg/mem32
+  | OPS_R64_RM64   !Reg    !RegMem  -- ^ reg64, reg/mem64
+  | OPS_V128_VM128 !Vec    !VecMem  -- ^ vec128, vec/mem128
   deriving (Show,Eq,Ord)
 
 data MemLock
@@ -138,9 +146,12 @@ encodeInsn ctx op args = do
         _        -> Nothing
       
       primary   oc = emptyEnc { encOpcode = Just (Op oc) }
-      secondary oc = emptyEnc { encOpcode = Just (Op_0F oc) }
-      map_0f38  oc = emptyEnc { encOpcode   = Just (Op_0F38 oc) }
-      map_66_0f38 oc = (map_0f38 oc) { encPrefixes = [P_66] }
+      map_0f    oc = emptyEnc { encOpcode = Just (Op_0F oc) }
+      map_0f38  oc = emptyEnc { encOpcode = Just (Op_0F38 oc) }
+
+      prefix_66 e  = e { encPrefixes = P_66 : encPrefixes e }
+      map_66_0f   oc = prefix_66 $ map_0f   oc
+      map_66_0f38 oc = prefix_66 $ map_0f38 oc
 
       primary_imm8  oc i = set_imm (SizedValue8 i)  $ primary oc
       primary_imm16 oc i = set_imm (SizedValue16 i) $ primary oc
@@ -181,7 +192,7 @@ encodeInsn ctx op args = do
                , encModRM = Just (mkModRM_ext_reg ext c)
                }
 
-      -- store register in ModRM.reg
+      -- store gpr in ModRM.reg
       set_reg r enc =
         let !(xc,c) = regCodeX r
             -- handle registers that require REX
@@ -192,8 +203,31 @@ encodeInsn ctx op args = do
                , encModRM = encModRM enc <> Just (mkModRM_reg c)
                }
 
+      -- store vec in ModRM.reg
+      set_vec r enc =
+        let !(xc,c) = vecCodeX r
+            -- register extension in REX.R
+            mrex = if xc then Just rexR else Nothing
+        in enc { encRex   = encRex enc <> mrex
+               , encModRM = encModRM enc <> Just (mkModRM_reg c)
+               }
+
       set_reg_mem r   m e = set_reg r   $ set_mem m e
       set_ext_mem ext m e = set_ext ext $ set_mem m e
+      set_vec_mem v   m e = set_vec v   $ set_mem m e
+
+      -- store v1 in ModRM.reg and v2 in ModRM.rm
+      set_vecs_reg_rm v1 v2 enc =
+        let
+            -- ModRM.rm extension in REX.B; ModRM.reg extension in REX.R
+            !(xr,r) = vecCodeX v1
+            !(xm,m) = vecCodeX v2
+            mrex1 = if xr then Just rexR else Nothing
+            mrex2 = if xm then Just rexB else Nothing
+        in enc { encRex   = encRex enc <> mrex1 <> mrex2
+               , encModRM = Just (mkModRM_regs_reg_rm r m)
+               }
+
 
       -- store r1 in ModRM.reg and r2 in ModRM.rm
       set_regs_reg_rm r1 r2 enc
@@ -360,14 +394,6 @@ encodeInsn ctx op args = do
       , handle_reg_rm   0x12
       ]
 
-    ADD -> asum
-      [ handle_acc_imm  0x04
-      , handle_rm_imm   0x80 0x0
-      , handle_rm_imm8  0x83 0x0
-      , handle_rm_reg   0x00
-      , handle_reg_rm   0x02
-      ]
-
     ADCX -> do
       has_extension ADX
       case args of
@@ -381,4 +407,22 @@ encodeInsn ctx op args = do
         OPS_R64_RM64 r (RM_Reg rm) -> do
           assert_mode64
           pure $ set_opsize64 $ set_regs_reg_rm r rm $ map_66_0f38 0xF6
+        _ -> Nothing
+
+    ADD -> asum
+      [ handle_acc_imm  0x04
+      , handle_rm_imm   0x80 0x0
+      , handle_rm_imm8  0x83 0x0
+      , handle_rm_reg   0x00
+      , handle_reg_rm   0x02
+      ]
+
+    ADDPD -> 
+      case args of
+        OPS_V128_VM128 v (VM_Mem m) -> do
+          has_extension SSE2
+          pure $ set_vec_mem v m $ map_66_0f 0x58
+        OPS_V128_VM128 v1 (VM_Vec v2) -> do
+          has_extension SSE2
+          pure $ set_vecs_reg_rm v1 v2 $ map_66_0f 0x58
         _ -> Nothing
