@@ -57,6 +57,7 @@ library
     Haskus.Arch.X86_64.ISA.Encoding.Prefix
     Haskus.Arch.X86_64.ISA.Encoding.Reg
     Haskus.Arch.X86_64.ISA.Encoding.Rex
+    Haskus.Arch.X86_64.ISA.Encoding.Segment
     Haskus.Arch.X86_64.ISA.Encoding.SIB
     Haskus.Arch.X86_64.Disassembler
 

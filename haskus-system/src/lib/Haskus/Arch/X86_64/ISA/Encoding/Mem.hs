@@ -117,6 +117,8 @@ encodeMem32 = \cases
   -- with scaled index --
   -----------------------
 
+  -- FIXME: the following transformations may change the default segment!
+
   -- 1-scale without base: use the index as base
   Scale1 i Nothing d -> encodeMem32 Scale1 Nothing i d
 
@@ -195,6 +197,8 @@ encodeMem64 = \cases
   -----------------------
   -- with scaled index --
   -----------------------
+
+  -- FIXME: the following transformations may change the default segment!
 
   -- 1-scale without base: use the index as base
   Scale1 i Nothing d -> encodeMem64 Scale1 Nothing i d

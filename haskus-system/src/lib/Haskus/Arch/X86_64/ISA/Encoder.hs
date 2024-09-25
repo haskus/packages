@@ -15,6 +15,7 @@ import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Encoding.Mem
 import Haskus.Arch.X86_64.ISA.Encoding.Disp
 import Haskus.Arch.X86_64.ISA.Encoding.SIB
+import Haskus.Arch.X86_64.ISA.Encoding.Segment
 import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 
@@ -67,39 +68,48 @@ data Operands
 
 -- | Memory addressing
 data Mem
-  = M_16        !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 16-bit index-base-disp
-  | M_32 !Scale !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 32-bit scaled-index-base-disp
-  | M_64 !Scale !(Maybe Reg) !(Maybe Reg) !Disp -- ^ 64-bit scaled-index-base-disp
-  | M_Rel !Disp                                 -- ^ RIP-relative displacement
+  = M_16 !(Maybe Segment)        !(Maybe Reg) !(Maybe Reg) !Disp  -- ^ 16-bit index-base-disp
+  | M_32 !(Maybe Segment) !Scale !(Maybe Reg) !(Maybe Reg) !Disp  -- ^ 32-bit scaled-index-base-disp
+  | M_64 !(Maybe Segment) !Scale !(Maybe Reg) !(Maybe Reg) !Disp  -- ^ 64-bit scaled-index-base-disp
+  | M_Rel !(Maybe Segment) !Disp                                  -- ^ RIP-relative displacement
   deriving (Show,Eq,Ord)
 
 -- | Encode a memory operand. Return Nothing in case of failure to encode.
 encodeMem :: Mem -> Enc -> Maybe Enc
 encodeMem mem e = case mem of
-  M_16 i b d
+  M_16 seg i b d
     | Just (modrm,disp) <- encodeMem16 i b d
-    -> Just $ e { encModRM = encModRM e <> Just modrm
-                , encDisp  = disp
+    -> Just $ e { encModRM    = encModRM e <> Just modrm
+                , encDisp     = disp
+                , encPrefixes = seg_prefix seg (encPrefixes e)
                 }
-  M_32 sc i b d
+  M_32 seg sc i b d
     | Just (modrm,disp,sib) <- encodeMem32 sc i b d
-    -> Just $ e { encModRM = encModRM e <> Just modrm
-                , encDisp  = disp
-                , encSIB   = sib
+    -> Just $ e { encModRM    = encModRM e <> Just modrm
+                , encDisp     = disp
+                , encSIB      = sib
+                , encPrefixes = seg_prefix seg (encPrefixes e)
                 }
-  M_64 sc i b d
+  M_64 seg sc i b d
     | Just (modrm,disp,sib,rex) <- encodeMem64 sc i b d
-    -> Just $ e { encModRM = encModRM e <> Just modrm
-                , encDisp  = disp
-                , encSIB   = sib
-                , encRex   = encRex e <> rex
+    -> Just $ e { encModRM    = encModRM e <> Just modrm
+                , encDisp     = disp
+                , encSIB      = sib
+                , encRex      = encRex e <> rex
+                , encPrefixes = seg_prefix seg (encPrefixes e)
                 }
-  M_Rel d
+  M_Rel seg d
     | Just (modrm,disp) <- encodeMemRel d
-    -> Just $ e { encModRM = encModRM e <> Just modrm
-                , encDisp  = disp
+    -> Just $ e { encModRM    = encModRM e <> Just modrm
+                , encDisp     = disp
+                , encPrefixes = seg_prefix seg (encPrefixes e)
                 }
   _ -> Nothing
+
+  where
+    seg_prefix seg ps = case seg of
+      Nothing -> ps
+      Just s  -> segmentOverridePrefix s : ps
 
 
 data InsnEncErr
