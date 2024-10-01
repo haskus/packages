@@ -4,6 +4,8 @@ module Haskus.Arch.X86_64.ISA.Encoding.Mem
   , encodeMem64
   , encodeMemRel
   , encode_mem16
+  , encode_mem32
+  , encode_mem64
   )
 where
 
@@ -13,7 +15,6 @@ import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
-import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Binary.Cast
 
 encodeMem16 :: Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp)
@@ -119,7 +120,7 @@ encodeMem32 scale index base disp
 -- modrm.reg is set to 0
 --
 -- This function doesn't try to arrange its arguments differently to make them
--- encodable. Use encodeMem16 for this
+-- encodable. Use encodeMem32 for this
 encode_mem32 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp,Maybe SIB)
 encode_mem32 = \cases
   -- without SIB byte
@@ -151,10 +152,13 @@ encode_mem32 = \cases
   scale (scaled_index -> Just index) Nothing (Disp32 d)
     -> ret_sib 0b00 (Disp32 d) (s scale index 0b101)
 
-  scale (scaled_index -> Just index) (sib_base -> Just base) (Disp8 d)
+  scale (scaled_index -> Just index) (sib_base_without_disp -> Just base) NoDisp
+    -> ret_sib 0b00 NoDisp (s scale index base)
+
+  scale (scaled_index -> Just index) (sib_base_with_disp -> Just base) (Disp8 d)
     -> ret_sib 0b01 (Disp8 d) (s scale index base)
 
-  scale (scaled_index -> Just index) (sib_base -> Just base) (Disp32 d)
+  scale (scaled_index -> Just index) (sib_base_with_disp -> Just base) (Disp32 d)
     -> ret_sib 0b10 (Disp32 d) (s scale index base)
 
   _ _ _ _ -> Nothing
@@ -163,16 +167,18 @@ encode_mem32 = \cases
     ret a b c d = Just (mkModRM_mod_rm a b,c,d)
     ret_sib a c d = ret a 0b100 c d
     s a b c   = Just (mkSIB a b c)
-    sib_base = \case
-      JR_EAX  -> Just 0b000
-      JR_ECX  -> Just 0b001
-      JR_EDX  -> Just 0b010
-      JR_EBX  -> Just 0b011
-      JR_ESP  -> Just 0b100
-      JR_EBP  -> Just 0b101
-      JR_ESI  -> Just 0b110
-      JR_EDI  -> Just 0b111
-      _       -> Nothing
+    sib_base_without_disp = sib_base False
+    sib_base_with_disp    = sib_base True
+    sib_base with_disp = \case
+      JR_EAX             -> Just 0b000
+      JR_ECX             -> Just 0b001
+      JR_EDX             -> Just 0b010
+      JR_EBX             -> Just 0b011
+      JR_ESP             -> Just 0b100
+      JR_EBP | with_disp -> Just 0b101 -- EBP requires a disp
+      JR_ESI             -> Just 0b110
+      JR_EDI             -> Just 0b111
+      _                  -> Nothing
     scaled_index = \case
       JR_EAX  -> Just 0b000
       JR_ECX  -> Just 0b001
@@ -186,88 +192,154 @@ encode_mem32 = \cases
 
 -- | Return (modrm,disp,sib,rex) for the given 64-bit addressing form scale-index-base-disp
 encodeMem64 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp,Maybe SIB,Maybe Rex)
-encodeMem64 = \cases
-  -- only support 64-bit registers (with or without REX)
-  _  (Just r) _ _ | regSize r /= OpSize64 -> Nothing
-  _  _ (Just r) _ | regSize r /= OpSize64 -> Nothing
-
-  -- nothing to encode
-  _  Nothing Nothing NoDisp -> Nothing
-
-  -- special case for RBP/R13 without disp: they have to be encoded with a 0
-  -- displacement
-  sc i b NoDisp
-    | b == JR_RBP || b == JR_R13
-    -> encodeMem64 sc i b (Disp8 0)
-
-  ----------------
-  -- disp alone --
-  ----------------
-
-  _  Nothing Nothing (Disp32 d) -> ret_disp32 d
-  _  Nothing Nothing (Disp16 d) -> ret_disp32 (i32FromI16 d)
-  _  Nothing Nothing (Disp8  d) -> ret_disp32 (i32FromI8 d)
-
-  --------------------------
-  -- without scaled index --
-  --------------------------
-
-  -- special case for RSP/R12: they have to be encoded with a SIB
-  _  Nothing JR_RSP (disp_mod -> (mod,disp))
-    -> ret_sib mod disp (s Scale1 0b100 0b100) Nothing
-  _  Nothing JR_R12 (disp_mod -> (mod,disp))
-    -> ret_sib mod disp (s Scale1 0b100 0b100) (Just rexB)
-
-  -- base case
-  _  Nothing (Just (reg_base -> (rex,b))) (disp_mod -> (mod,disp))
-    -> ret mod b disp Nothing rex
-
-  -----------------------
-  -- with scaled index --
-  -----------------------
-
-  -- FIXME: the following transformations may change the default segment!
-
-  -- 1-scale without base: use the index as base
-  Scale1 i Nothing d -> encodeMem64 Scale1 Nothing i d
-
+encodeMem64 scale index base disp
   -- 2-scale without base and disp: transform 2*r ==> r+r to avoid requiring a 0 disp
-  Scale2 i Nothing NoDisp -> encodeMem64 Scale1 i i NoDisp
-
-  -- RSP can't be scaled. Try to switch with base if 1-scaled
-  Scale1 JR_RSP (Just b) d
-    | b /= R_RSP -> encodeMem64 Scale1 (Just b) JR_RSP d
-
-  -- otherwise bailout
-  _ JR_RSP _ _ -> Nothing
-
-  -- no-base case: we need a disp32
-  scale (Just (reg_index -> (rex,i))) Nothing (disp32 -> disp)
-    -> ret_sib 0b00 disp (s scale i 0b101) rex
+  -- only if r /= RSP/RBP
+  | Scale2 <- scale
+  , Nothing <- base
+  , NoDisp <- disp
+  , index /= Nothing && index /= JR_RSP && index /= JR_RBP
+  = encodeMem64 Scale1 index index NoDisp
 
   -- base case
-  scale (Just (reg_index -> (rex1,i))) (Just (reg_base -> (rex2,b))) (disp_mod -> (mod,disp))
-    -> ret_sib mod disp (s scale i b) (rex1 <> rex2)
+  | Just r <- encode_mem64 scale index base disp
+  = Just r
+
+  -- 1-scale without base: try using the index as base (if not RSP/RBP)
+  | Scale1 <- scale
+  , Nothing <- base
+  , index /= Nothing && index /= JR_RSP && index /= JR_RBP
+  = encodeMem64 Scale1 Nothing index disp
+
+  -- try to sign-extend disp16
+  | Disp16 d <- disp
+  = encodeMem64 scale index base (Disp32 (i32FromI16 d))
+
+  -- try to sign-extend disp8
+  | Disp8 d <- disp
+  = encodeMem64 scale index base (Disp32 (i32FromI8 d))
+
+  -- try with a 0 disp
+  | NoDisp <- disp
+  = encodeMem64 scale index base (Disp8 0)
+
+  | otherwise
+  = Nothing
+
+-- | Return (modrm,disp,sib,rex) for the given 64-bit addressing form scale-index-base-disp
+--
+-- modrm.reg is set to 0
+--
+-- This function doesn't try to arrange its arguments differently to make them
+-- encodable. Use encodeMem64 for this
+encode_mem64 :: Scale -> Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp,Maybe SIB,Maybe Rex)
+encode_mem64 = \cases
+  -- without SIB byte
+  _      Nothing JR_RAX  NoDisp      -> ret 0b00 0b000 NoDisp     Nothing Nothing
+  _      Nothing JR_RCX  NoDisp      -> ret 0b00 0b001 NoDisp     Nothing Nothing
+  _      Nothing JR_RDX  NoDisp      -> ret 0b00 0b010 NoDisp     Nothing Nothing
+  _      Nothing JR_RBX  NoDisp      -> ret 0b00 0b011 NoDisp     Nothing Nothing
+  _      Nothing Nothing (Disp32 d)  -> ret 0b00 0b101 (Disp32 d) Nothing Nothing
+  _      Nothing JR_RSI  NoDisp      -> ret 0b00 0b110 NoDisp     Nothing Nothing
+  _      Nothing JR_RDI  NoDisp      -> ret 0b00 0b111 NoDisp     Nothing Nothing
+  _      Nothing JR_R8   NoDisp      -> ret 0b00 0b000 NoDisp     Nothing (Just rexB)
+  _      Nothing JR_R9   NoDisp      -> ret 0b00 0b001 NoDisp     Nothing (Just rexB)
+  _      Nothing JR_R10  NoDisp      -> ret 0b00 0b010 NoDisp     Nothing (Just rexB)
+  _      Nothing JR_R11  NoDisp      -> ret 0b00 0b011 NoDisp     Nothing (Just rexB)
+          -- no R12: it requires a SIB
+          -- no R13: it requires a disp
+  _      Nothing JR_R14  NoDisp      -> ret 0b00 0b110 NoDisp     Nothing (Just rexB)
+  _      Nothing JR_R15  NoDisp      -> ret 0b00 0b111 NoDisp     Nothing (Just rexB)
+
+  _      Nothing JR_RAX  (Disp8 d)   -> ret 0b01 0b000 (Disp8 d)  Nothing Nothing
+  _      Nothing JR_RCX  (Disp8 d)   -> ret 0b01 0b001 (Disp8 d)  Nothing Nothing
+  _      Nothing JR_RDX  (Disp8 d)   -> ret 0b01 0b010 (Disp8 d)  Nothing Nothing
+  _      Nothing JR_RBX  (Disp8 d)   -> ret 0b01 0b011 (Disp8 d)  Nothing Nothing
+  _      Nothing JR_RBP  (Disp8 d)   -> ret 0b01 0b101 (Disp8 d)  Nothing Nothing
+  _      Nothing JR_RSI  (Disp8 d)   -> ret 0b01 0b110 (Disp8 d)  Nothing Nothing
+  _      Nothing JR_RDI  (Disp8 d)   -> ret 0b01 0b111 (Disp8 d)  Nothing Nothing
+  _      Nothing JR_R8   (Disp8 d)   -> ret 0b01 0b000 (Disp8 d)  Nothing (Just rexB)
+  _      Nothing JR_R9   (Disp8 d)   -> ret 0b01 0b001 (Disp8 d)  Nothing (Just rexB)
+  _      Nothing JR_R10  (Disp8 d)   -> ret 0b01 0b010 (Disp8 d)  Nothing (Just rexB)
+  _      Nothing JR_R11  (Disp8 d)   -> ret 0b01 0b011 (Disp8 d)  Nothing (Just rexB)
+          -- no R12: it requires a SIB
+  _      Nothing JR_R13  (Disp8 d)   -> ret 0b01 0b101 (Disp8 d)  Nothing (Just rexB)
+  _      Nothing JR_R14  (Disp8 d)   -> ret 0b01 0b110 (Disp8 d)  Nothing (Just rexB)
+  _      Nothing JR_R15  (Disp8 d)   -> ret 0b01 0b111 (Disp8 d)  Nothing (Just rexB)
+
+  _      Nothing JR_RAX  (Disp32 d)  -> ret 0b10 0b000 (Disp32 d) Nothing Nothing
+  _      Nothing JR_RCX  (Disp32 d)  -> ret 0b10 0b001 (Disp32 d) Nothing Nothing
+  _      Nothing JR_RDX  (Disp32 d)  -> ret 0b10 0b010 (Disp32 d) Nothing Nothing
+  _      Nothing JR_RBX  (Disp32 d)  -> ret 0b10 0b011 (Disp32 d) Nothing Nothing
+  _      Nothing JR_RBP  (Disp32 d)  -> ret 0b10 0b101 (Disp32 d) Nothing Nothing
+  _      Nothing JR_RSI  (Disp32 d)  -> ret 0b10 0b110 (Disp32 d) Nothing Nothing
+  _      Nothing JR_RDI  (Disp32 d)  -> ret 0b10 0b111 (Disp32 d) Nothing Nothing
+  _      Nothing JR_R8   (Disp32 d)  -> ret 0b10 0b000 (Disp32 d) Nothing (Just rexB)
+  _      Nothing JR_R9   (Disp32 d)  -> ret 0b10 0b001 (Disp32 d) Nothing (Just rexB)
+  _      Nothing JR_R10  (Disp32 d)  -> ret 0b10 0b010 (Disp32 d) Nothing (Just rexB)
+  _      Nothing JR_R11  (Disp32 d)  -> ret 0b10 0b011 (Disp32 d) Nothing (Just rexB)
+          -- no R12: it requires a SIB
+  _      Nothing JR_R13  (Disp32 d)  -> ret 0b10 0b101 (Disp32 d) Nothing (Just rexB)
+  _      Nothing JR_R14  (Disp32 d)  -> ret 0b10 0b110 (Disp32 d) Nothing (Just rexB)
+  _      Nothing JR_R15  (Disp32 d)  -> ret 0b10 0b111 (Disp32 d) Nothing (Just rexB)
+
+  -- with SIB byte
+  scale (scaled_index -> Just (rexi,index)) Nothing (Disp32 d)
+    -> ret_sib 0b00 (Disp32 d) (s scale index 0b101) rexi
+
+  scale (scaled_index -> Just (rexi,index)) (sib_base_without_disp -> Just (rexb,base)) NoDisp
+    -> ret_sib 0b00 NoDisp (s scale index base) (rexi <> rexb)
+
+  scale (scaled_index -> Just (rexi,index)) (sib_base_with_disp -> Just (rexb,base)) (Disp8 d)
+    -> ret_sib 0b01 (Disp8 d) (s scale index base) (rexb <> rexi)
+
+  scale (scaled_index -> Just (rexi,index)) (sib_base_with_disp -> Just (rexb,base)) (Disp32 d)
+    -> ret_sib 0b10 (Disp32 d) (s scale index base) (rexb <> rexi)
+
+  _ _ _ _ -> Nothing
 
   where
-    ret a b c d e   = Just (mkModRM_mod_rm a b,c,d,e)
+    ret a b c d e = Just (mkModRM_mod_rm a b,c,d,e)
     ret_sib a c d e = ret a 0b100 c d e
-    -- in 64-bit mode, disp32-only form must be encoded with a SIB (the no-SIB
-    -- form is taken for RIP-relative addressing)
-    ret_disp32 d = ret_sib 0b00 (Disp32 d) (s Scale1 0b100 0b101) Nothing
-    reg_base  (regCodeX -> (x,c)) = (if x then Just rexB else Nothing,c)
-    reg_index (regCodeX -> (x,c)) = (if x then Just rexX else Nothing,c)
     s a b c   = Just (mkSIB a b c)
-    disp_mod = \case
-      NoDisp   -> (0b00, NoDisp)
-      Disp8 d  -> (0b01, Disp8 d)
-      Disp16 d -> (0b10, Disp32 (i32FromI16 d))
-      Disp32 d -> (0b10, Disp32 d)
-    disp32 = \case
-      NoDisp   -> Disp32 0
-      Disp8 d  -> Disp32 (i32FromI8 d)
-      Disp16 d -> Disp32 (i32FromI16 d)
-      Disp32 d -> Disp32 d
+    sib_base_without_disp = sib_base False
+    sib_base_with_disp    = sib_base True
+    sib_base with_disp = \case
+      JR_RAX             -> Just (Nothing  ,0b000)
+      JR_RCX             -> Just (Nothing  ,0b001)
+      JR_RDX             -> Just (Nothing  ,0b010)
+      JR_RBX             -> Just (Nothing  ,0b011)
+      JR_RSP             -> Just (Nothing  ,0b100)
+      JR_RBP | with_disp -> Just (Nothing  ,0b101) -- RBP requires a disp
+      JR_RSI             -> Just (Nothing  ,0b110)
+      JR_RDI             -> Just (Nothing  ,0b111)
+      JR_R8              -> Just (Just rexB,0b000)
+      JR_R9              -> Just (Just rexB,0b001)
+      JR_R10             -> Just (Just rexB,0b010)
+      JR_R11             -> Just (Just rexB,0b011)
+      JR_R12             -> Just (Just rexB,0b100)
+      JR_R13             -> Just (Just rexB,0b101)
+      JR_R14             -> Just (Just rexB,0b110)
+      JR_R15             -> Just (Just rexB,0b111)
+      _                  -> Nothing
+    scaled_index = \case
+      JR_RAX  -> Just (Nothing  ,0b000)
+      JR_RCX  -> Just (Nothing  ,0b001)
+      JR_RDX  -> Just (Nothing  ,0b010)
+      JR_RBX  -> Just (Nothing  ,0b011)
+      Nothing -> Just (Nothing  ,0b100)
+      JR_RBP  -> Just (Nothing  ,0b101)
+      JR_RSI  -> Just (Nothing  ,0b110)
+      JR_RDI  -> Just (Nothing  ,0b111)
+      JR_R8   -> Just (Just rexX,0b000)
+      JR_R9   -> Just (Just rexX,0b001)
+      JR_R10  -> Just (Just rexX,0b010)
+      JR_R11  -> Just (Just rexX,0b011)
+      JR_R12  -> Just (Just rexX,0b100)
+      JR_R13  -> Just (Just rexX,0b101)
+      JR_R14  -> Just (Just rexX,0b110)
+      JR_R15  -> Just (Just rexX,0b111)
+      _       -> Nothing
 
 
 -- | Return (modrm,disp) for the given 64-bit RIP-relative addressing form RIP+disp
