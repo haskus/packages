@@ -49,8 +49,8 @@ data Operation
   -- MULX
 
   -- Conversions
-  | SXA     -- ^ Sign-extend rAX: DEST := SX(low_half(DEST))
-  -- CWD -- ^ Sign-extension in rAX in rDX
+  | SXA     -- ^ Sign-extend rAX: rAX := SX(low_half(rAX))
+  | SXAD    -- ^ Sign-extend rAX: rDX:rAX := SX(rAX)
 
   -- Moves
   -- CMOV
@@ -713,6 +713,15 @@ encodeInsn ctx op args = do
       OPS_R16 R_AX  -> pure $ set_opsize16 $ primary 0x98
       OPS_R16 R_EAX -> pure $ set_opsize32 $ primary 0x98
       OPS_R16 R_RAX -> pure $ set_opsize64 $ primary 0x98
+      _             -> Nothing
+
+    SXAD -> case args of
+      -- Intel uses CWD/CDQ/CQO mnemonics to differentiate the operand size.
+      -- This sucks. Let's use the source/destination register (AX,EAX,RAX) as an
+      -- operand instead.
+      OPS_R16 R_AX  -> pure $ set_opsize16 $ primary 0x99
+      OPS_R16 R_EAX -> pure $ set_opsize32 $ primary 0x99
+      OPS_R16 R_RAX -> pure $ set_opsize64 $ primary 0x99
       _             -> Nothing
 
     ADCX -> do
