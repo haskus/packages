@@ -42,11 +42,11 @@ data Operation
   | MUL     -- ^ Unsigned multiply: rDX:rAX := rAX * SRC
   | IDIV    -- ^ Signed divide: (rAX,rDX) := rDX:rAX `quotRem` SRC
   | IMUL    -- ^ Signed multiply: rDX:rAX := rAX * SRC
+  | NEG     -- ^ Two's complement negation
 
   | ADCX    -- ^ Unsigned add with carry flag: CF:DEST := DEST + SRC + CF
   | ADOX    -- ^ Unsigned add with overflow flag: OF:DEST := DEST + SRC + OF
   -- MULX
-  -- NEG
 
   -- Conversions
   -- CBW -- ^ Sign extension of rAX in rAX
@@ -675,6 +675,7 @@ encodeInsn ctx op args = do
       , handle_ext_rm primary 0xFE 0x0
       ]
 
+    NEG  -> handle_ext_rm primary 0xF6 0x3
     DIV  -> handle_ext_rm primary 0xF6 0x6
     MUL  -> handle_ext_rm primary 0xF6 0x4
     IDIV -> handle_ext_rm primary 0xF6 0x7
