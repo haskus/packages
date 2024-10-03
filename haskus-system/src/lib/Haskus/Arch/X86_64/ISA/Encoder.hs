@@ -54,11 +54,12 @@ data Operation
 
   -- Moves
   | MOV     -- ^ Move
+  | LEA     -- ^ Load effective address: DEST := EA(SRC)
+
   -- CMOV
   -- IN
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
-  -- LEA
   -- LODSB, LODSW, LODSD, LODSQ
   -- MOVBE
   -- MOVD
@@ -750,8 +751,20 @@ encodeInsn ctx op args = do
             pure $ set_opsize64 $ set_imm64 i $ set_oc_reg primary 0xB8 r
           _ -> Nothing
       , handle_rm_imm primary 0xC6 0x0
-      -- TODO: other forms
+      -- TODO: add other forms
       ]
+
+    LEA -> case args of
+      -- we don't care about the size of the targetted memory...
+      OPS_R16_M16 r m -> do
+        pure $ set_opsize16 $ set_rm_reg_mem r m $ primary 0x8D
+      OPS_R32_M32 r m -> do
+        pure $ set_opsize32 $ set_rm_reg_mem r m $ primary 0x8D
+      OPS_R64_M64 r m -> do
+        assert_mode64
+        pure $ set_opsize64 $ set_rm_reg_mem r m $ primary 0x8D
+      _ -> Nothing
+
 
     ADCX -> do
       has_extension ADX
