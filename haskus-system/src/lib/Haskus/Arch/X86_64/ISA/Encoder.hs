@@ -34,6 +34,9 @@ data Operation
   -- Arithmetic
   | ADC     -- ^ Add with carry: DEST := DEST + SRC + CF
   | ADD     -- ^ Add: DEST := DEST + SRC
+  | SBB     -- ^ Subtract with borrow: DEST := DEST - (SRC+CF)
+  | SUB     -- ^ Subtract: DEST := DEST - SRC
+
   | ADCX    -- ^ Unsigned add with carry flag: CF:DEST := DEST + SRC + CF
   | ADOX    -- ^ Unsigned add with overflow flag: OF:DEST := DEST + SRC + OF
   -- DEC
@@ -44,8 +47,6 @@ data Operation
   -- MUL
   -- MULX
   -- NEG
-  -- SBB
-  -- SUB
 
   -- Conversions
   -- CBW -- ^ Sign extension of rAX in rAX
@@ -522,6 +523,40 @@ encodeInsn ctx op args = do
       , handle_reg_rm   0x12
       ]
 
+    ADD -> asum
+      [ handle_acc_imm  0x04
+      , handle_rm_imm   0x80 0x0
+      , handle_rm_imm8  0x83 0x0
+      , handle_rm_reg   0x00
+      , handle_reg_rm   0x02
+      ]
+
+    AND -> asum
+      [ handle_acc_imm  0x24
+      , handle_rm_imm   0x80 0x4
+      , handle_rm_imm8  0x83 0x4
+      , handle_rm_reg   0x20
+      , handle_reg_rm   0x22
+      ]
+
+    SUB -> asum
+      [ handle_acc_imm  0x2C
+      , handle_rm_imm   0x80 0x5
+      , handle_rm_imm8  0x83 0x5
+      , handle_rm_reg   0x28
+      , handle_reg_rm   0x2A
+      ]
+
+    SBB -> asum
+      [ handle_acc_imm  0x1C
+      , handle_rm_imm   0x80 0x3
+      , handle_rm_imm8  0x83 0x3
+      , handle_rm_reg   0x18
+      , handle_reg_rm   0x1A
+      ]
+
+
+
     ADCX -> do
       has_extension ADX
       case args of
@@ -537,14 +572,6 @@ encodeInsn ctx op args = do
           pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_66_0F38 0xF6
         _ -> Nothing
 
-    ADD -> asum
-      [ handle_acc_imm  0x04
-      , handle_rm_imm   0x80 0x0
-      , handle_rm_imm8  0x83 0x0
-      , handle_rm_reg   0x00
-      , handle_reg_rm   0x02
-      ]
-
     ADOX -> do
       has_extension ADX
       case args of
@@ -559,15 +586,6 @@ encodeInsn ctx op args = do
           assert_mode64
           pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_F3_0F38 0xF6
         _ -> Nothing
-
-    AND -> asum
-      [ handle_acc_imm  0x24
-      , handle_rm_imm   0x80 0x4
-      , handle_rm_imm8  0x83 0x4
-      , handle_rm_reg   0x20
-      , handle_reg_rm   0x22
-      ]
-
 
     ADDPD -> 
       case args of
