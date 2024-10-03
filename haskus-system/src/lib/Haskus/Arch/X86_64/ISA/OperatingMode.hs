@@ -9,6 +9,8 @@ module Haskus.Arch.X86_64.ISA.OperatingMode
   , isLegacyMode
   , supportsRipRelativeAddr
   , modeName
+  , EffectiveMode (..)
+  , effectiveMode
   )
 where
 
@@ -70,3 +72,18 @@ supportsRipRelativeAddr :: Mode -> Bool
 supportsRipRelativeAddr = \case
    Mode64    -> True
    _         -> False
+
+
+data EffectiveMode
+  = EMode64
+  | EMode32
+  | EMode16
+  deriving (Show,Eq,Ord)
+
+effectiveMode :: Mode -> EffectiveMode
+effectiveMode = \case
+  Mode64    -> EMode64
+  Mode64_32 -> EMode32
+  Mode32    -> EMode32
+  Mode32_16 -> EMode16
+  Mode16    -> EMode16

@@ -2,7 +2,6 @@ module Haskus.Arch.X86_64.ISA.Encoder
   ( encodeInsn
   , Operation (..)
   , Operand (..)
-  , Mem(..)
   )
 where
 
@@ -12,9 +11,6 @@ import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Encoding.Mem
-import Haskus.Arch.X86_64.ISA.Encoding.Disp
-import Haskus.Arch.X86_64.ISA.Encoding.SIB
-import Haskus.Arch.X86_64.ISA.Encoding.Segment
 import Haskus.Arch.X86_64.ISA.Encoding.Vec
 import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
@@ -249,60 +245,6 @@ data Operands
   | OPS_V128_VM128 !Vec    !VecMem  -- ^ vec128, vec/mem128
   deriving (Show,Eq,Ord)
 
-data MemLock
-  = Lock
-  | NoLock
-  deriving (Show,Eq,Ord)
-
--- | Memory addressing
-data Mem
-  = M_16  !MemLock !(Maybe Segment)        !(Maybe Reg) !(Maybe Reg) !Disp  -- ^ 16-bit index-base-disp
-  | M_32  !MemLock !(Maybe Segment) !Scale !(Maybe Reg) !(Maybe Reg) !Disp  -- ^ 32-bit scaled-index-base-disp
-  | M_64  !MemLock !(Maybe Segment) !Scale !(Maybe Reg) !(Maybe Reg) !Disp  -- ^ 64-bit scaled-index-base-disp
-  | M_Rel !MemLock !(Maybe Segment) !Disp                                   -- ^ RIP-relative displacement
-  deriving (Show,Eq,Ord)
-
--- | Encode a memory operand. Return Nothing in case of failure to encode.
-encodeMem :: Mem -> Enc -> Maybe Enc
-encodeMem mem e = case mem of
-  M_16 lock seg i b d
-    | Just (modrm,disp) <- encodeMem16 i b d
-    -> Just $ e { encModRM    = encModRM e <> Just modrm
-                , encDisp     = disp
-                , encPrefixes = lock_prefix lock $ seg_prefix seg $ encPrefixes e
-                }
-  M_32 lock seg sc i b d
-    | Just (modrm,disp,sib) <- encodeMem32 sc i b d
-    -> Just $ e { encModRM    = encModRM e <> Just modrm
-                , encDisp     = disp
-                , encSIB      = sib
-                , encPrefixes = lock_prefix lock $ seg_prefix seg $ encPrefixes e
-                }
-  M_64 lock seg sc i b d
-    | Just (modrm,disp,sib,rex) <- encodeMem64 sc i b d
-    -> Just $ e { encModRM    = encModRM e <> Just modrm
-                , encDisp     = disp
-                , encSIB      = sib
-                , encRex      = encRex e <> rex
-                , encPrefixes = lock_prefix lock $ seg_prefix seg $ encPrefixes e
-                }
-  M_Rel lock seg d
-    | Just (modrm,disp) <- encodeMemRel d
-    -> Just $ e { encModRM    = encModRM e <> Just modrm
-                , encDisp     = disp
-                , encPrefixes = lock_prefix lock $ seg_prefix seg $ encPrefixes e
-                }
-  _ -> Nothing
-
-  where
-    lock_prefix lock ps = case lock of
-      Lock   -> P_F0 : ps
-      NoLock -> ps
-    seg_prefix seg ps = case seg of
-      Nothing -> ps
-      Just s  -> segmentOverridePrefix s : ps
-
-
 -- | Get the encoding specification of an instruction and its operands
 encodeInsn :: Context -> Operation -> Operands -> Maybe Enc
 encodeInsn ctx op args = do
@@ -383,9 +325,7 @@ encodeInsn ctx op args = do
              }
 
       -- encode memory operand
-      -- TODO: we should check that the addressing mode is valid in the current
-      -- execution context
-      set_m_mem mem e = case encodeMem mem e of
+      set_m_mem mem e = case encodeMem ctx mem e of
         Nothing -> error $ "Couldn't encode memory operand: " ++ show mem
         Just e' -> e'
 
