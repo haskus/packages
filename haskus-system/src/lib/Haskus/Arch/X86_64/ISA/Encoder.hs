@@ -53,13 +53,13 @@ data Operation
   | SXAD    -- ^ Sign-extend rAX: rDX:rAX := SX(rAX)
 
   -- Moves
+  | MOV     -- ^ Move
   -- CMOV
   -- IN
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
   -- LEA
   -- LODSB, LODSW, LODSD, LODSQ
-  -- MOV
   -- MOVBE
   -- MOVD
   -- MOVNTI
@@ -234,6 +234,7 @@ data Operands
   | OPS_R16_I16       !Reg !U16        -- ^ reg16, imm16
   | OPS_R32_I32       !Reg !U32        -- ^ reg32, imm32
   | OPS_R64_I32       !Reg !U32        -- ^ reg64, imm32sx
+  | OPS_R64_I64       !Reg !U64        -- ^ reg64, imm64
 
   | OPS_M8_I8         !Mem !U8         -- ^ mem8, imm8
   | OPS_M16_I8        !Mem !U8         -- ^ mem16, imm8sx
@@ -305,6 +306,7 @@ encodeInsn ctx op args = do
       set_imm8  i = set_imm (SizedValue8 i)
       set_imm16 i = set_imm (SizedValue16 i)
       set_imm32 i = set_imm (SizedValue32 i)
+      set_imm64 i = set_imm (SizedValue64 i)
 
       set_imm imm e = e { encImm = Just imm }
 
@@ -340,6 +342,15 @@ encodeInsn ctx op args = do
         in e { encRex   = encRex e <> mrex1 <> mrex2
              , encModRM = encModRM e <> Just (mkModRM_reg r)
              }
+
+      -- store register code in REX.R:opcode
+      set_oc_reg mk_oc oc r =
+        let !(xc,c) = regCodeX r
+            -- handle registers that require REX
+            mrex1 = if regREX r then Just emptyRex else Nothing
+            -- register code extension in REX.R
+            mrex2 = if xc       then Just rexR     else Nothing
+        in (mk_oc (oc + c)) { encRex = mrex1 <> mrex2 }
 
       -- store gpr in REX.B:ModRM.rm
       set_m_gpr r e = set_m_reg (regREX r) xc c e
@@ -723,6 +734,24 @@ encodeInsn ctx op args = do
       OPS_R16 R_EAX -> pure $ set_opsize32 $ primary 0x99
       OPS_R16 R_RAX -> pure $ set_opsize64 $ primary 0x99
       _             -> Nothing
+
+    MOV -> asum
+      [ handle_rm_reg primary 0x88
+      , handle_reg_rm primary 0x8A
+        -- shorter forms for reg,imm + imm64 form!
+      , case args of
+          OPS_R8_I8   r i ->
+            pure $ set_imm8 i $ set_oc_reg primary 0xB0 r
+          OPS_R16_I16 r i ->
+            pure $ set_opsize16 $ set_imm16 i $ set_oc_reg primary 0xB8 r
+          OPS_R32_I32 r i ->
+            pure $ set_opsize32 $ set_imm32 i $ set_oc_reg primary 0xB8 r
+          OPS_R64_I64 r i ->
+            pure $ set_opsize64 $ set_imm64 i $ set_oc_reg primary 0xB8 r
+          _ -> Nothing
+      , handle_rm_imm primary 0xC6 0x0
+      -- TODO: other forms
+      ]
 
     ADCX -> do
       has_extension ADX
