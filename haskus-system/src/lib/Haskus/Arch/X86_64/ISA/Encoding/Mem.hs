@@ -1,11 +1,15 @@
 module Haskus.Arch.X86_64.ISA.Encoding.Mem
-  ( encodeMem16
+  ( encodeMem
+  , encodeMem16
   , encodeMem32
   , encodeMem64
   , encodeMemRel
   , encode_mem16
   , encode_mem32
   , encode_mem64
+  , Mem (..)
+  , MemAddr (..)
+  , MemLock(..)
   )
 where
 
@@ -15,6 +19,11 @@ import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
+import Haskus.Arch.X86_64.ISA.Encoding.Enc
+import Haskus.Arch.X86_64.ISA.Encoding.Segment
+import Haskus.Arch.X86_64.ISA.Encoding.Prefix
+import Haskus.Arch.X86_64.ISA.Size
+import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Binary.Cast
 
 encodeMem16 :: Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp)
@@ -351,3 +360,87 @@ encodeMemRel disp =
                 Disp16 d -> (i32FromI16 d)
                 Disp8  d -> (i32FromI8 d)
   in Just (mkModRM_mod_rm 0b00 0b101, Disp32 disp')
+
+-- | Memory addressing
+data Mem = Mem
+  { memSegment  :: !(Maybe Segment)        -- ^ Segment override
+  , memLock     :: !MemLock                -- ^ Memory lock
+  , memAddr     :: !MemAddr                -- ^ Memory address
+  , memAddrSize :: !(Maybe AddressSize)    -- ^ Overloaded address size
+  }
+  deriving (Show,Eq,Ord)
+
+data MemAddr
+  -- | Absolute memory address (i.e. non relative to rIP)
+  = MemAbs
+    { mabsBase  :: !(Maybe Reg) -- ^ Base register
+    , mabsScale :: !Scale       -- ^ Scale for the index
+    , mabsIndex :: !(Maybe Reg) -- ^ Index register
+    , mabsDisp  :: !Disp        -- ^ Displacement
+    }
+  -- | rIP relative address
+  | MemRel
+    { mrelDisp :: Disp -- ^ Displacement relative to rIP
+    }
+  deriving (Show,Eq,Ord)
+
+-- | Encode a memory operand. Return Nothing in case of failure to encode.
+encodeMem :: Context -> Mem -> Enc -> Maybe Enc
+encodeMem ctx mem e = do
+  addr_prefix <- case memAddrSize mem of
+      Nothing -> Just id
+      Just a
+        | overriddenAddressSize False ctx == a -> Just id
+        | overriddenAddressSize True  ctx == a -> Just (P_67 :)
+        | otherwise                            -> Nothing -- can't override address-size
+  let lock_prefix = case memLock mem of
+        Lock   -> (P_F0 :)
+        NoLock -> id
+  let seg_prefix = case memSegment mem of
+        Nothing -> id
+        Just s  -> (segmentOverridePrefix s :)
+  let add_prefixes = addr_prefix . lock_prefix . seg_prefix . encPrefixes
+
+  case effectiveMode (ctxMode ctx) of
+    EMode64
+      | MemRel d <- memAddr mem
+      , Just (modrm,disp) <- encodeMemRel d
+      -> Just $ e { encModRM    = encModRM e <> Just modrm
+                  , encDisp     = disp
+                  , encPrefixes = add_prefixes e
+                  }
+
+      | MemAbs b sc i d <- memAddr mem
+      , Just (modrm,disp,sib,rex) <- encodeMem64 sc i b d
+      -> Just $ e { encModRM    = encModRM e <> Just modrm
+                  , encDisp     = disp
+                  , encSIB      = sib
+                  , encRex      = encRex e <> rex
+                  , encPrefixes = add_prefixes e
+                  }
+
+    EMode32
+      | MemAbs b sc i d <- memAddr mem
+      , Just (modrm,disp,sib) <- encodeMem32 sc i b d
+      -> Just $ e { encModRM    = encModRM e <> Just modrm
+                  , encDisp     = disp
+                  , encSIB      = sib
+                  , encPrefixes = add_prefixes e
+                  }
+
+    EMode16
+      | MemAbs b Scale1 i d <- memAddr mem
+      , Just (modrm,disp) <- encodeMem16 i b d
+      -> Just $ e { encModRM    = encModRM e <> Just modrm
+                  , encDisp     = disp
+                  , encPrefixes = add_prefixes e
+                  }
+
+    _ -> Nothing
+
+
+data MemLock
+  = Lock
+  | NoLock
+  deriving (Show,Eq,Ord)
+
