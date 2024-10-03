@@ -37,13 +37,14 @@ data Operation
   | SBB     -- ^ Subtract with borrow: DEST := DEST - (SRC+CF)
   | SUB     -- ^ Subtract: DEST := DEST - SRC
 
+  | DEC     -- ^ Decrement by 1
+  | INC     -- ^ Increment by 1
+
   | ADCX    -- ^ Unsigned add with carry flag: CF:DEST := DEST + SRC + CF
   | ADOX    -- ^ Unsigned add with overflow flag: OF:DEST := DEST + SRC + OF
-  -- DEC
   -- DIV
   -- IDIV
   -- IMUL
-  -- INC
   -- MUL
   -- MULX
   -- NEG
@@ -228,6 +229,10 @@ data Operands
   | OPS_I16        !U16             -- ^ imm16
   | OPS_I32        !U32             -- ^ imm32
   | OPS_I64        !U64             -- ^ imm64
+  | OPS_RM8        !RegMem          -- ^ reg/mem8
+  | OPS_RM16       !RegMem          -- ^ reg/mem16
+  | OPS_RM32       !RegMem          -- ^ reg/mem32
+  | OPS_RM64       !RegMem          -- ^ reg/mem64
   | OPS_RM8_I8     !RegMem !U8      -- ^ reg/mem8, imm8
   | OPS_RM16_I16   !RegMem !U16     -- ^ reg/mem16, imm16
   | OPS_RM32_I32   !RegMem !U32     -- ^ reg/mem32, imm32
@@ -555,6 +560,75 @@ encodeInsn ctx op args = do
       , handle_reg_rm   0x1A
       ]
 
+    DEC -> do
+      case args of
+        -- shorter forms, except in 64-bit mode (reused for REX prefixes)
+        OPS_RM16 (RM_Reg r)
+          | not mode64
+          , (False,c) <- regCodeX r
+          -> pure $ set_opsize16 $ primary (0x48 + c)
+        OPS_RM32 (RM_Reg r)
+          | not mode64
+          , (False,c) <- regCodeX r
+          -> pure $ set_opsize32 $ primary (0x48 + c)
+
+        OPS_RM8  (RM_Mem m) -> do
+          pure $ set_rm_ext_mem 0x1 m $ primary 0xFE
+        OPS_RM16 (RM_Mem m) -> do
+          pure $ set_opsize16 $ set_rm_ext_mem 0x1 m $ primary 0xFF
+        OPS_RM32 (RM_Mem m) -> do
+          pure $ set_opsize32 $ set_rm_ext_mem 0x1 m $ primary 0xFF
+        OPS_RM64 (RM_Mem m) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_rm_ext_mem 0x1 m $ primary 0xFF
+
+        -- Intel doc says that reg extension goes into REX.R. Is that true??
+        -- ModRM.rm extension is supposed to go into REX.B
+        OPS_RM8  (RM_Reg r) -> do
+          pure $ set_rm_ext_reg 0x1 r $ primary 0xFE
+        OPS_RM16 (RM_Reg r) -> do
+          pure $ set_opsize16 $ set_rm_ext_reg 0x1 r $ primary 0xFF
+        OPS_RM32 (RM_Reg r) -> do
+          pure $ set_opsize32 $ set_rm_ext_reg 0x1 r $ primary 0xFF
+        OPS_RM64 (RM_Reg r) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_rm_ext_reg 0x1 r $ primary 0xFF
+        _ -> Nothing
+
+    INC -> do
+      case args of
+        -- shorter forms, except in 64-bit mode (reused for REX prefixes)
+        OPS_RM16 (RM_Reg r)
+          | not mode64
+          , (False,c) <- regCodeX r
+          -> pure $ set_opsize16 $ primary (0x40 + c)
+        OPS_RM32 (RM_Reg r)
+          | not mode64
+          , (False,c) <- regCodeX r
+          -> pure $ set_opsize32 $ primary (0x40 + c)
+
+        OPS_RM8  (RM_Mem m) -> do
+          pure $ set_rm_ext_mem 0x0 m $ primary 0xFE
+        OPS_RM16 (RM_Mem m) -> do
+          pure $ set_opsize16 $ set_rm_ext_mem 0x0 m $ primary 0xFF
+        OPS_RM32 (RM_Mem m) -> do
+          pure $ set_opsize32 $ set_rm_ext_mem 0x0 m $ primary 0xFF
+        OPS_RM64 (RM_Mem m) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_rm_ext_mem 0x0 m $ primary 0xFF
+
+        -- Intel doc says that reg extension goes into REX.R. Is that true??
+        -- ModRM.rm extension is supposed to go into REX.B
+        OPS_RM8  (RM_Reg r) -> do
+          pure $ set_rm_ext_reg 0x0 r $ primary 0xFE
+        OPS_RM16 (RM_Reg r) -> do
+          pure $ set_opsize16 $ set_rm_ext_reg 0x0 r $ primary 0xFF
+        OPS_RM32 (RM_Reg r) -> do
+          pure $ set_opsize32 $ set_rm_ext_reg 0x0 r $ primary 0xFF
+        OPS_RM64 (RM_Reg r) -> do
+          assert_mode64
+          pure $ set_opsize64 $ set_rm_ext_reg 0x0 r $ primary 0xFF
+        _ -> Nothing
 
 
     ADCX -> do
