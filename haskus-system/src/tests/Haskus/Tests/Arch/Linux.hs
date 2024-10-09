@@ -1,6 +1,5 @@
 module Haskus.Tests.Arch.Linux where
 
-
 import Test.Tasty
 
 import Haskus.Tests.Arch.Linux.Input

@@ -6,6 +6,8 @@ module Haskus.Arch.X86_64.ISA.Context
    , Context (..)
    , context64
    , defaultContext64
+   , context16
+   , defaultContext16
    , defaultOperationSize
    , defaultAddressSize
    , overriddenOperationSize
@@ -45,6 +47,13 @@ context64 = Context Mode64 False False
 defaultContext64 :: Context
 defaultContext64 = context64 allExtensions
 
+-- | 16-bit context
+context16 :: ExtensionSet -> Context
+context16 = Context Mode16 False False
+
+-- | 16-bit context with all extensions enabled
+defaultContext16 :: Context
+defaultContext16 = context16 mempty
 
 -- | Indicate if an extension is enabled
 extensionAvailable :: Context -> Extension -> Bool
