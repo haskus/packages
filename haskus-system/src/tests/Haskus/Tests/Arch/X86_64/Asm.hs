@@ -9,6 +9,8 @@ import Haskus.Arch.X86_64.ISA.Encoder
 import Haskus.Arch.X86_64.ISA.Encoding.Enc
 import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.Operand
+import Haskus.Arch.X86_64.ISA.Encoding.Operation
+import Haskus.Arch.X86_64.ISA.Optimizer
 import Haskus.Arch.X86_64.ISA.Context
 
 import Test.Tasty
@@ -24,8 +26,16 @@ testAsm = testGroup "Assembler"
   , testEncoding defaultContext16 DAA [] $ Just "27"
   , testEncoding defaultContext64 MOV [OpReg R_RAX, I8  0x17] Nothing
   , testEncoding defaultContext64 MOV [OpReg R_RAX, I32 0x17] $ Just "48c7c017000000"
+  , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I32 0x17] $ Just "b817000000"
   ]
   
+-- | Encode with optimized assembly
+testOptEncoding :: Context -> Operation -> Operands -> Maybe String -> TestTree
+testOptEncoding ctx op ops result =
+  case optimizeInsn defaultOptimOpts ctx op ops of
+    Just (op',ops') -> testEncoding ctx op' ops' result
+    Nothing         -> testEncoding ctx op  ops  result
+
 testEncoding :: Context -> Operation -> Operands -> Maybe String -> TestTree
 testEncoding ctx op ops result = testCase (show (op,ops)) $
   let str = case encodeInsn ctx op ops of
