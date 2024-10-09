@@ -6,6 +6,10 @@ module Haskus.Arch.X86_64.ISA.Encoding.Vec
   , vecREX
   , VecType(..)
   , vecType
+  , isVec64
+  , isVec128
+  , isVec256
+  , isVec512
   )
 where
 
@@ -60,3 +64,16 @@ vecType (Vec w) = case w `shiftR` 6 of
 
 instance Show Vec where
   show v = show (vecType v) ++ show (vecCode v)
+
+
+isVec64 :: Vec -> Maybe Vec
+isVec64 v = if vecType v == VecMMX then Just v else Nothing
+
+isVec128 :: Vec -> Maybe Vec
+isVec128 v = if vecType v == VecXMM then Just v else Nothing
+
+isVec256 :: Vec -> Maybe Vec
+isVec256 v = if vecType v == VecYMM then Just v else Nothing
+
+isVec512 :: Vec -> Maybe Vec
+isVec512 v = if vecType v == VecZMM then Just v else Nothing

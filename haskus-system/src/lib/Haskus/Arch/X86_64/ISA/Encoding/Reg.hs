@@ -7,6 +7,10 @@ module Haskus.Arch.X86_64.ISA.Encoding.Reg
   , regREX
   , regNO_REX
   , compatibleRegs
+  , isReg8
+  , isReg16
+  , isReg32
+  , isReg64
   -- * Registers
   , pattern R_AL,   pattern R_AX,   pattern R_EAX,  pattern R_RAX
   , pattern R_BL,   pattern R_BX,   pattern R_EBX,  pattern R_RBX
@@ -82,6 +86,18 @@ regSize (Reg w) = case w `shiftR` 6 of
   0b01 -> OpSize16
   0b10 -> OpSize32
   _    -> OpSize64
+
+isReg8 :: Reg -> Maybe Reg
+isReg8 r = if regSize r == OpSize8 then Just r else Nothing
+
+isReg16 :: Reg -> Maybe Reg
+isReg16 r = if regSize r == OpSize16 then Just r else Nothing
+
+isReg32 :: Reg -> Maybe Reg
+isReg32 r = if regSize r == OpSize32 then Just r else Nothing
+
+isReg64 :: Reg -> Maybe Reg
+isReg64 r = if regSize r == OpSize64 then Just r else Nothing
 
 -- | Are two registers compatible (encodable in the same instruction)
 compatibleRegs :: Reg -> Reg -> Bool
