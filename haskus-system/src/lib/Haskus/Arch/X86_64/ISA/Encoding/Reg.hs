@@ -11,6 +11,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Reg
   , isReg16
   , isReg32
   , isReg64
+  , asReg32
   -- * Registers
   , pattern R_AL,   pattern R_AX,   pattern R_EAX,  pattern R_RAX
   , pattern R_BL,   pattern R_BX,   pattern R_EBX,  pattern R_RBX
@@ -105,7 +106,8 @@ compatibleRegs (Reg a) (Reg b) = not (regREX r && regNO_REX r)
   where
     !r = Reg (a .|. b)
 
-
+asReg32 :: Reg -> Reg
+asReg32 (Reg x) = Reg ((x .&. 0b00111111) .|. 0b10000000)
 
 pattern R_AL  = Reg 0b00_0_0_0000
 pattern R_AX  = Reg 0b01_0_0_0000
