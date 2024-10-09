@@ -6,13 +6,15 @@ module Haskus.Arch.X86_64.ISA.Encoding.Enc
   , encDispOffset
   , Opcode (..)
   , EncError (..)
-  , check
+  , encCheck
   , encode
+  , encodeToArray#
   )
 where
 
 import Haskus.Binary.Word
 import Haskus.Memory.Writer
+import Haskus.Memory.Writer.SizedWriter (SizedWriter(..), fromSizedWriter)
 import Haskus.Arch.X86_64.ISA.Encoding.Prefix
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
@@ -21,6 +23,7 @@ import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Size
 
 import Data.Maybe
+import GHC.Exts
 
 -- | Instruction encoding specification
 data Enc = Enc
@@ -32,6 +35,7 @@ data Enc = Enc
   , encDisp     :: !Disp               -- ^ Displacement
   , encImm      :: !(Maybe SizedValue) -- ^ Immediate
   }
+  deriving (Show)
 
 emptyEnc :: Enc
 emptyEnc = Enc [] Nothing Nothing Nothing Nothing NoDisp Nothing
@@ -131,8 +135,8 @@ data EncError
   deriving (Show,Eq,Ord)
 
 -- | Check the validity of an encoding
-check :: Enc -> [EncError]
-check e@Enc{..} = concat
+encCheck :: Enc -> [EncError]
+encCheck e@Enc{..} = concat
   [ 
     -- at most 5 prefixes
     let n = fromIntegral (length encPrefixes) in wh (n > 5) (TooManyPrefixes n)
@@ -146,7 +150,7 @@ check e@Enc{..} = concat
           3 -> True
           _ -> False
         ps = filter (not . g2o3) encPrefixes
-    in wh (null ps || isLegacyOpcode encOpcode) (PrefixNotAllowed ps)
+    in wh (not (null ps || isLegacyOpcode encOpcode)) (PrefixNotAllowed ps)
 
     -- Instructions with 64-bit immediate have no displacement, and vice versa
   , let is_size64 = \case
@@ -191,3 +195,14 @@ encode Enc{..} = mconcat
       Just (Op_0F0F oc) -> writeU8 oc -- 3DNow! opcode goes after the operands
       _                 -> mempty
   ]
+
+-- | Allocate a ByteArray and encode the instruction into it.
+--
+-- Don't use it if you have many instructions to encode: use a bigger array or
+-- reuse one instead of allocating a fresh one for every instruction.
+encodeToArray# :: Enc -> ByteArray#
+encodeToArray# enc =
+  let !(W# sz) = encSize enc
+      !sw      = SizedWriter sz (encode enc)
+  in runRW# \s0 -> case fromSizedWriter sw s0 of
+      (# _, b #) -> b

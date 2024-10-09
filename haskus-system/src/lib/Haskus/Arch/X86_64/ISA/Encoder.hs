@@ -2,6 +2,7 @@ module Haskus.Arch.X86_64.ISA.Encoder
   ( encodeInsn
   , Operation (..)
   , Operand (..)
+  , Operands (..)
   )
 where
 
@@ -751,7 +752,10 @@ encodeInsn ctx op args = do
             pure $ set_opsize64 $ set_imm64 i $ set_oc_reg primary 0xB8 r
           _ -> Nothing
       , handle_rm_imm primary 0xC6 0x0
-      -- TODO: add other forms
+      -- TODO: mov rm, sreg
+      -- TODO: mov sreg, rm
+      -- TODO: mov acc, moffs
+      -- TODO: mov moffs, acc
       ]
 
     LEA -> case args of
