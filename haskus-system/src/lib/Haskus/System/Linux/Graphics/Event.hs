@@ -41,7 +41,8 @@ peekEvents = go
       peekEvent :: Ptr () -> m (Event,Word32)
       peekEvent ptr = do
          hdr <- peek (castPtr ptr)
-         let payloadPtr = castPtr ptr `plusPtr` 8 -- sizeof event header
+         let  payloadPtr :: Ptr a
+              payloadPtr = castPtr ptr `plusPtr` 8 -- sizeof event header
          v <- case toEventType (eventType hdr) of
             VBlankStartEvent      -> VBlankStart       <|| peek payloadPtr
             FrameSwitchedEvent    -> FrameSwitched     <|| peek payloadPtr

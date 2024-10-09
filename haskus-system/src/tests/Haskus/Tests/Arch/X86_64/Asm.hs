@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLists #-}
+
 module Haskus.Tests.Arch.X86_64.Asm
   ( testAsm
   )
@@ -6,6 +8,7 @@ where
 import Haskus.Arch.X86_64.ISA.Encoder
 import Haskus.Arch.X86_64.ISA.Encoding.Enc
 import Haskus.Arch.X86_64.ISA.Encoding.Reg
+import Haskus.Arch.X86_64.ISA.Encoding.Operand
 import Haskus.Arch.X86_64.ISA.Context
 
 import Test.Tasty
@@ -17,10 +20,10 @@ import Numeric (showHex)
 
 testAsm :: TestTree
 testAsm = testGroup "Assembler"
-  [ testEncoding defaultContext64 DAA NoOperand Nothing
-  , testEncoding defaultContext16 DAA NoOperand $ Just "27"
-  , testEncoding defaultContext64 MOV (OPS_R64_I8  R_RAX 0x17) Nothing
-  , testEncoding defaultContext64 MOV (OPS_R64_I32 R_RAX 0x17) $ Just "48c7c017000000"
+  [ testEncoding defaultContext64 DAA [] Nothing
+  , testEncoding defaultContext16 DAA [] $ Just "27"
+  , testEncoding defaultContext64 MOV [OpReg R_RAX, I8  0x17] Nothing
+  , testEncoding defaultContext64 MOV [OpReg R_RAX, I32 0x17] $ Just "48c7c017000000"
   ]
   
 testEncoding :: Context -> Operation -> Operands -> Maybe String -> TestTree
