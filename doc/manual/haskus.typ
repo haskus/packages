@@ -37,7 +37,7 @@
 // CFFFE5 (green)
 
 #set document(
-    title: "Haskus packages manual"
+    title: "Haskus Computer Manual"
   , author: "Sylvain Henry"
   , date: auto
 )
