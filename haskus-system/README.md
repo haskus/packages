@@ -1,5 +1,3 @@
-[![GitHub CI](https://github.com/haskus/haskus-system/workflows/CI/badge.svg)](https://github.com/haskus/haskus-system/actions)
-
 # Haskus system
 
 Haskus system is a framework written in Haskell and designed for system
