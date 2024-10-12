@@ -42,9 +42,9 @@ data Operation
   | SXAD    -- ^ Sign-extend rAX: rDX:rAX := SX(rAX)
 
   -- Moves
-  | MOV       -- ^ Move
-  | LEA       -- ^ Load effective address: DEST := EA(SRC)
-  | CMOV Cond -- ^ Conditional move
+  | MOV        -- ^ Move
+  | LEA        -- ^ Load effective address: DEST := EA(SRC)
+  | CMOV !Cond -- ^ Conditional move
   -- IN
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
@@ -125,11 +125,11 @@ data Operation
   -- XOR
 
   -- Control-flow
+  | Jcc !Cond -- ^ Conditional jump
   -- CALL
   -- ENTER
   -- INT
   -- INTO
-  -- JCC
   -- JCXZ, jECXZ, JRCXZ
   -- JMP
   -- LEAVE
