@@ -131,12 +131,13 @@ data Operation
   | INT3      -- ^ Generate breakpoint trap
   | INT       -- ^ Generate software interruption
   | SYSCALL   -- ^ Syscall
+  | RET       -- ^ Near return (i.e. same CS)
+  | RET_FAR   -- ^ Far return (i.e. different CS)
   -- CALL
   -- ENTER
   -- JCXZ, jECXZ, JRCXZ
   -- LEAVE
   -- LOOP
-  -- RET
   -- UD0, UD1, UD2
 
   -- Flags

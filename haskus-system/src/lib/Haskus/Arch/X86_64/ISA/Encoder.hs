@@ -671,11 +671,21 @@ encodeInsn !ctx !op !args = do
     INT  -> do
       i <- imm8_arg
       pure $ set_imm8 i $ primary 0xCD
+
     SYSCALL -> do
       assert_mode64
       assert_no_args
       pure (map_0F 0x05)
 
+    RET -> case args of
+      []      -> pure $ primary 0xC3
+      [I16 i] -> pure $ set_imm16 i $ primary 0xC2
+      _       -> Nothing
+
+    RET_FAR -> case args of
+      []      -> pure $ primary 0xCB
+      [I16 i] -> pure $ set_imm16 i $ primary 0xCA
+      _       -> Nothing
 
     ADCX -> do
       has_extension Ext.ADX
