@@ -133,7 +133,8 @@ data Operation
   | SYSCALL   -- ^ Syscall
   | RET       -- ^ Near return (i.e. same CS)
   | RET_FAR   -- ^ Far return (i.e. different CS)
-  -- CALL
+  | CALL      -- ^ Near call (i.e. same CS)
+  | CALL_FAR  -- ^ Far call (i.e. different CS)
   -- ENTER
   -- JCXZ, jECXZ, JRCXZ
   -- LEAVE

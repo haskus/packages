@@ -687,6 +687,20 @@ encodeInsn !ctx !op !args = do
       [I16 i] -> pure $ set_imm16 i $ primary 0xCA
       _       -> Nothing
 
+    CALL -> case args of
+      [I16 i] -> pure $ set_opsize16 $ set_imm16 i $ primary 0xE8
+      [I32 i] -> pure $ set_opsize32 $ set_imm32 i $ primary 0xE8
+      [R16 r] | not mode64 -> pure $ set_opsize16 $ set_rm_ext_reg 0x2 r $ primary 0xFF
+      [R32 r] | not mode64 -> pure $ set_opsize32 $ set_rm_ext_reg 0x2 r $ primary 0xFF
+      [M16 m] | not mode64 -> pure $ set_opsize16 $ set_rm_ext_mem 0x2 m $ primary 0xFF
+      [M32 m] | not mode64 -> pure $ set_opsize32 $ set_rm_ext_mem 0x2 m $ primary 0xFF
+      -- default to 64-bit operand size in 64-bit mode
+      [R64 r]              -> pure $                set_rm_ext_reg 0x2 r $ primary 0xFF
+      [M64 m]              -> pure $                set_rm_ext_mem 0x2 m $ primary 0xFF
+      _ -> Nothing
+
+    CALL_FAR -> Nothing -- TODO: far CALLs
+
     ADCX -> do
       has_extension Ext.ADX
       case args of
