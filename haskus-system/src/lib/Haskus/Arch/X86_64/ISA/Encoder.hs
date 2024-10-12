@@ -671,6 +671,10 @@ encodeInsn !ctx !op !args = do
     INT  -> do
       i <- imm8_arg
       pure $ set_imm8 i $ primary 0xCD
+    SYSCALL -> do
+      assert_mode64
+      assert_no_args
+      pure (map_0F 0x05)
 
 
     ADCX -> do
