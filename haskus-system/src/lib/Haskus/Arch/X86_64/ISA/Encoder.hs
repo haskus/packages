@@ -524,6 +524,15 @@ encodeInsn !ctx !op !args = do
         pure $ set_opsize64 $ set_rm_reg_mem r m $ primary 0x8D
       _ -> Nothing
 
+    Jcc cc -> case args of
+      [I8  i] -> pure $ set_imm8 i $ primary (0x70 + condCode cc)
+      [I16 i]
+        | not mode64 -- not supported in 64-bit mode
+        -> pure $ set_opsize16 $ set_imm16 i $ map_0F (0x80 + condCode cc)
+      [I32 i] -> pure $ set_opsize32 $ set_imm32 i $ map_0F (0x80 + condCode cc)
+      _       -> Nothing
+
+
 
     ADCX -> do
       has_extension Ext.ADX
