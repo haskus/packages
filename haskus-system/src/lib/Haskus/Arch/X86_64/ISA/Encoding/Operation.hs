@@ -49,6 +49,8 @@ data Operation
   | MOVZX      -- ^ Move with zero-extension
   | IN         -- ^ Input from port
   | OUT        -- ^ Output to port
+  | PUSH
+  -- POP
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
   -- LODSB, LODSW, LODSD, LODSQ
@@ -57,9 +59,7 @@ data Operation
   -- MOVNTI
   -- MOVSB, MOVSW, MOVSD, MOVSQ
   -- OUTSB, OUTSW, OUTSD
-  -- POP
   -- POPA, POPAD
-  -- PUSH
   -- PUSHA, PUSHAD
   -- SETcc
   -- STOSB, STOSW, STOSD, STOSQ
