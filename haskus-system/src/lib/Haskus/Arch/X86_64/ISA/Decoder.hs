@@ -12,6 +12,7 @@ module Haskus.Arch.X86_64.ISA.Decoder
 where
 
 import Haskus.Arch.X86_64.ISA.Context
+import Haskus.Arch.X86_64.ISA.Extension
 import Haskus.Arch.X86_64.ISA.Register
 import Haskus.Arch.X86_64.ISA.Memory
 import Haskus.Arch.Common.Immediate
