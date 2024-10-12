@@ -603,6 +603,29 @@ encodeInsn !ctx !op !args = do
       [OpSeg GS]              -> pure $ map_0F 0xA8
       _ -> Nothing
 
+    POP -> case args of
+      -- smaller forms for registers
+      [R16 r] -> pure $ set_opsize16 $ set_oc_reg primary 0x58 r
+      [R32 r] -> pure $ set_opsize32 $ set_oc_reg primary 0x58 r
+      [R64 r] -> pure $ set_opsize64 $ set_oc_reg primary 0x58 r
+
+      -- dead code because of the smaller forms above
+      -- [R16 r] -> pure $ set_opsize16 $ set_rm_ext_reg 0x0 r $ primary 0x8F
+      -- [R32 r] -> pure $ set_opsize32 $ set_rm_ext_reg 0x0 r $ primary 0x8F
+      -- [R64 r] -> pure $ set_opsize64 $ set_rm_ext_reg 0x0 r $ primary 0x8F
+
+      [M16 m] -> pure $ set_opsize16 $ set_rm_ext_mem 0x0 m $ primary 0x8F
+      [M32 m] -> pure $ set_opsize32 $ set_rm_ext_mem 0x0 m $ primary 0x8F
+      [M64 m] -> pure $ set_opsize64 $ set_rm_ext_mem 0x0 m $ primary 0x8F
+      -- TODO: the operand size can be used to select the stack increment. How
+      -- do we provide this to users?
+      [OpSeg SS] | not mode64 -> pure $ primary 0x17
+      [OpSeg DS] | not mode64 -> pure $ primary 0x1F
+      [OpSeg ES] | not mode64 -> pure $ primary 0x07
+      [OpSeg FS]              -> pure $ map_0F 0xA1
+      [OpSeg GS]              -> pure $ map_0F 0xA9
+      _ -> Nothing
+
 
     Jcc cc -> case args of
       [I8  i] -> pure $ set_imm8 i $ primary (0x70 + condCode cc)

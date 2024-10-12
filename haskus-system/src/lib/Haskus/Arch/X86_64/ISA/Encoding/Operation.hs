@@ -49,8 +49,8 @@ data Operation
   | MOVZX      -- ^ Move with zero-extension
   | IN         -- ^ Input from port
   | OUT        -- ^ Output to port
-  | PUSH
-  -- POP
+  | PUSH       -- ^ Push a value onto the stack
+  | POP        -- ^ Pop a value from the stack
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
   -- LODSB, LODSW, LODSD, LODSQ
