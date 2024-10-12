@@ -135,11 +135,13 @@ data Operation
   | RET_FAR   -- ^ Far return (i.e. different CS)
   | CALL      -- ^ Near call (i.e. same CS)
   | CALL_FAR  -- ^ Far call (i.e. different CS)
-  -- ENTER
-  -- JCXZ, jECXZ, JRCXZ
+  | UD0       -- ^ Undefined instruction
+  | UD1       -- ^ Undefined instruction
+  | UD2       -- ^ Undefined instruction
+  -- ENTER -- requires 2 immediates (imm16 then imm8, or imm24) :/
   -- LEAVE
+  -- JCXZ, jECXZ, JRCXZ
   -- LOOP
-  -- UD0, UD1, UD2
 
   -- Flags
   -- CLC
