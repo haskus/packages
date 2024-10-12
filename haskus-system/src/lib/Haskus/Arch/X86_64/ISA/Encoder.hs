@@ -559,6 +559,24 @@ encodeInsn !ctx !op !args = do
         pure $ set_opsize64 $ set_rm_reg_mem r m $ primary 0x8D
       _ -> Nothing
 
+    IN -> case args of
+      [R8  R_AL,  I8 i]     -> pure $ set_imm8 i $ primary 0xE4
+      [R16 R_AX,  I8 i]     -> pure $ set_opsize16 $ set_imm8 i $ primary 0xE5
+      [R32 R_EAX, I8 i]     -> pure $ set_opsize32 $ set_imm8 i $ primary 0xE5
+      [R8  R_AL,  R16 R_DX] -> pure $ primary 0xEC
+      [R16 R_AX,  R16 R_DX] -> pure $ set_opsize16 $ primary 0xED
+      [R32 R_EAX, R16 R_DX] -> pure $ set_opsize32 $ primary 0xED
+      _ -> Nothing
+
+    OUT -> case args of
+      [I8 i, R8  R_AL]      -> pure $ set_imm8 i $ primary 0xE6
+      [I8 i, R16 R_AX]      -> pure $ set_opsize16 $ set_imm8 i $ primary 0xE7
+      [I8 i, R32 R_EAX]     -> pure $ set_opsize32 $ set_imm8 i $ primary 0xE7
+      [R16 R_DX, R8  R_AL]  -> pure $ primary 0xEE
+      [R16 R_DX, R16 R_AX]  -> pure $ set_opsize16 $ primary 0xEF
+      [R16 R_DX, R32 R_EAX] -> pure $ set_opsize32 $ primary 0xEF
+      _ -> Nothing
+
     Jcc cc -> case args of
       [I8  i] -> pure $ set_imm8 i $ primary (0x70 + condCode cc)
       [I16 i]
