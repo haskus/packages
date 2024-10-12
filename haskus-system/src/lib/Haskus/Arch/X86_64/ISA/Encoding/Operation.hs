@@ -1,7 +1,11 @@
 module Haskus.Arch.X86_64.ISA.Encoding.Operation
   ( Operation (..)
+  , Cond(..)
+  , condCode
   )
 where
+
+import Haskus.Binary.Word
 
 data Operation
   ---------------------------------------
@@ -38,10 +42,9 @@ data Operation
   | SXAD    -- ^ Sign-extend rAX: rDX:rAX := SX(rAX)
 
   -- Moves
-  | MOV     -- ^ Move
-  | LEA     -- ^ Load effective address: DEST := EA(SRC)
-
-  -- CMOV
+  | MOV       -- ^ Move
+  | LEA       -- ^ Load effective address: DEST := EA(SRC)
+  | CMOV Cond -- ^ Conditional move
   -- IN
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
@@ -192,3 +195,41 @@ data Operation
   deriving (Show,Eq,Ord)
 
 
+-- | Condition (for Jcc and CMOVcc)
+data Cond
+  = C_C   -- ^ CF=1. NAE (not above or equal), B (below), C (carry)
+  | C_NC  -- ^ CF=0. AE (above or equal), NB (not below), NC (not carry)
+  | C_O   -- ^ OF=1. O (overflow)
+  | C_NO  -- ^ OF=0. NO (not overflow)
+  | C_P   -- ^ PF=1. P (parity), PE (parity even)
+  | C_NP  -- ^ PF=0. NP (not parity), PO (parity odd)
+  | C_S   -- ^ SF=1. S (sign)
+  | C_NS  -- ^ SF=0. NS (not sign)
+  | C_Z   -- ^ ZF=1. E (equal), Z (zero)
+  | C_NZ  -- ^ ZF=0. NE (not equal), NZ (not zero)
+  | C_A   -- ^ CF=0 and ZF=0. A (above), NBE (not below or equal)
+  | C_NA  -- ^ CF=1 or  ZF=1. BE (below or equal), NA (not above)
+  | C_G   -- ^ ZF=0 and SF=OF. G (greater)
+  | C_NG  -- ^ ZF=1 or SF/=OF. LE (less or equal), NG (not greater)
+  | C_L   -- ^ SF/=OF. L (less), NGE (not greater or equal)
+  | C_NL  -- ^ SF=OF. GE (greater or equal), NL (not less)
+  deriving (Show,Eq,Ord)
+
+condCode :: Cond -> U8
+condCode = \case
+  C_O  -> 0x0
+  C_NO -> 0x1
+  C_C  -> 0x2
+  C_NC -> 0x3
+  C_Z  -> 0x4
+  C_NZ -> 0x5
+  C_NA -> 0x6
+  C_A  -> 0x7
+  C_S  -> 0x8
+  C_NS -> 0x9
+  C_P  -> 0xA
+  C_NP -> 0xB
+  C_L  -> 0xC
+  C_NL -> 0xD
+  C_NG -> 0xE
+  C_G  -> 0xF

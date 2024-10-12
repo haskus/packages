@@ -1,7 +1,6 @@
 -- | Execution context for some code.
 module Haskus.Arch.X86_64.ISA.Context
    ( module Haskus.Arch.X86_64.ISA.OperatingMode
-   , module Haskus.Arch.X86_64.ISA.Extension
      -- * Execution context
    , Context (..)
    , context64

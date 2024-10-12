@@ -97,6 +97,7 @@ import Haskus.Arch.X86_64.ISA.Solver
 import Haskus.Arch.X86_64.ISA.Register
 import Haskus.Arch.X86_64.ISA.Memory
 import Haskus.Arch.X86_64.ISA.Operand
+import Haskus.Arch.X86_64.ISA.Extension
 import Haskus.Arch.Common.Register
 import Haskus.Utils.Flow
 

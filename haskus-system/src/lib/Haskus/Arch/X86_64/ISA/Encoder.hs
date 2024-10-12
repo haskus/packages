@@ -15,6 +15,7 @@ import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Encoding.Mem
 import Haskus.Arch.X86_64.ISA.Encoding.Vec
 import Haskus.Arch.X86_64.ISA.Context
+import qualified Haskus.Arch.X86_64.ISA.Extension as Ext
 import Haskus.Arch.X86_64.ISA.Size
 
 import Control.Applicative
@@ -501,6 +502,17 @@ encodeInsn !ctx !op !args = do
       -- TODO: mov moffs, acc
       ]
 
+    CMOV cc -> do
+      let oc = map_0F (0x40 + condCode cc)
+      case args of
+        [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg d s oc
+        [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg d s oc
+        [R64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_reg d s oc
+        [R16 d, M16 s] -> pure $ set_opsize16 $ set_rm_reg_mem d s oc
+        [R32 d, M32 s] -> pure $ set_opsize32 $ set_rm_reg_mem d s oc
+        [R64 d, M64 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s oc
+        _              -> Nothing
+
     LEA -> case args of
       -- we don't care about the size of the targetted memory...
       [R16 r, OpMem m] -> do
@@ -514,7 +526,7 @@ encodeInsn !ctx !op !args = do
 
 
     ADCX -> do
-      has_extension ADX
+      has_extension Ext.ADX
       case args of
         [R32 r, M32 m] -> do
           pure $ set_rm_reg_mem r m $ map_66_0F38 0xF6
@@ -529,7 +541,7 @@ encodeInsn !ctx !op !args = do
         _ -> Nothing
 
     ADOX -> do
-      has_extension ADX
+      has_extension Ext.ADX
       case args of
         [R32 r, M32 m] -> do
           pure $ set_rm_reg_mem r m $ map_F3_0F38 0xF6
@@ -546,9 +558,9 @@ encodeInsn !ctx !op !args = do
     ADDPD -> 
       case args of
         [V128 v, M128 m] -> do
-          has_extension SSE2
+          has_extension Ext.SSE2
           pure $ set_rm_vec_mem v m $ map_66_0F 0x58
         [V128 v1, V128 v2] -> do
-          has_extension SSE2
+          has_extension Ext.SSE2
           pure $ set_rm_vec_vec v1 v2 $ map_66_0F 0x58
         _ -> Nothing

@@ -794,7 +794,6 @@ where
 
 import Haskus.Utils.List ((\\))
 import Haskus.Arch.X86_64.ISA.MicroArch
-import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Arch.X86_64.ISA.Encoding
 import Haskus.Arch.X86_64.ISA.Insn
@@ -803,6 +802,7 @@ import Haskus.Arch.X86_64.ISA.Immediate
 import Haskus.Arch.X86_64.ISA.Memory
 import Haskus.Arch.X86_64.ISA.Solver
 import Haskus.Arch.X86_64.ISA.Operand
+import Haskus.Arch.X86_64.ISA.Extension
 import Haskus.Number.Word
 import Haskus.Utils.Solver
 
