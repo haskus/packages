@@ -701,6 +701,21 @@ encodeInsn !ctx !op !args = do
 
     CALL_FAR -> Nothing -- TODO: far CALLs
 
+    UD0 -> case args of
+      [R32 r, R32 rm] -> pure $ set_rm_reg_reg r rm $ map_0F 0xFF
+      [R32 r, M32 rm] -> pure $ set_rm_reg_mem r rm $ map_0F 0xFF
+      _ -> Nothing
+
+    UD1 -> case args of
+      [R32 r, R32 rm] -> pure $ set_rm_reg_reg r rm $ map_0F 0xB9
+      [R32 r, M32 rm] -> pure $ set_rm_reg_mem r rm $ map_0F 0xB9
+      _ -> Nothing
+
+    UD2 -> do
+      assert_no_args
+      pure $ map_0F 0x0B
+
+
     ADCX -> do
       has_extension Ext.ADX
       case args of
