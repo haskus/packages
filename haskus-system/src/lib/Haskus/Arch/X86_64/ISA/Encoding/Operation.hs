@@ -126,10 +126,12 @@ data Operation
   -- Control-flow
   | JMP       -- ^ Unconditional jump
   | Jcc !Cond -- ^ Conditional jump
+  | INTO      -- ^ Generate overflow trap if OF=1
+  | INT1      -- ^ Generate debug trap
+  | INT3      -- ^ Generate breakpoint trap
+  | INT       -- ^ Generate software interruption
   -- CALL
   -- ENTER
-  -- INT
-  -- INTO
   -- JCXZ, jECXZ, JRCXZ
   -- LEAVE
   -- LOOP
