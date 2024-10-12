@@ -532,6 +532,14 @@ encodeInsn !ctx !op !args = do
       [I32 i] -> pure $ set_opsize32 $ set_imm32 i $ map_0F (0x80 + condCode cc)
       _       -> Nothing
 
+    JMP -> case args of
+      [I8  i] -> pure $ set_imm8 i $ primary 0xEB
+      [I16 i]
+        | not mode64 -- not supported in 64-bit mode
+        -> pure $ set_opsize16 $ set_imm16 i $ primary 0xE9
+      [I32 i] -> pure $ set_opsize32 $ set_imm32 i $ primary 0xE9
+      -- TODO: other forms: rm, ptr k:n, m k:n
+      _       -> Nothing
 
 
     ADCX -> do
