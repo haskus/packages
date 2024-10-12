@@ -535,10 +535,28 @@ encodeInsn !ctx !op !args = do
     JMP -> case args of
       [I8  i] -> pure $ set_imm8 i $ primary 0xEB
       [I16 i]
-        | not mode64 -- not supported in 64-bit mode
+        | not mode64
         -> pure $ set_opsize16 $ set_imm16 i $ primary 0xE9
       [I32 i] -> pure $ set_opsize32 $ set_imm32 i $ primary 0xE9
-      -- TODO: other forms: rm, ptr k:n, m k:n
+      [R16 r]
+        | not mode64
+        -> pure $ set_opsize16 $ set_rm_ext_reg 0x4 r $ primary 0xFF
+      [R32 r]
+        | not mode64
+        -> pure $ set_opsize32 $ set_rm_ext_reg 0x4 r $ primary 0xFF
+      [R64 r]
+        | mode64 -- default to 64-bit size
+        -> pure $ set_rm_ext_reg 0x4 r $ primary 0xFF
+      [M16 m]
+        | not mode64
+        -> pure $ set_opsize16 $ set_rm_ext_mem 0x4 m $ primary 0xFF
+      [M32 m]
+        | not mode64
+        -> pure $ set_opsize32 $ set_rm_ext_mem 0x4 m $ primary 0xFF
+      [M64 m]
+        | mode64 -- default to 64-bit size
+        -> pure $ set_rm_ext_mem 0x4 m $ primary 0xFF
+      -- TODO: other forms: ptr k:n, m k:n
       _       -> Nothing
 
 
