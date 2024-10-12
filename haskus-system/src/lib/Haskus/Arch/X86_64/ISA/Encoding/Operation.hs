@@ -47,7 +47,8 @@ data Operation
   | CMOV !Cond -- ^ Conditional move
   | MOVSX      -- ^ Move with sign-extension (use this for MOVSXD too)
   | MOVZX      -- ^ Move with zero-extension
-  -- IN
+  | IN         -- ^ Input from port
+  | OUT        -- ^ Output to port
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
   -- LODSB, LODSW, LODSD, LODSQ
@@ -55,7 +56,6 @@ data Operation
   -- MOVD
   -- MOVNTI
   -- MOVSB, MOVSW, MOVSD, MOVSQ
-  -- OUT
   -- OUTSB, OUTSW, OUTSD
   -- POP
   -- POPA, POPAD
