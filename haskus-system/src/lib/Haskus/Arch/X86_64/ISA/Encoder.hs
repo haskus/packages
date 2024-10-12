@@ -407,6 +407,33 @@ encodeInsn !ctx !op !args = do
       , handle_reg_rm   primary 0x22
       ]
 
+    OR -> alts
+      [ handle_acc_imm  primary 0x0C
+      , handle_rm_imm   primary 0x80 0x1
+      , handle_rm_imm8  primary 0x83 0x1
+      , handle_rm_reg   primary 0x08
+      , handle_reg_rm   primary 0x0A
+      ]
+
+    XOR -> alts
+      [ handle_acc_imm  primary 0x34
+      , handle_rm_imm   primary 0x80 0x6
+      , handle_rm_imm8  primary 0x83 0x6
+      , handle_rm_reg   primary 0x30
+      , handle_reg_rm   primary 0x32
+      ]
+
+    NOT -> case args of
+      [R8  r] -> pure $ set_rm_ext_reg 0x2 r $ primary 0xF6
+      [M8  m] -> pure $ set_rm_ext_mem 0x2 m $ primary 0xF6
+      [R16 r] -> pure $ set_opsize16 $ set_rm_ext_reg 0x2 r $ primary 0xF7
+      [R32 r] -> pure $ set_opsize32 $ set_rm_ext_reg 0x2 r $ primary 0xF7
+      [R64 r] -> pure $ set_opsize64 $ set_rm_ext_reg 0x2 r $ primary 0xF7
+      [M16 m] -> pure $ set_opsize16 $ set_rm_ext_mem 0x2 m $ primary 0xF7
+      [M32 m] -> pure $ set_opsize32 $ set_rm_ext_mem 0x2 m $ primary 0xF7
+      [M64 m] -> pure $ set_opsize64 $ set_rm_ext_mem 0x2 m $ primary 0xF7
+      _ -> Nothing
+
     SUB -> alts
       [ handle_acc_imm  primary 0x2C
       , handle_rm_imm   primary 0x80 0x5

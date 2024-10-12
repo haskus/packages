@@ -77,7 +77,10 @@ data Operation
   -- SCASB, SCASW, SCASD, SCASQ
 
   -- Binary
-  | AND
+  | AND     -- ^ Bitwise AND
+  | OR      -- ^ Bitwise OR
+  | XOR     -- ^ Bitwise XOR
+  | NOT     -- ^ One's complement negation
   -- ANDN
   -- BEXTR
   -- BLCFILL
@@ -99,8 +102,6 @@ data Operation
   -- BTS
   -- BZHI
   -- LZCNT
-  -- NOT
-  -- OR
   -- PDEP
   -- PEXT
   -- POPCNT
@@ -122,7 +123,6 @@ data Operation
   -- TEST
   -- TZCNT
   -- TZMSK
-  -- XOR
 
   -- Control-flow
   | JMP       -- ^ Unconditional jump
