@@ -715,6 +715,13 @@ encodeInsn !ctx !op !args = do
       assert_no_args
       pure $ map_0F 0x0B
 
+    CMC -> assert_no_args >> pure (primary 0xF5)
+    CLC -> assert_no_args >> pure (primary 0xF8)
+    STC -> assert_no_args >> pure (primary 0xF9)
+    CLI -> assert_no_args >> pure (primary 0xFA)
+    STI -> assert_no_args >> pure (primary 0xFB)
+    CLD -> assert_no_args >> pure (primary 0xFC)
+    STD -> assert_no_args >> pure (primary 0xFD)
 
     ADCX -> do
       has_extension Ext.ADX
