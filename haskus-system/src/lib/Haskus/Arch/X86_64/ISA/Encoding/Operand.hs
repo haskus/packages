@@ -29,12 +29,14 @@ import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.Mem
 import Haskus.Arch.X86_64.ISA.Encoding.Vec
+import Haskus.Arch.X86_64.ISA.Encoding.Segment
 
 data Operand
   = OpImm !SizedValue
   | OpReg !Reg
   | OpVec !Vec
   | OpMem !Mem
+  | OpSeg !Segment
   deriving (Show,Eq,Ord)
 
 pattern I8   x = OpImm (SizedValue8  x)

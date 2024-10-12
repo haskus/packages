@@ -14,6 +14,7 @@ import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Encoding.Mem
 import Haskus.Arch.X86_64.ISA.Encoding.Vec
+import Haskus.Arch.X86_64.ISA.Encoding.Segment
 import Haskus.Arch.X86_64.ISA.Context
 import qualified Haskus.Arch.X86_64.ISA.Extension as Ext
 import Haskus.Arch.X86_64.ISA.Size
@@ -86,13 +87,13 @@ encodeInsn !ctx !op !args = do
              , encModRM = encModRM e <> Just (mkModRM_reg r)
              }
 
-      -- store register code in REX.R:opcode
+      -- store register code in REX.B:opcode
       set_oc_reg mk_oc oc r =
         let !(xc,c) = regCodeX r
             -- handle registers that require REX
             mrex1 = if regREX r then Just emptyRex else Nothing
-            -- register code extension in REX.R
-            mrex2 = if xc       then Just rexR     else Nothing
+            -- register code extension in REX.B
+            mrex2 = if xc       then Just rexB     else Nothing
         in (mk_oc (oc + c)) { encRex = mrex1 <> mrex2 }
 
       -- store gpr in REX.B:ModRM.rm
@@ -576,6 +577,32 @@ encodeInsn !ctx !op !args = do
       [R16 R_DX, R16 R_AX]  -> pure $ set_opsize16 $ primary 0xEF
       [R16 R_DX, R32 R_EAX] -> pure $ set_opsize32 $ primary 0xEF
       _ -> Nothing
+
+    PUSH -> case args of
+      -- smaller forms for registers
+      [R16 r] -> pure $ set_opsize16 $ set_oc_reg primary 0x50 r
+      [R32 r] -> pure $ set_opsize32 $ set_oc_reg primary 0x50 r
+      [R64 r] -> pure $ set_opsize64 $ set_oc_reg primary 0x50 r
+
+      -- dead code because of the smaller forms above
+      -- [R16 r] -> pure $ set_opsize16 $ set_rm_ext_reg 0x6 r $ primary 0xFF
+      -- [R32 r] -> pure $ set_opsize32 $ set_rm_ext_reg 0x6 r $ primary 0xFF
+      -- [R64 r] -> pure $ set_opsize64 $ set_rm_ext_reg 0x6 r $ primary 0xFF
+
+      [M16 m] -> pure $ set_opsize16 $ set_rm_ext_mem 0x6 m $ primary 0xFF
+      [M32 m] -> pure $ set_opsize32 $ set_rm_ext_mem 0x6 m $ primary 0xFF
+      [M64 m] -> pure $ set_opsize64 $ set_rm_ext_mem 0x6 m $ primary 0xFF
+      [I8 i]  -> pure $                set_imm8 i           $ primary 0x6A
+      [I16 i] -> pure $ set_opsize16 $ set_imm16 i          $ primary 0x68
+      [I32 i] -> pure $ set_opsize32 $ set_imm32 i          $ primary 0x68
+      [OpSeg CS] | not mode64 -> pure $ primary 0x0E
+      [OpSeg SS] | not mode64 -> pure $ primary 0x16
+      [OpSeg DS] | not mode64 -> pure $ primary 0x1E
+      [OpSeg ES] | not mode64 -> pure $ primary 0x06
+      [OpSeg FS]              -> pure $ map_0F 0xA0
+      [OpSeg GS]              -> pure $ map_0F 0xA8
+      _ -> Nothing
+
 
     Jcc cc -> case args of
       [I8  i] -> pure $ set_imm8 i $ primary (0x70 + condCode cc)
