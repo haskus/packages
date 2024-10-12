@@ -125,13 +125,13 @@ data Operation
   -- XOR
 
   -- Control-flow
+  | JMP       -- ^ Unconditional jump
   | Jcc !Cond -- ^ Conditional jump
   -- CALL
   -- ENTER
   -- INT
   -- INTO
   -- JCXZ, jECXZ, JRCXZ
-  -- JMP
   -- LEAVE
   -- LOOP
   -- RET
