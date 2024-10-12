@@ -45,6 +45,8 @@ data Operation
   | MOV        -- ^ Move
   | LEA        -- ^ Load effective address: DEST := EA(SRC)
   | CMOV !Cond -- ^ Conditional move
+  | MOVSX      -- ^ Move with sign-extension (use this for MOVSXD too)
+  | MOVZX      -- ^ Move with zero-extension
   -- IN
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
@@ -53,9 +55,6 @@ data Operation
   -- MOVD
   -- MOVNTI
   -- MOVSB, MOVSW, MOVSD, MOVSQ
-  -- MOVSX
-  -- MOVSXD
-  -- MOVZX
   -- OUT
   -- OUTSB, OUTSW, OUTSD
   -- POP

@@ -502,6 +502,41 @@ encodeInsn !ctx !op !args = do
       -- TODO: mov moffs, acc
       ]
 
+    MOVSX -> case args of
+      [R16 d, R8 s]  -> pure $ set_opsize16 $ set_rm_reg_reg d s $ map_0F 0xBE
+      [R32 d, R8 s]  -> pure $ set_opsize32 $ set_rm_reg_reg d s $ map_0F 0xBE
+      [R64 d, R8 s]  -> pure $ set_opsize64 $ set_rm_reg_reg d s $ map_0F 0xBE
+      [R32 d, R16 s] -> pure $                set_rm_reg_reg d s $ map_0F 0xBF
+      [R64 d, R16 s] -> pure $ set_opsize64 $ set_rm_reg_reg d s $ map_0F 0xBF
+      [R64 d, R32 s] -> pure $ set_opsize64 $ set_rm_reg_reg d s $ primary 0x63
+      [R16 d, M8 s]  -> pure $ set_opsize16 $ set_rm_reg_mem d s $ map_0F 0xBE
+      [R32 d, M8 s]  -> pure $ set_opsize32 $ set_rm_reg_mem d s $ map_0F 0xBE
+      [R64 d, M8 s]  -> pure $ set_opsize64 $ set_rm_reg_mem d s $ map_0F 0xBE
+      [R32 d, M16 s] -> pure $                set_rm_reg_mem d s $ map_0F 0xBF
+      [R64 d, M16 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ map_0F 0xBF
+      [R64 d, M32 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ primary 0x63
+      -- discouraged (use normal MOV instead) but still supported
+      [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg d s $ primary 0x63
+      [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg d s $ primary 0x63
+      [R16 d, M16 s] -> pure $ set_opsize16 $ set_rm_reg_mem d s $ primary 0x63
+      [R32 d, M32 s] -> pure $ set_opsize32 $ set_rm_reg_mem d s $ primary 0x63
+      _ -> Nothing
+
+    MOVZX -> case args of
+      [R16 d, R8 s]  -> pure $ set_opsize16 $ set_rm_reg_reg d s $ map_0F 0xB6
+      [R32 d, R8 s]  -> pure $ set_opsize32 $ set_rm_reg_reg d s $ map_0F 0xB6
+      [R64 d, R8 s]  -> pure $ set_opsize64 $ set_rm_reg_reg d s $ map_0F 0xB6
+      [R32 d, R16 s] -> pure $                set_rm_reg_reg d s $ map_0F 0xB7
+      [R64 d, R16 s] -> pure $ set_opsize64 $ set_rm_reg_reg d s $ map_0F 0xB7
+      [R16 d, M8 s]  -> pure $ set_opsize16 $ set_rm_reg_mem d s $ map_0F 0xB6
+      [R32 d, M8 s]  -> pure $ set_opsize32 $ set_rm_reg_mem d s $ map_0F 0xB6
+      [R64 d, M8 s]  -> pure $ set_opsize64 $ set_rm_reg_mem d s $ map_0F 0xB6
+      [R32 d, M16 s] -> pure $                set_rm_reg_mem d s $ map_0F 0xB7
+      [R64 d, M16 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ map_0F 0xB7
+      -- [R64 d, R32 s] -- not supported: a simple MOV does the same thing
+      -- [R64 d, M32 s] -- not supported: a simple MOV does the same thing
+      _ -> Nothing
+
     CMOV cc -> do
       let oc = map_0F (0x40 + condCode cc)
       case args of
