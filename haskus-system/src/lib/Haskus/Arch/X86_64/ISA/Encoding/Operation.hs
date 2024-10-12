@@ -130,6 +130,7 @@ data Operation
   | INT1      -- ^ Generate debug trap
   | INT3      -- ^ Generate breakpoint trap
   | INT       -- ^ Generate software interruption
+  | SYSCALL   -- ^ Syscall
   -- CALL
   -- ENTER
   -- JCXZ, jECXZ, JRCXZ
