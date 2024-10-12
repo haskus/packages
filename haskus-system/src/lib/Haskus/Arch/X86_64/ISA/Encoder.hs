@@ -662,6 +662,16 @@ encodeInsn !ctx !op !args = do
       -- TODO: other forms: ptr k:n, m k:n
       _       -> Nothing
 
+    INTO -> do
+      assert_not_mode64
+      assert_no_args
+      pure (primary 0xCE)
+    INT1 -> assert_no_args >> pure (primary 0xF1)
+    INT3 -> assert_no_args >> pure (primary 0xCC)
+    INT  -> do
+      i <- imm8_arg
+      pure $ set_imm8 i $ primary 0xCD
+
 
     ADCX -> do
       has_extension Ext.ADX
