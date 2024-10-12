@@ -144,15 +144,17 @@ data Operation
   -- LOOP
 
   -- Flags
-  -- CLC
-  -- CLD
-  -- CMC
+  | CLC     -- ^ Clear carry flag
+  | STC     -- ^ Set carry flag
+  | CLI     -- ^ Clear interrupt flag
+  | STI     -- ^ Set interrupt flag
+  | CLD     -- ^ Clear direction flag
+  | STD     -- ^ Set direction flag
+  | CMC     -- ^ Complement carry flag
   -- LAHF
   -- POPF, POPFD, POPFQ
   -- PUSHF, PUSHFD, PUSHFQ
   -- SAHF
-  -- STC
-  -- STD
 
   -- Cache management and memory barriers
   -- CLFLUSH
