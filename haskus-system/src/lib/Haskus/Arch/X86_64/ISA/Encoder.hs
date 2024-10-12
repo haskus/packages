@@ -726,6 +726,22 @@ encodeInsn !ctx !op !args = do
     LAHF -> assert_no_args >> pure (primary 0x9F)
     SAHF -> assert_no_args >> pure (primary 0x9E)
 
+    POPF sz -> do
+      assert_no_args
+      case sz of
+        OpSize8  -> Nothing
+        OpSize16 -> pure $ set_opsize16 $ primary 0x9D
+        OpSize32 -> pure $ set_opsize32 $ primary 0x9D
+        OpSize64 -> pure $ set_opsize64 $ primary 0x9D
+
+    PUSHF sz -> do
+      assert_no_args
+      case sz of
+        OpSize8  -> Nothing
+        OpSize16 -> pure $ set_opsize16 $ primary 0x9C
+        OpSize32 -> pure $ set_opsize32 $ primary 0x9C
+        OpSize64 -> pure $ set_opsize64 $ primary 0x9C
+
     ADCX -> do
       has_extension Ext.ADX
       case args of

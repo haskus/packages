@@ -6,6 +6,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Operation
 where
 
 import Haskus.Binary.Word
+import Haskus.Arch.X86_64.ISA.Size
 
 data Operation
   ---------------------------------------
@@ -153,8 +154,9 @@ data Operation
   | CMC     -- ^ Complement carry flag
   | LAHF    -- ^ Load status flags into AH
   | SAHF    -- ^ Store AH into flags
-  -- POPF, POPFD, POPFQ
-  -- PUSHF, PUSHFD, PUSHFQ
+
+  | POPF  !OperandSize -- ^ Pop stack into FLAGS register
+  | PUSHF !OperandSize -- ^ Push FLAGS register onto the stack
 
   -- Cache management and memory barriers
   -- CLFLUSH
