@@ -170,8 +170,8 @@ data Operation
   -- PREFETCH, PREFETCHW, PREFETCHn
 
   -- Misc instructions
+  | CPUID     -- ^ CPU identification
   -- BOUND
-  -- CPUID
   -- CRC32
   -- LLWPCB
   -- LWPINS

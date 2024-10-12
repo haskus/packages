@@ -742,6 +742,8 @@ encodeInsn !ctx !op !args = do
         OpSize32 -> pure $ set_opsize32 $ primary 0x9C
         OpSize64 -> pure $ set_opsize64 $ primary 0x9C
 
+    CPUID -> assert_no_args >> pure (map_0F 0xA2)
+
     ADCX -> do
       has_extension Ext.ADX
       case args of
