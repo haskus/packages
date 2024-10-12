@@ -151,10 +151,10 @@ data Operation
   | CLD     -- ^ Clear direction flag
   | STD     -- ^ Set direction flag
   | CMC     -- ^ Complement carry flag
-  -- LAHF
+  | LAHF    -- ^ Load status flags into AH
+  | SAHF    -- ^ Store AH into flags
   -- POPF, POPFD, POPFQ
   -- PUSHF, PUSHFD, PUSHFQ
-  -- SAHF
 
   -- Cache management and memory barriers
   -- CLFLUSH

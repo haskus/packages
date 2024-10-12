@@ -723,6 +723,9 @@ encodeInsn !ctx !op !args = do
     CLD -> assert_no_args >> pure (primary 0xFC)
     STD -> assert_no_args >> pure (primary 0xFD)
 
+    LAHF -> assert_no_args >> pure (primary 0x9F)
+    SAHF -> assert_no_args >> pure (primary 0x9E)
+
     ADCX -> do
       has_extension Ext.ADX
       case args of
