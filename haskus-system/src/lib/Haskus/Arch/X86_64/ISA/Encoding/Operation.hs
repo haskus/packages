@@ -70,7 +70,7 @@ data Operation
 
   -- Comparisons
   | TEST        -- ^ Logical compare
-  -- CMP
+  | CMP         -- ^ Compare
   -- CMPSB, CMPSW, CMPSD, CMPSQ
   -- CMPXCHG
   -- CMPXCHG8B
