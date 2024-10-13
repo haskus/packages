@@ -82,6 +82,9 @@ data Operation
   | OR      -- ^ Bitwise OR
   | XOR     -- ^ Bitwise XOR
   | NOT     -- ^ One's complement negation
+  | SHL     -- ^ Shift left
+  | SHR     -- ^ Shift right
+  | SAR     -- ^ Shift arithmetic right
   -- ANDN
   -- BEXTR
   -- BLCFILL
@@ -111,13 +114,9 @@ data Operation
   -- ROL
   -- ROR
   -- RORX
-  -- SAL
-  -- SHL
-  -- SAR
   -- SARX
   -- SHLD
   -- SHLX
-  -- SHR
   -- SHRD
   -- SHRX
   -- T1MSKC
