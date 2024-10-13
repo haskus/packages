@@ -424,6 +424,11 @@ encodeInsn !ctx !op !args = do
       [M64 rm, R64 r] -> pure $ set_opsize64 $ set_rm_reg_mem r rm $ map_0F 0xB1
       _ -> Nothing
 
+    CMPXCHGB -> case args of
+      [M64  m] -> pure $                set_rm_ext_mem 0x1 m $ map_0F 0xC7
+      [M128 m] -> pure $ set_opsize64 $ set_rm_ext_mem 0x1 m $ map_0F 0xC7
+      _ -> Nothing
+
     AND -> alts
       [ handle_acc_imm  primary 0x24
       , handle_rm_imm   primary 0x80 0x4
