@@ -85,6 +85,10 @@ data Operation
   | SHL     -- ^ Shift left
   | SHR     -- ^ Shift right
   | SAR     -- ^ Shift arithmetic right
+  | ROL     -- ^ Rotate left
+  | ROR     -- ^ Rotate right
+  | RCL     -- ^ Rotate through carry left
+  | RCR     -- ^ Rotate through carry right
   -- ANDN
   -- BEXTR
   -- BLCFILL
@@ -109,10 +113,6 @@ data Operation
   -- PDEP
   -- PEXT
   -- POPCNT
-  -- RCL
-  -- RCR
-  -- ROL
-  -- ROR
   -- RORX
   -- SARX
   -- SHLD
