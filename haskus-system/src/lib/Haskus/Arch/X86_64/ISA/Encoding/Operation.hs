@@ -71,8 +71,8 @@ data Operation
   -- Comparisons
   | TEST        -- ^ Logical compare
   | CMP         -- ^ Compare
+  | CMPXCHG     -- ^ Compare and exchange
   -- CMPSB, CMPSW, CMPSD, CMPSQ
-  -- CMPXCHG
   -- CMPXCHG8B
   -- CMPXCHG16B
   -- SCASB, SCASW, SCASD, SCASQ
