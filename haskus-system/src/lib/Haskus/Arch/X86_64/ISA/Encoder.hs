@@ -688,6 +688,13 @@ encodeInsn !ctx !op !args = do
       [M64 m, R8 R_CL] -> pure $ set_opsize64 $ set_rm_ext_mem 0x3 m $ primary 0xD3
       _ -> Nothing
 
+    BSWAP -> do
+      -- TODO: not allowed before 486
+      case args of
+        [R32 r] -> pure $ set_opsize32 $ set_oc_reg map_0F 0xC8 r
+        [R64 r] -> pure $ set_opsize64 $ set_oc_reg map_0F 0xC8 r
+        _       -> Nothing
+
     SUB -> alts
       [ handle_acc_imm  primary 0x2C
       , handle_rm_imm   primary 0x80 0x5

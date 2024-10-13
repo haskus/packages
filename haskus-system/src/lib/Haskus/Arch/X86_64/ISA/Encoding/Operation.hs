@@ -89,6 +89,7 @@ data Operation
   | ROR     -- ^ Rotate right
   | RCL     -- ^ Rotate through carry left
   | RCR     -- ^ Rotate through carry right
+  | BSWAP   -- ^ Byte swap
   -- ANDN
   -- BEXTR
   -- BLCFILL
@@ -103,7 +104,6 @@ data Operation
   -- BLSR
   -- BSF
   -- BSR
-  -- BSWAP
   -- BT
   -- BTC
   -- BTR
