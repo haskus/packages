@@ -155,13 +155,13 @@ encodeInsn !ctx !op !args = do
       -- several instructions have special encodings for the rAX, immN cases
       -- (ADD, ADC, etc.). We handle them here.
       handle_acc_imm mk_oc oc = case args of
-        [OpReg R_AL,  I8  i] -> do
+        [R8 R_AL,  I8  i] -> do
           pure $ set_imm8 i $ mk_oc oc
-        [OpReg R_AX,  I16 i] -> do
+        [R16 R_AX,  I16 i] -> do
           pure $ set_opsize16 $ set_imm16 i $ mk_oc (oc+1)
-        [OpReg R_EAX, I32 i] -> do
+        [R32 R_EAX, I32 i] -> do
           pure $ set_opsize32 $ set_imm32 i $ mk_oc (oc+1)
-        [OpReg R_RAX, I32 i] -> do
+        [R64 R_RAX, I32 i] -> do
           assert_mode64
           pure $ set_opsize64 $ set_imm32 i $ mk_oc (oc+1)
         _ -> Nothing
@@ -398,6 +398,29 @@ encodeInsn !ctx !op !args = do
       , handle_rm_reg   primary 0x00
       , handle_reg_rm   primary 0x02
       ]
+
+    TEST -> case args of
+      [R8 R_AL,   I8  i] -> pure $                set_imm8  i $ primary 0xA8
+      [R16 R_AX,  I16 i] -> pure $ set_opsize16 $ set_imm16 i $ primary 0xA9
+      [R32 R_EAX, I32 i] -> pure $ set_opsize32 $ set_imm32 i $ primary 0xA9
+      [R64 R_RAX, I32 i] -> pure $ set_opsize64 $ set_imm32 i $ primary 0xA9
+      [R8  r,     I8  i] -> pure $                set_rm_ext_reg 0x0 r $ set_imm8  i $ primary 0xF6
+      [R16 r,     I16 i] -> pure $ set_opsize16 $ set_rm_ext_reg 0x0 r $ set_imm16 i $ primary 0xF7
+      [R32 r,     I32 i] -> pure $ set_opsize32 $ set_rm_ext_reg 0x0 r $ set_imm32 i $ primary 0xF7
+      [R64 r,     I32 i] -> pure $ set_opsize64 $ set_rm_ext_reg 0x0 r $ set_imm32 i $ primary 0xF7
+      [M8  m,     I8  i] -> pure $                set_rm_ext_mem 0x0 m $ set_imm8  i $ primary 0xF6
+      [M16 m,     I16 i] -> pure $ set_opsize16 $ set_rm_ext_mem 0x0 m $ set_imm16 i $ primary 0xF7
+      [M32 m,     I32 i] -> pure $ set_opsize32 $ set_rm_ext_mem 0x0 m $ set_imm32 i $ primary 0xF7
+      [M64 m,     I32 i] -> pure $ set_opsize64 $ set_rm_ext_mem 0x0 m $ set_imm32 i $ primary 0xF7
+      [R8  rm, R8  r]    -> pure $                set_rm_reg_reg r rm  $ primary 0x84
+      [R16 rm, R16 r]    -> pure $ set_opsize16 $ set_rm_reg_reg r rm  $ primary 0x85
+      [R32 rm, R32 r]    -> pure $ set_opsize32 $ set_rm_reg_reg r rm  $ primary 0x85
+      [R64 rm, R64 r]    -> pure $ set_opsize64 $ set_rm_reg_reg r rm  $ primary 0x85
+      [M8  rm, R8  r]    -> pure $                set_rm_reg_mem r rm  $ primary 0x84
+      [M16 rm, R16 r]    -> pure $ set_opsize16 $ set_rm_reg_mem r rm  $ primary 0x85
+      [M32 rm, R32 r]    -> pure $ set_opsize32 $ set_rm_reg_mem r rm  $ primary 0x85
+      [M64 rm, R64 r]    -> pure $ set_opsize64 $ set_rm_reg_mem r rm  $ primary 0x85
+      _ -> Nothing
 
     AND -> alts
       [ handle_acc_imm  primary 0x24

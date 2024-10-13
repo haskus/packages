@@ -69,6 +69,7 @@ data Operation
   -- XLAT
 
   -- Comparisons
+  | TEST        -- ^ Logical compare
   -- CMP
   -- CMPSB, CMPSW, CMPSD, CMPSQ
   -- CMPXCHG
@@ -120,7 +121,6 @@ data Operation
   -- SHRD
   -- SHRX
   -- T1MSKC
-  -- TEST
   -- TZCNT
   -- TZMSK
 
