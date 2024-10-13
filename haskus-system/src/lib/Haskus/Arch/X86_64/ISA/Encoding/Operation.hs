@@ -53,6 +53,8 @@ data Operation
   | PUSH        -- ^ Push a value onto the stack
   | POP         -- ^ Pop a value from the stack
   | SETcc !Cond -- ^ Set byte on condition
+  | XCHG
+  | XADD
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
   -- LODSB, LODSW, LODSD, LODSQ
@@ -64,8 +66,6 @@ data Operation
   -- POPA, POPAD
   -- PUSHA, PUSHAD
   -- STOSB, STOSW, STOSD, STOSQ
-  -- XADD
-  -- XCHG
   -- XLAT
 
   -- Comparisons

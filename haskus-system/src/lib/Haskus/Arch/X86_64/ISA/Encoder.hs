@@ -819,6 +819,38 @@ encodeInsn !ctx !op !args = do
       [M8 m] -> pure $ set_rm_ext_mem 0x0 m $ map_0F (0x90 + condCode cc)
       _      -> Nothing
 
+    XCHG -> case args of
+      [R16 R_AX,  R16 r]     -> pure $ set_opsize16 $ set_oc_reg primary 0x90 r
+      [R16 r,     R16 R_AX]  -> pure $ set_opsize16 $ set_oc_reg primary 0x90 r
+      [R32 R_EAX, R32 r]     -> pure $ set_opsize32 $ set_oc_reg primary 0x90 r
+      [R32 r,     R32 R_EAX] -> pure $ set_opsize32 $ set_oc_reg primary 0x90 r
+      [R64 R_RAX, R64 r]     -> pure $ set_opsize64 $ set_oc_reg primary 0x90 r
+      [R64 r,     R64 R_RAX] -> pure $ set_opsize64 $ set_oc_reg primary 0x90 r
+      [R8 r1,     R8 r2]     -> pure $ set_rm_reg_reg r1 r2 $ primary 0x86
+      [M8 m,      R8 r]      -> pure $ set_rm_reg_mem r m   $ primary 0x86
+      [R8 r,      M8 m]      -> pure $ set_rm_reg_mem r m   $ primary 0x86
+      [R16 r1,    R16 r2]    -> pure $ set_opsize16 $ set_rm_reg_reg r1 r2 $ primary 0x87
+      [M16 m,     R16 r]     -> pure $ set_opsize16 $ set_rm_reg_mem r m   $ primary 0x87
+      [R16 r,     M16 m]     -> pure $ set_opsize16 $ set_rm_reg_mem r m   $ primary 0x87
+      [R32 r1,    R32 r2]    -> pure $ set_opsize32 $ set_rm_reg_reg r1 r2 $ primary 0x87
+      [M32 m,     R32 r]     -> pure $ set_opsize32 $ set_rm_reg_mem r m   $ primary 0x87
+      [R32 r,     M32 m]     -> pure $ set_opsize32 $ set_rm_reg_mem r m   $ primary 0x87
+      [R64 r1,    R64 r2]    -> pure $ set_opsize64 $ set_rm_reg_reg r1 r2 $ primary 0x87
+      [M64 m,     R64 r]     -> pure $ set_opsize64 $ set_rm_reg_mem r m   $ primary 0x87
+      [R64 r,     M64 m]     -> pure $ set_opsize64 $ set_rm_reg_mem r m   $ primary 0x87
+      _ -> Nothing
+
+    XADD -> case args of
+      [R8 d,  R8 s] -> pure $ set_rm_reg_reg s d $ map_0F 0xC0
+      [M8 d,  R8 s] -> pure $ set_rm_reg_mem s d $ map_0F 0xC0
+      [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg s d $ map_0F 0xC1
+      [M16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_mem s d $ map_0F 0xC1
+      [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg s d $ map_0F 0xC1
+      [M32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_mem s d $ map_0F 0xC1
+      [R64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_reg s d $ map_0F 0xC1
+      [M64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_mem s d $ map_0F 0xC1
+      _ -> Nothing
+
     LEA -> case args of
       -- we don't care about the size of the targetted memory...
       [R16 r, OpMem m] -> do
