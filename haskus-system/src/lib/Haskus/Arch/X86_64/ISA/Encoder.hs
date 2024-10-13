@@ -413,6 +413,17 @@ encodeInsn !ctx !op !args = do
       , handle_reg_rm   primary 0x3A
       ]
 
+    CMPXCHG -> case args of
+      [R8  rm, R8  r] -> pure $ set_rm_reg_reg r rm $ map_0F 0xB0
+      [M8  rm, R8  r] -> pure $ set_rm_reg_mem r rm $ map_0F 0xB0
+      [R16 rm, R16 r] -> pure $ set_opsize16 $ set_rm_reg_reg r rm $ map_0F 0xB1
+      [M16 rm, R16 r] -> pure $ set_opsize16 $ set_rm_reg_mem r rm $ map_0F 0xB1
+      [R32 rm, R32 r] -> pure $ set_opsize32 $ set_rm_reg_reg r rm $ map_0F 0xB1
+      [M32 rm, R32 r] -> pure $ set_opsize32 $ set_rm_reg_mem r rm $ map_0F 0xB1
+      [R64 rm, R64 r] -> pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_0F 0xB1
+      [M64 rm, R64 r] -> pure $ set_opsize64 $ set_rm_reg_mem r rm $ map_0F 0xB1
+      _ -> Nothing
+
     AND -> alts
       [ handle_acc_imm  primary 0x24
       , handle_rm_imm   primary 0x80 0x4
