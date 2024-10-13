@@ -944,6 +944,21 @@ encodeInsn !ctx !op !args = do
       [OpSeg GS]              -> pure $ map_0F 0xA9
       _ -> Nothing
 
+    POPA sz -> do
+      assert_not_mode64
+      assert_no_args
+      case sz of
+        OpSize16 -> pure $ set_opsize16 $ primary 0x61
+        OpSize32 -> pure $ set_opsize32 $ primary 0x61
+        _        -> Nothing
+
+    PUSHA sz -> do
+      assert_not_mode64
+      assert_no_args
+      case sz of
+        OpSize16 -> pure $ set_opsize16 $ primary 0x60
+        OpSize32 -> pure $ set_opsize32 $ primary 0x60
+        _        -> Nothing
 
     Jcc cc -> case args of
       [I8  i] -> pure $ set_imm8 i $ primary (0x70 + condCode cc)

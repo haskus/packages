@@ -43,18 +43,21 @@ data Operation
   | SXAD    -- ^ Sign-extend rAX: rDX:rAX := SX(rAX)
 
   -- Moves
-  | MOV         -- ^ Move
-  | LEA         -- ^ Load effective address: DEST := EA(SRC)
-  | CMOV !Cond  -- ^ Conditional move
-  | MOVSX       -- ^ Move with sign-extension (use this for MOVSXD too)
-  | MOVZX       -- ^ Move with zero-extension
-  | IN          -- ^ Input from port
-  | OUT         -- ^ Output to port
-  | PUSH        -- ^ Push a value onto the stack
-  | POP         -- ^ Pop a value from the stack
-  | SETcc !Cond -- ^ Set byte on condition
-  | XCHG
-  | XADD
+  | MOV           -- ^ Move
+  | LEA           -- ^ Load effective address: DEST := EA(SRC)
+  | CMOV !Cond    -- ^ Conditional move
+  | MOVSX         -- ^ Move with sign-extension (use this for MOVSXD too)
+  | MOVZX         -- ^ Move with zero-extension
+  | IN            -- ^ Input from port
+  | OUT           -- ^ Output to port
+  | PUSH          -- ^ Push a value onto the stack
+  | POP           -- ^ Pop a value from the stack
+  | SETcc !Cond   -- ^ Set byte on condition
+  | XCHG          -- ^ Exchange values
+  | XADD          -- ^ Exchange and add
+
+  | POPA  !OperandSize -- ^ Pop all general purpose registers
+  | PUSHA !OperandSize -- ^ Push all general purpose registers
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
   -- LODSB, LODSW, LODSD, LODSQ
@@ -63,8 +66,6 @@ data Operation
   -- MOVNTI
   -- MOVSB, MOVSW, MOVSD, MOVSQ
   -- OUTSB, OUTSW, OUTSD
-  -- POPA, POPAD
-  -- PUSHA, PUSHAD
   -- STOSB, STOSW, STOSD, STOSQ
   -- XLAT
 
