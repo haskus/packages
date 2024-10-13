@@ -72,9 +72,8 @@ data Operation
   | TEST        -- ^ Logical compare
   | CMP         -- ^ Compare
   | CMPXCHG     -- ^ Compare and exchange
+  | CMPXCHGB    -- ^ Compare and exchange bytes
   -- CMPSB, CMPSW, CMPSD, CMPSQ
-  -- CMPXCHG8B
-  -- CMPXCHG16B
   -- SCASB, SCASW, SCASD, SCASQ
 
   -- Binary
