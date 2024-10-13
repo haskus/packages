@@ -43,15 +43,16 @@ data Operation
   | SXAD    -- ^ Sign-extend rAX: rDX:rAX := SX(rAX)
 
   -- Moves
-  | MOV        -- ^ Move
-  | LEA        -- ^ Load effective address: DEST := EA(SRC)
-  | CMOV !Cond -- ^ Conditional move
-  | MOVSX      -- ^ Move with sign-extension (use this for MOVSXD too)
-  | MOVZX      -- ^ Move with zero-extension
-  | IN         -- ^ Input from port
-  | OUT        -- ^ Output to port
-  | PUSH       -- ^ Push a value onto the stack
-  | POP        -- ^ Pop a value from the stack
+  | MOV         -- ^ Move
+  | LEA         -- ^ Load effective address: DEST := EA(SRC)
+  | CMOV !Cond  -- ^ Conditional move
+  | MOVSX       -- ^ Move with sign-extension (use this for MOVSXD too)
+  | MOVZX       -- ^ Move with zero-extension
+  | IN          -- ^ Input from port
+  | OUT         -- ^ Output to port
+  | PUSH        -- ^ Push a value onto the stack
+  | POP         -- ^ Pop a value from the stack
+  | SETcc !Cond -- ^ Set byte on condition
   -- INS, INSB, INSW, INSD
   -- LDS, LES, LFS, LGS, LSS
   -- LODSB, LODSW, LODSD, LODSQ
@@ -62,7 +63,6 @@ data Operation
   -- OUTSB, OUTSW, OUTSD
   -- POPA, POPAD
   -- PUSHA, PUSHAD
-  -- SETcc
   -- STOSB, STOSW, STOSD, STOSQ
   -- XADD
   -- XCHG

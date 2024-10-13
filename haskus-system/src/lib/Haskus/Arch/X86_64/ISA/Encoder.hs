@@ -590,6 +590,11 @@ encodeInsn !ctx !op !args = do
         [R64 d, M64 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s oc
         _              -> Nothing
 
+    SETcc cc -> case args of
+      [R8 r] -> pure $ set_rm_ext_reg 0x0 r $ map_0F (0x90 + condCode cc)
+      [M8 m] -> pure $ set_rm_ext_mem 0x0 m $ map_0F (0x90 + condCode cc)
+      _      -> Nothing
+
     LEA -> case args of
       -- we don't care about the size of the targetted memory...
       [R16 r, OpMem m] -> do
