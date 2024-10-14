@@ -91,6 +91,10 @@ data Operation
   | RCL     -- ^ Rotate through carry left
   | RCR     -- ^ Rotate through carry right
   | BSWAP   -- ^ Byte swap
+  | POPCNT  -- ^ Count number of bits set to 1
+  | LZCNT   -- ^ Count the number of leading zero bits
+  | BSR     -- ^ Bit scan reverse (search first msb set to 1)
+  | BSF     -- ^ Bit scan forward (search first lsb set to 1)
   -- ANDN
   -- BEXTR
   -- BLCFILL
@@ -104,16 +108,13 @@ data Operation
   -- BLSMSK
   -- BLSR
   -- BSF
-  -- BSR
   -- BT
   -- BTC
   -- BTR
   -- BTS
   -- BZHI
-  -- LZCNT
   -- PDEP
   -- PEXT
-  -- POPCNT
   -- RORX
   -- SARX
   -- SHLD
