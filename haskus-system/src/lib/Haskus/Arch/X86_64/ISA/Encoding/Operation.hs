@@ -59,6 +59,8 @@ data Operation
   | OUT                             -- ^ Output to port
   | INS   !OperandSize !AddressSize -- ^ Input from port to string
   | OUTS  !OperandSize !AddressSize -- ^ Output string to port
+  | MOVS  !OperandSize !AddressSize -- ^ Move data from string to string (DS:rSI to ES:rDI)
+  | STOS  !OperandSize !AddressSize -- ^ Store string (acc to rDI)
 
   | POPA  !OperandSize -- ^ Pop all general purpose registers
   | PUSHA !OperandSize -- ^ Push all general purpose registers
@@ -66,8 +68,6 @@ data Operation
   -- LODSB, LODSW, LODSD, LODSQ
   -- MOVD
   -- MOVNTI
-  -- MOVSB, MOVSW, MOVSD, MOVSQ
-  -- STOSB, STOSW, STOSD, STOSQ
   -- XLAT
 
   -- Comparisons

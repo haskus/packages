@@ -935,6 +935,24 @@ encodeInsn !ctx !op !args = do
         _        -> Nothing
       set_addrsize asz e
 
+    MOVS osz asz -> do
+      assert_no_args
+      e <- case osz of
+        OpSize8  -> pure $ primary 0xA4
+        OpSize16 -> pure $ set_opsize16 $ primary 0xA5
+        OpSize32 -> pure $ set_opsize32 $ primary 0xA5
+        OpSize64 -> pure $ set_opsize64 $ primary 0xA5
+      set_addrsize asz e
+
+    STOS osz asz -> do
+      assert_no_args
+      e <- case osz of
+        OpSize8  -> pure $ primary 0xAA
+        OpSize16 -> pure $ set_opsize16 $ primary 0xAB
+        OpSize32 -> pure $ set_opsize32 $ primary 0xAB
+        OpSize64 -> pure $ set_opsize64 $ primary 0xAB
+      set_addrsize asz e
+
     PUSH -> case args of
       -- smaller forms for registers
       [R16 r] -> pure $ set_opsize16 $ set_oc_reg primary 0x50 r
