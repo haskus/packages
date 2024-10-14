@@ -190,6 +190,10 @@ data Operation
   ---------------------------------------
   | STR         -- ^ Store task register
   | LTR         -- ^ Load task register
+  | SGDT        -- ^ Store global descriptor table register
+  | LGDT        -- ^ Load global descriptor table register
+  | SIDT        -- ^ Store interrupt descriptor table register
+  | LIDT        -- ^ Load interrupt descriptor table register
   -- RDFSBASE
   -- RDGSBASE
   -- WRFSBASE
