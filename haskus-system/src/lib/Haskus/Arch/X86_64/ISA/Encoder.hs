@@ -1184,6 +1184,25 @@ encodeInsn !ctx !op !args = do
       assert_no_args
       pure (map_0F 0x05)
 
+    SYSRET comp_mode -> do
+      assert_mode64
+      assert_no_args
+      -- do we switch to 32-bit compatibility mode?
+      pure $ if comp_mode
+        then                map_0F 0x07
+        else set_opsize64 $ map_0F 0x07
+
+    SYSENTER -> do
+      assert_no_args
+      pure (map_0F 0x34)
+
+    SYSEXIT comp_mode -> do
+      assert_no_args
+      -- do we switch to 32-bit compatibility mode?
+      pure $ if comp_mode
+        then                map_0F 0x35
+        else set_opsize64 $ map_0F 0x35
+
     RET -> case args of
       []      -> pure $ primary 0xC3
       [I16 i] -> pure $ set_imm16 i $ primary 0xC2
