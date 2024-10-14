@@ -1005,6 +1005,13 @@ encodeInsn !ctx !op !args = do
       [M64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_mem s d $ map_0F 0xC1
       _ -> Nothing
 
+    MOVNTI -> do
+      has_extension Ext.SSE2
+      case args of
+        [M32 m, R32 r] -> pure $                set_rm_reg_mem r m $ map_0F 0xC3
+        [M64 m, R64 r] -> pure $ set_opsize64 $ set_rm_reg_mem r m $ map_0F 0xC3
+        _ -> Nothing
+
     LEA -> case args of
       -- we don't care about the size of the targetted memory...
       [R16 r, OpMem m] -> do

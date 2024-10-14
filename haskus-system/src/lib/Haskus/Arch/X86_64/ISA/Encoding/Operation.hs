@@ -54,6 +54,7 @@ data Operation
   | SETcc !Cond   -- ^ Set byte on condition
   | XCHG          -- ^ Exchange values
   | XADD          -- ^ Exchange and add
+  | MOVNTI        -- ^ Move using non-temporal hint
 
   | IN                              -- ^ Input from port
   | OUT                             -- ^ Output to port
@@ -72,7 +73,6 @@ data Operation
   | LGS   -- ^ Load GS:r with far pointer from memory
   | LSS   -- ^ Load SS:r with far pointer from memory
   -- MOVD
-  -- MOVNTI
   -- XLAT
 
   -- Comparisons
