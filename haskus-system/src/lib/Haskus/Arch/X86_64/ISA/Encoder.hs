@@ -1142,6 +1142,24 @@ encodeInsn !ctx !op !args = do
       [I32 i] -> pure $ set_opsize32 $ set_imm32 i $ map_0F (0x80 + condCode cc)
       _       -> Nothing
 
+    LOOP -> case args of
+      [R16 R_CX,  I8 i] -> set_addrsize AddrSize16 $ set_imm8 i $ primary 0xE2
+      [R32 R_ECX, I8 i] -> set_addrsize AddrSize32 $ set_imm8 i $ primary 0xE2
+      [R64 R_RCX, I8 i] -> set_addrsize AddrSize64 $ set_imm8 i $ primary 0xE2
+      _ -> Nothing
+
+    LOOPE -> case args of
+      [R16 R_CX,  I8 i] -> set_addrsize AddrSize16 $ set_imm8 i $ primary 0xE1
+      [R32 R_ECX, I8 i] -> set_addrsize AddrSize32 $ set_imm8 i $ primary 0xE1
+      [R64 R_RCX, I8 i] -> set_addrsize AddrSize64 $ set_imm8 i $ primary 0xE1
+      _ -> Nothing
+
+    LOOPNE -> case args of
+      [R16 R_CX,  I8 i] -> set_addrsize AddrSize16 $ set_imm8 i $ primary 0xE0
+      [R32 R_ECX, I8 i] -> set_addrsize AddrSize32 $ set_imm8 i $ primary 0xE0
+      [R64 R_RCX, I8 i] -> set_addrsize AddrSize64 $ set_imm8 i $ primary 0xE0
+      _ -> Nothing
+
     JMP -> case args of
       [I8  i] -> pure $ set_imm8 i $ primary 0xEB
       [I16 i]

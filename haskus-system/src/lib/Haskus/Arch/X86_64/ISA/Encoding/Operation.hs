@@ -127,6 +127,9 @@ data Operation
   -- Control-flow
   | JMP       -- ^ Unconditional jump
   | Jcc !Cond -- ^ Conditional jump
+  | LOOP      -- ^ Decrement given rCX register. Jump if /=0
+  | LOOPE     -- ^ Decrement given rCX register. Jump if /=0 and ZF=1
+  | LOOPNE    -- ^ Decrement given rCX register. Jump if /=0 and ZF=0
   | INTO      -- ^ Generate overflow trap if OF=1
   | INT1      -- ^ Generate debug trap
   | INT3      -- ^ Generate breakpoint trap
@@ -146,7 +149,6 @@ data Operation
   -- ENTER -- requires 2 immediates (imm16 then imm8, or imm24) :/
   -- LEAVE
   -- JCXZ, jECXZ, JRCXZ
-  -- LOOP
 
   -- Flags
   | CLC     -- ^ Clear carry flag
