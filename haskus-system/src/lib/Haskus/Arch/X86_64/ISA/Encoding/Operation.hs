@@ -95,6 +95,10 @@ data Operation
   | LZCNT   -- ^ Count the number of leading zero bits
   | BSR     -- ^ Bit scan reverse (search first msb set to 1)
   | BSF     -- ^ Bit scan forward (search first lsb set to 1)
+  | BT      -- ^ Bit test (result in CF)
+  | BTC     -- ^ Bit test and complement (result in CF)
+  | BTR     -- ^ Bit test and reset (result in CF)
+  | BTS     -- ^ Bit test and set (result in CF)
   -- ANDN
   -- BEXTR
   -- BLCFILL
@@ -107,11 +111,6 @@ data Operation
   -- BLSIC
   -- BLSMSK
   -- BLSR
-  -- BSF
-  -- BT
-  -- BTC
-  -- BTR
-  -- BTS
   -- BZHI
   -- PDEP
   -- PEXT

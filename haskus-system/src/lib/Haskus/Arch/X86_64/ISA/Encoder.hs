@@ -742,6 +742,70 @@ encodeInsn !ctx !op !args = do
         [R64 d, M64 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ map_0F 0xBC
         _ -> Nothing
 
+    BT -> do
+      case args of
+        [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg s d $ map_0F 0xA3
+        [M16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_mem s d $ map_0F 0xA3
+        [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg s d $ map_0F 0xA3
+        [M32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_mem s d $ map_0F 0xA3
+        [R64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_reg s d $ map_0F 0xA3
+        [M64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_mem s d $ map_0F 0xA3
+        [R16 d, I8 i]  -> pure $ set_opsize16 $ set_rm_ext_reg 0x4 d $ set_imm8 i $ map_0F 0xBA
+        [M16 d, I8 i]  -> pure $ set_opsize16 $ set_rm_ext_mem 0x4 d $ set_imm8 i $ map_0F 0xBA
+        [R32 d, I8 i]  -> pure $ set_opsize32 $ set_rm_ext_reg 0x4 d $ set_imm8 i $ map_0F 0xBA
+        [M32 d, I8 i]  -> pure $ set_opsize32 $ set_rm_ext_mem 0x4 d $ set_imm8 i $ map_0F 0xBA
+        [R64 d, I8 i]  -> pure $ set_opsize64 $ set_rm_ext_reg 0x4 d $ set_imm8 i $ map_0F 0xBA
+        [M64 d, I8 i]  -> pure $ set_opsize64 $ set_rm_ext_mem 0x4 d $ set_imm8 i $ map_0F 0xBA
+        _ -> Nothing
+
+    BTC -> do
+      case args of
+        [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg s d $ map_0F 0xBB
+        [M16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_mem s d $ map_0F 0xBB
+        [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg s d $ map_0F 0xBB
+        [M32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_mem s d $ map_0F 0xBB
+        [R64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_reg s d $ map_0F 0xBB
+        [M64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_mem s d $ map_0F 0xBB
+        [R16 d, I8 i]  -> pure $ set_opsize16 $ set_rm_ext_reg 0x7 d $ set_imm8 i $ map_0F 0xBA
+        [M16 d, I8 i]  -> pure $ set_opsize16 $ set_rm_ext_mem 0x7 d $ set_imm8 i $ map_0F 0xBA
+        [R32 d, I8 i]  -> pure $ set_opsize32 $ set_rm_ext_reg 0x7 d $ set_imm8 i $ map_0F 0xBA
+        [M32 d, I8 i]  -> pure $ set_opsize32 $ set_rm_ext_mem 0x7 d $ set_imm8 i $ map_0F 0xBA
+        [R64 d, I8 i]  -> pure $ set_opsize64 $ set_rm_ext_reg 0x7 d $ set_imm8 i $ map_0F 0xBA
+        [M64 d, I8 i]  -> pure $ set_opsize64 $ set_rm_ext_mem 0x7 d $ set_imm8 i $ map_0F 0xBA
+        _ -> Nothing
+
+    BTR -> do
+      case args of
+        [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg s d $ map_0F 0xB3
+        [M16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_mem s d $ map_0F 0xB3
+        [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg s d $ map_0F 0xB3
+        [M32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_mem s d $ map_0F 0xB3
+        [R64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_reg s d $ map_0F 0xB3
+        [M64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_mem s d $ map_0F 0xB3
+        [R16 d, I8 i]  -> pure $ set_opsize16 $ set_rm_ext_reg 0x6 d $ set_imm8 i $ map_0F 0xBA
+        [M16 d, I8 i]  -> pure $ set_opsize16 $ set_rm_ext_mem 0x6 d $ set_imm8 i $ map_0F 0xBA
+        [R32 d, I8 i]  -> pure $ set_opsize32 $ set_rm_ext_reg 0x6 d $ set_imm8 i $ map_0F 0xBA
+        [M32 d, I8 i]  -> pure $ set_opsize32 $ set_rm_ext_mem 0x6 d $ set_imm8 i $ map_0F 0xBA
+        [R64 d, I8 i]  -> pure $ set_opsize64 $ set_rm_ext_reg 0x6 d $ set_imm8 i $ map_0F 0xBA
+        [M64 d, I8 i]  -> pure $ set_opsize64 $ set_rm_ext_mem 0x6 d $ set_imm8 i $ map_0F 0xBA
+        _ -> Nothing
+
+    BTS -> do
+      case args of
+        [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg s d $ map_0F 0xAB
+        [M16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_mem s d $ map_0F 0xAB
+        [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg s d $ map_0F 0xAB
+        [M32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_mem s d $ map_0F 0xAB
+        [R64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_reg s d $ map_0F 0xAB
+        [M64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_mem s d $ map_0F 0xAB
+        [R16 d, I8 i]  -> pure $ set_opsize16 $ set_rm_ext_reg 0x5 d $ set_imm8 i $ map_0F 0xBA
+        [M16 d, I8 i]  -> pure $ set_opsize16 $ set_rm_ext_mem 0x5 d $ set_imm8 i $ map_0F 0xBA
+        [R32 d, I8 i]  -> pure $ set_opsize32 $ set_rm_ext_reg 0x5 d $ set_imm8 i $ map_0F 0xBA
+        [M32 d, I8 i]  -> pure $ set_opsize32 $ set_rm_ext_mem 0x5 d $ set_imm8 i $ map_0F 0xBA
+        [R64 d, I8 i]  -> pure $ set_opsize64 $ set_rm_ext_reg 0x5 d $ set_imm8 i $ map_0F 0xBA
+        [M64 d, I8 i]  -> pure $ set_opsize64 $ set_rm_ext_mem 0x5 d $ set_imm8 i $ map_0F 0xBA
+        _ -> Nothing
+
     SUB -> alts
       [ handle_acc_imm  primary 0x2C
       , handle_rm_imm   primary 0x80 0x5
