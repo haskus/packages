@@ -1164,6 +1164,12 @@ encodeInsn !ctx !op !args = do
           pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_F3_0F38 0xF6
         _ -> Nothing
 
+    STR -> case args of
+      [M16 m] -> pure $ set_rm_ext_mem 0x1 m $ map_0F 0x00
+      -- it is zero-extended to the whole register.
+      [R16 r] -> pure $ set_rm_ext_reg 0x1 r $ map_0F 0x00
+      _ -> Nothing
+
     ADDPD -> 
       case args of
         [V128 v, M128 m] -> do
