@@ -64,7 +64,12 @@ data Operation
 
   | POPA  !OperandSize -- ^ Pop all general purpose registers
   | PUSHA !OperandSize -- ^ Push all general purpose registers
-  -- LDS, LES, LFS, LGS, LSS
+
+  | LDS   -- ^ Load DS:r with far pointer from memory
+  | LES   -- ^ Load ES:r with far pointer from memory
+  | LFS   -- ^ Load FS:r with far pointer from memory
+  | LGS   -- ^ Load GS:r with far pointer from memory
+  | LSS   -- ^ Load SS:r with far pointer from memory
   -- LODSB, LODSW, LODSD, LODSQ
   -- MOVD
   -- MOVNTI
