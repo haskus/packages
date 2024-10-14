@@ -15489,7 +15489,7 @@ i_prefetchw = insn
                            ,    encOpcodeExt       = Just 1
                            ,    encProperties      = [ LegacyModeSupport
                                                      , LongModeSupport
-                                                     , Extension PRFCHW
+                                                     , Extension PREFETCHW
                                                      ]
                            ,    encOperands        = [ mem8 NA ]
                            }

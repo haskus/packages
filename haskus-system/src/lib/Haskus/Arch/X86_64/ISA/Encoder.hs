@@ -831,16 +831,19 @@ encodeInsn !ctx !op !args = do
       -- [R64 d, M32 s] -- not supported: a simple MOV does the same thing
       _ -> Nothing
 
-    MOVBE -> case args of
-      [R16 d, M16 s] -> pure $ set_opsize16 $ set_rm_reg_mem d s $ map_0F38 0xF0
-      [R32 d, M32 s] -> pure $ set_opsize32 $ set_rm_reg_mem d s $ map_0F38 0xF0
-      [R64 d, M64 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ map_0F38 0xF0
-      [M16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_mem s d $ map_0F38 0xF1
-      [M32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_mem s d $ map_0F38 0xF1
-      [M64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_mem s d $ map_0F38 0xF1
-      _ -> Nothing
+    MOVBE -> do
+      has_extension Ext.MOVBE
+      case args of
+        [R16 d, M16 s] -> pure $ set_opsize16 $ set_rm_reg_mem d s $ map_0F38 0xF0
+        [R32 d, M32 s] -> pure $ set_opsize32 $ set_rm_reg_mem d s $ map_0F38 0xF0
+        [R64 d, M64 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ map_0F38 0xF0
+        [M16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_mem s d $ map_0F38 0xF1
+        [M32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_mem s d $ map_0F38 0xF1
+        [M64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_mem s d $ map_0F38 0xF1
+        _ -> Nothing
 
     CMOV cc -> do
+      has_extension Ext.CMOV
       let oc = map_0F (0x40 + condCode cc)
       case args of
         [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg d s oc
