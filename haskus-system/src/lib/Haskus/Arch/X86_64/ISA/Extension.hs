@@ -7,39 +7,51 @@ module Haskus.Arch.X86_64.ISA.Extension
   )
 where
 
+-- | Instruction extensions
+--
+-- Table 5.1 and Table 5.2 in Intel manuals
 data Extension
-   = VEX             -- ^ VEX encoded instruction support
-   | XOP             -- ^ XOP encoded instruction support
-   | ADX             -- ^ ADX extension
+   = FPU             -- ^ X87 FPU
    | MMX             -- ^ MMX
-   | AVX             -- ^ AVX extension
-   | AVX2            -- ^ AVX2 extension
    | SSE             -- ^ SSE extension
    | SSE2            -- ^ SSE2 extension
    | SSE3            -- ^ SSE3 extension
    | SSSE3           -- ^ SSSE3 extension
    | SSE4_1          -- ^ SSE4.1 extension
    | SSE4_2          -- ^ SSE4.2 extension
+   | AVX             -- ^ AVX extension
+   | AVX2            -- ^ AVX2 extension
+   | VMX             -- ^ VMX extension
+   | SMX             -- ^ SMX extension
+   | ADX             -- ^ ADX extension (ADOX, ADCX instructions)
+   | MOVBE           -- ^ MOVBE instruction
+   | CRC32           -- ^ CRC32 extension
+   | POPCNT          -- ^ POPCNT extension
    | AES             -- ^ AES extension
+   | PCLMULQDQ       -- ^ PCLMULQDQ instruction
+   | F16C            -- ^ VCVTPH2PS/VCVTPS2PH instructions
+   | RDRAND          -- ^ RDRAND instruction
+   | FSGSBASE        -- ^ RDFSBASE instruction
+   | FMA             -- ^ Fused multiply-add extension
    | BMI1            -- ^ BMI1 extension
    | BMI2            -- ^ BMI2 extension
-   | SMAP            -- ^ Supervisor Mode Access Prevention (SMAP)
-   | CLFLUSH         -- ^ CLFLUSH instruction
-   | CX8             -- ^ CMPXCHG8B instruction
-   | FPU             -- ^ x87 instructions
-   | CMOV            -- ^ CMOVs instructions (and FCMOVcc if FPU is set too)
    | INVPCID         -- ^ Invalid process-context identifier (INVPCID) extension
-   | MONITOR         -- ^ MONITOR/MWAIT
-   | PCLMULQDQ       -- ^ PCLMULQDQ instruction
-   | PRFCHW          -- ^ PREFETCHW instruction
+   | LZCNT           -- ^ LZCNT instruction
+   | TSX             -- ^ TSX extension
+   | PREFETCHW       -- ^ PREFETCHW instruction
+   | RDSEED          -- ^ RDSEED instruction
+   | CLAC            -- ^ CLAC instruction
+   | STAC            -- ^ STAC instruction
    | PREFETCHWT1     -- ^ PREFETCHWT1 instruction
-   | FSGSBASE        -- ^ RDFSBASE instruction
+   | CLFLUSH         -- ^ CLFLUSH instruction
+   | VEX             -- ^ VEX encoded instruction support
+   | XOP             -- ^ XOP encoded instruction support
+   | SMAP            -- ^ Supervisor Mode Access Prevention (SMAP)
+   | CX8             -- ^ CMPXCHG8B instruction
+   | CMOV            -- ^ CMOVs instructions (and FCMOVcc if FPU is set too)
+   | MONITOR         -- ^ MONITOR/MWAIT
    | OSPKE           -- ^ RDPKRU instruction
-   | RDRAND          -- ^ RDRAND instruction
-   | RDSEDD          -- ^ RDSEED instruction
    | LSAHF           -- ^ LAHF/SAHF instruction in 64-bit mode
-   | F16C            -- ^ VCVTPH2PS/VCVTPS2PH instructions
-   | FMA             -- ^ Fused multiply-add extension
    | RTM             -- ^ Transactional memory
    | AMD3DNow        -- ^ AMD 3DNow! instructions
    | CET             -- ^ Control-flow enforcement technology
