@@ -97,6 +97,7 @@ data Operation
   | BSWAP   -- ^ Byte swap
   | POPCNT  -- ^ Count number of bits set to 1
   | LZCNT   -- ^ Count the number of leading zero bits
+  | TZCNT   -- ^ Count the number of trailing zero bits
   | BSR     -- ^ Bit scan reverse (search first msb set to 1)
   | BSF     -- ^ Bit scan forward (search first lsb set to 1)
   | BT      -- ^ Bit test (result in CF)
@@ -125,7 +126,6 @@ data Operation
   -- SHRD
   -- SHRX
   -- T1MSKC
-  -- TZCNT
   -- TZMSK
 
   -- Control-flow
