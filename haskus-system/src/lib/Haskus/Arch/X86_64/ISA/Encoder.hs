@@ -1170,6 +1170,12 @@ encodeInsn !ctx !op !args = do
       [R16 r] -> pure $ set_rm_ext_reg 0x1 r $ map_0F 0x00
       _ -> Nothing
 
+    LTR -> case args of
+      [M16 m] -> pure $ set_rm_ext_mem 0x3 m $ map_0F 0x00
+      -- it is zero-extended to the whole register.
+      [R16 r] -> pure $ set_rm_ext_reg 0x3 r $ map_0F 0x00
+      _ -> Nothing
+
     ADDPD -> 
       case args of
         [V128 v, M128 m] -> do
