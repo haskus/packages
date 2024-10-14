@@ -54,6 +54,8 @@ encodeInsn !ctx !op !args = do
 
       set_imm imm e = e { encImm = Just imm }
 
+      set_modrm v e = e { encModRM = Just (ModRM v) }
+
       _set_opsize osz e = case osz of
         OpSize8  -> Nothing
         OpSize16 -> pure $ set_opsize16 e
@@ -1378,6 +1380,11 @@ encodeInsn !ctx !op !args = do
         [R64 r] -> pure $ set_opsize64 $ set_rm_ext_reg 0x3 r $ prefix_F3 $ map_0F 0xAE
         _ -> Nothing
 
+    SWAPGS -> do
+      assert_mode64
+      assert_no_args
+      pure $ set_modrm 0xF8 $ map_0F 0x01
+
     RDPID -> do
       has_extension Ext.RDPID
       case args of
@@ -1391,8 +1398,7 @@ encodeInsn !ctx !op !args = do
 
     RDTSCP -> do
       assert_no_args
-      -- ModRM set to 0xF9
-      pure $ (map_0F 0x01) { encModRM = Just (ModRM 0xF9) }
+      pure $ set_modrm 0xF9 $ map_0F 0x01
 
     LSL -> case args of
       [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg d s $ map_0F 0x03
@@ -1414,21 +1420,21 @@ encodeInsn !ctx !op !args = do
       assert_no_args
       -- Can be encoded as 0F AE Fx, where x in the range 0-7 (i.e. ModRM.rm
       -- field is ignored). We use 0F AE F0.
-      pure $ (map_0F 0xAE) { encModRM = Just (ModRM 0xF0) }
+      pure $ set_modrm 0xF0 $ map_0F 0xAE
 
     SFENCE -> do
       has_extension Ext.SSE
       assert_no_args
       -- Can be encoded as 0F AE Fx, where x in the range 8-F (i.e. ModRM.rm
       -- field is ignored). We use 0F AE F8.
-      pure $ (map_0F 0xAE) { encModRM = Just (ModRM 0xF8) }
+      pure $ set_modrm 0xF8 $ map_0F 0xAE
 
     LFENCE -> do
       has_extension Ext.SSE2
       assert_no_args
       -- Can be encoded as 0F AE Ex, where x in the range 8-F (i.e. ModRM.rm
       -- field is ignored). We use 0F AE E8.
-      pure $ (map_0F 0xAE) { encModRM = Just (ModRM 0xE8) }
+      pure $ set_modrm 0xE8 $ map_0F 0xAE
 
 
     ADDPS ->
