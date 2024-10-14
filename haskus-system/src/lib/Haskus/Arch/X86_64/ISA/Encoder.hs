@@ -1301,6 +1301,18 @@ encodeInsn !ctx !op !args = do
         [OpMem m] -> pure $ set_rm_ext_mem 0x2 m $ map_0F 0x01
         _ -> Nothing
 
+    SLDT -> do
+      case args of
+        [M16 m] -> pure $ set_rm_ext_mem 0x0 m $ map_0F 0x00
+        [R16 r] -> pure $ set_rm_ext_reg 0x0 r $ map_0F 0x00
+        _ -> Nothing
+
+    LLDT -> do
+      case args of
+        [M16 m] -> pure $ set_rm_ext_mem 0x2 m $ map_0F 0x00
+        [R16 r] -> pure $ set_rm_ext_reg 0x2 r $ map_0F 0x00
+        _ -> Nothing
+
     SIDT -> do
       case args of
         [OpMem m] -> pure $ set_rm_ext_mem 0x1 m $ map_0F 0x01
