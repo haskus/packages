@@ -173,6 +173,7 @@ data Operation
   -- Misc instructions
   | CPUID     -- ^ CPU identification
   | PAUSE     -- ^ Spin loop hint
+  | NOP !U8   -- ^ No operation (size up to 9 bytes)
   -- BOUND
   -- CRC32
   -- LLWPCB

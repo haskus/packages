@@ -13,6 +13,8 @@ import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Encoding.Mem
+import Haskus.Arch.X86_64.ISA.Encoding.SIB
+import Haskus.Arch.X86_64.ISA.Encoding.Disp
 import Haskus.Arch.X86_64.ISA.Encoding.Vec
 import Haskus.Arch.X86_64.ISA.Encoding.Segment
 import Haskus.Arch.X86_64.ISA.Context
@@ -1254,6 +1256,23 @@ encodeInsn !ctx !op !args = do
     PAUSE -> do
       assert_no_args
       pure $ prefix_F3 $ primary 0x90
+
+    NOP sz -> do
+      let mem a = Mem Nothing Nothing NoLock a Nothing
+      let ra = if mode64 then Just R_RAX else Just R_EAX
+      case sz of
+        1 -> pure $ primary 0x90
+        2 -> pure $ prefix_66 $ primary 0x90
+        -- multi-byte NOPs as recommended in Intel manual
+        -- Not supported on all models
+        3 -> pure $             set_rm_ext_mem 0x0 (mem (MemAbs ra Scale1 Nothing NoDisp))     $ map_0F 0x1F
+        4 -> pure $             set_rm_ext_mem 0x0 (mem (MemAbs ra Scale1 Nothing (Disp8 0)))  $ map_0F 0x1F
+        5 -> pure $             set_rm_ext_mem 0x0 (mem (MemAbs ra Scale1 ra      (Disp8 0)))  $ map_0F 0x1F
+        6 -> pure $ prefix_66 $ set_rm_ext_mem 0x0 (mem (MemAbs ra Scale1 ra      (Disp8 0)))  $ map_0F 0x1F
+        7 -> pure $             set_rm_ext_mem 0x0 (mem (MemAbs ra Scale1 Nothing (Disp32 0))) $ map_0F 0x1F
+        8 -> pure $             set_rm_ext_mem 0x0 (mem (MemAbs ra Scale1 ra      (Disp32 0))) $ map_0F 0x1F
+        9 -> pure $ prefix_66 $ set_rm_ext_mem 0x0 (mem (MemAbs ra Scale1 ra      (Disp32 0))) $ map_0F 0x1F
+        _ -> Nothing
 
     ADCX -> do
       has_extension Ext.ADX
