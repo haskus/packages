@@ -131,7 +131,6 @@ data Operation
   | INT1      -- ^ Generate debug trap
   | INT3      -- ^ Generate breakpoint trap
   | INT       -- ^ Generate software interruption
-  | SYSCALL   -- ^ Syscall
   | RET       -- ^ Near return (i.e. same CS)
   | RET_FAR   -- ^ Far return (i.e. different CS)
   | CALL      -- ^ Near call (i.e. same CS)
@@ -139,6 +138,11 @@ data Operation
   | UD0       -- ^ Undefined instruction
   | UD1       -- ^ Undefined instruction
   | UD2       -- ^ Undefined instruction
+
+  | SYSCALL       -- ^ System call
+  | SYSRET !Bool  -- ^ System call return (True=enable 32-bit mode)
+  | SYSENTER      -- ^ System call enter
+  | SYSEXIT !Bool -- ^ System call exit (True=enable 32-bit mode)
   -- ENTER -- requires 2 immediates (imm16 then imm8, or imm24) :/
   -- LEAVE
   -- JCXZ, jECXZ, JRCXZ
