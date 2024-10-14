@@ -1371,6 +1371,15 @@ encodeInsn !ctx !op !args = do
       -- ModRM set to 0xF9
       pure $ (map_0F 0x01) { encModRM = Just (ModRM 0xF9) }
 
+    LSL -> case args of
+      [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg d s $ map_0F 0x03
+      [R16 d, M16 s] -> pure $ set_opsize16 $ set_rm_reg_mem d s $ map_0F 0x03
+      [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg d s $ map_0F 0x03
+      [R32 d, M16 s] -> pure $ set_opsize32 $ set_rm_reg_mem d s $ map_0F 0x03
+      [R64 d, R32 s] -> pure $ set_opsize64 $ set_rm_reg_reg d s $ map_0F 0x03
+      [R64 d, M16 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ map_0F 0x03
+      _ -> Nothing
+
     PREFETCHW -> do
       has_extension Ext.PREFETCHW
       case args of

@@ -203,6 +203,7 @@ data Operation
   | RDPID       -- ^ Read processor ID
   | RDTSC       -- ^ Read time-stamp counter
   | RDTSCP      -- ^ Read time-stamp counter and processor ID
+  | LSL         -- ^ Load segment limit
   -- RDPRU
   --
 
