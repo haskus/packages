@@ -1431,7 +1431,7 @@ encodeInsn !ctx !op !args = do
       pure $ (map_0F 0xAE) { encModRM = Just (ModRM 0xE8) }
 
 
-    ADDPS -> 
+    ADDPS ->
       case args of
         [V128 v, M128 m] -> do
           has_extension Ext.SSE
@@ -1442,7 +1442,7 @@ encodeInsn !ctx !op !args = do
         -- TODO: add VEX and EVEX encodings
         _ -> Nothing
 
-    ADDPD -> 
+    ADDPD ->
       case args of
         [V128 v, M128 m] -> do
           has_extension Ext.SSE2
@@ -1453,7 +1453,7 @@ encodeInsn !ctx !op !args = do
         -- TODO: add VEX and EVEX encodings
         _ -> Nothing
 
-    ADDSS -> 
+    ADDSS ->
       case args of
         [V128 v, M32 m] -> do
           has_extension Ext.SSE
@@ -1464,7 +1464,7 @@ encodeInsn !ctx !op !args = do
         -- TODO: add VEX and EVEX encodings
         _ -> Nothing
 
-    ADDSD -> 
+    ADDSD ->
       case args of
         [V128 v, M32 m] -> do
           has_extension Ext.SSE2
@@ -1472,5 +1472,49 @@ encodeInsn !ctx !op !args = do
         [V128 v1, V128 v2] -> do
           has_extension Ext.SSE2
           pure $ set_rm_vec_vec v1 v2 $ prefix_F2 $ map_0F 0x58
+        -- TODO: add VEX and EVEX encodings
+        _ -> Nothing
+
+    SUBPS ->
+      case args of
+        [V128 v, M128 m] -> do
+          has_extension Ext.SSE
+          pure $ set_rm_vec_mem v m $ map_0F 0x5C
+        [V128 v1, V128 v2] -> do
+          has_extension Ext.SSE
+          pure $ set_rm_vec_vec v1 v2 $ map_0F 0x5C
+        -- TODO: add VEX and EVEX encodings
+        _ -> Nothing
+
+    SUBPD ->
+      case args of
+        [V128 v, M128 m] -> do
+          has_extension Ext.SSE2
+          pure $ set_rm_vec_mem v m $ prefix_66 $ map_0F 0x5C
+        [V128 v1, V128 v2] -> do
+          has_extension Ext.SSE2
+          pure $ set_rm_vec_vec v1 v2 $ prefix_66 $ map_0F 0x5C
+        -- TODO: add VEX and EVEX encodings
+        _ -> Nothing
+
+    SUBSS ->
+      case args of
+        [V128 v, M32 m] -> do
+          has_extension Ext.SSE
+          pure $ set_rm_vec_mem v m $ prefix_F3 $ map_0F 0x5C
+        [V128 v1, V128 v2] -> do
+          has_extension Ext.SSE
+          pure $ set_rm_vec_vec v1 v2 $ prefix_F3 $ map_0F 0x5C
+        -- TODO: add VEX and EVEX encodings
+        _ -> Nothing
+
+    SUBSD ->
+      case args of
+        [V128 v, M32 m] -> do
+          has_extension Ext.SSE2
+          pure $ set_rm_vec_mem v m $ prefix_F2 $ map_0F 0x5C
+        [V128 v1, V128 v2] -> do
+          has_extension Ext.SSE2
+          pure $ set_rm_vec_vec v1 v2 $ prefix_F2 $ map_0F 0x5C
         -- TODO: add VEX and EVEX encodings
         _ -> Nothing
