@@ -159,15 +159,16 @@ data Operation
   | PUSHF !OperandSize -- ^ Push FLAGS register onto the stack
 
   -- Cache management and memory barriers
+  | PREFETCHW         -- ^ Prefetch data into caches in anticipation of a write
+  | MFENCE            -- ^ Memory fence
+  | LFENCE            -- ^ Load fence
+  | SFENCE            -- ^ Store fence
   -- CLFLUSH
   -- CLFLUSHOPT
   -- CLWB
   -- CLZERO
-  -- LFENCE
-  -- MFENCE
-  -- SFENCE
   -- MCOMMIT
-  -- PREFETCH, PREFETCHW, PREFETCHn
+  -- PREFETCH, PREFETCHn
 
   -- Misc instructions
   | CPUID     -- ^ CPU identification
