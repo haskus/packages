@@ -55,6 +55,9 @@ encodeInsn !ctx !op !args = do
       set_imm imm e = e { encImm = Just imm }
 
       set_modrm v e = e { encModRM = Just (ModRM v) }
+      set_segment ms e = case ms of
+        Nothing -> e
+        Just s  -> e { encPrefixes = segmentOverridePrefix s : encPrefixes e }
 
       _set_opsize osz e = case osz of
         OpSize8  -> Nothing
@@ -1011,6 +1014,19 @@ encodeInsn !ctx !op !args = do
         [M32 m, R32 r] -> pure $                set_rm_reg_mem r m $ map_0F 0xC3
         [M64 m, R64 r] -> pure $ set_opsize64 $ set_rm_reg_mem r m $ map_0F 0xC3
         _ -> Nothing
+
+    XLAT -> do
+      case args of
+        -- expect [[rS:]rBX + AL] form
+        -- Use it to infer segment and address size
+        [OpMem (Mem mseg _msize NoLock (MemAbs (Just base) Scale1 (Just R_AL) NoDisp) Nothing)]
+          -> case base of
+              R_BX  -> set_addrsize AddrSize16 $ set_segment mseg $ primary 0xD7
+              R_EBX -> set_addrsize AddrSize32 $ set_segment mseg $ primary 0xD7
+              R_RBX -> set_addrsize AddrSize64 $ set_segment mseg $ primary 0xD7
+              _ -> Nothing
+        _ -> Nothing
+
 
     LEA -> case args of
       -- we don't care about the size of the targetted memory...
