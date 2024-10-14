@@ -172,6 +172,7 @@ data Operation
 
   -- Misc instructions
   | CPUID     -- ^ CPU identification
+  | PAUSE     -- ^ Spin loop hint
   -- BOUND
   -- CRC32
   -- LLWPCB
@@ -180,7 +181,6 @@ data Operation
   -- MONITORX
   -- MWAITX
   -- NOP
-  -- PAUSE
   -- RDRAND
   -- RDSEED
   -- SLWPCB
