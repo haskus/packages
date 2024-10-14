@@ -61,6 +61,7 @@ data Operation
   | OUTS  !OperandSize !AddressSize -- ^ Output string to port
   | MOVS  !OperandSize !AddressSize -- ^ Move data from string to string (DS:rSI to ES:rDI)
   | STOS  !OperandSize !AddressSize -- ^ Store string (acc to rDI)
+  | LODS  !OperandSize !AddressSize -- ^ Load string (DS:rSI into acc)
 
   | POPA  !OperandSize -- ^ Pop all general purpose registers
   | PUSHA !OperandSize -- ^ Push all general purpose registers
@@ -70,7 +71,6 @@ data Operation
   | LFS   -- ^ Load FS:r with far pointer from memory
   | LGS   -- ^ Load GS:r with far pointer from memory
   | LSS   -- ^ Load SS:r with far pointer from memory
-  -- LODSB, LODSW, LODSD, LODSQ
   -- MOVD
   -- MOVNTI
   -- XLAT
