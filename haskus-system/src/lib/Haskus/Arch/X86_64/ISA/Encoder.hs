@@ -1134,6 +1134,41 @@ encodeInsn !ctx !op !args = do
         OpSize32 -> pure $ set_opsize32 $ primary 0x60
         _        -> Nothing
 
+    LDS -> do
+      assert_not_mode64
+      case args of
+        [R16 r, OpMem m] -> pure $ set_opsize16 $ set_rm_reg_mem r m $ primary 0xC5
+        [R32 r, OpMem m] -> pure $ set_opsize32 $ set_rm_reg_mem r m $ primary 0xC5
+        _ -> Nothing
+
+    LES -> do
+      assert_not_mode64
+      case args of
+        [R16 r, OpMem m] -> pure $ set_opsize16 $ set_rm_reg_mem r m $ primary 0xC4
+        [R32 r, OpMem m] -> pure $ set_opsize32 $ set_rm_reg_mem r m $ primary 0xC4
+        _ -> Nothing
+
+    LSS -> do
+      case args of
+        [R16 r, OpMem m] -> pure $ set_opsize16 $ set_rm_reg_mem r m $ map_0F 0xB2
+        [R32 r, OpMem m] -> pure $ set_opsize32 $ set_rm_reg_mem r m $ map_0F 0xB2
+        [R64 r, OpMem m] -> pure $ set_opsize64 $ set_rm_reg_mem r m $ map_0F 0xB2
+        _ -> Nothing
+
+    LFS -> do
+      case args of
+        [R16 r, OpMem m] -> pure $ set_opsize16 $ set_rm_reg_mem r m $ map_0F 0xB4
+        [R32 r, OpMem m] -> pure $ set_opsize32 $ set_rm_reg_mem r m $ map_0F 0xB4
+        [R64 r, OpMem m] -> pure $ set_opsize64 $ set_rm_reg_mem r m $ map_0F 0xB4
+        _ -> Nothing
+
+    LGS -> do
+      case args of
+        [R16 r, OpMem m] -> pure $ set_opsize16 $ set_rm_reg_mem r m $ map_0F 0xB5
+        [R32 r, OpMem m] -> pure $ set_opsize32 $ set_rm_reg_mem r m $ map_0F 0xB5
+        [R64 r, OpMem m] -> pure $ set_opsize64 $ set_rm_reg_mem r m $ map_0F 0xB5
+        _ -> Nothing
+
     Jcc cc -> case args of
       [I8  i] -> pure $ set_imm8 i $ primary (0x70 + condCode cc)
       [I16 i]
