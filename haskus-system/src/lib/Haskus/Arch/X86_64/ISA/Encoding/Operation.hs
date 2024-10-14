@@ -48,24 +48,25 @@ data Operation
   | CMOV !Cond    -- ^ Conditional move
   | MOVSX         -- ^ Move with sign-extension (use this for MOVSXD too)
   | MOVZX         -- ^ Move with zero-extension
-  | IN            -- ^ Input from port
-  | OUT           -- ^ Output to port
+  | MOVBE         -- ^ Move with byte swap
   | PUSH          -- ^ Push a value onto the stack
   | POP           -- ^ Pop a value from the stack
   | SETcc !Cond   -- ^ Set byte on condition
   | XCHG          -- ^ Exchange values
   | XADD          -- ^ Exchange and add
 
+  | IN                              -- ^ Input from port
+  | OUT                             -- ^ Output to port
+  | INS   !OperandSize !AddressSize -- ^ Input from port to string
+  | OUTS  !OperandSize !AddressSize -- ^ Output string to port
+
   | POPA  !OperandSize -- ^ Pop all general purpose registers
   | PUSHA !OperandSize -- ^ Push all general purpose registers
-  | INS   !OperandSize !AddressSize -- ^ Input from port to string
   -- LDS, LES, LFS, LGS, LSS
   -- LODSB, LODSW, LODSD, LODSQ
-  -- MOVBE
   -- MOVD
   -- MOVNTI
   -- MOVSB, MOVSW, MOVSD, MOVSQ
-  -- OUTSB, OUTSW, OUTSD
   -- STOSB, STOSW, STOSD, STOSQ
   -- XLAT
 
