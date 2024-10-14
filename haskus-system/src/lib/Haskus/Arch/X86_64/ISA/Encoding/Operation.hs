@@ -13,8 +13,22 @@ data Operation
   -- General-purpose instructions
   ---------------------------------------
 
+  -- Data transfer instructions
+  = MOV                 -- ^ Move
+  | CMOV !Cond          -- ^ Conditional move
+  | XCHG                -- ^ Exchange values
+  | XADD                -- ^ Exchange and add
+  | PUSH                -- ^ Push a value onto the stack
+  | POP                 -- ^ Pop a value from the stack
+  | CMPXCHG             -- ^ Compare and exchange
+  | CMPXCHGB            -- ^ Compare and exchange bytes
+  | POPA  !OperandSize  -- ^ Pop all general purpose registers
+  | PUSHA !OperandSize  -- ^ Push all general purpose registers
+  | SXA                 -- ^ Sign-extend rAX: rAX := SX(low_half(rAX))
+  | SXAD                -- ^ Sign-extend rAX: rDX:rAX := SX(rAX)
+
   -- Binary-coded-decimal (BCD) operations
-  = AAA     -- ^ Adjust AL after addition
+  | AAA     -- ^ Adjust AL after addition
   | AAS     -- ^ Adjust AL after subtraction
   | AAD     -- ^ Adjust AX before division
   | AAM     -- ^ Adjust AX after multiply
@@ -38,22 +52,12 @@ data Operation
   | ADOX    -- ^ Unsigned add with overflow flag: OF:DEST := DEST + SRC + OF
   -- MULX
 
-  -- Conversions
-  | SXA     -- ^ Sign-extend rAX: rAX := SX(low_half(rAX))
-  | SXAD    -- ^ Sign-extend rAX: rDX:rAX := SX(rAX)
-
   -- Moves
-  | MOV           -- ^ Move
   | LEA           -- ^ Load effective address: DEST := EA(SRC)
-  | CMOV !Cond    -- ^ Conditional move
   | MOVSX         -- ^ Move with sign-extension (use this for MOVSXD too)
   | MOVZX         -- ^ Move with zero-extension
   | MOVBE         -- ^ Move with byte swap
-  | PUSH          -- ^ Push a value onto the stack
-  | POP           -- ^ Pop a value from the stack
   | SETcc !Cond   -- ^ Set byte on condition
-  | XCHG          -- ^ Exchange values
-  | XADD          -- ^ Exchange and add
   | MOVNTI        -- ^ Move using non-temporal hint
   | XLAT          -- ^ Table look-up translation: AL <- [eS:rBX + AL]
 
@@ -64,9 +68,8 @@ data Operation
   | MOVS  !OperandSize !AddressSize -- ^ Move data from string to string (DS:rSI to ES:rDI)
   | STOS  !OperandSize !AddressSize -- ^ Store string (acc to rDI)
   | LODS  !OperandSize !AddressSize -- ^ Load string (DS:rSI into acc)
-
-  | POPA  !OperandSize -- ^ Pop all general purpose registers
-  | PUSHA !OperandSize -- ^ Push all general purpose registers
+  | CMPS  !OperandSize !AddressSize -- ^ Compare data at DS:rSI with data at ES:rDI)
+  | SCAS  !OperandSize !AddressSize -- ^ Scan string at ES:rDI and compare with rAX
 
   | LDS   -- ^ Load DS:r with far pointer from memory
   | LES   -- ^ Load ES:r with far pointer from memory
@@ -78,10 +81,6 @@ data Operation
   -- Comparisons
   | TEST        -- ^ Logical compare
   | CMP         -- ^ Compare
-  | CMPXCHG     -- ^ Compare and exchange
-  | CMPXCHGB    -- ^ Compare and exchange bytes
-  -- CMPSB, CMPSW, CMPSD, CMPSQ
-  -- SCASB, SCASW, SCASD, SCASQ
 
   -- Binary
   | AND     -- ^ Bitwise AND
