@@ -200,7 +200,9 @@ data Operation
   | RDGSBASE    -- ^ Load GS base address
   | WRFSBASE    -- ^ Set FS base address
   | WRGSBASE    -- ^ Set GS base address
-  -- RDPID
+  | RDPID       -- ^ Read processor ID
+  | RDTSC       -- ^ Read time-stamp counter
+  | RDTSCP      -- ^ Read time-stamp counter and processor ID
   -- RDPRU
   --
 

@@ -55,6 +55,7 @@ data Extension
    | RTM             -- ^ Transactional memory
    | AMD3DNow        -- ^ AMD 3DNow! instructions
    | CET             -- ^ Control-flow enforcement technology
+   | RDPID           -- ^ RDPID instruction
    deriving (Show,Eq,Enum,Bounded)
 
 type ExtensionSet = [Extension] -- FIXME: use Enum based BitSet
