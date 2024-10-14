@@ -55,6 +55,7 @@ data Operation
   | XCHG          -- ^ Exchange values
   | XADD          -- ^ Exchange and add
   | MOVNTI        -- ^ Move using non-temporal hint
+  | XLAT          -- ^ Table look-up translation: AL <- [eS:rBX + AL]
 
   | IN                              -- ^ Input from port
   | OUT                             -- ^ Output to port
@@ -73,7 +74,6 @@ data Operation
   | LGS   -- ^ Load GS:r with far pointer from memory
   | LSS   -- ^ Load SS:r with far pointer from memory
   -- MOVD
-  -- XLAT
 
   -- Comparisons
   | TEST        -- ^ Logical compare
