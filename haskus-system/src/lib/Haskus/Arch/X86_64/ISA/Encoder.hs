@@ -54,6 +54,12 @@ encodeInsn !ctx !op !args = do
 
       set_imm imm e = e { encImm = Just imm }
 
+      _set_opsize osz e = case osz of
+        OpSize8  -> Nothing
+        OpSize16 -> pure $ set_opsize16 e
+        OpSize32 -> pure $ set_opsize32 e
+        OpSize64 -> pure $ set_opsize64 e
+
       set_opsize16 e = case defaultOperationSize ctx of
         OpSize16 -> e
         OpSize32 -> e { encPrefixes = P_66 : encPrefixes e }
@@ -1284,6 +1290,26 @@ encodeInsn !ctx !op !args = do
       -- it is zero-extended to the whole register.
       [R16 r] -> pure $ set_rm_ext_reg 0x3 r $ map_0F 0x00
       _ -> Nothing
+
+    SGDT -> do
+      case args of
+        [OpMem m] -> pure $ set_rm_ext_mem 0x0 m $ map_0F 0x01
+        _ -> Nothing
+
+    LGDT -> do
+      case args of
+        [OpMem m] -> pure $ set_rm_ext_mem 0x2 m $ map_0F 0x01
+        _ -> Nothing
+
+    SIDT -> do
+      case args of
+        [OpMem m] -> pure $ set_rm_ext_mem 0x1 m $ map_0F 0x01
+        _ -> Nothing
+
+    LIDT -> do
+      case args of
+        [OpMem m] -> pure $ set_rm_ext_mem 0x3 m $ map_0F 0x01
+        _ -> Nothing
 
     PREFETCHW -> do
       has_extension Ext.PREFETCHW
