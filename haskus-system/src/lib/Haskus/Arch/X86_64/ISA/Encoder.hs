@@ -1285,6 +1285,34 @@ encodeInsn !ctx !op !args = do
       [R16 r] -> pure $ set_rm_ext_reg 0x3 r $ map_0F 0x00
       _ -> Nothing
 
+    PREFETCHW -> do
+      has_extension Ext.PREFETCHW
+      case args of
+        [OpMem m] -> pure $ set_rm_ext_mem 0x1 m $ map_0F 0x0D
+        _ -> Nothing
+
+    MFENCE -> do
+      has_extension Ext.SSE2
+      assert_no_args
+      -- Can be encoded as 0F AE Fx, where x in the range 0-7 (i.e. ModRM.rm
+      -- field is ignored). We use 0F AE F0.
+      pure $ (map_0F 0xAE) { encModRM = Just (mkModRM 0b11 0b110 0b000) }
+
+    SFENCE -> do
+      has_extension Ext.SSE
+      assert_no_args
+      -- Can be encoded as 0F AE Fx, where x in the range 8-F (i.e. ModRM.rm
+      -- field is ignored). We use 0F AE F8.
+      pure $ (map_0F 0xAE) { encModRM = Just (mkModRM 0b11 0b111 0b000) }
+
+    LFENCE -> do
+      has_extension Ext.SSE2
+      assert_no_args
+      -- Can be encoded as 0F AE Ex, where x in the range 8-F (i.e. ModRM.rm
+      -- field is ignored). We use 0F AE E8.
+      pure $ (map_0F 0xAE) { encModRM = Just (mkModRM 0b11 0b101 0b000) }
+
+
     ADDPD -> 
       case args of
         [V128 v, M128 m] -> do
