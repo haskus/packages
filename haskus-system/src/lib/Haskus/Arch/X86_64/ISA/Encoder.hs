@@ -1323,6 +1323,39 @@ encodeInsn !ctx !op !args = do
         [OpMem m] -> pure $ set_rm_ext_mem 0x3 m $ map_0F 0x01
         _ -> Nothing
 
+    RDFSBASE -> do
+      assert_mode64
+      has_extension Ext.FSGSBASE
+      case args of
+        [R32 r] -> pure $                set_rm_ext_reg 0x0 r $ prefix_F3 $ map_0F 0xAE
+        [R64 r] -> pure $ set_opsize64 $ set_rm_ext_reg 0x0 r $ prefix_F3 $ map_0F 0xAE
+        _ -> Nothing
+
+    RDGSBASE -> do
+      assert_mode64
+      has_extension Ext.FSGSBASE
+      case args of
+        [R32 r] -> pure $                set_rm_ext_reg 0x1 r $ prefix_F3 $ map_0F 0xAE
+        [R64 r] -> pure $ set_opsize64 $ set_rm_ext_reg 0x1 r $ prefix_F3 $ map_0F 0xAE
+        _ -> Nothing
+
+    WRFSBASE -> do
+      assert_mode64
+      has_extension Ext.FSGSBASE
+      case args of
+        [R32 r] -> pure $                set_rm_ext_reg 0x2 r $ prefix_F3 $ map_0F 0xAE
+        [R64 r] -> pure $ set_opsize64 $ set_rm_ext_reg 0x2 r $ prefix_F3 $ map_0F 0xAE
+        _ -> Nothing
+
+    WRGSBASE -> do
+      assert_mode64
+      has_extension Ext.FSGSBASE
+      case args of
+        [R32 r] -> pure $                set_rm_ext_reg 0x3 r $ prefix_F3 $ map_0F 0xAE
+        [R64 r] -> pure $ set_opsize64 $ set_rm_ext_reg 0x3 r $ prefix_F3 $ map_0F 0xAE
+        _ -> Nothing
+
+
     PREFETCHW -> do
       has_extension Ext.PREFETCHW
       case args of

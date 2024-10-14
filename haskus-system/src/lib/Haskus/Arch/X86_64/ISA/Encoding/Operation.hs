@@ -196,10 +196,10 @@ data Operation
   | LIDT        -- ^ Load interrupt descriptor table register
   | SLDT        -- ^ Store local descriptor table register
   | LLDT        -- ^ Load local descriptor table register
-  -- RDFSBASE
-  -- RDGSBASE
-  -- WRFSBASE
-  -- WRGSBASE
+  | RDFSBASE    -- ^ Load FS base address
+  | RDGSBASE    -- ^ Load GS base address
+  | WRFSBASE    -- ^ Set FS base address
+  | WRGSBASE    -- ^ Set GS base address
   -- RDPID
   -- RDPRU
   --
