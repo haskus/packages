@@ -181,7 +181,6 @@ data Operation
   -- LWPVAL
   -- MONITORX
   -- MWAITX
-  -- NOP
   -- RDRAND
   -- RDSEED
   -- SLWPCB
@@ -211,7 +210,10 @@ data Operation
   ---------------------------------------
   -- Vector instructions
   ---------------------------------------
-  | ADDPD   -- ^ Parallel add 2 rightmost doubles; other leftmost doubles unmodified (SSE)
+  | ADDPD   -- ^ Parallel add packed F64
+  | ADDPS   -- ^ Parallel add packed F32
+  | ADDSS   -- ^ Add scale F32
+  | ADDSD   -- ^ Add scale F64
   -- MOVMSKPD
   -- MOVMSKPS
 

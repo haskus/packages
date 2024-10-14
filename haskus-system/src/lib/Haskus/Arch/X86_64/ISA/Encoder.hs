@@ -45,9 +45,7 @@ encodeInsn !ctx !op !args = do
 
       prefix_66 e  = e { encPrefixes = P_66 : encPrefixes e }
       prefix_F3 e  = e { encPrefixes = P_F3 : encPrefixes e }
-      map_66_0F   oc = prefix_66 $ map_0F   oc
-      map_66_0F38 oc = prefix_66 $ map_0F38 oc
-      map_F3_0F38 oc = prefix_F3 $ map_0F38 oc
+      prefix_F2 e  = e { encPrefixes = P_F2 : encPrefixes e }
 
       set_imm8  i = set_imm (SizedValue8 i)
       set_imm16 i = set_imm (SizedValue16 i)
@@ -1278,30 +1276,30 @@ encodeInsn !ctx !op !args = do
       has_extension Ext.ADX
       case args of
         [R32 r, M32 m] -> do
-          pure $ set_rm_reg_mem r m $ map_66_0F38 0xF6
+          pure $ set_rm_reg_mem r m $ prefix_66 $ map_0F38 0xF6
         [R64 r, M64 m] -> do
           assert_mode64
-          pure $ set_opsize64 $ set_rm_reg_mem r m $ map_66_0F38 0xF6
+          pure $ set_opsize64 $ set_rm_reg_mem r m $ prefix_66 $ map_0F38 0xF6
         [R32 r, R32 rm] -> do
-          pure $ set_rm_reg_reg r rm $ map_66_0F38 0xF6
+          pure $ set_rm_reg_reg r rm $ prefix_66 $ map_0F38 0xF6
         [R64 r, R64 rm] -> do
           assert_mode64
-          pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_66_0F38 0xF6
+          pure $ set_opsize64 $ set_rm_reg_reg r rm $ prefix_66 $ map_0F38 0xF6
         _ -> Nothing
 
     ADOX -> do
       has_extension Ext.ADX
       case args of
         [R32 r, M32 m] -> do
-          pure $ set_rm_reg_mem r m $ map_F3_0F38 0xF6
+          pure $ set_rm_reg_mem r m $ prefix_F3 $ map_0F38 0xF6
         [R64 r, M64 m] -> do
           assert_mode64
-          pure $ set_opsize64 $ set_rm_reg_mem r m $ map_F3_0F38 0xF6
+          pure $ set_opsize64 $ set_rm_reg_mem r m $ prefix_F3 $ map_0F38 0xF6
         [R32 r, R32 rm] -> do
-          pure $ set_rm_reg_reg r rm $ map_F3_0F38 0xF6
+          pure $ set_rm_reg_reg r rm $ prefix_F3 $ map_0F38 0xF6
         [R64 r, R64 rm] -> do
           assert_mode64
-          pure $ set_opsize64 $ set_rm_reg_reg r rm $ map_F3_0F38 0xF6
+          pure $ set_opsize64 $ set_rm_reg_reg r rm $ prefix_F3 $ map_0F38 0xF6
         _ -> Nothing
 
     STR -> case args of
@@ -1433,12 +1431,46 @@ encodeInsn !ctx !op !args = do
       pure $ (map_0F 0xAE) { encModRM = Just (ModRM 0xE8) }
 
 
+    ADDPS -> 
+      case args of
+        [V128 v, M128 m] -> do
+          has_extension Ext.SSE
+          pure $ set_rm_vec_mem v m $ map_0F 0x58
+        [V128 v1, V128 v2] -> do
+          has_extension Ext.SSE
+          pure $ set_rm_vec_vec v1 v2 $ map_0F 0x58
+        -- TODO: add VEX and EVEX encodings
+        _ -> Nothing
+
     ADDPD -> 
       case args of
         [V128 v, M128 m] -> do
           has_extension Ext.SSE2
-          pure $ set_rm_vec_mem v m $ map_66_0F 0x58
+          pure $ set_rm_vec_mem v m $ prefix_66 $ map_0F 0x58
         [V128 v1, V128 v2] -> do
           has_extension Ext.SSE2
-          pure $ set_rm_vec_vec v1 v2 $ map_66_0F 0x58
+          pure $ set_rm_vec_vec v1 v2 $ prefix_66 $ map_0F 0x58
+        -- TODO: add VEX and EVEX encodings
+        _ -> Nothing
+
+    ADDSS -> 
+      case args of
+        [V128 v, M32 m] -> do
+          has_extension Ext.SSE
+          pure $ set_rm_vec_mem v m $ prefix_F3 $ map_0F 0x58
+        [V128 v1, V128 v2] -> do
+          has_extension Ext.SSE
+          pure $ set_rm_vec_vec v1 v2 $ prefix_F3 $ map_0F 0x58
+        -- TODO: add VEX and EVEX encodings
+        _ -> Nothing
+
+    ADDSD -> 
+      case args of
+        [V128 v, M32 m] -> do
+          has_extension Ext.SSE2
+          pure $ set_rm_vec_mem v m $ prefix_F2 $ map_0F 0x58
+        [V128 v1, V128 v2] -> do
+          has_extension Ext.SSE2
+          pure $ set_rm_vec_vec v1 v2 $ prefix_F2 $ map_0F 0x58
+        -- TODO: add VEX and EVEX encodings
         _ -> Nothing
