@@ -1256,6 +1256,14 @@ encodeInsn !ctx !op !args = do
         then                map_0F 0x35
         else set_opsize64 $ map_0F 0x35
 
+    LEAVE osz -> do
+      assert_no_args
+      case osz of
+        OpSize64 | mode64     -> pure $ primary 0xC9
+        OpSize32 | not mode64 -> pure $ set_opsize32 $ primary 0xC9
+        OpSize16              -> pure $ set_opsize16 $ primary 0xC9
+        _ -> Nothing
+
     RET -> case args of
       []      -> pure $ primary 0xC3
       [I16 i] -> pure $ set_imm16 i $ primary 0xC2

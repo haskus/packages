@@ -151,8 +151,8 @@ data Operation
   | SYSRET !Bool  -- ^ System call return (True=enable 32-bit mode)
   | SYSENTER      -- ^ System call enter
   | SYSEXIT !Bool -- ^ System call exit (True=enable 32-bit mode)
+  | LEAVE !OperandSize -- ^ High level procedure exit
   -- ENTER -- requires 2 immediates (imm16 then imm8, or imm24) :/
-  -- LEAVE
   -- JCXZ, jECXZ, JRCXZ
 
   -- Flags
