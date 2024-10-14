@@ -1,6 +1,6 @@
 -- | ModRM byte
 module Haskus.Arch.X86_64.ISA.Encoding.ModRM
-  ( ModRM
+  ( ModRM (..)
   , writeModRM
   , mkModRM
   , mkModRM_reg
