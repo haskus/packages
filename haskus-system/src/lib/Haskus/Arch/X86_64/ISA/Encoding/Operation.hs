@@ -58,7 +58,7 @@ data Operation
 
   | POPA  !OperandSize -- ^ Pop all general purpose registers
   | PUSHA !OperandSize -- ^ Push all general purpose registers
-  -- INS, INSB, INSW, INSD
+  | INS   !OperandSize !AddressSize -- ^ Input from port to string
   -- LDS, LES, LFS, LGS, LSS
   -- LODSB, LODSW, LODSD, LODSQ
   -- MOVBE

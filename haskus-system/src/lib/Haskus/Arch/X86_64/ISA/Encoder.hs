@@ -66,6 +66,11 @@ encodeInsn !ctx !op !args = do
 
       set_opsize64 e = e { encRex = encRex e <> Just rexW }
 
+      set_addrsize asz e
+        | overriddenAddressSize False ctx == asz = Just e
+        | overriddenAddressSize True  ctx == asz = Just $ e { encPrefixes = P_67 : encPrefixes e }
+        | otherwise                              = Nothing
+
       -- store opcode extension in ModRM.reg
       set_r_ext ext e = e { encModRM = encModRM e <> Just (mkModRM_reg ext) }
 
@@ -902,6 +907,15 @@ encodeInsn !ctx !op !args = do
       [R16 R_DX, R16 R_AX]  -> pure $ set_opsize16 $ primary 0xEF
       [R16 R_DX, R32 R_EAX] -> pure $ set_opsize32 $ primary 0xEF
       _ -> Nothing
+
+    INS osz asz -> do
+      assert_no_args
+      e <- case osz of
+        OpSize8  -> pure $ primary 0x6C
+        OpSize16 -> pure $ set_opsize16 $ primary 0x6D
+        OpSize32 -> pure $ set_opsize32 $ primary 0x6D
+        _        -> Nothing
+      set_addrsize asz e
 
     PUSH -> case args of
       -- smaller forms for registers
