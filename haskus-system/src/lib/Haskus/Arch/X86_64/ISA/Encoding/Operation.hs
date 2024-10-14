@@ -185,6 +185,7 @@ data Operation
   | CPUID     -- ^ CPU identification
   | PAUSE     -- ^ Spin loop hint
   | NOP !U8   -- ^ No operation (size up to 9 bytes)
+  | MWAIT     -- ^ Monitor wait
   -- BOUND
   -- CRC32
   -- LLWPCB

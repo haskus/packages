@@ -1354,6 +1354,10 @@ encodeInsn !ctx !op !args = do
         9 -> pure $ prefix_66 $ set_rm_ext_mem 0x0 (mem (MemAbs ra Scale1 ra      (Disp32 0))) $ map_0F 0x1F
         _ -> Nothing
 
+    MWAIT -> do
+      assert_no_args
+      pure $ set_modrm 0xC9 $ map_0F 0x01
+
     ADCX -> do
       has_extension Ext.ADX
       case args of
