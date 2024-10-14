@@ -210,10 +210,14 @@ data Operation
   ---------------------------------------
   -- Vector instructions
   ---------------------------------------
-  | ADDPD   -- ^ Parallel add packed F64
-  | ADDPS   -- ^ Parallel add packed F32
-  | ADDSS   -- ^ Add scale F32
-  | ADDSD   -- ^ Add scale F64
+  | ADDPD   -- ^ Add packed F64
+  | ADDPS   -- ^ Add packed F32
+  | ADDSS   -- ^ Add scalar F32
+  | ADDSD   -- ^ Add scalar F64
+  | SUBPD   -- ^ Sub packed F64
+  | SUBPS   -- ^ Sub packed F32
+  | SUBSS   -- ^ Sub scalar F32
+  | SUBSD   -- ^ Sub scalar F64
   -- MOVMSKPD
   -- MOVMSKPS
 
