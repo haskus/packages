@@ -733,6 +733,17 @@ encodeInsn !ctx !op !args = do
         [R64 d, M64 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ prefix_F3 $ map_0F 0xBD
         _ -> Nothing
 
+    TZCNT -> do
+      has_extension Ext.BMI1
+      case args of
+        [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg d s $ prefix_F3 $ map_0F 0xBC
+        [R16 d, M16 s] -> pure $ set_opsize16 $ set_rm_reg_mem d s $ prefix_F3 $ map_0F 0xBC
+        [R32 d, R32 s] -> pure $ set_opsize32 $ set_rm_reg_reg d s $ prefix_F3 $ map_0F 0xBC
+        [R32 d, M32 s] -> pure $ set_opsize32 $ set_rm_reg_mem d s $ prefix_F3 $ map_0F 0xBC
+        [R64 d, R64 s] -> pure $ set_opsize64 $ set_rm_reg_reg d s $ prefix_F3 $ map_0F 0xBC
+        [R64 d, M64 s] -> pure $ set_opsize64 $ set_rm_reg_mem d s $ prefix_F3 $ map_0F 0xBC
+        _ -> Nothing
+
     BSR -> do
       case args of
         [R16 d, R16 s] -> pure $ set_opsize16 $ set_rm_reg_reg d s $ map_0F 0xBD
