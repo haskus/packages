@@ -188,6 +188,7 @@ data Operation
   -- System instructions
   ---------------------------------------
   | STR         -- ^ Store task register
+  | LTR         -- ^ Load task register
   -- RDFSBASE
   -- RDGSBASE
   -- WRFSBASE
