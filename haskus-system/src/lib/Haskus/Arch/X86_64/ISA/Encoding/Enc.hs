@@ -20,6 +20,8 @@ import Haskus.Arch.X86_64.ISA.Encoding.Rex
 import Haskus.Arch.X86_64.ISA.Encoding.ModRM
 import Haskus.Arch.X86_64.ISA.Encoding.Disp
 import Haskus.Arch.X86_64.ISA.Encoding.SIB
+import Haskus.Arch.X86_64.ISA.Encoding.Vex
+import Haskus.Arch.X86_64.ISA.Encoding.Xop
 import Haskus.Arch.X86_64.ISA.Size
 
 import Data.Maybe
@@ -87,14 +89,13 @@ encDispOffset Enc{..} = case encDisp of
 
 -- | Instruction opcode
 data Opcode
-  = Op      !U8         -- ^ Primary opcode map
-  | Op_0F   !U8         -- ^ Secondary opcode map
-  | Op_0F38 !U8         -- ^ 0F_38 opcode map
-  | Op_0F3A !U8         -- ^ 0F_3A opcode map
-  | Op_0F0F !U8         -- ^ 3DNow! opcode map
-  | Op_Vex2 !U8 !U8     -- ^ Vex 2-byte opcode
-  | Op_Vex3 !U8 !U8 !U8 -- ^ Vex 3-byte opcode
-  | Op_Xop  !U8 !U8 !U8 -- ^ Xop 3-byte opcode
+  = Op      !U8       -- ^ Primary opcode map
+  | Op_0F   !U8       -- ^ Secondary opcode map
+  | Op_0F38 !U8       -- ^ 0F_38 opcode map
+  | Op_0F3A !U8       -- ^ 0F_3A opcode map
+  | Op_0F0F !U8       -- ^ 3DNow! opcode map
+  | Op_Vex  !Vex !U8  -- ^ Vex prefix: 2-byte or 3-byte prefix + opcode
+  | Op_Xop  !Xop !U8  -- ^ Xop prefix: 3-byte prefix + opcode
   deriving (Show,Eq,Ord)
 
 opcodeSize :: Opcode -> Word
@@ -104,8 +105,7 @@ opcodeSize = \case
   Op_0F38 {} -> 3
   Op_0F3A {} -> 3
   Op_0F0F {} -> 3
-  Op_Vex2 {} -> 3
-  Op_Vex3 {} -> 4
+  Op_Vex v _ -> vexSize v + 1
   Op_Xop  {} -> 4
 
 isLegacyOpcode :: Maybe Opcode -> Bool
@@ -116,8 +116,7 @@ isLegacyOpcode = \case
   Just (Op_0F38 {}) -> True
   Just (Op_0F3A {}) -> True
   Just (Op_0F0F {}) -> True
-  Just (Op_Vex2 {}) -> False
-  Just (Op_Vex3 {}) -> False
+  Just (Op_Vex  {}) -> False
   Just (Op_Xop  {}) -> False
 
 is3DNowOpcode :: Opcode -> Bool
@@ -176,15 +175,15 @@ encode Enc{..} = mconcat
   [ mconcat (map (writeU8 . fromPrefix) encPrefixes) -- prefixes
   , maybe mempty (writeU8 . rexU8)      encRex       -- REX
   , case encOpcode of
-      Nothing                 -> mempty
-      Just (Op      oc      ) -> writeU8 oc
-      Just (Op_0F   oc      ) -> writeU8 0x0F <> writeU8 oc
-      Just (Op_0F38 oc      ) -> writeU8 0x0F <> writeU8 0x38 <> writeU8 oc
-      Just (Op_0F3A oc      ) -> writeU8 0x0F <> writeU8 0x3A <> writeU8 oc
-      Just (Op_0F0F _oc     ) -> writeU8 0x0F <> writeU8 0x0F -- 3DNow! opcode goes after the operands
-      Just (Op_Vex2 v1 oc   ) -> writeU8 0xC5 <> writeU8 v1   <> writeU8 oc
-      Just (Op_Vex3 v1 v2 oc) -> writeU8 0xC4 <> writeU8 v1   <> writeU8 v2 <> writeU8 oc
-      Just (Op_Xop  v1 v2 oc) -> writeU8 0x8F <> writeU8 v1   <> writeU8 v2 <> writeU8 oc
+      Nothing -> mempty
+      Just o  -> case o of
+        Op      oc  -> writeU8 oc
+        Op_0F   oc  -> writeU8 0x0F <> writeU8 oc
+        Op_0F38 oc  -> writeU8 0x0F <> writeU8 0x38 <> writeU8 oc
+        Op_0F3A oc  -> writeU8 0x0F <> writeU8 0x3A <> writeU8 oc
+        Op_0F0F _oc -> writeU8 0x0F <> writeU8 0x0F -- 3DNow! opcode goes after the operands
+        Op_Vex v oc -> writeVex v <> writeU8 oc
+        Op_Xop x oc -> writeXop x <> writeU8 oc
   
   , maybe mempty writeModRM encModRM
   , maybe mempty writeSIB   encSIB
