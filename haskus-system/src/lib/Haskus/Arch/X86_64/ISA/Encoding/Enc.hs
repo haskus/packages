@@ -104,9 +104,9 @@ opcodeSize = \case
   Op_0F38 {} -> 3
   Op_0F3A {} -> 3
   Op_0F0F {} -> 3
-  Op_Vex2 {} -> 2
-  Op_Vex3 {} -> 3
-  Op_Xop  {} -> 3
+  Op_Vex2 {} -> 3
+  Op_Vex3 {} -> 4
+  Op_Xop  {} -> 4
 
 isLegacyOpcode :: Maybe Opcode -> Bool
 isLegacyOpcode = \case
