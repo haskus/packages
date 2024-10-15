@@ -24,8 +24,8 @@ testAsm :: TestTree
 testAsm = testGroup "Assembler"
   [ testEncoding    defaultContext64 DAA [] (Left ENotAvailableInMode64)
   , testEncoding    defaultContext16 DAA [] (Right "27")
-  , testEncoding    defaultContext64 MOV [OpReg R_RAX, I8  0x17] (Left ENoEncoding)
-  , testEncoding    defaultContext64 MOV [OpReg R_RAX, I32 0x17] (Left ENoEncoding)
+  , testEncoding    defaultContext64 MOV [OpReg R_RAX, I8  0x17] (Left EInvalidArgs)
+  , testEncoding    defaultContext64 MOV [OpReg R_RAX, I32 0x17] (Left EInvalidArgs)
   , testEncoding    defaultContext64 MOV [OpReg R_RAX, I64 0x17] (Right "48b81700000000000000")
   , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I64 0x17] (Right "b817000000")
   , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I64 maxBound] (Right "48c7c0ffffffff")
