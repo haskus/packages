@@ -19,6 +19,7 @@ module Haskus.Utils.Monad
    , allM
    , orM
    , andM
+   , (<<)
    )
 where
 
@@ -135,3 +136,10 @@ orM = anyM id
 -- > \xs -> Just (and xs) == andM (map Just xs)
 andM :: Monad m => [m Bool] -> m Bool
 andM = allM id
+
+
+-- | Reversed monad bind
+(<<) :: Monad m => m () -> m () -> m ()
+(<<) f g = g >> f
+
+infixr 1 <<

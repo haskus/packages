@@ -25,11 +25,6 @@ import Haskus.Arch.X86_64.ISA.Size
 import Control.Applicative
 import Haskus.Utils.Monad
 
-(<<) :: Monad m => m () -> m () -> m ()
-(<<) f g = g >> f
-
-infixr 1 <<
-
 -- | Encoding error
 data EError
   = EOnlyAvailableInMode64
