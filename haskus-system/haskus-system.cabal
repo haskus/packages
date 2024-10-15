@@ -62,6 +62,8 @@ library
     Haskus.Arch.X86_64.ISA.Encoding.Segment
     Haskus.Arch.X86_64.ISA.Encoding.SIB
     Haskus.Arch.X86_64.ISA.Encoding.Vec
+    Haskus.Arch.X86_64.ISA.Encoding.Vex
+    Haskus.Arch.X86_64.ISA.Encoding.Xop
     Haskus.Arch.X86_64.ISA.Optimizer
     Haskus.Arch.X86_64.Disassembler
 
