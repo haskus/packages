@@ -275,8 +275,7 @@ encodeInsn !ctx !op !args = do
           set_opsize64 << set_imm32 i << mk_oc (oc+1)
         _ -> Nothing
 
-      -- handle regN, immN cases (reg in ModRM.rm field)
-      handle_reg_imm mk_oc oc ext = case args of
+      handle_rm_imm  mk_oc oc ext = case args of
         [R8  r, I8  i] -> Just do
           set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
         [R16 r, I16 i] -> Just do
@@ -286,21 +285,6 @@ encodeInsn !ctx !op !args = do
         [R64 r, I32 i] -> Just do
           assert_mode64
           set_opsize64 << set_rm_ext_reg ext r << set_imm32 i << mk_oc (oc+1)
-        _ -> Nothing
-
-      -- handle regN, imm8 cases (reg in ModRM.rm field)
-      handle_reg_imm8 mk_oc oc ext = case args of
-        [R16 r, I8 i] -> Just do
-          set_opsize16 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
-        [R32 r, I8 i] -> Just do
-          set_opsize32 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
-        [R64 r, I8 i] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
-        _ -> Nothing
-
-      -- handle memN, immN cases
-      handle_mem_imm mk_oc oc ext = case args of
         [M8  m, I8  i] -> Just do
           set_rm_ext_mem ext m << set_imm8 i << mk_oc oc
         [M16 m, I16 i] -> Just do
@@ -312,8 +296,14 @@ encodeInsn !ctx !op !args = do
           set_opsize64 << set_rm_ext_mem ext m << set_imm32 i << mk_oc (oc+1)
         _ -> Nothing
 
-      -- handle memN, imm8 cases
-      handle_mem_imm8 mk_oc oc ext = case args of
+      handle_rm_imm8 mk_oc oc ext = case args of
+        [R16 r, I8 i] -> Just do
+          set_opsize16 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
+        [R32 r, I8 i] -> Just do
+          set_opsize32 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
+        [R64 r, I8 i] -> Just do
+          assert_mode64
+          set_opsize64 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
         [M16 m, I8 i] -> Just do
           set_opsize16 << set_rm_ext_mem ext m << set_imm8 i << mk_oc oc
         [M32 m, I8 i] -> Just do
@@ -323,8 +313,7 @@ encodeInsn !ctx !op !args = do
           set_opsize64 << set_rm_ext_mem ext m << set_imm8 i << mk_oc oc
         _ -> Nothing
 
-      -- handle reg:ModRM.rm, reg:ModRM.reg cases
-      handle_regs_rm_reg mk_oc oc = case args of
+      handle_rm_reg  mk_oc oc     = case args of
         [R8  r1, R8  r2] -> Just do
           set_mr_reg_reg r1 r2 << mk_oc oc
         [R16 r1, R16 r2] -> Just do
@@ -334,49 +323,6 @@ encodeInsn !ctx !op !args = do
         [R64 r1, R64 r2] -> Just do
           assert_mode64
           set_opsize64 << set_mr_reg_reg r1 r2 << mk_oc (oc+1)
-        _ -> Nothing
-
-      -- handle reg:ModRM.reg, reg:ModRM.rm cases
-      handle_regs_reg_rm mk_oc oc = case args of
-        [R8 r1, R8 r2] -> Just do
-          set_rm_reg_reg r1 r2 << mk_oc oc
-        [R16 r1, R16 r2] -> Just do
-          set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
-        [R32 r1, R32 r2] -> Just do
-          set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
-        [R64 r1, R64 r2] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
-        _ -> Nothing
-      
-      -- handle reg:ModRM.reg, reg:ModRM.rm, i8 cases
-      --
-      -- Opsize: 16, 32, 64
-      handle_regs_reg_rm_i8 mk_oc oc = case args of
-        [R16 r1, R16 r2, I8 i] -> Just do
-          set_imm8 i << set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R32 r1, R32 r2, I8 i] -> Just do
-          set_imm8 i << set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R64 r1, R64 r2, I8 i] -> Just do
-          assert_mode64
-          set_imm8 i << set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc oc
-        _ -> Nothing
-
-      -- handle reg:ModRM.reg, reg:ModRM.rm, imm cases
-      --
-      -- Opsize: 16, 32, 64
-      handle_regs_reg_rm_imm mk_oc oc = case args of
-        [R16 r1, R16 r2, I16 i] -> Just do
-          set_imm16 i << set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R32 r1, R32 r2, I32 i] -> Just do
-          set_imm32 i << set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R64 r1, R64 r2, I32 i] -> Just do
-          assert_mode64
-          set_imm32 i << set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc oc
-        _ -> Nothing
-
-      -- handle mem:ModRM.rm, reg:ModRM.reg cases
-      handle_mem_reg mk_oc oc = case args of
         [M8 m,  R8   r] -> Just do
           set_rm_reg_mem r m << mk_oc oc
         [M16 m, R16 r] -> Just do
@@ -388,8 +334,16 @@ encodeInsn !ctx !op !args = do
           set_opsize64 << set_rm_reg_mem r m << mk_oc (oc+1)
         _ -> Nothing
 
-      -- handle reg:ModRM.reg, mem:ModRM.rm cases
-      handle_reg_mem mk_oc oc = case args of
+      handle_reg_rm  mk_oc oc     = case args of
+        [R8 r1, R8 r2] -> Just do
+          set_rm_reg_reg r1 r2 << mk_oc oc
+        [R16 r1, R16 r2] -> Just do
+          set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
+        [R32 r1, R32 r2] -> Just do
+          set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
+        [R64 r1, R64 r2] -> Just do
+          assert_mode64
+          set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
         [R8  r, M8  m] -> Just do
           set_rm_reg_mem r m << mk_oc oc
         [R16 r, M16 m] -> Just do
@@ -401,10 +355,14 @@ encodeInsn !ctx !op !args = do
           set_opsize64 << set_rm_reg_mem r m << mk_oc (oc+1)
         _ -> Nothing
 
-      -- handle reg:ModRM.reg, mem:ModRM.rm, i8 cases
-      --
-      -- Opsize: 16, 32, 64
-      handle_reg_mem_i8 mk_oc oc = case args of
+      handle_reg_rm_i8 mk_oc oc   = case args of
+        [R16 r1, R16 r2, I8 i] -> Just do
+          set_imm8 i << set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc oc
+        [R32 r1, R32 r2, I8 i] -> Just do
+          set_imm8 i << set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc oc
+        [R64 r1, R64 r2, I8 i] -> Just do
+          assert_mode64
+          set_imm8 i << set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc oc
         [R16 r, M16 m, I8 i] -> Just do
           set_imm8 i << set_opsize16 << set_rm_reg_mem r m << mk_oc oc
         [R32 r, M32 m, I8 i] -> Just do
@@ -414,10 +372,14 @@ encodeInsn !ctx !op !args = do
           set_imm8 i << set_opsize64 << set_rm_reg_mem r m << mk_oc oc
         _ -> Nothing
 
-      -- handle reg:ModRM.reg, mem:ModRM.rm, imm cases
-      --
-      -- Opsize: 16, 32, 64
-      handle_reg_mem_imm mk_oc oc = case args of
+      handle_reg_rm_imm mk_oc oc  = case args of
+        [R16 r1, R16 r2, I16 i] -> Just do
+          set_imm16 i << set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc oc
+        [R32 r1, R32 r2, I32 i] -> Just do
+          set_imm32 i << set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc oc
+        [R64 r1, R64 r2, I32 i] -> Just do
+          assert_mode64
+          set_imm32 i << set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc oc
         [R16 r, M16 m, I16 i] -> Just do
           set_imm16 i << set_opsize16 << set_rm_reg_mem r m << mk_oc oc
         [R32 r, M32 m, I32 i] -> Just do
@@ -426,13 +388,6 @@ encodeInsn !ctx !op !args = do
           assert_mode64
           set_imm32 i << set_opsize64 << set_rm_reg_mem r m << mk_oc oc
         _ -> Nothing
-
-      handle_rm_imm  mk_oc oc ext = handle_reg_imm  mk_oc oc ext <|> handle_mem_imm mk_oc oc ext
-      handle_rm_imm8 mk_oc oc ext = handle_reg_imm8 mk_oc oc ext <|> handle_mem_imm8 mk_oc oc ext
-      handle_rm_reg  mk_oc oc     = handle_regs_rm_reg mk_oc oc  <|> handle_mem_reg mk_oc oc
-      handle_reg_rm  mk_oc oc     = handle_regs_reg_rm mk_oc oc  <|> handle_reg_mem mk_oc oc
-      handle_reg_rm_i8 mk_oc oc   = handle_regs_reg_rm_i8 mk_oc oc <|> handle_reg_mem_i8 mk_oc oc
-      handle_reg_rm_imm mk_oc oc  = handle_regs_reg_rm_imm mk_oc oc <|> handle_reg_mem_imm mk_oc oc
 
       alts :: [Maybe (E ())] -> E ()
       alts as = case asum as of
