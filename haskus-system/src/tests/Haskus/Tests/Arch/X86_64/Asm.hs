@@ -22,27 +22,27 @@ import Numeric (showHex)
 
 testAsm :: TestTree
 testAsm = testGroup "Assembler"
-  [ testEncoding defaultContext64 DAA [] Nothing
-  , testEncoding defaultContext16 DAA [] $ Just "27"
-  , testEncoding defaultContext64 MOV [OpReg R_RAX, I8  0x17] Nothing
-  , testEncoding defaultContext64 MOV [OpReg R_RAX, I32 0x17] $ Just "48c7c017000000"
-  , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I32 0x17] $ Just "b817000000"
+  [ testEncoding defaultContext64 DAA [] (Left ENotAvailableInMode64)
+  , testEncoding defaultContext16 DAA [] (Right "27")
+  , testEncoding defaultContext64 MOV [OpReg R_RAX, I8  0x17] (Left ENoEncoding)
+  , testEncoding defaultContext64 MOV [OpReg R_RAX, I32 0x17] (Right "48c7c017000000")
+  , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I32 0x17] (Right "b817000000")
   ]
   
 -- | Encode with optimized assembly
-testOptEncoding :: Context -> Operation -> Operands -> Maybe String -> TestTree
+testOptEncoding :: Context -> Operation -> Operands -> Either EError String -> TestTree
 testOptEncoding ctx op ops result =
   case optimizeInsn defaultOptimOpts ctx op ops of
     Just (op',ops') -> testEncoding ctx op' ops' result
     Nothing         -> testEncoding ctx op  ops  result
 
-testEncoding :: Context -> Operation -> Operands -> Maybe String -> TestTree
+testEncoding :: Context -> Operation -> Operands -> Either EError String -> TestTree
 testEncoding ctx op ops result = testCase (show (op,ops)) $
   let str = case encodeInsn ctx op ops of
-              Nothing  -> Nothing
-              Just enc -> case encCheck enc of
+              Left (_,err) -> Left err
+              Right enc    -> case encCheck enc of
                 errs | not (null errs) -> error $ "Generated invalid encoding: " ++ show errs
-                _ -> Just $ arrToString (encodeToArray# enc)
+                _ -> Right $ arrToString (encodeToArray# enc)
   in str @?= result
 
 arrToString :: ByteArray# -> String
