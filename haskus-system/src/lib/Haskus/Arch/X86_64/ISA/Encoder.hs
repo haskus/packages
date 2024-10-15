@@ -22,7 +22,6 @@ import Haskus.Arch.X86_64.ISA.Context
 import qualified Haskus.Arch.X86_64.ISA.Extension as Ext
 import Haskus.Arch.X86_64.ISA.Size
 
-import Control.Applicative
 import Haskus.Utils.Monad
 
 -- | Encoding error
@@ -261,140 +260,6 @@ encodeInsn !ctx !op !args = do
       -- store r1 in ModRM.rm and r2 in ModRM.reg
       set_mr_reg_reg r1 r2 = set_rm_reg_reg r2 r1
 
-      -- several instructions have special encodings for the rAX, immN cases
-      -- (ADD, ADC, etc.). We handle them here.
-      handle_acc_imm mk_oc oc = case args of
-        [R8 R_AL,  I8  i] -> Just do
-          set_imm8 i << mk_oc oc
-        [R16 R_AX,  I16 i] -> Just do
-          set_opsize16 << set_imm16 i << mk_oc (oc+1)
-        [R32 R_EAX, I32 i] -> Just do
-          set_opsize32 << set_imm32 i << mk_oc (oc+1)
-        [R64 R_RAX, I32 i] -> Just do
-          assert_mode64
-          set_opsize64 << set_imm32 i << mk_oc (oc+1)
-        _ -> Nothing
-
-      handle_rm_imm  mk_oc oc ext = case args of
-        [R8  r, I8  i] -> Just do
-          set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
-        [R16 r, I16 i] -> Just do
-          set_opsize16 << set_rm_ext_reg ext r << set_imm16 i << mk_oc (oc+1)
-        [R32 r, I32 i] -> Just do
-          set_opsize32 << set_rm_ext_reg ext r << set_imm32 i << mk_oc (oc+1)
-        [R64 r, I32 i] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_ext_reg ext r << set_imm32 i << mk_oc (oc+1)
-        [M8  m, I8  i] -> Just do
-          set_rm_ext_mem ext m << set_imm8 i << mk_oc oc
-        [M16 m, I16 i] -> Just do
-          set_opsize16 << set_rm_ext_mem ext m << set_imm16 i << mk_oc (oc+1)
-        [M32 m, I32 i] -> Just do
-          set_opsize32 << set_rm_ext_mem ext m << set_imm32 i << mk_oc (oc+1)
-        [M64 m, I32 i] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_ext_mem ext m << set_imm32 i << mk_oc (oc+1)
-        _ -> Nothing
-
-      handle_rm_imm8 mk_oc oc ext = case args of
-        [R16 r, I8 i] -> Just do
-          set_opsize16 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
-        [R32 r, I8 i] -> Just do
-          set_opsize32 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
-        [R64 r, I8 i] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_ext_reg ext r << set_imm8 i << mk_oc oc
-        [M16 m, I8 i] -> Just do
-          set_opsize16 << set_rm_ext_mem ext m << set_imm8 i << mk_oc oc
-        [M32 m, I8 i] -> Just do
-          set_opsize32 << set_rm_ext_mem ext m << set_imm8 i << mk_oc oc
-        [M64 m, I8 i] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_ext_mem ext m << set_imm8 i << mk_oc oc
-        _ -> Nothing
-
-      handle_rm_reg  mk_oc oc     = case args of
-        [R8  r1, R8  r2] -> Just do
-          set_mr_reg_reg r1 r2 << mk_oc oc
-        [R16 r1, R16 r2] -> Just do
-          set_opsize16 << set_mr_reg_reg r1 r2 << mk_oc (oc+1)
-        [R32 r1, R32 r2] -> Just do
-          set_opsize32 << set_mr_reg_reg r1 r2 << mk_oc (oc+1)
-        [R64 r1, R64 r2] -> Just do
-          assert_mode64
-          set_opsize64 << set_mr_reg_reg r1 r2 << mk_oc (oc+1)
-        [M8 m,  R8   r] -> Just do
-          set_rm_reg_mem r m << mk_oc oc
-        [M16 m, R16 r] -> Just do
-          set_opsize16 << set_rm_reg_mem r m << mk_oc (oc+1)
-        [M32 m, R32 r] -> Just do
-          set_opsize32 << set_rm_reg_mem r m << mk_oc (oc+1)
-        [M64 m, R64 r] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_reg_mem r m << mk_oc (oc+1)
-        _ -> Nothing
-
-      handle_reg_rm  mk_oc oc     = case args of
-        [R8 r1, R8 r2] -> Just do
-          set_rm_reg_reg r1 r2 << mk_oc oc
-        [R16 r1, R16 r2] -> Just do
-          set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
-        [R32 r1, R32 r2] -> Just do
-          set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
-        [R64 r1, R64 r2] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc (oc+1)
-        [R8  r, M8  m] -> Just do
-          set_rm_reg_mem r m << mk_oc oc
-        [R16 r, M16 m] -> Just do
-          set_opsize16 << set_rm_reg_mem r m << mk_oc (oc+1)
-        [R32 r, M32 m] -> Just do
-          set_opsize32 << set_rm_reg_mem r m << mk_oc (oc+1)
-        [R64 r, M64 m] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_reg_mem r m << mk_oc (oc+1)
-        _ -> Nothing
-
-      handle_reg_rm_i8 mk_oc oc   = case args of
-        [R16 r1, R16 r2, I8 i] -> Just do
-          set_imm8 i << set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R32 r1, R32 r2, I8 i] -> Just do
-          set_imm8 i << set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R64 r1, R64 r2, I8 i] -> Just do
-          assert_mode64
-          set_imm8 i << set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R16 r, M16 m, I8 i] -> Just do
-          set_imm8 i << set_opsize16 << set_rm_reg_mem r m << mk_oc oc
-        [R32 r, M32 m, I8 i] -> Just do
-          set_imm8 i << set_opsize32 << set_rm_reg_mem r m << mk_oc oc
-        [R64 r, M64 m, I8 i] -> Just do
-          assert_mode64
-          set_imm8 i << set_opsize64 << set_rm_reg_mem r m << mk_oc oc
-        _ -> Nothing
-
-      handle_reg_rm_imm mk_oc oc  = case args of
-        [R16 r1, R16 r2, I16 i] -> Just do
-          set_imm16 i << set_opsize16 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R32 r1, R32 r2, I32 i] -> Just do
-          set_imm32 i << set_opsize32 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R64 r1, R64 r2, I32 i] -> Just do
-          assert_mode64
-          set_imm32 i << set_opsize64 << set_rm_reg_reg r1 r2 << mk_oc oc
-        [R16 r, M16 m, I16 i] -> Just do
-          set_imm16 i << set_opsize16 << set_rm_reg_mem r m << mk_oc oc
-        [R32 r, M32 m, I32 i] -> Just do
-          set_imm32 i << set_opsize32 << set_rm_reg_mem r m << mk_oc oc
-        [R64 r, M64 m, I32 i] -> Just do
-          assert_mode64
-          set_imm32 i << set_opsize64 << set_rm_reg_mem r m << mk_oc oc
-        _ -> Nothing
-
-      alts :: [Maybe (E ())] -> E ()
-      alts as = case asum as of
-        Nothing -> noEncoding
-        Just e  -> e
-        
-
   runE case op of
     AAA -> do
       assert_not_mode64
@@ -426,35 +291,139 @@ encodeInsn !ctx !op !args = do
       primary 0x2F
       assert_no_args
 
-    ADC -> alts
-      [ handle_acc_imm  primary 0x14
-      , handle_rm_imm   primary 0x80 0x2
-      , handle_rm_imm8  primary 0x83 0x2
-      , handle_rm_reg   primary 0x10
-      , handle_reg_rm   primary 0x12
-      ]
+    ADC -> case args of
+      [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0x14
+      [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0x15
+      [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0x15
+      [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0x15
+      [R8  r,     I8  i] ->                 set_rm_ext_reg 0x2 r << set_imm8  i << primary 0x80
+      [R16 r,     I16 i] -> set_opsize16 << set_rm_ext_reg 0x2 r << set_imm16 i << primary 0x81
+      [R32 r,     I32 i] -> set_opsize32 << set_rm_ext_reg 0x2 r << set_imm32 i << primary 0x81
+      [R64 r,     I32 i] -> set_opsize64 << set_rm_ext_reg 0x2 r << set_imm32 i << primary 0x81
+      [M8  m,     I8  i] ->                 set_rm_ext_mem 0x2 m << set_imm8  i << primary 0x80
+      [M16 m,     I16 i] -> set_opsize16 << set_rm_ext_mem 0x2 m << set_imm16 i << primary 0x81
+      [M32 m,     I32 i] -> set_opsize32 << set_rm_ext_mem 0x2 m << set_imm32 i << primary 0x81
+      [M64 m,     I32 i] -> set_opsize64 << set_rm_ext_mem 0x2 m << set_imm32 i << primary 0x81
+      [R16 r,     I8  i] -> set_opsize16 << set_rm_ext_reg 0x2 r << set_imm8 i << primary 0x83
+      [R32 r,     I8  i] -> set_opsize32 << set_rm_ext_reg 0x2 r << set_imm8 i << primary 0x83
+      [R64 r,     I8  i] -> set_opsize64 << set_rm_ext_reg 0x2 r << set_imm8 i << primary 0x83
+      [M16 m,     I8  i] -> set_opsize16 << set_rm_ext_mem 0x2 m << set_imm8 i << primary 0x83
+      [M32 m,     I8  i] -> set_opsize32 << set_rm_ext_mem 0x2 m << set_imm8 i << primary 0x83
+      [M64 m,     I8  i] -> set_opsize64 << set_rm_ext_mem 0x2 m << set_imm8 i << primary 0x83
+      [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x10
+      [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x11
+      [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x11
+      [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x11
+      [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x10
+      [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x11
+      [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x11
+      [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x11
+      [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x12
+      [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x13
+      [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x13
+      [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x13
+      [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x12
+      [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x13
+      [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x13
+      [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x13
+      _ -> invalidArgs
 
-    ADD -> alts
-      [ handle_acc_imm  primary 0x04
-      , handle_rm_imm   primary 0x80 0x0
-      , handle_rm_imm8  primary 0x83 0x0
-      , handle_rm_reg   primary 0x00
-      , handle_reg_rm   primary 0x02
-      ]
+    ADD -> case args of
+        [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0x04
+        [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0x05
+        [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0x05
+        [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0x05
+        [R8  r,     I8  i] ->                 set_rm_ext_reg 0x0 r << set_imm8  i << primary 0x80
+        [R16 r,     I16 i] -> set_opsize16 << set_rm_ext_reg 0x0 r << set_imm16 i << primary 0x81
+        [R32 r,     I32 i] -> set_opsize32 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0x81
+        [R64 r,     I32 i] -> set_opsize64 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0x81
+        [M8  m,     I8  i] ->                 set_rm_ext_mem 0x0 m << set_imm8  i << primary 0x80
+        [M16 m,     I16 i] -> set_opsize16 << set_rm_ext_mem 0x0 m << set_imm16 i << primary 0x81
+        [M32 m,     I32 i] -> set_opsize32 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0x81
+        [M64 m,     I32 i] -> set_opsize64 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0x81
+        [R16 r,     I8  i] -> set_opsize16 << set_rm_ext_reg 0x0 r << set_imm8 i << primary 0x83
+        [R32 r,     I8  i] -> set_opsize32 << set_rm_ext_reg 0x0 r << set_imm8 i << primary 0x83
+        [R64 r,     I8  i] -> set_opsize64 << set_rm_ext_reg 0x0 r << set_imm8 i << primary 0x83
+        [M16 m,     I8  i] -> set_opsize16 << set_rm_ext_mem 0x0 m << set_imm8 i << primary 0x83
+        [M32 m,     I8  i] -> set_opsize32 << set_rm_ext_mem 0x0 m << set_imm8 i << primary 0x83
+        [M64 m,     I8  i] -> set_opsize64 << set_rm_ext_mem 0x0 m << set_imm8 i << primary 0x83
+        [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x00
+        [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x01
+        [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x01
+        [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x01
+        [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x00
+        [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x01
+        [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x01
+        [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x01
+        [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x02
+        [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x03
+        [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x03
+        [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x03
+        [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x02
+        [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x03
+        [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x03
+        [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x03
+        _ -> invalidArgs
 
-    TEST -> alts
-      [ handle_acc_imm  primary 0xA8
-      , handle_rm_imm   primary 0xF6 0x0
-      , handle_rm_reg   primary 0x84
-      ]
+    TEST -> case args of
+        [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0xA8
+        [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0xA9
+        [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0xA9
+        [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0xA9
+        [R8  r,     I8  i] ->                 set_rm_ext_reg 0x0 r << set_imm8  i << primary 0xF6
+        [R16 r,     I16 i] -> set_opsize16 << set_rm_ext_reg 0x0 r << set_imm16 i << primary 0xF7
+        [R32 r,     I32 i] -> set_opsize32 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xF7
+        [R64 r,     I32 i] -> set_opsize64 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xF7
+        [M8  m,     I8  i] ->                 set_rm_ext_mem 0x0 m << set_imm8  i << primary 0xF6
+        [M16 m,     I16 i] -> set_opsize16 << set_rm_ext_mem 0x0 m << set_imm16 i << primary 0xF7
+        [M32 m,     I32 i] -> set_opsize32 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xF7
+        [M64 m,     I32 i] -> set_opsize64 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xF7
+        [R8  r1,   R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x84
+        [R16 r1,   R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x85
+        [R32 r1,   R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x85
+        [R64 r1,   R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x85
+        [M8 m,     R8   r] ->                 set_rm_reg_mem r m   << primary 0x84
+        [M16 m,    R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x85
+        [M32 m,    R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x85
+        [M64 m,    R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x85
+        _ -> invalidArgs
 
-    CMP -> alts
-      [ handle_acc_imm  primary 0x3C
-      , handle_rm_imm   primary 0x80 0x7
-      , handle_rm_imm8  primary 0x83 0x7
-      , handle_rm_reg   primary 0x38
-      , handle_reg_rm   primary 0x3A
-      ]
+    CMP -> case args of
+        [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0x3C
+        [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0x3D
+        [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0x3D
+        [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0x3D
+        [R8  r,     I8  i] ->                 set_rm_ext_reg 0x7 r << set_imm8  i << primary 0x80
+        [R16 r,     I16 i] -> set_opsize16 << set_rm_ext_reg 0x7 r << set_imm16 i << primary 0x81
+        [R32 r,     I32 i] -> set_opsize32 << set_rm_ext_reg 0x7 r << set_imm32 i << primary 0x81
+        [R64 r,     I32 i] -> set_opsize64 << set_rm_ext_reg 0x7 r << set_imm32 i << primary 0x81
+        [M8  m,     I8  i] ->                 set_rm_ext_mem 0x7 m << set_imm8  i << primary 0x80
+        [M16 m,     I16 i] -> set_opsize16 << set_rm_ext_mem 0x7 m << set_imm16 i << primary 0x81
+        [M32 m,     I32 i] -> set_opsize32 << set_rm_ext_mem 0x7 m << set_imm32 i << primary 0x81
+        [M64 m,     I32 i] -> set_opsize64 << set_rm_ext_mem 0x7 m << set_imm32 i << primary 0x81
+        [R16 r,     I8  i] -> set_opsize16 << set_rm_ext_reg 0x7 r << set_imm8 i << primary 0x83
+        [R32 r,     I8  i] -> set_opsize32 << set_rm_ext_reg 0x7 r << set_imm8 i << primary 0x83
+        [R64 r,     I8  i] -> set_opsize64 << set_rm_ext_reg 0x7 r << set_imm8 i << primary 0x83
+        [M16 m,     I8  i] -> set_opsize16 << set_rm_ext_mem 0x7 m << set_imm8 i << primary 0x83
+        [M32 m,     I8  i] -> set_opsize32 << set_rm_ext_mem 0x7 m << set_imm8 i << primary 0x83
+        [M64 m,     I8  i] -> set_opsize64 << set_rm_ext_mem 0x7 m << set_imm8 i << primary 0x83
+        [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x38
+        [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x39
+        [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x39
+        [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x39
+        [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x38
+        [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x39
+        [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x39
+        [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x39
+        [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x3A
+        [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x3B
+        [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x3B
+        [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x3B
+        [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x3A
+        [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x3B
+        [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x3B
+        [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x3B
+        _ -> invalidArgs
 
     CMPXCHG -> case args of
       [R8  rm, R8  r] ->                 set_rm_reg_reg r rm << map_0F 0xB0
@@ -472,29 +441,116 @@ encodeInsn !ctx !op !args = do
       [M128 m] -> set_opsize64 << set_rm_ext_mem 0x1 m << map_0F 0xC7
       _ -> invalidArgs
 
-    AND -> alts
-      [ handle_acc_imm  primary 0x24
-      , handle_rm_imm   primary 0x80 0x4
-      , handle_rm_imm8  primary 0x83 0x4
-      , handle_rm_reg   primary 0x20
-      , handle_reg_rm   primary 0x22
-      ]
+    AND -> case args of
+        [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0x24
+        [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0x25
+        [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0x25
+        [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0x25
+        [R8  r,     I8  i] ->                 set_rm_ext_reg 0x4 r << set_imm8  i << primary 0x80
+        [R16 r,     I16 i] -> set_opsize16 << set_rm_ext_reg 0x4 r << set_imm16 i << primary 0x81
+        [R32 r,     I32 i] -> set_opsize32 << set_rm_ext_reg 0x4 r << set_imm32 i << primary 0x81
+        [R64 r,     I32 i] -> set_opsize64 << set_rm_ext_reg 0x4 r << set_imm32 i << primary 0x81
+        [M8  m,     I8  i] ->                 set_rm_ext_mem 0x4 m << set_imm8  i << primary 0x80
+        [M16 m,     I16 i] -> set_opsize16 << set_rm_ext_mem 0x4 m << set_imm16 i << primary 0x81
+        [M32 m,     I32 i] -> set_opsize32 << set_rm_ext_mem 0x4 m << set_imm32 i << primary 0x81
+        [M64 m,     I32 i] -> set_opsize64 << set_rm_ext_mem 0x4 m << set_imm32 i << primary 0x81
+        [R16 r,     I8  i] -> set_opsize16 << set_rm_ext_reg 0x4 r << set_imm8 i << primary 0x83
+        [R32 r,     I8  i] -> set_opsize32 << set_rm_ext_reg 0x4 r << set_imm8 i << primary 0x83
+        [R64 r,     I8  i] -> set_opsize64 << set_rm_ext_reg 0x4 r << set_imm8 i << primary 0x83
+        [M16 m,     I8  i] -> set_opsize16 << set_rm_ext_mem 0x4 m << set_imm8 i << primary 0x83
+        [M32 m,     I8  i] -> set_opsize32 << set_rm_ext_mem 0x4 m << set_imm8 i << primary 0x83
+        [M64 m,     I8  i] -> set_opsize64 << set_rm_ext_mem 0x4 m << set_imm8 i << primary 0x83
+        [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x20
+        [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x21
+        [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x21
+        [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x21
+        [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x20
+        [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x21
+        [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x21
+        [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x21
+        [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x22
+        [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x23
+        [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x23
+        [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x23
+        [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x22
+        [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x23
+        [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x23
+        [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x23
+        _ -> invalidArgs
 
-    OR -> alts
-      [ handle_acc_imm  primary 0x0C
-      , handle_rm_imm   primary 0x80 0x1
-      , handle_rm_imm8  primary 0x83 0x1
-      , handle_rm_reg   primary 0x08
-      , handle_reg_rm   primary 0x0A
-      ]
+    OR -> case args of
+        [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0x0C
+        [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0x0D
+        [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0x0D
+        [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0x0D
+        [R8  r,     I8  i] ->                 set_rm_ext_reg 0x1 r << set_imm8  i << primary 0x80
+        [R16 r,     I16 i] -> set_opsize16 << set_rm_ext_reg 0x1 r << set_imm16 i << primary 0x81
+        [R32 r,     I32 i] -> set_opsize32 << set_rm_ext_reg 0x1 r << set_imm32 i << primary 0x81
+        [R64 r,     I32 i] -> set_opsize64 << set_rm_ext_reg 0x1 r << set_imm32 i << primary 0x81
+        [M8  m,     I8  i] ->                 set_rm_ext_mem 0x1 m << set_imm8  i << primary 0x80
+        [M16 m,     I16 i] -> set_opsize16 << set_rm_ext_mem 0x1 m << set_imm16 i << primary 0x81
+        [M32 m,     I32 i] -> set_opsize32 << set_rm_ext_mem 0x1 m << set_imm32 i << primary 0x81
+        [M64 m,     I32 i] -> set_opsize64 << set_rm_ext_mem 0x1 m << set_imm32 i << primary 0x81
+        [R16 r,     I8  i] -> set_opsize16 << set_rm_ext_reg 0x1 r << set_imm8 i << primary 0x83
+        [R32 r,     I8  i] -> set_opsize32 << set_rm_ext_reg 0x1 r << set_imm8 i << primary 0x83
+        [R64 r,     I8  i] -> set_opsize64 << set_rm_ext_reg 0x1 r << set_imm8 i << primary 0x83
+        [M16 m,     I8  i] -> set_opsize16 << set_rm_ext_mem 0x1 m << set_imm8 i << primary 0x83
+        [M32 m,     I8  i] -> set_opsize32 << set_rm_ext_mem 0x1 m << set_imm8 i << primary 0x83
+        [M64 m,     I8  i] -> set_opsize64 << set_rm_ext_mem 0x1 m << set_imm8 i << primary 0x83
+        [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x08
+        [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x09
+        [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x09
+        [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x09
+        [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x08
+        [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x09
+        [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x09
+        [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x09
+        [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x0A
+        [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x0B
+        [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x0B
+        [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x0B
+        [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x0A
+        [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x0B
+        [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x0B
+        [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x0B
+        _ -> invalidArgs
 
-    XOR -> alts
-      [ handle_acc_imm  primary 0x34
-      , handle_rm_imm   primary 0x80 0x6
-      , handle_rm_imm8  primary 0x83 0x6
-      , handle_rm_reg   primary 0x30
-      , handle_reg_rm   primary 0x32
-      ]
+    XOR -> case args of
+        [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0x34
+        [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0x35
+        [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0x35
+        [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0x35
+        [R8  r,     I8  i] ->                 set_rm_ext_reg 0x6 r << set_imm8  i << primary 0x80
+        [R16 r,     I16 i] -> set_opsize16 << set_rm_ext_reg 0x6 r << set_imm16 i << primary 0x81
+        [R32 r,     I32 i] -> set_opsize32 << set_rm_ext_reg 0x6 r << set_imm32 i << primary 0x81
+        [R64 r,     I32 i] -> set_opsize64 << set_rm_ext_reg 0x6 r << set_imm32 i << primary 0x81
+        [M8  m,     I8  i] ->                 set_rm_ext_mem 0x6 m << set_imm8  i << primary 0x80
+        [M16 m,     I16 i] -> set_opsize16 << set_rm_ext_mem 0x6 m << set_imm16 i << primary 0x81
+        [M32 m,     I32 i] -> set_opsize32 << set_rm_ext_mem 0x6 m << set_imm32 i << primary 0x81
+        [M64 m,     I32 i] -> set_opsize64 << set_rm_ext_mem 0x6 m << set_imm32 i << primary 0x81
+        [R16 r,     I8  i] -> set_opsize16 << set_rm_ext_reg 0x6 r << set_imm8 i << primary 0x83
+        [R32 r,     I8  i] -> set_opsize32 << set_rm_ext_reg 0x6 r << set_imm8 i << primary 0x83
+        [R64 r,     I8  i] -> set_opsize64 << set_rm_ext_reg 0x6 r << set_imm8 i << primary 0x83
+        [M16 m,     I8  i] -> set_opsize16 << set_rm_ext_mem 0x6 m << set_imm8 i << primary 0x83
+        [M32 m,     I8  i] -> set_opsize32 << set_rm_ext_mem 0x6 m << set_imm8 i << primary 0x83
+        [M64 m,     I8  i] -> set_opsize64 << set_rm_ext_mem 0x6 m << set_imm8 i << primary 0x83
+        [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x30
+        [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x31
+        [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x31
+        [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x31
+        [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x30
+        [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x31
+        [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x31
+        [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x31
+        [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x32
+        [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x33
+        [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x33
+        [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x33
+        [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x32
+        [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x33
+        [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x33
+        [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x33
+        _ -> invalidArgs
 
     NOT -> case args of
       [R8  r] ->                 set_rm_ext_reg 0x2 r << primary 0xF6
@@ -855,21 +911,79 @@ encodeInsn !ctx !op !args = do
         [M64 d, I8 i]  -> set_opsize64 << set_rm_ext_mem 0x5 d << set_imm8 i << map_0F 0xBA
         _ -> invalidArgs
 
-    SUB -> alts
-      [ handle_acc_imm  primary 0x2C
-      , handle_rm_imm   primary 0x80 0x5
-      , handle_rm_imm8  primary 0x83 0x5
-      , handle_rm_reg   primary 0x28
-      , handle_reg_rm   primary 0x2A
-      ]
+    SUB -> case args of
+        [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0x2C
+        [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0x2D
+        [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0x2D
+        [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0x2D
+        [R8  r, I8  i] ->                 set_rm_ext_reg 0x5 r << set_imm8  i << primary 0x80
+        [R16 r, I16 i] -> set_opsize16 << set_rm_ext_reg 0x5 r << set_imm16 i << primary 0x81
+        [R32 r, I32 i] -> set_opsize32 << set_rm_ext_reg 0x5 r << set_imm32 i << primary 0x81
+        [R64 r, I32 i] -> set_opsize64 << set_rm_ext_reg 0x5 r << set_imm32 i << primary 0x81
+        [M8  m, I8  i] ->                 set_rm_ext_mem 0x5 m << set_imm8  i << primary 0x80
+        [M16 m, I16 i] -> set_opsize16 << set_rm_ext_mem 0x5 m << set_imm16 i << primary 0x81
+        [M32 m, I32 i] -> set_opsize32 << set_rm_ext_mem 0x5 m << set_imm32 i << primary 0x81
+        [M64 m, I32 i] -> set_opsize64 << set_rm_ext_mem 0x5 m << set_imm32 i << primary 0x81
+        [R16 r, I8 i] -> set_opsize16 << set_rm_ext_reg 0x5 r << set_imm8 i << primary 0x83
+        [R32 r, I8 i] -> set_opsize32 << set_rm_ext_reg 0x5 r << set_imm8 i << primary 0x83
+        [R64 r, I8 i] -> set_opsize64 << set_rm_ext_reg 0x5 r << set_imm8 i << primary 0x83
+        [M16 m, I8 i] -> set_opsize16 << set_rm_ext_mem 0x5 m << set_imm8 i << primary 0x83
+        [M32 m, I8 i] -> set_opsize32 << set_rm_ext_mem 0x5 m << set_imm8 i << primary 0x83
+        [M64 m, I8 i] -> set_opsize64 << set_rm_ext_mem 0x5 m << set_imm8 i << primary 0x83
+        [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x28
+        [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x29
+        [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x29
+        [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x29
+        [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x28
+        [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x29
+        [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x29
+        [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x29
+        [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x2A
+        [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x2B
+        [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x2B
+        [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x2B
+        [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x2A
+        [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x2B
+        [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x2B
+        [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x2B
+        _ -> invalidArgs
 
-    SBB -> alts
-      [ handle_acc_imm  primary 0x1C
-      , handle_rm_imm   primary 0x80 0x3
-      , handle_rm_imm8  primary 0x83 0x3
-      , handle_rm_reg   primary 0x18
-      , handle_reg_rm   primary 0x1A
-      ]
+    SBB -> case args of
+        [R8 R_AL,   I8  i] ->                 set_imm8  i << primary 0x1C
+        [R16 R_AX,  I16 i] -> set_opsize16 << set_imm16 i << primary 0x1D
+        [R32 R_EAX, I32 i] -> set_opsize32 << set_imm32 i << primary 0x1D
+        [R64 R_RAX, I32 i] -> set_opsize64 << set_imm32 i << primary 0x1D
+        [R8  r,     I8  i] ->                 set_rm_ext_reg 0x3 r << set_imm8  i << primary 0x80
+        [R16 r,     I16 i] -> set_opsize16 << set_rm_ext_reg 0x3 r << set_imm16 i << primary 0x81
+        [R32 r,     I32 i] -> set_opsize32 << set_rm_ext_reg 0x3 r << set_imm32 i << primary 0x81
+        [R64 r,     I32 i] -> set_opsize64 << set_rm_ext_reg 0x3 r << set_imm32 i << primary 0x81
+        [M8  m,     I8  i] ->                 set_rm_ext_mem 0x3 m << set_imm8  i << primary 0x80
+        [M16 m,     I16 i] -> set_opsize16 << set_rm_ext_mem 0x3 m << set_imm16 i << primary 0x81
+        [M32 m,     I32 i] -> set_opsize32 << set_rm_ext_mem 0x3 m << set_imm32 i << primary 0x81
+        [M64 m,     I32 i] -> set_opsize64 << set_rm_ext_mem 0x3 m << set_imm32 i << primary 0x81
+        [R16 r,     I8  i] -> set_opsize16 << set_rm_ext_reg 0x3 r << set_imm8 i << primary 0x83
+        [R32 r,     I8  i] -> set_opsize32 << set_rm_ext_reg 0x3 r << set_imm8 i << primary 0x83
+        [R64 r,     I8  i] -> set_opsize64 << set_rm_ext_reg 0x3 r << set_imm8 i << primary 0x83
+        [M16 m,     I8  i] -> set_opsize16 << set_rm_ext_mem 0x3 m << set_imm8 i << primary 0x83
+        [M32 m,     I8  i] -> set_opsize32 << set_rm_ext_mem 0x3 m << set_imm8 i << primary 0x83
+        [M64 m,     I8  i] -> set_opsize64 << set_rm_ext_mem 0x3 m << set_imm8 i << primary 0x83
+        [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x18
+        [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x19
+        [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x19
+        [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x19
+        [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x18
+        [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x19
+        [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x19
+        [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x19
+        [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x1A
+        [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x1B
+        [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x1B
+        [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x1B
+        [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x1A
+        [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x1B
+        [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x1B
+        [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x1B
+        _ -> invalidArgs
 
     DEC -> case args of
       [M8  m] ->                 set_rm_ext_mem 0x1 m << primary 0xFE
@@ -939,22 +1053,34 @@ encodeInsn !ctx !op !args = do
       [M64 m] -> set_opsize64 << set_rm_ext_mem 0x7 m << primary 0xF7
       _ -> invalidArgs
 
-    IMUL -> alts
-      [ case args of
-          [M8  m] -> Just $                 set_rm_ext_mem 0x5 m << primary 0xF6
-          [M16 m] -> Just $ set_opsize16 << set_rm_ext_mem 0x5 m << primary 0xF7
-          [M32 m] -> Just $ set_opsize32 << set_rm_ext_mem 0x5 m << primary 0xF7
-          [M64 m] -> Just $ set_opsize64 << set_rm_ext_mem 0x5 m << primary 0xF7
-          [R8  r] -> Just $                 set_rm_ext_reg 0x5 r << primary 0xF6
-          [R16 r] -> Just $ set_opsize16 << set_rm_ext_reg 0x5 r << primary 0xF7
-          [R32 r] -> Just $ set_opsize32 << set_rm_ext_reg 0x5 r << primary 0xF7
-          [R64 r] -> Just $ set_opsize64 << set_rm_ext_reg 0x5 r << primary 0xF7
-          _ -> Nothing
-
-      , handle_reg_rm     map_0F  0xAF
-      , handle_reg_rm_i8  primary 0x6B
-      , handle_reg_rm_imm primary 0x69
-      ]
+    IMUL -> case args of
+      [M8  m] ->                 set_rm_ext_mem 0x5 m << primary 0xF6
+      [M16 m] -> set_opsize16 << set_rm_ext_mem 0x5 m << primary 0xF7
+      [M32 m] -> set_opsize32 << set_rm_ext_mem 0x5 m << primary 0xF7
+      [M64 m] -> set_opsize64 << set_rm_ext_mem 0x5 m << primary 0xF7
+      [R8  r] ->                 set_rm_ext_reg 0x5 r << primary 0xF6
+      [R16 r] -> set_opsize16 << set_rm_ext_reg 0x5 r << primary 0xF7
+      [R32 r] -> set_opsize32 << set_rm_ext_reg 0x5 r << primary 0xF7
+      [R64 r] -> set_opsize64 << set_rm_ext_reg 0x5 r << primary 0xF7
+      [R16 r1, R16 r2, I16 i] -> set_imm16 i << set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x69
+      [R32 r1, R32 r2, I32 i] -> set_imm32 i << set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x69
+      [R64 r1, R64 r2, I32 i] -> set_imm32 i << set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x69
+      [R16 r, M16 m, I16 i] -> set_imm16 i << set_opsize16 << set_rm_reg_mem r m << primary 0x69
+      [R32 r, M32 m, I32 i] -> set_imm32 i << set_opsize32 << set_rm_reg_mem r m << primary 0x69
+      [R64 r, M64 m, I32 i] -> set_imm32 i << set_opsize64 << set_rm_reg_mem r m << primary 0x69
+      [R16 r1, R16 r2, I8 i] -> set_imm8 i << set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x6B
+      [R32 r1, R32 r2, I8 i] -> set_imm8 i << set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x6B
+      [R64 r1, R64 r2, I8 i] -> set_imm8 i << set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x6B
+      [R16 r, M16 m, I8 i]   -> set_imm8 i << set_opsize16 << set_rm_reg_mem r m << primary 0x6B
+      [R32 r, M32 m, I8 i]   -> set_imm8 i << set_opsize32 << set_rm_reg_mem r m << primary 0x6B
+      [R64 r, M64 m, I8 i]   -> set_imm8 i << set_opsize64 << set_rm_reg_mem r m << primary 0x6B
+      [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << map_0F 0xAF
+      [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << map_0F 0xAF
+      [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << map_0F 0xAF
+      [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << map_0F 0xAF
+      [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << map_0F 0xAF
+      [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << map_0F 0xAF
+      _ -> invalidArgs
 
     SXA -> case args of
       -- Intel uses CBW/CWDE/CDQE mnemonics to differentiate the operand size.
@@ -974,32 +1100,43 @@ encodeInsn !ctx !op !args = do
       [OpReg R_RAX] -> set_opsize64 << primary 0x99
       _             -> invalidArgs
 
-    MOV -> alts
-      [ handle_rm_reg primary 0x88
-      , handle_reg_rm primary 0x8A
-        -- shorter forms for reg,imm + imm64 form!
-      , case args of
-          [R8  r, I8  i] -> pure $                 set_imm8  i << set_oc_reg r << primary 0xB0
-          [R16 r, I16 i] -> pure $ set_opsize16 << set_imm16 i << set_oc_reg r << primary 0xB8
-          [R32 r, I32 i] -> pure $ set_opsize32 << set_imm32 i << set_oc_reg r << primary 0xB8
-          [R64 r, I64 i] -> pure $ set_opsize64 << set_imm64 i << set_oc_reg r << primary 0xB8
-          _ -> Nothing
-      , case args of
-        [R8  r, I8  i] -> Just $                 set_rm_ext_reg 0x0 r << set_imm8  i << primary 0xC6
-        [R16 r, I16 i] -> Just $ set_opsize16 << set_rm_ext_reg 0x0 r << set_imm16 i << primary 0xC7
-        [R32 r, I32 i] -> Just $ set_opsize32 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xC7
-        [M8  m, I8  i] -> Just $                 set_rm_ext_mem 0x0 m << set_imm8  i << primary 0xC6
-        [M16 m, I16 i] -> Just $ set_opsize16 << set_rm_ext_mem 0x0 m << set_imm16 i << primary 0xC7
-        [M32 m, I32 i] -> Just $ set_opsize32 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xC7
-        -- These are really MOVSX, so we implement them as such.
-        -- [R64 r, I32 i] -> Just $ set_opsize64 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xC7
-        -- [M64 m, I32 i] -> Just $ set_opsize64 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xC7
-        _ -> Nothing
+    MOV -> case args of
+      [R8  r1, R8  r2] ->                 set_mr_reg_reg r1 r2 << primary 0x88
+      [R16 r1, R16 r2] -> set_opsize16 << set_mr_reg_reg r1 r2 << primary 0x89
+      [R32 r1, R32 r2] -> set_opsize32 << set_mr_reg_reg r1 r2 << primary 0x89
+      [R64 r1, R64 r2] -> set_opsize64 << set_mr_reg_reg r1 r2 << primary 0x89
+      [M8 m,   R8   r] ->                 set_rm_reg_mem r m   << primary 0x88
+      [M16 m,  R16  r] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x89
+      [M32 m,  R32  r] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x89
+      [M64 m,  R64  r] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x89
+      -- redundant encodings
+      -- [R8  r1, R8  r2] ->                 set_rm_reg_reg r1 r2 << primary 0x8A
+      -- [R16 r1, R16 r2] -> set_opsize16 << set_rm_reg_reg r1 r2 << primary 0x8B
+      -- [R32 r1, R32 r2] -> set_opsize32 << set_rm_reg_reg r1 r2 << primary 0x8B
+      -- [R64 r1, R64 r2] -> set_opsize64 << set_rm_reg_reg r1 r2 << primary 0x8B
+      [R8  r,  M8   m] ->                 set_rm_reg_mem r m   << primary 0x8A
+      [R16 r,  M16  m] -> set_opsize16 << set_rm_reg_mem r m   << primary 0x8B
+      [R32 r,  M32  m] -> set_opsize32 << set_rm_reg_mem r m   << primary 0x8B
+      [R64 r,  M64  m] -> set_opsize64 << set_rm_reg_mem r m   << primary 0x8B
+      -- shorter forms for reg,imm + imm64 form!
+      [R8  r, I8  i] ->                 set_imm8  i << set_oc_reg r << primary 0xB0
+      [R16 r, I16 i] -> set_opsize16 << set_imm16 i << set_oc_reg r << primary 0xB8
+      [R32 r, I32 i] -> set_opsize32 << set_imm32 i << set_oc_reg r << primary 0xB8
+      [R64 r, I64 i] -> set_opsize64 << set_imm64 i << set_oc_reg r << primary 0xB8
+      [R8  r, I8  i] ->                 set_rm_ext_reg 0x0 r << set_imm8  i << primary 0xC6
+      [R16 r, I16 i] -> set_opsize16 << set_rm_ext_reg 0x0 r << set_imm16 i << primary 0xC7
+      [R32 r, I32 i] -> set_opsize32 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xC7
+      [M8  m, I8  i] ->                 set_rm_ext_mem 0x0 m << set_imm8  i << primary 0xC6
+      [M16 m, I16 i] -> set_opsize16 << set_rm_ext_mem 0x0 m << set_imm16 i << primary 0xC7
+      [M32 m, I32 i] -> set_opsize32 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xC7
+      -- These are really MOVSX, so we implement them as such.
+      -- [R64 r, I32 i] -> Just $ set_opsize64 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xC7
+      -- [M64 m, I32 i] -> Just $ set_opsize64 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xC7
       -- TODO: mov rm, sreg
       -- TODO: mov sreg, rm
       -- TODO: mov acc, moffs
       -- TODO: mov moffs, acc
-      ]
+      _ -> invalidArgs
 
     MOVSX -> case args of
       [R16 d, R8 s]  -> set_opsize16 << set_rm_reg_reg d s << map_0F 0xBE
