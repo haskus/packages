@@ -427,30 +427,6 @@ encodeInsn !ctx !op !args = do
           set_imm32 i << set_opsize64 << set_rm_reg_mem r m << mk_oc oc
         _ -> Nothing
 
-      handle_ext_rm mk_oc oc ext = case args of
-        [M8  m] -> Just do
-          set_rm_ext_mem ext m << mk_oc oc
-        [M16 m] -> Just do
-          set_opsize16 << set_rm_ext_mem ext m << mk_oc (oc+1)
-        [M32 m] -> Just do
-          set_opsize32 << set_rm_ext_mem ext m << mk_oc (oc+1)
-        [M64 m] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_ext_mem ext m << mk_oc (oc+1)
-
-        -- FIXME: Intel doc says that reg extension goes into REX.R. Is that true??
-        -- ModRM.rm extension is supposed to go into REX.B
-        [R8 r] -> Just do
-          set_rm_ext_reg ext r << mk_oc oc
-        [R16 r] -> Just do
-          set_opsize16 << set_rm_ext_reg ext r << mk_oc (oc+1)
-        [R32 r] -> Just do
-          set_opsize32 << set_rm_ext_reg ext r << mk_oc (oc+1)
-        [R64 r] -> Just do
-          assert_mode64
-          set_opsize64 << set_rm_ext_reg ext r << mk_oc (oc+1)
-        _ -> Nothing
-
       handle_rm_imm  mk_oc oc ext = handle_reg_imm  mk_oc oc ext <|> handle_mem_imm mk_oc oc ext
       handle_rm_imm8 mk_oc oc ext = handle_reg_imm8 mk_oc oc ext <|> handle_mem_imm8 mk_oc oc ext
       handle_rm_reg  mk_oc oc     = handle_regs_rm_reg mk_oc oc  <|> handle_mem_reg mk_oc oc
@@ -1009,7 +985,17 @@ encodeInsn !ctx !op !args = do
       _ -> invalidArgs
 
     IMUL -> alts
-      [ handle_ext_rm     primary 0xF6 0x5
+      [ case args of
+          [M8  m] -> Just $                 set_rm_ext_mem 0x5 m << primary 0xF6
+          [M16 m] -> Just $ set_opsize16 << set_rm_ext_mem 0x5 m << primary 0xF7
+          [M32 m] -> Just $ set_opsize32 << set_rm_ext_mem 0x5 m << primary 0xF7
+          [M64 m] -> Just $ set_opsize64 << set_rm_ext_mem 0x5 m << primary 0xF7
+          [R8  r] -> Just $                 set_rm_ext_reg 0x5 r << primary 0xF6
+          [R16 r] -> Just $ set_opsize16 << set_rm_ext_reg 0x5 r << primary 0xF7
+          [R32 r] -> Just $ set_opsize32 << set_rm_ext_reg 0x5 r << primary 0xF7
+          [R64 r] -> Just $ set_opsize64 << set_rm_ext_reg 0x5 r << primary 0xF7
+          _ -> Nothing
+
       , handle_reg_rm     map_0F  0xAF
       , handle_reg_rm_i8  primary 0x6B
       , handle_reg_rm_imm primary 0x69
