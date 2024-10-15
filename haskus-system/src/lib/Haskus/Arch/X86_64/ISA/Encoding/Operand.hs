@@ -68,6 +68,10 @@ data Operands
 
 instance IsList Operands where
   type Item Operands = Operand
+
+  {-# INLINE fromListN #-}
+  fromListN _ = fromList
+
   {-# INLINE fromList #-}
   fromList = \case
     []      -> Ops0
