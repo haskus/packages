@@ -940,35 +940,45 @@ encodeInsn !ctx !op !args = do
       , handle_reg_rm   primary 0x1A
       ]
 
-    DEC -> alts
-      [ case args of
-          -- shorter forms, except in 64-bit mode (reused for REX prefixes)
-          [R16 r]
-            | not mode64
-            , (False,c) <- regCodeX r
-            -> pure $ set_opsize16 << primary (0x48 + c)
-          [R32 r]
-            | not mode64
-            , (False,c) <- regCodeX r
-            -> pure $ set_opsize32 << primary (0x48 + c)
-          _ -> Nothing
-      , handle_ext_rm primary 0xFE 0x1
-      ]
+    DEC -> case args of
+      [M8  m] ->                 set_rm_ext_mem 0x1 m << primary 0xFE
+      [M16 m] -> set_opsize16 << set_rm_ext_mem 0x1 m << primary 0xFF
+      [M32 m] -> set_opsize32 << set_rm_ext_mem 0x1 m << primary 0xFF
+      [M64 m] -> set_opsize64 << set_rm_ext_mem 0x1 m << primary 0xFF
+      -- shorter forms, except in 64-bit mode (reused for REX prefixes)
+      [R16 r]
+        | not mode64
+        , (False,c) <- regCodeX r
+        -> set_opsize16 << primary (0x48 + c)
+      [R32 r]
+        | not mode64
+        , (False,c) <- regCodeX r
+        -> set_opsize32 << primary (0x48 + c)
+      [R8  r] ->                 set_rm_ext_reg 0x1 r << primary 0xFE
+      [R16 r] -> set_opsize16 << set_rm_ext_reg 0x1 r << primary 0xFF
+      [R32 r] -> set_opsize32 << set_rm_ext_reg 0x1 r << primary 0xFF
+      [R64 r] -> set_opsize64 << set_rm_ext_reg 0x1 r << primary 0xFF
+      _ -> invalidArgs
 
-    INC -> alts
-      [ case args of
-          -- shorter forms, except in 64-bit mode (reused for REX prefixes)
-          [R16 r]
-            | not mode64
-            , (False,c) <- regCodeX r
-            -> pure $ set_opsize16 << primary (0x40 + c)
-          [R32 r]
-            | not mode64
-            , (False,c) <- regCodeX r
-            -> pure $ set_opsize32 << primary (0x40 + c)
-          _ -> Nothing
-      , handle_ext_rm primary 0xFE 0x0
-      ]
+    INC -> case args of
+      [M8  m] ->                 set_rm_ext_mem 0x0 m << primary 0xFE
+      [M16 m] -> set_opsize16 << set_rm_ext_mem 0x0 m << primary 0xFF
+      [M32 m] -> set_opsize32 << set_rm_ext_mem 0x0 m << primary 0xFF
+      [M64 m] -> set_opsize64 << set_rm_ext_mem 0x0 m << primary 0xFF
+      -- shorter forms, except in 64-bit mode (reused for REX prefixes)
+      [R16 r]
+        | not mode64
+        , (False,c) <- regCodeX r
+        -> set_opsize16 << primary (0x40 + c)
+      [R32 r]
+        | not mode64
+        , (False,c) <- regCodeX r
+        -> set_opsize32 << primary (0x40 + c)
+      [R8  r] ->                 set_rm_ext_reg 0x0 r << primary 0xFE
+      [R16 r] -> set_opsize16 << set_rm_ext_reg 0x0 r << primary 0xFF
+      [R32 r] -> set_opsize32 << set_rm_ext_reg 0x0 r << primary 0xFF
+      [R64 r] -> set_opsize64 << set_rm_ext_reg 0x0 r << primary 0xFF
+      _ -> invalidArgs
 
     NEG  -> case args of
       [M8  m] ->                 set_rm_ext_mem 0x3 m << primary 0xF6
@@ -1033,7 +1043,17 @@ encodeInsn !ctx !op !args = do
           [R32 r, I32 i] -> pure $ set_opsize32 << set_imm32 i << set_oc_reg r << primary 0xB8
           [R64 r, I64 i] -> pure $ set_opsize64 << set_imm64 i << set_oc_reg r << primary 0xB8
           _ -> Nothing
-      , handle_rm_imm primary 0xC6 0x0
+      , case args of
+        [R8  r, I8  i] -> Just $                 set_rm_ext_reg 0x0 r << set_imm8  i << primary 0xC6
+        [R16 r, I16 i] -> Just $ set_opsize16 << set_rm_ext_reg 0x0 r << set_imm16 i << primary 0xC7
+        [R32 r, I32 i] -> Just $ set_opsize32 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xC7
+        [M8  m, I8  i] -> Just $                 set_rm_ext_mem 0x0 m << set_imm8  i << primary 0xC6
+        [M16 m, I16 i] -> Just $ set_opsize16 << set_rm_ext_mem 0x0 m << set_imm16 i << primary 0xC7
+        [M32 m, I32 i] -> Just $ set_opsize32 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xC7
+        -- These are really MOVSX, so we implement them as such.
+        -- [R64 r, I32 i] -> Just $ set_opsize64 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xC7
+        -- [M64 m, I32 i] -> Just $ set_opsize64 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xC7
+        _ -> Nothing
       -- TODO: mov rm, sreg
       -- TODO: mov sreg, rm
       -- TODO: mov acc, moffs
@@ -1058,6 +1078,9 @@ encodeInsn !ctx !op !args = do
       [R32 d, R32 s] -> set_opsize32 << set_rm_reg_reg d s << primary 0x63
       [R16 d, M16 s] -> set_opsize16 << set_rm_reg_mem d s << primary 0x63
       [R32 d, M32 s] -> set_opsize32 << set_rm_reg_mem d s << primary 0x63
+      -- these are documented as MOVs, but they're really MOVSXs!
+      [R64 r, I32 i] -> set_opsize64 << set_rm_ext_reg 0x0 r << set_imm32 i << primary 0xC7
+      [M64 m, I32 i] -> set_opsize64 << set_rm_ext_mem 0x0 m << set_imm32 i << primary 0xC7
       _ -> invalidArgs
 
     MOVZX -> case args of
