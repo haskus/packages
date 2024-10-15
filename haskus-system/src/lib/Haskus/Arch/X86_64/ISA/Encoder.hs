@@ -1364,12 +1364,12 @@ encodeInsn !ctx !op !args = do
       [I8 i]  ->          imm8  i          << oc 0x6A
       [I16 i] -> osz16 << imm16 i          << oc 0x68
       [I32 i] -> osz32 << imm32 i          << oc 0x68
-      [OpSeg CS] | not mode64 -> oc 0x0E
-      [OpSeg SS] | not mode64 -> oc 0x16
-      [OpSeg DS] | not mode64 -> oc 0x1E
-      [OpSeg ES] | not mode64 -> oc 0x06
-      [OpSeg FS]              -> oc_0F 0xA0
-      [OpSeg GS]              -> oc_0F 0xA8
+      [OpSeg CS] -> assert_not_mode64 << oc 0x0E
+      [OpSeg SS] -> assert_not_mode64 << oc 0x16
+      [OpSeg DS] -> assert_not_mode64 << oc 0x1E
+      [OpSeg ES] -> assert_not_mode64 << oc 0x06
+      [OpSeg FS] -> oc_0F 0xA0
+      [OpSeg GS] -> oc_0F 0xA8
       _ -> invalidArgs
 
     POP -> case args of
@@ -1388,11 +1388,11 @@ encodeInsn !ctx !op !args = do
       [M64 m] -> osz64 << rm_ext_mem 0x0 m << oc 0x8F
       -- TODO: the operand size can be used to select the stack increment. How
       -- do we provide this to users?
-      [OpSeg SS] | not mode64 -> oc 0x17
-      [OpSeg DS] | not mode64 -> oc 0x1F
-      [OpSeg ES] | not mode64 -> oc 0x07
-      [OpSeg FS]              -> oc_0F 0xA1
-      [OpSeg GS]              -> oc_0F 0xA9
+      [OpSeg SS] -> assert_not_mode64 << oc 0x17
+      [OpSeg DS] -> assert_not_mode64 << oc 0x1F
+      [OpSeg ES] -> assert_not_mode64 << oc 0x07
+      [OpSeg FS] -> oc_0F 0xA1
+      [OpSeg GS] -> oc_0F 0xA9
       _ -> invalidArgs
 
     POPA sz -> do
