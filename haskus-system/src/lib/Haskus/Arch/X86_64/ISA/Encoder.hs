@@ -111,6 +111,11 @@ encodeInsn !ctx !op !args = do
       assert_not_mode64   = when   mode64 $ efail ENotAvailableInMode64
       require_extension x = unless (extensionAvailable ctx x) $ efail (ERequireExtension x)
 
+      req_avx  = require_extension Ext.AVX
+      req_sse  = require_extension Ext.SSE
+      req_sse2 = require_extension Ext.SSE2
+      req_bmi1 = require_extension Ext.BMI1
+
       assert_no_args = case args of
         [] -> pure ()
         _  -> efail ERequireNoArg
@@ -851,7 +856,7 @@ encodeInsn !ctx !op !args = do
         _ -> invalidArgs
 
     TZCNT -> do
-      require_extension Ext.BMI1
+      req_bmi1
       case args of
         [R16 d, R16 s] -> osz16 << rm_reg_reg d s << p_F3 << oc_0F 0xBC
         [R16 d, M16 s] -> osz16 << rm_reg_mem d s << p_F3 << oc_0F 0xBC
@@ -1271,7 +1276,7 @@ encodeInsn !ctx !op !args = do
       _ -> invalidArgs
 
     MOVNTI -> do
-      require_extension Ext.SSE2
+      req_sse2
       case args of
         [M32 m, R32 r] ->          rm_reg_mem r m << oc_0F 0xC3
         [M64 m, R64 r] -> osz64 << rm_reg_mem r m << oc_0F 0xC3
@@ -1823,21 +1828,21 @@ encodeInsn !ctx !op !args = do
         _ -> invalidArgs
 
     MFENCE -> do
-      require_extension Ext.SSE2
+      req_sse2
       assert_no_args
       -- Can be encoded as 0F AE Fx, where x in the range 0-7 (i.e. ModRM.rm
       -- field is ignored). We use 0F AE F0.
       set_modrm 0xF0 << oc_0F 0xAE
 
     SFENCE -> do
-      require_extension Ext.SSE
+      req_sse
       assert_no_args
       -- Can be encoded as 0F AE Fx, where x in the range 8-F (i.e. ModRM.rm
       -- field is ignored). We use 0F AE F8.
       set_modrm 0xF8 << oc_0F 0xAE
 
     LFENCE -> do
-      require_extension Ext.SSE2
+      req_sse2
       assert_no_args
       -- Can be encoded as 0F AE Ex, where x in the range 8-F (i.e. ModRM.rm
       -- field is ignored). We use 0F AE E8.
@@ -1847,86 +1852,86 @@ encodeInsn !ctx !op !args = do
     ADDPS ->
       case args of
         [V128 v, M128 m] -> do
-          require_extension Ext.SSE
+          req_sse
           rm_vec_mem v m << oc_0F 0x58
         [V128 v1, V128 v2] -> do
-          require_extension Ext.SSE
+          req_sse
           rm_vec_vec v1 v2 << oc_0F 0x58
         [V128 d, V128 s1, V128 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_128_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
         [V256 d, V256 s1, V256 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_256_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
         [V128 d, V128 s1, M128 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_128_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         [V256 d, V256 s1, M256 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_256_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         _ -> invalidArgs
 
     ADDPD ->
       case args of
         [V128 v, M128 m] -> do
-          require_extension Ext.SSE2
+          req_sse2
           rm_vec_mem v m << p_66 << oc_0F 0x58
         [V128 v1, V128 v2] -> do
-          require_extension Ext.SSE2
+          req_sse2
           rm_vec_vec v1 v2 << p_66 << oc_0F 0x58
         [V128 d, V128 s1, V128 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_128_66_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
         [V256 d, V256 s1, V256 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_256_66_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
         [V128 d, V128 s1, M128 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_128_66_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         [V256 d, V256 s1, M256 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_256_66_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         _ -> invalidArgs
 
     ADDSS ->
       case args of
         [V128 v, M32 m] -> do
-          require_extension Ext.SSE
+          req_sse
           rm_vec_mem v m << p_F3 << oc_0F 0x58
         [V128 v1, V128 v2] -> do
-          require_extension Ext.SSE
+          req_sse
           rm_vec_vec v1 v2 << p_F3 << oc_0F 0x58
         [V128 d, V128 s1, V128 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_LIG_F3_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
         [V128 d, V128 s1, M32 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_LIG_F3_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         _ -> invalidArgs
 
     ADDSD ->
       case args of
         [V128 v, M32 m] -> do
-          require_extension Ext.SSE2
+          req_sse2
           rm_vec_mem v m << p_F2 << oc_0F 0x58
         [V128 v1, V128 v2] -> do
-          require_extension Ext.SSE2
+          req_sse2
           rm_vec_vec v1 v2 << p_F2 << oc_0F 0x58
         [V128 d, V128 s1, V128 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_LIG_F2_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
         [V128 d, V128 s1, M64 s2] -> do
-          require_extension Ext.AVX
+          req_avx
           vex_LIG_F2_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         _ -> invalidArgs
 
     SUBPS ->
       case args of
         [V128 v, M128 m] -> do
-          require_extension Ext.SSE
+          req_sse
           rm_vec_mem v m << oc_0F 0x5C
         [V128 v1, V128 v2] -> do
-          require_extension Ext.SSE
+          req_sse
           rm_vec_vec v1 v2 << oc_0F 0x5C
         -- TODO: add VEX and EVEX encodings
         _ -> invalidArgs
@@ -1934,10 +1939,10 @@ encodeInsn !ctx !op !args = do
     SUBPD ->
       case args of
         [V128 v, M128 m] -> do
-          require_extension Ext.SSE2
+          req_sse2
           rm_vec_mem v m << p_66 << oc_0F 0x5C
         [V128 v1, V128 v2] -> do
-          require_extension Ext.SSE2
+          req_sse2
           rm_vec_vec v1 v2 << p_66 << oc_0F 0x5C
         -- TODO: add VEX and EVEX encodings
         _ -> invalidArgs
@@ -1945,10 +1950,10 @@ encodeInsn !ctx !op !args = do
     SUBSS ->
       case args of
         [V128 v, M32 m] -> do
-          require_extension Ext.SSE
+          req_sse
           rm_vec_mem v m << p_F3 << oc_0F 0x5C
         [V128 v1, V128 v2] -> do
-          require_extension Ext.SSE
+          req_sse
           rm_vec_vec v1 v2 << p_F3 << oc_0F 0x5C
         -- TODO: add VEX and EVEX encodings
         _ -> invalidArgs
@@ -1956,10 +1961,10 @@ encodeInsn !ctx !op !args = do
     SUBSD ->
       case args of
         [V128 v, M32 m] -> do
-          require_extension Ext.SSE2
+          req_sse2
           rm_vec_mem v m << p_F2 << oc_0F 0x5C
         [V128 v1, V128 v2] -> do
-          require_extension Ext.SSE2
+          req_sse2
           rm_vec_vec v1 v2 << p_F2 << oc_0F 0x5C
         -- TODO: add VEX and EVEX encodings
         _ -> invalidArgs
