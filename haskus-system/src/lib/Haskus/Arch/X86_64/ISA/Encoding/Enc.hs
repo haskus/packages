@@ -5,6 +5,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Enc
   , encImmOffset
   , encDispOffset
   , Opcode (..)
+  , LegacyMap (..)
   , EncError (..)
   , encCheck
   , encode
@@ -89,40 +90,49 @@ encDispOffset Enc{..} = case encDisp of
 
 -- | Instruction opcode
 data Opcode
-  = Op      !U8       -- ^ Primary opcode map
-  | Op_0F   !U8       -- ^ Secondary opcode map
-  | Op_0F38 !U8       -- ^ 0F_38 opcode map
-  | Op_0F3A !U8       -- ^ 0F_3A opcode map
-  | Op_0F0F !U8       -- ^ 3DNow! opcode map
-  | Op_Vex  !Vex !U8  -- ^ Vex prefix: 2-byte or 3-byte prefix + opcode
-  | Op_Xop  !Xop !U8  -- ^ Xop prefix: 3-byte prefix + opcode
+  = Op_Leg  !LegacyMap !U8 -- ^ Legacy encoding
+  | Op_Vex  !Vex       !U8  -- ^ Vex prefix: 2-byte or 3-byte prefix + opcode
+  | Op_Xop  !Xop       !U8  -- ^ Xop prefix: 3-byte prefix + opcode
   deriving (Show,Eq,Ord)
+
+data LegacyMap
+  = Map_Primary -- ^ Primary opcode map
+  | Map_0F      -- ^ Secondary opcode map
+  | Map_0F38    -- ^ 0F_38 opcode map
+  | Map_0F3A    -- ^ 0F_3A opcode map
+  | Map_0F0F    -- ^ 3DNow opcode map
+  deriving (Show,Eq,Ord)
+
+writeLegacyMap :: LegacyMap -> Writer s
+writeLegacyMap = \case
+  Map_Primary  -> mempty
+  Map_0F       -> writeU8 0x0F
+  Map_0F38     -> writeU8 0x0F <> writeU8 0x38
+  Map_0F3A     -> writeU8 0x0F <> writeU8 0x3A
+  Map_0F0F     -> writeU8 0x0F <> writeU8 0x0F
 
 opcodeSize :: Opcode -> Word
 opcodeSize = \case
-  Op      {} -> 1
-  Op_0F   {} -> 2
-  Op_0F38 {} -> 3
-  Op_0F3A {} -> 3
-  Op_0F0F {} -> 3
+  Op_Leg m _ -> case m of
+    Map_Primary -> 1
+    Map_0F      -> 2
+    Map_0F38    -> 3
+    Map_0F3A    -> 3
+    Map_0F0F    -> 3
   Op_Vex v _ -> vexSize v + 1
   Op_Xop  {} -> 4
 
 isLegacyOpcode :: Maybe Opcode -> Bool
 isLegacyOpcode = \case
   Nothing           -> True
-  Just (Op      {}) -> True
-  Just (Op_0F   {}) -> True
-  Just (Op_0F38 {}) -> True
-  Just (Op_0F3A {}) -> True
-  Just (Op_0F0F {}) -> True
+  Just (Op_Leg {})  -> True
   Just (Op_Vex  {}) -> False
   Just (Op_Xop  {}) -> False
 
 is3DNowOpcode :: Opcode -> Bool
 is3DNowOpcode = \case
-  Op_0F0F {} -> True
-  _          -> False
+  Op_Leg Map_0F0F _ -> True
+  _                 -> False
 
 data EncError
   = TooManyPrefixes !Word       -- ^ More than 5 prefixes
@@ -177,11 +187,9 @@ encode Enc{..} = mconcat
   , case encOpcode of
       Nothing -> mempty
       Just o  -> case o of
-        Op      oc  -> writeU8 oc
-        Op_0F   oc  -> writeU8 0x0F <> writeU8 oc
-        Op_0F38 oc  -> writeU8 0x0F <> writeU8 0x38 <> writeU8 oc
-        Op_0F3A oc  -> writeU8 0x0F <> writeU8 0x3A <> writeU8 oc
-        Op_0F0F _oc -> writeU8 0x0F <> writeU8 0x0F -- 3DNow! opcode goes after the operands
+        Op_Leg m oc -> case m of
+          Map_0F0F -> writeLegacyMap m -- 3DNow! opcode goes after the operands
+          _        -> writeLegacyMap m <> writeU8 oc
         Op_Vex v oc -> writeVex v <> writeU8 oc
         Op_Xop x oc -> writeXop x <> writeU8 oc
   
@@ -191,8 +199,9 @@ encode Enc{..} = mconcat
   , maybe mempty writeSizedValueLE encImm
     
   , case encOpcode of
-      Just (Op_0F0F oc) -> writeU8 oc -- 3DNow! opcode goes after the operands
-      _                 -> mempty
+      -- 3DNow! opcode goes after the operands
+      Just (Op_Leg Map_0F0F oc) -> writeU8 oc
+      _                         -> mempty
   ]
 
 -- | Allocate a ByteArray and encode the instruction into it.
