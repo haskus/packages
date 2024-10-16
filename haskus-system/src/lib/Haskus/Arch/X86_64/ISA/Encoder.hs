@@ -17,6 +17,7 @@ import Haskus.Arch.X86_64.ISA.Encoding.Mem
 import Haskus.Arch.X86_64.ISA.Encoding.SIB
 import Haskus.Arch.X86_64.ISA.Encoding.Disp
 import Haskus.Arch.X86_64.ISA.Encoding.Vec
+import Haskus.Arch.X86_64.ISA.Encoding.Vex
 import Haskus.Arch.X86_64.ISA.Encoding.Segment
 import Haskus.Arch.X86_64.ISA.Context
 import qualified Haskus.Arch.X86_64.ISA.Extension as Ext
@@ -114,9 +115,13 @@ encodeInsn !ctx !op !args = do
         [] -> pure ()
         _  -> efail ERequireNoArg
 
-      oc       o = modifyEnc \e -> e { encOpcode = Just (Op o) }
-      oc_0F    o = modifyEnc \e -> e { encOpcode = Just (Op_0F o) }
-      oc_0F38  o = modifyEnc \e -> e { encOpcode = Just (Op_0F38 o) }
+      oc       o = set_oc (Op_Leg Map_Primary o)
+      oc_0F    o = set_oc (Op_Leg Map_0F o)
+      oc_0F38  o = set_oc (Op_Leg Map_0F38 o)
+
+      set_vex mk_vex o  = set_oc (Op_Vex mk_vex o)
+      vex_128_66_0F_WIG = set_vex mkVex_128_66_0F_WIG
+      vex_256_66_0F_WIG = set_vex mkVex_256_66_0F_WIG
 
       p_67 = modifyEnc \e -> e { encPrefixes = P_67 : encPrefixes e }
       p_66 = modifyEnc \e -> e { encPrefixes = P_66 : encPrefixes e }
@@ -128,8 +133,8 @@ encodeInsn !ctx !op !args = do
       imm32 i = set_imm (SizedValue32 i)
       imm64 i = set_imm (SizedValue64 i)
 
+      set_oc o    = modifyEnc \e -> e { encOpcode = Just o }
       set_imm imm = modifyEnc \e -> e { encImm = Just imm }
-
       set_modrm v = modifyEnc \e -> e { encModRM = Just (ModRM v) }
 
       set_segment ms = case ms of
@@ -162,23 +167,41 @@ encodeInsn !ctx !op !args = do
       -- store opcode extension in ModRM.reg
       set_r_ext ext = modifyEnc \e -> e { encModRM = encModRM e <> Just (mkModRM_reg ext) }
 
-      -- store gpr in REX.R:ModRM.reg
-      set_r_gpr r = set_r_reg (regREX r) xc c
+      -- store gpr in rEX.R:ModRM.reg
+      set_r_gpr r = set_r_code (regREX r) xc c
         where !(xc,c) = regCodeX r
 
-      -- store vec in REX.R:ModRM.reg
-      set_r_vec r = set_r_reg False xc c
+      -- store vec in rEX.R:ModRM.reg
+      set_r_vec r = set_r_code False xc c
         where !(xc,c) = vecCodeX r
 
-      -- store register code in REX.R:ModRM.reg
-      set_r_reg force_rex xr r = modifyEnc \e ->
-        let -- handle registers that require REX
-            mrex1 = if force_rex then Just emptyRex else Nothing
-            -- register code extension in REX.R
-            mrex2 = if xr        then Just rexR     else Nothing
-        in e { encRex   = encRex e <> mrex1 <> mrex2
-             , encModRM = encModRM e <> Just (mkModRM_reg r)
-             }
+      set_v_vec v = set_v_code (vecCode v)
+
+      -- | Set Vex.vvvv to the given code
+      set_v_code c = modifyEnc \e ->
+        case getOpcode e of
+          Op_Leg {}  -> error "set_v_code: VVVV field not available with legacy encoding"
+          Op_Vex v o -> e { encOpcode = Just (Op_Vex (vexSetV c v) o) }
+          Op_Xop {}  -> error "set_v_code: Xop not supported"
+          
+
+      -- store register code in rEX.R:ModRM.reg
+      set_r_code force_rex xr r = modifyEnc \e ->
+        case getOpcode e of
+          Op_Leg {} ->
+            let -- handle registers that require REX
+                mrex1 = if force_rex then Just emptyRex else Nothing
+                -- register code extension in REX.R
+                mrex2 = if xr        then Just rexR     else Nothing
+            in e { encRex   = encRex e <> mrex1 <> mrex2
+                 , encModRM = encModRM e <> Just (mkModRM_reg r)
+                 }
+          Op_Vex v o ->
+            -- we ignore force_rex with Vex encoding
+            e { encOpcode = Just $! if not xr then Op_Vex v o else Op_Vex (vexSetR v) o
+              , encModRM  = encModRM e <> Just (mkModRM_reg r)
+              }
+          Op_Xop {} -> error "set_r_code: XOP not supported"
 
       -- store register code in REX.B:opcode
       oc_reg r = do
@@ -191,29 +214,42 @@ encodeInsn !ctx !op !args = do
           let opc = case encOpcode e of
                       Nothing -> error "oc_reg: expected an opcode"
                       Just o0 -> case o0 of
-                        Op      o -> Op      (o+c)
-                        Op_0F   o -> Op_0F   (o+c)
-                        Op_0F38 o -> Op_0F38 (o+c)
-                        Op_0F3A o -> Op_0F3A (o+c)
-                        Op_0F0F o -> Op_0F0F (o+c)
-                        _ -> error $ "oc_reg: unexpected opcode: " ++ show o0
+                        Op_Leg m o -> Op_Leg m (o+c)
+                        Op_Vex v o -> Op_Vex v (o+c)
+                        Op_Xop v o -> Op_Xop v (o+c)
           in e { encRex = mrex1 <> mrex2
                , encOpcode = Just opc
                }
 
-      -- store gpr in REX.B:ModRM.rm
-      set_m_gpr r = set_m_reg (regREX r) xc c
+      -- store gpr in rEX.B:ModRM.rm
+      set_m_gpr r = set_m_code (regREX r) xc c
         where !(xc,c) = regCodeX r
 
-      -- store register code in REX.B:ModRM.rm
-      set_m_reg force_rex xr r = modifyEnc \e ->
-        let -- handle registers that require REX
-            mrex1 = if force_rex then Just emptyRex else Nothing
-            -- register code extension in REX.B
-            mrex2 = if xr        then Just rexB     else Nothing
-        in e { encRex   = encRex e <> mrex1 <> mrex2
-             , encModRM = encModRM e <> Just (mkModRM_mod_rm 0b11 r)
-             }
+      -- store vec in rEX.B:ModRM.rm
+      set_m_vec r = set_m_code False xc c
+        where !(xc,c) = vecCodeX r
+
+      getOpcode e = case encOpcode e of
+        Nothing -> error "getOpcode: no opcode set"
+        Just o  -> o
+
+      -- store register code in rEX.B:ModRM.rm
+      set_m_code force_rex xr r = modifyEnc \e ->
+        case getOpcode e of
+          Op_Leg {} ->
+            let -- handle registers that require REX
+                mrex1 = if force_rex then Just emptyRex else Nothing
+                -- register code extension in REX.B
+                mrex2 = if xr        then Just rexB     else Nothing
+            in e { encRex   = encRex e <> mrex1 <> mrex2
+                 , encModRM = encModRM e <> Just (mkModRM_mod_rm 0b11 r)
+                 }
+          Op_Vex v o ->
+            -- we ignore force_rex with Vex encoding
+            e { encOpcode = Just $! if not xr then Op_Vex v o else Op_Vex (vexSetB v) o
+              , encModRM  = encModRM e <> Just (mkModRM_mod_rm 0b11 r)
+              }
+          Op_Xop {} -> error "set_m_code: XOP not supported"
 
       -- encode memory operand
       set_m_mem mem = do
@@ -223,22 +259,13 @@ encodeInsn !ctx !op !args = do
           Just e' -> setEnc e'
 
       -- store opcode extension in ModRM.reg and reg in ModRM.rm
-      rm_ext_reg x r = set_r_ext x >> set_m_gpr r
+      rm_ext_reg r m = set_r_ext r >> set_m_gpr m
       rm_reg_mem r m = set_r_gpr r >> set_m_mem m
-      rm_ext_mem x m = set_r_ext x >> set_m_mem m
-      rm_vec_mem v m = set_r_vec v >> set_m_mem m
-
-      -- store v1 in ModRM.reg and v2 in ModRM.rm
-      rm_vec_vec v1 v2 = do
-        let
-            -- ModRM.rm extension in REX.B; ModRM.reg extension in REX.R
-            !(xr,r) = vecCodeX v1
-            !(xm,m) = vecCodeX v2
-            mrex1 = if xr then Just rexR else Nothing
-            mrex2 = if xm then Just rexB else Nothing
-        modifyEnc \e -> e { encRex   = encRex e <> mrex1 <> mrex2
-                          , encModRM = Just (mkModRM 0b11 r m)
-                          }
+      rm_ext_mem r m = set_r_ext r >> set_m_mem m
+      rm_vec_mem r m = set_r_vec r >> set_m_mem m
+      rm_vec_vec r m = set_r_vec r >> set_m_vec m
+      --vrm_vec_vec_vec v r m = set_v_vec v >> set_r_vec r >> set_m_vec m
+      rvm_vec_vec_vec r v m = set_v_vec v >> set_r_vec r >> set_m_vec m
 
       -- store r1 in ModRM.reg and r2 in ModRM.rm
       rm_reg_reg r1 r2 = do
@@ -1820,7 +1847,13 @@ encodeInsn !ctx !op !args = do
         [V128 v1, V128 v2] -> do
           require_extension Ext.SSE2
           rm_vec_vec v1 v2 << p_66 << oc_0F 0x58
-        -- TODO: add VEX and EVEX encodings
+        [V128 d, V128 s1, V128 s2] -> do
+          require_extension Ext.AVX
+          vex_128_66_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
+        [V256 d, V256 s1, V256 s2] -> do
+          require_extension Ext.AVX
+          vex_256_66_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
+        -- TODO: add missing VEX and EVEX encodings
         _ -> invalidArgs
 
     ADDSS ->

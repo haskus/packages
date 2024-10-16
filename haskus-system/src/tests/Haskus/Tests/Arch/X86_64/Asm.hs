@@ -8,6 +8,7 @@ where
 import Haskus.Arch.X86_64.ISA.Encoder
 import Haskus.Arch.X86_64.ISA.Encoding.Enc
 import Haskus.Arch.X86_64.ISA.Encoding.Reg
+import Haskus.Arch.X86_64.ISA.Encoding.Vec
 import Haskus.Arch.X86_64.ISA.Encoding.Operand
 import Haskus.Arch.X86_64.ISA.Encoding.Operation
 import Haskus.Arch.X86_64.ISA.Optimizer
@@ -29,6 +30,7 @@ testAsm = testGroup "Assembler"
   , testEncoding    defaultContext64 MOV [OpReg R_RAX, I64 0x17] (Right "48b81700000000000000")
   , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I64 0x17] (Right "b817000000")
   , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I64 maxBound] (Right "48c7c0ffffffff")
+  , testEncoding    defaultContext64 ADDPD [OpVec R_XMM1, OpVec R_XMM2, OpVec R_XMM3] (Right "c5e958cb")
   ]
   
 -- | Encode with optimized assembly
