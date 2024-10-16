@@ -8,6 +8,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Mem
   , encode_mem32
   , encode_mem64
   , Mem (..)
+  , emptyMem
   , MemAddr (..)
   , MemLock(..)
   , isMemAny
@@ -16,6 +17,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Mem
   , isMem32
   , isMem64
   , isMem128
+  , isMem256
   )
 where
 
@@ -372,10 +374,24 @@ data Mem = Mem
   { memSegment  :: !(Maybe Segment)        -- ^ Segment override
   , memSize     :: !(Maybe Size)           -- ^ Target memory size
   , memLock     :: !MemLock                -- ^ Memory lock
-  , memAddr     :: !MemAddr                -- ^ Memory address
   , memAddrSize :: !(Maybe AddressSize)    -- ^ Overloaded address size
+  , memAddr     :: !MemAddr                -- ^ Memory address
   }
   deriving (Show,Eq,Ord)
+
+emptyMem :: Mem
+emptyMem = Mem
+  { memSegment = Nothing
+  , memSize = Nothing
+  , memLock = NoLock
+  , memAddrSize = Nothing
+  , memAddr = MemAbs
+    { mabsBase = Nothing
+    , mabsScale = Scale1
+    , mabsIndex = Nothing
+    , mabsDisp = NoDisp
+    }
+  }
 
 data MemAddr
   -- | Absolute memory address (i.e. non relative to rIP)
@@ -408,6 +424,9 @@ isMem64 m = if memSize m == Just Size64 then Just m else Nothing
 
 isMem128 :: Mem -> Maybe Mem
 isMem128 m = if memSize m == Just Size128 then Just m else Nothing
+
+isMem256 :: Mem -> Maybe Mem
+isMem256 m = if memSize m == Just Size256 then Just m else Nothing
 
 -- | Encode a memory operand. Return Nothing in case of failure to encode.
 encodeMem :: Context -> Mem -> Enc -> Maybe Enc

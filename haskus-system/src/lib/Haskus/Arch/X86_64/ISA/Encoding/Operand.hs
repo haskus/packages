@@ -16,6 +16,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Operand
   , pattern M32
   , pattern M64
   , pattern M128
+  , pattern M256
   , pattern V64
   , pattern V128
   , pattern V256
@@ -52,6 +53,7 @@ pattern M16  x <- OpMem (isMem16  -> Just x)
 pattern M32  x <- OpMem (isMem32  -> Just x)
 pattern M64  x <- OpMem (isMem64  -> Just x)
 pattern M128 x <- OpMem (isMem128 -> Just x)
+pattern M256 x <- OpMem (isMem256 -> Just x)
 pattern V64  x <- OpVec (isVec64  -> Just x)
 pattern V128 x <- OpVec (isVec128 -> Just x)
 pattern V256 x <- OpVec (isVec256 -> Just x)

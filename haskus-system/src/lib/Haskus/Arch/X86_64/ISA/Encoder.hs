@@ -266,6 +266,7 @@ encodeInsn !ctx !op !args = do
       rm_vec_vec r m = set_r_vec r >> set_m_vec m
       --vrm_vec_vec_vec v r m = set_v_vec v >> set_r_vec r >> set_m_vec m
       rvm_vec_vec_vec r v m = set_v_vec v >> set_r_vec r >> set_m_vec m
+      rvm_vec_vec_mem r v m = set_v_vec v >> set_r_vec r >> set_m_mem m
 
       -- store r1 in ModRM.reg and r2 in ModRM.rm
       rm_reg_reg r1 r2 = do
@@ -1276,7 +1277,18 @@ encodeInsn !ctx !op !args = do
       case args of
         -- expect [[rS:]rBX + AL] form
         -- Use it to infer segment and address size
-        [OpMem (Mem mseg _msize NoLock (MemAbs (Just base) Scale1 (Just R_AL) NoDisp) Nothing)]
+        [OpMem m]
+          | Mem { memSegment  = mseg
+                , memSize     = _msize
+                , memLock     = NoLock
+                , memAddrSize = Nothing
+                , memAddr     = a
+                } <- m
+          , MemAbs { mabsBase  = Just base
+                   , mabsScale = Scale1
+                   , mabsIndex = Just R_AL
+                   , mabsDisp  = NoDisp
+                   } <- a
           -> case base of
               R_BX  -> asz16 << set_segment mseg << oc 0xD7
               R_EBX -> asz32 << set_segment mseg << oc 0xD7
@@ -1645,7 +1657,7 @@ encodeInsn !ctx !op !args = do
       p_F3 << oc 0x90
 
     NOP sz -> do
-      let mem a = Mem Nothing Nothing NoLock a Nothing
+      let mem a = emptyMem { memAddr = a}
       let ra = if mode64 then Just R_RAX else Just R_EAX
       case sz of
         1 ->         oc 0x90
@@ -1853,6 +1865,12 @@ encodeInsn !ctx !op !args = do
         [V256 d, V256 s1, V256 s2] -> do
           require_extension Ext.AVX
           vex_256_66_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
+        [V128 d, V128 s1, M128 s2] -> do
+          require_extension Ext.AVX
+          vex_128_66_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
+        [V256 d, V256 s1, M256 s2] -> do
+          require_extension Ext.AVX
+          vex_256_66_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         -- TODO: add missing VEX and EVEX encodings
         _ -> invalidArgs
 
