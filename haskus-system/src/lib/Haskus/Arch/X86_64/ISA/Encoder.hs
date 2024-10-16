@@ -120,8 +120,12 @@ encodeInsn !ctx !op !args = do
       oc_0F38  o = set_oc (Op_Leg Map_0F38 o)
 
       set_vex mk_vex o  = set_oc (Op_Vex mk_vex o)
+      vex_LIG_F2_0F_WIG = set_vex mkVex_LIG_F2_0F_WIG
+      vex_LIG_F3_0F_WIG = set_vex mkVex_LIG_F3_0F_WIG
       vex_128_66_0F_WIG = set_vex mkVex_128_66_0F_WIG
       vex_256_66_0F_WIG = set_vex mkVex_256_66_0F_WIG
+      vex_128_0F_WIG    = set_vex mkVex_128_0F_WIG
+      vex_256_0F_WIG    = set_vex mkVex_256_0F_WIG
 
       p_67 = modifyEnc \e -> e { encPrefixes = P_67 : encPrefixes e }
       p_66 = modifyEnc \e -> e { encPrefixes = P_66 : encPrefixes e }
@@ -1848,7 +1852,18 @@ encodeInsn !ctx !op !args = do
         [V128 v1, V128 v2] -> do
           require_extension Ext.SSE
           rm_vec_vec v1 v2 << oc_0F 0x58
-        -- TODO: add VEX and EVEX encodings
+        [V128 d, V128 s1, V128 s2] -> do
+          require_extension Ext.AVX
+          vex_128_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
+        [V256 d, V256 s1, V256 s2] -> do
+          require_extension Ext.AVX
+          vex_256_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
+        [V128 d, V128 s1, M128 s2] -> do
+          require_extension Ext.AVX
+          vex_128_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
+        [V256 d, V256 s1, M256 s2] -> do
+          require_extension Ext.AVX
+          vex_256_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         _ -> invalidArgs
 
     ADDPD ->
@@ -1871,7 +1886,6 @@ encodeInsn !ctx !op !args = do
         [V256 d, V256 s1, M256 s2] -> do
           require_extension Ext.AVX
           vex_256_66_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
-        -- TODO: add missing VEX and EVEX encodings
         _ -> invalidArgs
 
     ADDSS ->
@@ -1882,7 +1896,12 @@ encodeInsn !ctx !op !args = do
         [V128 v1, V128 v2] -> do
           require_extension Ext.SSE
           rm_vec_vec v1 v2 << p_F3 << oc_0F 0x58
-        -- TODO: add VEX and EVEX encodings
+        [V128 d, V128 s1, V128 s2] -> do
+          require_extension Ext.AVX
+          vex_LIG_F3_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
+        [V128 d, V128 s1, M32 s2] -> do
+          require_extension Ext.AVX
+          vex_LIG_F3_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         _ -> invalidArgs
 
     ADDSD ->
@@ -1893,7 +1912,12 @@ encodeInsn !ctx !op !args = do
         [V128 v1, V128 v2] -> do
           require_extension Ext.SSE2
           rm_vec_vec v1 v2 << p_F2 << oc_0F 0x58
-        -- TODO: add VEX and EVEX encodings
+        [V128 d, V128 s1, V128 s2] -> do
+          require_extension Ext.AVX
+          vex_LIG_F2_0F_WIG 0x58 >> rvm_vec_vec_vec d s1 s2
+        [V128 d, V128 s1, M64 s2] -> do
+          require_extension Ext.AVX
+          vex_LIG_F2_0F_WIG 0x58 >> rvm_vec_vec_mem d s1 s2
         _ -> invalidArgs
 
     SUBPS ->
