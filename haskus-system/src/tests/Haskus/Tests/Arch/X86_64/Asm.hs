@@ -9,10 +9,14 @@ import Haskus.Arch.X86_64.ISA.Encoder
 import Haskus.Arch.X86_64.ISA.Encoding.Enc
 import Haskus.Arch.X86_64.ISA.Encoding.Reg
 import Haskus.Arch.X86_64.ISA.Encoding.Vec
+import Haskus.Arch.X86_64.ISA.Encoding.Mem
+import Haskus.Arch.X86_64.ISA.Encoding.SIB
+import Haskus.Arch.X86_64.ISA.Encoding.Disp
 import Haskus.Arch.X86_64.ISA.Encoding.Operand
 import Haskus.Arch.X86_64.ISA.Encoding.Operation
 import Haskus.Arch.X86_64.ISA.Optimizer
 import Haskus.Arch.X86_64.ISA.Context
+import Haskus.Arch.X86_64.ISA.Size
 
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -23,15 +27,25 @@ import Numeric (showHex)
 
 testAsm :: TestTree
 testAsm = testGroup "Assembler"
-  [ testEncoding    defaultContext64 DAA [] (Left ENotAvailableInMode64)
-  , testEncoding    defaultContext16 DAA [] (Right "27")
-  , testEncoding    defaultContext64 MOV [OpReg R_RAX, I8  0x17] (Left EInvalidArgs)
-  , testEncoding    defaultContext64 MOV [OpReg R_RAX, I32 0x17] (Left EInvalidArgs)
-  , testEncoding    defaultContext64 MOV [OpReg R_RAX, I64 0x17] (Right "48b81700000000000000")
-  , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I64 0x17] (Right "b817000000")
-  , testOptEncoding defaultContext64 MOV [OpReg R_RAX, I64 maxBound] (Right "48c7c0ffffffff")
-  , testEncoding    defaultContext64 ADDPD [OpVec R_XMM1, OpVec R_XMM2, OpVec R_XMM3] (Right "c5e958cb")
+  [ def64 DAA [] (Left ENotAvailableInMode64)
+  , def16 DAA [] (Right "27")
+  , def64 MOV [OpReg R_RAX, I8  0x17] (Left EInvalidArgs)
+  , def64 MOV [OpReg R_RAX, I32 0x17] (Left EInvalidArgs)
+  , def64 MOV [OpReg R_RAX, I64 0x17] (Right "48b81700000000000000")
+  , opt64 MOV [OpReg R_RAX, I64 0x17] (Right "b817000000")
+  , opt64 MOV [OpReg R_RAX, I64 maxBound] (Right "48c7c0ffffffff")
+  , def64 ADDPD [OpVec R_XMM1, OpVec R_XMM2, OpVec R_XMM3] (Right "c5e958cb")
+  , let m = Mem Nothing (Just Size128) NoLock Nothing $ MemAbs (Just R_RAX) Scale1 Nothing NoDisp
+    in def64 ADDPD [OpVec R_XMM1, OpVec R_XMM2, OpMem m] (Right "c5e95808")
+  , let m = Mem Nothing (Just Size256) NoLock Nothing $ MemAbs (Just R_RAX) Scale1 Nothing NoDisp
+    in def64 ADDPD [OpVec R_YMM1, OpVec R_YMM2, OpMem m] (Right "c5ed5808")
+  , let m = Mem Nothing (Just Size256) NoLock Nothing $ MemAbs (Just R_RAX) Scale2 (Just R_RCX) (Disp8 57)
+    in def64 ADDPD [OpVec R_YMM1, OpVec R_YMM2, OpMem m] (Right "c5ed584c4839")
   ]
+  where
+    def16 = testEncoding defaultContext16
+    def64 = testEncoding defaultContext64
+    opt64 = testOptEncoding defaultContext64
   
 -- | Encode with optimized assembly
 testOptEncoding :: Context -> Operation -> Operands -> Either EError String -> TestTree
