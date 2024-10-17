@@ -14,6 +14,10 @@ module Haskus.Arch.X86_64.ISA.Encoding.Vex
   , mkVex_256_0F_WIG
   , mkVex_LZ_0F38_W0
   , mkVex_LZ_0F38_W1
+  , mkVex_LZ_F2_0F38_W0
+  , mkVex_LZ_F2_0F38_W1
+  , mkVex_LZ_F3_0F38_W0
+  , mkVex_LZ_F3_0F38_W1
   , extendVex
   , vexSetB
   , vexSetR
@@ -42,6 +46,10 @@ mkVex_128_0F_WIG :: Vex
 mkVex_256_0F_WIG :: Vex
 mkVex_LZ_0F38_W0 :: Vex
 mkVex_LZ_0F38_W1 :: Vex
+mkVex_LZ_F2_0F38_W0 :: Vex
+mkVex_LZ_F2_0F38_W1 :: Vex
+mkVex_LZ_F3_0F38_W0 :: Vex
+mkVex_LZ_F3_0F38_W1 :: Vex
 
 mkVex_LIG_F2_0F_WIG = Vex2 0b1_1111_0_11 -- R=1, vvvv=1111, L=0, pp=11
 mkVex_LIG_F3_0F_WIG = Vex2 0b1_1111_0_11 -- R=1, vvvv=1111, L=0, pp=10
@@ -57,6 +65,14 @@ mkVex_LZ_0F38_W0    = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
                            0b0_1111_0_00 -- W=0, vvvv=1111, L=0, pp=00
 mkVex_LZ_0F38_W1    = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
                            0b1_1111_0_00 -- W=1, vvvv=1111, L=0, pp=00
+mkVex_LZ_F2_0F38_W0 = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
+                           0b0_1111_0_11 -- W=0, vvvv=1111, L=0, pp=11
+mkVex_LZ_F2_0F38_W1 = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
+                           0b1_1111_0_11 -- W=1, vvvv=1111, L=0, pp=11
+mkVex_LZ_F3_0F38_W0 = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
+                           0b0_1111_0_10 -- W=0, vvvv=1111, L=0, pp=10
+mkVex_LZ_F3_0F38_W1 = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
+                           0b1_1111_0_10 -- W=1, vvvv=1111, L=0, pp=10
 
 -- | Set vvvv field in given U8
 set_v :: U8 -> U8 -> U8
