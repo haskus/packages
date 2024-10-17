@@ -1885,6 +1885,20 @@ encodeInsn !ctx !op !args = do
       [R64 a, M64 b] -> vex_LZ_0F38_W1 0xF3 >> rvm_ext_reg_mem 0x3 a b
       _ -> invalidArgs
 
+    BLSMSK -> req_bmi1 >> case args of
+      [R32 a, R32 b] -> vex_LZ_0F38_W0 0xF3 >> rvm_ext_reg_reg 0x2 a b
+      [R32 a, M32 b] -> vex_LZ_0F38_W0 0xF3 >> rvm_ext_reg_mem 0x2 a b
+      [R64 a, R64 b] -> vex_LZ_0F38_W1 0xF3 >> rvm_ext_reg_reg 0x2 a b
+      [R64 a, M64 b] -> vex_LZ_0F38_W1 0xF3 >> rvm_ext_reg_mem 0x2 a b
+      _ -> invalidArgs
+
+    BLSR -> req_bmi1 >> case args of
+      [R32 a, R32 b] -> vex_LZ_0F38_W0 0xF3 >> rvm_ext_reg_reg 0x1 a b
+      [R32 a, M32 b] -> vex_LZ_0F38_W0 0xF3 >> rvm_ext_reg_mem 0x1 a b
+      [R64 a, R64 b] -> vex_LZ_0F38_W1 0xF3 >> rvm_ext_reg_reg 0x1 a b
+      [R64 a, M64 b] -> vex_LZ_0F38_W1 0xF3 >> rvm_ext_reg_mem 0x1 a b
+      _ -> invalidArgs
+
     ADDPS -> req_sse >> case args of
       [V128 a, M128 b] -> oc_0F 0x58 >> rm_vec_mem a b
       [V128 a, V128 b] -> oc_0F 0x58 >> rm_vec_vec a b
