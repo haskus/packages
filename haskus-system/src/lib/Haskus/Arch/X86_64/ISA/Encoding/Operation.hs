@@ -108,13 +108,13 @@ data Operation
   -- BMI1 & BMI2
   | ANDN    -- ^ Logical AND NOT
   | BEXTR   -- ^ Bit field extract
+  | BLSI    -- ^ Extract lowest set isolated bit
   -- BLCFILL
   -- BLCI
   -- BLCIC
   -- BLCMSK
   -- BLCS
   -- BLSFILL
-  -- BLSI
   -- BLSIC
   -- BLSMSK
   -- BLSR
