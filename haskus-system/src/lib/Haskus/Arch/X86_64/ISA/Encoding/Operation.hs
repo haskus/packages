@@ -113,6 +113,7 @@ data Operation
   | BLSR    -- ^ Reset lowest set bit
   | PDEP    -- ^ Parallel bits deposit
   | PEXT    -- ^ Parallel bits extract
+  | RORX    -- ^ Rotate right logical without affecting flags
   -- BLCFILL
   -- BLCI
   -- BLCIC
@@ -121,7 +122,6 @@ data Operation
   -- BLSFILL
   -- BLSIC
   -- BZHI
-  -- RORX
   -- SARX
   -- SHLD
   -- SHLX

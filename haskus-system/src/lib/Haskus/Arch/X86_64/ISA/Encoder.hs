@@ -145,6 +145,8 @@ encodeInsn !ctx !op !args = do
       vex_LZ_F2_0F38_W1 = set_vex mkVex_LZ_F2_0F38_W1
       vex_LZ_F3_0F38_W0 = set_vex mkVex_LZ_F3_0F38_W0
       vex_LZ_F3_0F38_W1 = set_vex mkVex_LZ_F3_0F38_W1
+      vex_LZ_F2_0F3A_W0 = set_vex mkVex_LZ_F2_0F3A_W0
+      vex_LZ_F2_0F3A_W1 = set_vex mkVex_LZ_F2_0F3A_W1
 
       p_67 = modifyEnc \e -> e { encPrefixes = P_67 : encPrefixes e }
       p_66 = modifyEnc \e -> e { encPrefixes = P_66 : encPrefixes e }
@@ -302,18 +304,8 @@ encodeInsn !ctx !op !args = do
       rm_reg_reg r1 r2 = do
         unless (compatibleRegs r1 r2) do
           efail EIncompatibleRegs
-
-        let
-            -- handle registers that require REX
-            mrex1 = if regREX r1 || regREX r2 then Just emptyRex else Nothing
-            -- ModRM.rm extension in REX.B; ModRM.reg extension in REX.R
-            !(xr,r) = regCodeX r1
-            !(xm,m) = regCodeX r2
-            mrex2 = if xr then Just rexR else Nothing
-            mrex3 = if xm then Just rexB else Nothing
-        modifyEnc \e -> e { encRex   = encRex e <> mrex1 <> mrex2 <> mrex3
-                          , encModRM = Just (mkModRM 0b11 r m)
-                          }
+        set_r_gpr r1
+        set_m_gpr r2
 
       -- store r1 in ModRM.rm and r2 in ModRM.reg
       mr_reg_reg r1 r2 = rm_reg_reg r2 r1
@@ -1916,6 +1908,13 @@ encodeInsn !ctx !op !args = do
       [R32 a, R32 b, M32 c] -> vex_LZ_F3_0F38_W0 0xF5 >> rvm_reg_reg_mem a b c
       [R64 a, R64 b, R64 c] -> vex_LZ_F3_0F38_W1 0xF5 >> rvm_reg_reg_reg a b c
       [R64 a, R64 b, M64 c] -> vex_LZ_F3_0F38_W1 0xF5 >> rvm_reg_reg_mem a b c
+      _ -> invalidArgs
+
+    RORX -> req_bmi2 >> case args of
+      [R32 a, R32 b, I8 c] -> vex_LZ_F2_0F3A_W0 0xF0 >> rm_reg_reg a b >> imm8 c
+      [R32 a, M32 b, I8 c] -> vex_LZ_F2_0F3A_W0 0xF0 >> rm_reg_mem a b >> imm8 c
+      [R64 a, R64 b, I8 c] -> vex_LZ_F2_0F3A_W1 0xF0 >> rm_reg_reg a b >> imm8 c
+      [R64 a, M64 b, I8 c] -> vex_LZ_F2_0F3A_W1 0xF0 >> rm_reg_mem a b >> imm8 c
       _ -> invalidArgs
 
 
