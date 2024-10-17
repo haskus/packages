@@ -109,6 +109,8 @@ data Operation
   | ANDN    -- ^ Logical AND NOT
   | BEXTR   -- ^ Bit field extract
   | BLSI    -- ^ Extract lowest set isolated bit
+  | BLSMSK  -- ^ Get mask up to lowest set bit
+  | BLSR    -- ^ Reset lowest set bit
   -- BLCFILL
   -- BLCI
   -- BLCIC
@@ -116,8 +118,6 @@ data Operation
   -- BLCS
   -- BLSFILL
   -- BLSIC
-  -- BLSMSK
-  -- BLSR
   -- BZHI
   -- PDEP
   -- PEXT
