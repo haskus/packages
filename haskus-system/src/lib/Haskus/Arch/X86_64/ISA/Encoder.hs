@@ -1886,25 +1886,33 @@ encodeInsn !ctx !op !args = do
       _ -> invalidArgs
 
     SUBPS -> case args of
-      [V128 a, M128 b] -> req_sse >> oc_0F 0x5C >> rm_vec_mem a b
-      [V128 a, V128 b] -> req_sse >> oc_0F 0x5C >> rm_vec_vec a b
-      -- TODO: add VEX and EVEX encodings
+      [V128 a, M128 b]         -> req_sse >> oc_0F 0x5C >> rm_vec_mem a b
+      [V128 a, V128 b]         -> req_sse >> oc_0F 0x5C >> rm_vec_vec a b
+      [V128 a, V128 b, V128 c] -> req_avx >> vex_128_0F_WIG 0x5C >> rvm_vec_vec_vec a b c
+      [V256 a, V256 b, V256 c] -> req_avx >> vex_256_0F_WIG 0x5C >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M128 c] -> req_avx >> vex_128_0F_WIG 0x5C >> rvm_vec_vec_mem a b c
+      [V256 a, V256 b, M256 c] -> req_avx >> vex_256_0F_WIG 0x5C >> rvm_vec_vec_mem a b c
       _ -> invalidArgs
 
     SUBPD -> case args of
-      [V128 a, M128 b] -> req_sse2 >> oc_66_0F 0x5C >> rm_vec_mem a b
-      [V128 a, V128 b] -> req_sse2 >> oc_66_0F 0x5C >> rm_vec_vec a b
-      -- TODO: add VEX and EVEX encodings
+      [V128 a, M128 b]         -> req_sse2 >> oc_66_0F 0x5C >> rm_vec_mem a b
+      [V128 a, V128 b]         -> req_sse2 >> oc_66_0F 0x5C >> rm_vec_vec a b
+      [V128 a, V128 b, V128 c] -> req_avx  >> vex_128_66_0F_WIG 0x5C >> rvm_vec_vec_vec a b c
+      [V256 a, V256 b, V256 c] -> req_avx  >> vex_256_66_0F_WIG 0x5C >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M128 c] -> req_avx  >> vex_128_66_0F_WIG 0x5C >> rvm_vec_vec_mem a b c
+      [V256 a, V256 b, M256 c] -> req_avx  >> vex_256_66_0F_WIG 0x5C >> rvm_vec_vec_mem a b c
       _ -> invalidArgs
 
     SUBSS -> case args of
-      [V128 a, M32  b] -> req_sse >> oc_F3_0F 0x5C >> rm_vec_mem a b
-      [V128 a, V128 b] -> req_sse >> oc_F3_0F 0x5C >> rm_vec_vec a b
-      -- TODO: add VEX and EVEX encodings
+      [V128 a, M32  b]         -> req_sse >> oc_F3_0F 0x5C >> rm_vec_mem a b
+      [V128 a, V128 b]         -> req_sse >> oc_F3_0F 0x5C >> rm_vec_vec a b
+      [V128 a, V128 b, V128 c] -> req_avx >> vex_LIG_F3_0F_WIG 0x5C >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M32  c] -> req_avx >> vex_LIG_F3_0F_WIG 0x5C >> rvm_vec_vec_mem a b c
       _ -> invalidArgs
 
     SUBSD -> case args of
-      [V128 a, M32  b] -> req_sse2 >> oc_F2_0F 0x5C >> rm_vec_mem a b
-      [V128 a, V128 b] -> req_sse2 >> oc_F2_0F 0x5C >> rm_vec_vec a b
-      -- TODO: add VEX and EVEX encodings
+      [V128 a, M32  b]         -> req_sse2 >> oc_F2_0F 0x5C >> rm_vec_mem a b
+      [V128 a, V128 b]         -> req_sse2 >> oc_F2_0F 0x5C >> rm_vec_vec a b
+      [V128 a, V128 b, V128 c] -> req_avx  >> vex_LIG_F2_0F_WIG 0x5C >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M64  c] -> req_avx  >> vex_LIG_F2_0F_WIG 0x5C >> rvm_vec_vec_mem a b c
       _ -> invalidArgs
