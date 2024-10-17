@@ -111,6 +111,8 @@ data Operation
   | BLSI    -- ^ Extract lowest set isolated bit
   | BLSMSK  -- ^ Get mask up to lowest set bit
   | BLSR    -- ^ Reset lowest set bit
+  | PDEP    -- ^ Parallel bits deposit
+  | PEXT    -- ^ Parallel bits extract
   -- BLCFILL
   -- BLCI
   -- BLCIC
@@ -119,8 +121,6 @@ data Operation
   -- BLSFILL
   -- BLSIC
   -- BZHI
-  -- PDEP
-  -- PEXT
   -- RORX
   -- SARX
   -- SHLD
