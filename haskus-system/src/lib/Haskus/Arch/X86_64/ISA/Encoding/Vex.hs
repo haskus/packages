@@ -12,6 +12,8 @@ module Haskus.Arch.X86_64.ISA.Encoding.Vex
   , mkVex_256_F3_0F_WIG
   , mkVex_128_0F_WIG
   , mkVex_256_0F_WIG
+  , mkVex_LZ_0F38_W0
+  , mkVex_LZ_0F38_W1
   , extendVex
   , vexSetB
   , vexSetR
@@ -24,8 +26,8 @@ import Haskus.Binary.Bits
 import qualified Haskus.Memory.Writer as W
 
 data Vex
-  = Vex2 !U8
-  | Vex3 !U8 !U8
+  = Vex2 !U8      -- ^ RvvvvLpp
+  | Vex3 !U8 !U8  -- ^ RXBmmmmm WvvvvLpp
   deriving (Show,Eq,Ord)
 
 mkVex_LIG_F2_0F_WIG :: Vex
@@ -38,6 +40,8 @@ mkVex_128_F3_0F_WIG :: Vex
 mkVex_256_F3_0F_WIG :: Vex
 mkVex_128_0F_WIG :: Vex
 mkVex_256_0F_WIG :: Vex
+mkVex_LZ_0F38_W0 :: Vex
+mkVex_LZ_0F38_W1 :: Vex
 
 mkVex_LIG_F2_0F_WIG = Vex2 0b1_1111_0_11 -- R=1, vvvv=1111, L=0, pp=11
 mkVex_LIG_F3_0F_WIG = Vex2 0b1_1111_0_11 -- R=1, vvvv=1111, L=0, pp=10
@@ -49,6 +53,10 @@ mkVex_128_F3_0F_WIG = Vex2 0b1_1111_0_10 -- R=1, vvvv=1111, L=0, pp=10
 mkVex_256_F3_0F_WIG = Vex2 0b1_1111_1_10 -- R=1, vvvv=1111, L=1, pp=10
 mkVex_128_0F_WIG    = Vex2 0b1_1111_0_00 -- R=1, vvvv=1111, L=0, pp=00
 mkVex_256_0F_WIG    = Vex2 0b1_1111_1_00 -- R=1, vvvv=1111, L=1, pp=00
+mkVex_LZ_0F38_W0    = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
+                           0b0_1111_0_00 -- W=0, vvvv=1111, L=0, pp=00
+mkVex_LZ_0F38_W1    = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
+                           0b1_1111_0_00 -- W=1, vvvv=1111, L=0, pp=00
 
 -- | Set vvvv field in given U8
 set_v :: U8 -> U8 -> U8
