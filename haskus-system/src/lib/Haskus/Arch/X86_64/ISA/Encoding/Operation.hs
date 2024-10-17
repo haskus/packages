@@ -104,7 +104,9 @@ data Operation
   | BTC     -- ^ Bit test and complement (result in CF)
   | BTR     -- ^ Bit test and reset (result in CF)
   | BTS     -- ^ Bit test and set (result in CF)
-  -- ANDN
+
+  -- BMI1
+  | ANDN    -- ^ Logical AND NOT
   -- BEXTR
   -- BLCFILL
   -- BLCI

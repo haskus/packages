@@ -41,6 +41,7 @@ testAsm = testGroup "Assembler"
     in def64 VADDPD [OpVec R_YMM1, OpVec R_YMM2, OpMem m] (Right "c5ed5808")
   , let m = Mem Nothing (Just Size256) NoLock Nothing $ MemAbs (Just R_RAX) Scale2 (Just R_RCX) (Disp8 57)
     in def64 VADDPD [OpVec R_YMM1, OpVec R_YMM2, OpMem m] (Right "c5ed584c4839")
+  , def64 ANDN [OpReg R_RAX, OpReg R_RBX, OpReg R_R8] (Right "c4c2e0f2c0")
   ]
   where
     def16 = testEncoding defaultContext16
