@@ -230,6 +230,8 @@ data Operation
   | SUBPD   -- ^ Sub packed F64 (SSE)
   | SUBSS   -- ^ Sub scalar F32 (SSE)
   | SUBSD   -- ^ Sub scalar F64 (SSE)
+  | ADDSUBPS -- ^ Add/Sub packed F32 (SSE)
+  | ADDSUBPD -- ^ Add/Sub packed F64 (SSE)
 
   | VADDPS   -- ^ Add packed F32 (AVX)
   | VADDPD   -- ^ Add packed F64 (AVX)
@@ -239,6 +241,8 @@ data Operation
   | VSUBPD   -- ^ Sub packed F64 (AVX)
   | VSUBSS   -- ^ Sub scalar F32 (AVX)
   | VSUBSD   -- ^ Sub scalar F64 (AVX)
+  | VADDSUBPS -- ^ Add/Sub packed F32 (AVX)
+  | VADDSUBPD -- ^ Add/Sub packed F64 (AVX)
   -- MOVMSKPD
   -- MOVMSKPS
 

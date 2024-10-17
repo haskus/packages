@@ -114,6 +114,7 @@ encodeInsn !ctx !op !args = do
       req_avx  = require_extension Ext.AVX
       req_sse  = require_extension Ext.SSE
       req_sse2 = require_extension Ext.SSE2
+      req_sse3 = require_extension Ext.SSE3
       req_bmi1 = require_extension Ext.BMI1
 
       assert_no_args = case args of
@@ -133,6 +134,8 @@ encodeInsn !ctx !op !args = do
       vex_LIG_F3_0F_WIG = set_vex mkVex_LIG_F3_0F_WIG
       vex_128_66_0F_WIG = set_vex mkVex_128_66_0F_WIG
       vex_256_66_0F_WIG = set_vex mkVex_256_66_0F_WIG
+      vex_128_F2_0F_WIG = set_vex mkVex_128_F2_0F_WIG
+      vex_256_F2_0F_WIG = set_vex mkVex_256_F2_0F_WIG
       vex_128_0F_WIG    = set_vex mkVex_128_0F_WIG
       vex_256_0F_WIG    = set_vex mkVex_256_0F_WIG
 
@@ -1940,3 +1943,28 @@ encodeInsn !ctx !op !args = do
       [V128 a, V128 b, V128 c] -> req_avx  >> vex_LIG_F2_0F_WIG 0x5C >> rvm_vec_vec_vec a b c
       [V128 a, V128 b, M64  c] -> req_avx  >> vex_LIG_F2_0F_WIG 0x5C >> rvm_vec_vec_mem a b c
       _ -> invalidArgs
+
+    ADDSUBPS -> case args of
+      [V128 a, M128 b] -> req_sse3 >> oc_F2_0F 0xD0 >> rm_vec_mem a b
+      [V128 a, V128 b] -> req_sse3 >> oc_F2_0F 0xD0 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    VADDSUBPS -> case args of
+      [V128 a, V128 b, V128 c] -> req_avx >> vex_128_F2_0F_WIG 0xD0 >> rvm_vec_vec_vec a b c
+      [V256 a, V256 b, V256 c] -> req_avx >> vex_256_F2_0F_WIG 0xD0 >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M128 c] -> req_avx >> vex_128_F2_0F_WIG 0xD0 >> rvm_vec_vec_mem a b c
+      [V256 a, V256 b, M256 c] -> req_avx >> vex_256_F2_0F_WIG 0xD0 >> rvm_vec_vec_mem a b c
+      _ -> invalidArgs
+
+    ADDSUBPD -> case args of
+      [V128 a, M128 b] -> req_sse3 >> oc_66_0F 0xD0 >> rm_vec_mem a b
+      [V128 a, V128 b] -> req_sse3 >> oc_66_0F 0xD0 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    VADDSUBPD -> case args of
+      [V128 a, V128 b, V128 c] -> req_avx >> vex_128_66_0F_WIG 0xD0 >> rvm_vec_vec_vec a b c
+      [V256 a, V256 b, V256 c] -> req_avx >> vex_256_66_0F_WIG 0xD0 >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M128 c] -> req_avx >> vex_128_66_0F_WIG 0xD0 >> rvm_vec_vec_mem a b c
+      [V256 a, V256 b, M256 c] -> req_avx >> vex_256_66_0F_WIG 0xD0 >> rvm_vec_vec_mem a b c
+      _ -> invalidArgs
+
