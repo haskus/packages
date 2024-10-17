@@ -222,14 +222,23 @@ data Operation
   ---------------------------------------
   -- Vector instructions
   ---------------------------------------
-  | ADDPD   -- ^ Add packed F64
-  | ADDPS   -- ^ Add packed F32
-  | ADDSS   -- ^ Add scalar F32
-  | ADDSD   -- ^ Add scalar F64
-  | SUBPD   -- ^ Sub packed F64
-  | SUBPS   -- ^ Sub packed F32
-  | SUBSS   -- ^ Sub scalar F32
-  | SUBSD   -- ^ Sub scalar F64
+  | ADDPS   -- ^ Add packed F32 (SSE)
+  | ADDPD   -- ^ Add packed F64 (SSE)
+  | ADDSS   -- ^ Add scalar F32 (SSE)
+  | ADDSD   -- ^ Add scalar F64 (SSE)
+  | SUBPS   -- ^ Sub packed F32 (SSE)
+  | SUBPD   -- ^ Sub packed F64 (SSE)
+  | SUBSS   -- ^ Sub scalar F32 (SSE)
+  | SUBSD   -- ^ Sub scalar F64 (SSE)
+
+  | VADDPS   -- ^ Add packed F32 (AVX)
+  | VADDPD   -- ^ Add packed F64 (AVX)
+  | VADDSS   -- ^ Add scalar F32 (AVX)
+  | VADDSD   -- ^ Add scalar F64 (AVX)
+  | VSUBPS   -- ^ Sub packed F32 (AVX)
+  | VSUBPD   -- ^ Sub packed F64 (AVX)
+  | VSUBSS   -- ^ Sub scalar F32 (AVX)
+  | VSUBSD   -- ^ Sub scalar F64 (AVX)
   -- MOVMSKPD
   -- MOVMSKPS
 

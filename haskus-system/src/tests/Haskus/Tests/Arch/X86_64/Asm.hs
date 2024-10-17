@@ -34,13 +34,13 @@ testAsm = testGroup "Assembler"
   , def64 MOV [OpReg R_RAX, I64 0x17] (Right "48b81700000000000000")
   , opt64 MOV [OpReg R_RAX, I64 0x17] (Right "b817000000")
   , opt64 MOV [OpReg R_RAX, I64 maxBound] (Right "48c7c0ffffffff")
-  , def64 ADDPD [OpVec R_XMM1, OpVec R_XMM2, OpVec R_XMM3] (Right "c5e958cb")
+  , def64 VADDPD [OpVec R_XMM1, OpVec R_XMM2, OpVec R_XMM3] (Right "c5e958cb")
   , let m = Mem Nothing (Just Size128) NoLock Nothing $ MemAbs (Just R_RAX) Scale1 Nothing NoDisp
-    in def64 ADDPD [OpVec R_XMM1, OpVec R_XMM2, OpMem m] (Right "c5e95808")
+    in def64 VADDPD [OpVec R_XMM1, OpVec R_XMM2, OpMem m] (Right "c5e95808")
   , let m = Mem Nothing (Just Size256) NoLock Nothing $ MemAbs (Just R_RAX) Scale1 Nothing NoDisp
-    in def64 ADDPD [OpVec R_YMM1, OpVec R_YMM2, OpMem m] (Right "c5ed5808")
+    in def64 VADDPD [OpVec R_YMM1, OpVec R_YMM2, OpMem m] (Right "c5ed5808")
   , let m = Mem Nothing (Just Size256) NoLock Nothing $ MemAbs (Just R_RAX) Scale2 (Just R_RCX) (Disp8 57)
-    in def64 ADDPD [OpVec R_YMM1, OpVec R_YMM2, OpMem m] (Right "c5ed584c4839")
+    in def64 VADDPD [OpVec R_YMM1, OpVec R_YMM2, OpMem m] (Right "c5ed584c4839")
   ]
   where
     def16 = testEncoding defaultContext16
