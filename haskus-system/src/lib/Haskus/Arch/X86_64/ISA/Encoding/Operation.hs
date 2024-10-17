@@ -105,9 +105,9 @@ data Operation
   | BTR     -- ^ Bit test and reset (result in CF)
   | BTS     -- ^ Bit test and set (result in CF)
 
-  -- BMI1
+  -- BMI1 & BMI2
   | ANDN    -- ^ Logical AND NOT
-  -- BEXTR
+  | BEXTR   -- ^ Bit field extract
   -- BLCFILL
   -- BLCI
   -- BLCIC

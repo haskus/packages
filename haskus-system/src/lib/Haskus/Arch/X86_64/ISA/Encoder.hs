@@ -288,6 +288,8 @@ encodeInsn !ctx !op !args = do
       rvm_vec_vec_mem r v m = set_v_vec v >> set_r_vec r >> set_m_mem m
       rvm_reg_reg_reg r v m = set_v_gpr v >> set_r_gpr r >> set_m_gpr m
       rvm_reg_reg_mem r v m = set_v_gpr v >> set_r_gpr r >> set_m_mem m
+      rmv_reg_reg_reg r m v = set_v_gpr v >> set_r_gpr r >> set_m_gpr m
+      rmv_reg_mem_reg r m v = set_v_gpr v >> set_r_gpr r >> set_m_mem m
 
       -- store r1 in ModRM.reg and r2 in ModRM.rm
       rm_reg_reg r1 r2 = do
@@ -1865,6 +1867,13 @@ encodeInsn !ctx !op !args = do
       [R32 a, R32 b, M32 c] -> vex_LZ_0F38_W0 0xF2 >> rvm_reg_reg_mem a b c
       [R64 a, R64 b, R64 c] -> vex_LZ_0F38_W1 0xF2 >> rvm_reg_reg_reg a b c
       [R64 a, R64 b, M64 c] -> vex_LZ_0F38_W1 0xF2 >> rvm_reg_reg_mem a b c
+      _ -> invalidArgs
+
+    BEXTR -> req_bmi1 >> case args of
+      [R32 a, R32 b, R32 c] -> vex_LZ_0F38_W0 0xF7 >> rmv_reg_reg_reg a b c
+      [R32 a, M32 b, R32 c] -> vex_LZ_0F38_W0 0xF7 >> rmv_reg_mem_reg a b c
+      [R64 a, R64 b, R64 c] -> vex_LZ_0F38_W1 0xF7 >> rmv_reg_reg_reg a b c
+      [R64 a, M64 b, R64 c] -> vex_LZ_0F38_W1 0xF7 >> rmv_reg_mem_reg a b c
       _ -> invalidArgs
 
     ADDPS -> req_sse >> case args of
