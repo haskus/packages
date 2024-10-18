@@ -114,6 +114,9 @@ data Operation
   | PDEP    -- ^ Parallel bits deposit
   | PEXT    -- ^ Parallel bits extract
   | RORX    -- ^ Rotate right logical without affecting flags
+  | SARX    -- ^ Shit arithmetic right without affecting flags
+  | SHRX    -- ^ Shit logical right without affecting flags
+  | SHLX    -- ^ Shit logical left without affecting flags
   -- BLCFILL
   -- BLCI
   -- BLCIC
@@ -122,11 +125,8 @@ data Operation
   -- BLSFILL
   -- BLSIC
   -- BZHI
-  -- SARX
   -- SHLD
-  -- SHLX
   -- SHRD
-  -- SHRX
   -- T1MSKC
   -- TZMSK
 
