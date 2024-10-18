@@ -119,16 +119,7 @@ data Operation
   | SARX    -- ^ Shit arithmetic right without affecting flags
   | SHRX    -- ^ Shit logical right without affecting flags
   | SHLX    -- ^ Shit logical left without affecting flags
-  -- BLCFILL
-  -- BLCI
-  -- BLCIC
-  -- BLCMSK
-  -- BLCS
-  -- BLSFILL
-  -- BLSIC
-  -- BZHI
-  -- T1MSKC
-  -- TZMSK
+  | BZHI    -- ^ Zero high bits starting with specified bit position
 
   -- Control-flow
   | JMP       -- ^ Unconditional jump
@@ -218,35 +209,64 @@ data Operation
   | RDTSC       -- ^ Read time-stamp counter
   | RDTSCP      -- ^ Read time-stamp counter and processor ID
   | LSL         -- ^ Load segment limit
-  -- RDPRU
-  --
+  | RDPRU       -- ^ Read processor register
 
   ---------------------------------------
   -- Vector instructions
   ---------------------------------------
-  | ADDPS   -- ^ Add packed F32 (SSE)
-  | ADDPD   -- ^ Add packed F64 (SSE)
-  | ADDSS   -- ^ Add scalar F32 (SSE)
-  | ADDSD   -- ^ Add scalar F64 (SSE)
-  | SUBPS   -- ^ Sub packed F32 (SSE)
-  | SUBPD   -- ^ Sub packed F64 (SSE)
-  | SUBSS   -- ^ Sub scalar F32 (SSE)
-  | SUBSD   -- ^ Sub scalar F64 (SSE)
+
+  | ADDPS    -- ^ Add packed F32 (SSE)
+  | ADDPD    -- ^ Add packed F64 (SSE)
+  | ADDSS    -- ^ Add scalar F32 (SSE)
+  | ADDSD    -- ^ Add scalar F64 (SSE)
+  | SUBPS    -- ^ Sub packed F32 (SSE)
+  | SUBPD    -- ^ Sub packed F64 (SSE)
+  | SUBSS    -- ^ Sub scalar F32 (SSE)
+  | SUBSD    -- ^ Sub scalar F64 (SSE)
   | ADDSUBPS -- ^ Add/Sub packed F32 (SSE)
   | ADDSUBPD -- ^ Add/Sub packed F64 (SSE)
+  | MAXPS    -- ^ Maximum of packed F32 (SSE)
+  | MAXPD    -- ^ Maximum of packed F64 (SSE)
+  | MAXSS    -- ^ Maximum of scalar F32 (SSE)
+  | MAXSD    -- ^ Maximum of scalar F64 (SSE)
+  | MINPS    -- ^ Minimum of packed F32 (SSE)
+  | MINPD    -- ^ Minimum of packed F64 (SSE)
+  | MINSS    -- ^ Minimum of scalar F32 (SSE)
+  | MINSD    -- ^ Minimum of scalar F64 (SSE)
 
-  | VADDPS   -- ^ Add packed F32 (AVX)
-  | VADDPD   -- ^ Add packed F64 (AVX)
-  | VADDSS   -- ^ Add scalar F32 (AVX)
-  | VADDSD   -- ^ Add scalar F64 (AVX)
-  | VSUBPS   -- ^ Sub packed F32 (AVX)
-  | VSUBPD   -- ^ Sub packed F64 (AVX)
-  | VSUBSS   -- ^ Sub scalar F32 (AVX)
-  | VSUBSD   -- ^ Sub scalar F64 (AVX)
-  | VADDSUBPS -- ^ Add/Sub packed F32 (AVX)
-  | VADDSUBPD -- ^ Add/Sub packed F64 (AVX)
+
+  | VADDPS          -- ^ Add packed F32 (AVX)
+  | VADDPD          -- ^ Add packed F64 (AVX)
+  | VADDSS          -- ^ Add scalar F32 (AVX)
+  | VADDSD          -- ^ Add scalar F64 (AVX)
+  | VSUBPS          -- ^ Sub packed F32 (AVX)
+  | VSUBPD          -- ^ Sub packed F64 (AVX)
+  | VSUBSS          -- ^ Sub scalar F32 (AVX)
+  | VSUBSD          -- ^ Sub scalar F64 (AVX)
+  | VADDSUBPS       -- ^ Add/Sub packed F32 (AVX)
+  | VADDSUBPD       -- ^ Add/Sub packed F64 (AVX)
+  | VMAXPS          -- ^ Maximum of packed F32 (AVX)
+  | VMAXPD          -- ^ Maximum of packed F64 (AVX)
+  | VMAXSS          -- ^ Maximum of scalar F32 (AVX)
+  | VMAXSD          -- ^ Maximum of scalar F64 (AVX)
+  | VMINPS          -- ^ Minimum of packed F32 (AVX)
+  | VMINPD          -- ^ Minimum of packed F64 (AVX)
+  | VMINSS          -- ^ Minimum of scalar F32 (AVX)
+  | VMINSD          -- ^ Minimum of scalar F64 (AVX)
   -- MOVMSKPD
   -- MOVMSKPS
+
+  -- XOP TBM:
+  --
+  -- BLCFILL
+  -- BLCI
+  -- BLCIC
+  -- BLCMSK
+  -- BLCS
+  -- BLSFILL
+  -- BLSIC
+  -- T1MSKC
+  -- TZMSK
 
   deriving (Show,Eq,Ord)
 
