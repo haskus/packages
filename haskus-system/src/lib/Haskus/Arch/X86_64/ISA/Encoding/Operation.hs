@@ -104,6 +104,8 @@ data Operation
   | BTC     -- ^ Bit test and complement (result in CF)
   | BTR     -- ^ Bit test and reset (result in CF)
   | BTS     -- ^ Bit test and set (result in CF)
+  | SHLD    -- ^ Double precision shift left
+  | SHRD    -- ^ Double precision shift right
 
   -- BMI1 & BMI2
   | ANDN    -- ^ Logical AND NOT
@@ -125,8 +127,6 @@ data Operation
   -- BLSFILL
   -- BLSIC
   -- BZHI
-  -- SHLD
-  -- SHRD
   -- T1MSKC
   -- TZMSK
 

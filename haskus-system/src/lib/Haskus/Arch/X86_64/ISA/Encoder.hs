@@ -292,25 +292,23 @@ encodeInsn !ctx !op !args = do
       rm_ext_mem r m = set_r_ext r >> set_m_mem m
       rm_vec_mem r m = set_r_vec r >> set_m_mem m
       rm_vec_vec r m = set_r_vec r >> set_m_vec m
+      rm_reg_reg r m = set_r_gpr r >> set_m_gpr m >> chk_regs r m
+      mr_reg_reg m r = set_r_gpr r >> set_m_gpr m >> chk_regs r m
+      mr_mem_reg m r = set_r_gpr r >> set_m_mem m
+
       --vrm_vec_vec_vec v r m = set_v_vec v >> set_r_vec r >> set_m_vec m
       rvm_vec_vec_vec r v m = set_v_vec v >> set_r_vec r >> set_m_vec m
       rvm_vec_vec_mem r v m = set_v_vec v >> set_r_vec r >> set_m_mem m
-      rvm_reg_reg_reg r v m = set_v_gpr v >> set_r_gpr r >> set_m_gpr m
+      rvm_reg_reg_reg r v m = set_v_gpr v >> set_r_gpr r >> set_m_gpr m >> chk_regs r m
       rvm_reg_reg_mem r v m = set_v_gpr v >> set_r_gpr r >> set_m_mem m
-      rmv_reg_reg_reg r m v = set_v_gpr v >> set_r_gpr r >> set_m_gpr m
+      rmv_reg_reg_reg r m v = set_v_gpr v >> set_r_gpr r >> set_m_gpr m >> chk_regs r m
       rmv_reg_mem_reg r m v = set_v_gpr v >> set_r_gpr r >> set_m_mem m
       rvm_ext_reg_reg r v m = set_v_gpr v >> set_r_ext r >> set_m_gpr m
       rvm_ext_reg_mem r v m = set_v_gpr v >> set_r_ext r >> set_m_mem m
 
-      -- store r1 in ModRM.reg and r2 in ModRM.rm
-      rm_reg_reg r1 r2 = do
-        unless (compatibleRegs r1 r2) do
-          efail EIncompatibleRegs
-        set_r_gpr r1
-        set_m_gpr r2
+      -- check that regs are compatible when encoded in ModRM.{rm,reg}
+      chk_regs r1 r2 = unless (compatibleRegs r1 r2) (efail EIncompatibleRegs)
 
-      -- store r1 in ModRM.rm and r2 in ModRM.reg
-      mr_reg_reg r1 r2 = rm_reg_reg r2 r1
 
   runE case op of
     AAA -> do
@@ -964,6 +962,36 @@ encodeInsn !ctx !op !args = do
         [R64 d, I8 i]  -> osz64 << rm_ext_reg 0x5 d << imm8 i << oc_0F 0xBA
         [M64 d, I8 i]  -> osz64 << rm_ext_mem 0x5 d << imm8 i << oc_0F 0xBA
         _ -> invalidArgs
+
+    SHLD -> case args of
+      [R16 a, R16 b, I8 c]    -> osz16 >> oc_0F 0xA4 >> mr_reg_reg a b >> imm8 c
+      [M16 a, R16 b, I8 c]    -> osz16 >> oc_0F 0xA4 >> mr_mem_reg a b >> imm8 c
+      [R32 a, R32 b, I8 c]    -> osz32 >> oc_0F 0xA4 >> mr_reg_reg a b >> imm8 c
+      [M32 a, R32 b, I8 c]    -> osz32 >> oc_0F 0xA4 >> mr_mem_reg a b >> imm8 c
+      [R64 a, R64 b, I8 c]    -> osz64 >> oc_0F 0xA4 >> mr_reg_reg a b >> imm8 c
+      [M64 a, R64 b, I8 c]    -> osz64 >> oc_0F 0xA4 >> mr_mem_reg a b >> imm8 c
+      [R16 a, R16 b, R8 R_CL] -> osz16 >> oc_0F 0xA5 >> mr_reg_reg a b
+      [M16 a, R16 b, R8 R_CL] -> osz16 >> oc_0F 0xA5 >> mr_mem_reg a b
+      [R32 a, R32 b, R8 R_CL] -> osz32 >> oc_0F 0xA5 >> mr_reg_reg a b
+      [M32 a, R32 b, R8 R_CL] -> osz32 >> oc_0F 0xA5 >> mr_mem_reg a b
+      [R64 a, R64 b, R8 R_CL] -> osz64 >> oc_0F 0xA5 >> mr_reg_reg a b
+      [M64 a, R64 b, R8 R_CL] -> osz64 >> oc_0F 0xA5 >> mr_mem_reg a b
+      _ -> invalidArgs
+
+    SHRD -> case args of
+      [R16 a, R16 b, I8 c]    -> osz16 >> oc_0F 0xAC >> mr_reg_reg a b >> imm8 c
+      [M16 a, R16 b, I8 c]    -> osz16 >> oc_0F 0xAC >> mr_mem_reg a b >> imm8 c
+      [R32 a, R32 b, I8 c]    -> osz32 >> oc_0F 0xAC >> mr_reg_reg a b >> imm8 c
+      [M32 a, R32 b, I8 c]    -> osz32 >> oc_0F 0xAC >> mr_mem_reg a b >> imm8 c
+      [R64 a, R64 b, I8 c]    -> osz64 >> oc_0F 0xAC >> mr_reg_reg a b >> imm8 c
+      [M64 a, R64 b, I8 c]    -> osz64 >> oc_0F 0xAC >> mr_mem_reg a b >> imm8 c
+      [R16 a, R16 b, R8 R_CL] -> osz16 >> oc_0F 0xAD >> mr_reg_reg a b
+      [M16 a, R16 b, R8 R_CL] -> osz16 >> oc_0F 0xAD >> mr_mem_reg a b
+      [R32 a, R32 b, R8 R_CL] -> osz32 >> oc_0F 0xAD >> mr_reg_reg a b
+      [M32 a, R32 b, R8 R_CL] -> osz32 >> oc_0F 0xAD >> mr_mem_reg a b
+      [R64 a, R64 b, R8 R_CL] -> osz64 >> oc_0F 0xAD >> mr_reg_reg a b
+      [M64 a, R64 b, R8 R_CL] -> osz64 >> oc_0F 0xAD >> mr_mem_reg a b
+      _ -> invalidArgs
 
     SUB -> case args of
         [R8 R_AL,   I8  i] ->          imm8  i << oc 0x2C
