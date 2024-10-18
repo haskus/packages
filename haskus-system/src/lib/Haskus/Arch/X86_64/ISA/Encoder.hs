@@ -2093,6 +2093,16 @@ encodeInsn !ctx !op !args = do
       [V128 a, V128 b] -> oc_0F 0x55 >> rm_vec_vec a b
       _ -> invalidArgs
 
+    ORPD -> req_sse2 >> case args of
+      [V128 a, M128 b] -> oc_66_0F 0x56 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_66_0F 0x56 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    ORPS -> req_sse >> case args of
+      [V128 a, M128 b] -> oc_0F 0x56 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_0F 0x56 >> rm_vec_vec a b
+      _ -> invalidArgs
+
     ADDSUBPD -> req_sse3 >> case args of
       [V128 a, M128 b] -> oc_66_0F 0xD0 >> rm_vec_mem a b
       [V128 a, V128 b] -> oc_66_0F 0xD0 >> rm_vec_vec a b
@@ -2301,6 +2311,20 @@ encodeInsn !ctx !op !args = do
       [V256 a, V256 b, V256 c] -> vex_256_0F_WIG 0x55 >> rvm_vec_vec_vec a b c
       [V128 a, V128 b, M128 c] -> vex_128_0F_WIG 0x55 >> rvm_vec_vec_mem a b c
       [V256 a, V256 b, M256 c] -> vex_256_0F_WIG 0x55 >> rvm_vec_vec_mem a b c
+      _ -> invalidArgs
+
+    VORPD -> req_avx >> case args of
+      [V128 a, V128 b, V128 c] -> vex_128_66_0F_WIG 0x56 >> rvm_vec_vec_vec a b c
+      [V256 a, V256 b, V256 c] -> vex_256_66_0F_WIG 0x56 >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M128 c] -> vex_128_66_0F_WIG 0x56 >> rvm_vec_vec_mem a b c
+      [V256 a, V256 b, M256 c] -> vex_256_66_0F_WIG 0x56 >> rvm_vec_vec_mem a b c
+      _ -> invalidArgs
+
+    VORPS -> req_avx >> case args of
+      [V128 a, V128 b, V128 c] -> vex_128_0F_WIG 0x56 >> rvm_vec_vec_vec a b c
+      [V256 a, V256 b, V256 c] -> vex_256_0F_WIG 0x56 >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M128 c] -> vex_128_0F_WIG 0x56 >> rvm_vec_vec_mem a b c
+      [V256 a, V256 b, M256 c] -> vex_256_0F_WIG 0x56 >> rvm_vec_vec_mem a b c
       _ -> invalidArgs
 
     VADDSUBPD -> req_avx >> case args of
