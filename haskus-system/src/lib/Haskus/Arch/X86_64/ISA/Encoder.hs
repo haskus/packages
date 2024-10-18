@@ -1951,6 +1951,14 @@ encodeInsn !ctx !op !args = do
       [R64 a, R64 b, M64 c] -> vex_LZ_F3_0F38_W1 0xF5 >> rvm_reg_reg_mem a b c
       _ -> invalidArgs
 
+    MULX -> req_bmi2 >> case args of
+      [R32 a, R32 b, R32 c] -> vex_LZ_F2_0F38_W0 0xF6 >> rvm_reg_reg_reg a b c
+      [R32 a, R32 b, M32 c] -> vex_LZ_F2_0F38_W0 0xF6 >> rvm_reg_reg_mem a b c
+      [R64 a, R64 b, R64 c] -> vex_LZ_F2_0F38_W1 0xF6 >> rvm_reg_reg_reg a b c
+      [R64 a, R64 b, M64 c] -> vex_LZ_F2_0F38_W1 0xF6 >> rvm_reg_reg_mem a b c
+      _ -> invalidArgs
+
+
     RORX -> req_bmi2 >> case args of
       [R32 a, R32 b, I8 c] -> vex_LZ_F2_0F3A_W0 0xF0 >> rm_reg_reg a b >> imm8 c
       [R32 a, M32 b, I8 c] -> vex_LZ_F2_0F3A_W0 0xF0 >> rm_reg_mem a b >> imm8 c

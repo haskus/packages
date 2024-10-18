@@ -50,7 +50,6 @@ data Operation
 
   | ADCX    -- ^ Unsigned add with carry flag: CF:DEST := DEST + SRC + CF
   | ADOX    -- ^ Unsigned add with overflow flag: OF:DEST := DEST + SRC + OF
-  -- MULX
 
   -- Moves
   | LEA           -- ^ Load effective address: DEST := EA(SRC)
@@ -120,6 +119,7 @@ data Operation
   | SHRX    -- ^ Shit logical right without affecting flags
   | SHLX    -- ^ Shit logical left without affecting flags
   | BZHI    -- ^ Zero high bits starting with specified bit position
+  | MULX    -- ^ Unsigned multiply without affecting flags
 
   -- Control-flow
   | JMP       -- ^ Unconditional jump
