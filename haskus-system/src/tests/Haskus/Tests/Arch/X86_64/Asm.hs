@@ -56,7 +56,7 @@ testOptEncoding ctx op ops result =
     Nothing         -> testEncoding ctx op  ops  result
 
 testEncoding :: Context -> Operation -> Operands -> Either EError String -> TestTree
-testEncoding ctx op ops result = testCase (show (op,ops)) $
+testEncoding ctx op ops result = testCase (show op ++ " " ++ show ops) $
   let str = case encodeInsn ctx op ops of
               Left (_,err) -> Left err
               Right enc    -> case encCheck enc of

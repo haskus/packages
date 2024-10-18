@@ -38,7 +38,20 @@ data Operand
   | OpVec !Vec
   | OpMem !Mem
   | OpSeg !Segment
-  deriving (Show,Eq,Ord)
+  deriving (Eq,Ord)
+
+instance Show Operand where
+  show = \case
+    OpReg r -> show r
+    OpVec v -> show v
+    OpMem m -> show m
+    OpSeg s -> show s
+    OpImm i -> case i of
+      SizedValue8  v -> "imm8(" ++ show v ++ ")"
+      SizedValue16 v -> "imm16(" ++ show v ++ ")"
+      SizedValue32 v -> "imm32(" ++ show v ++ ")"
+      SizedValue64 v -> "imm64(" ++ show v ++ ")"
+
 
 pattern I8   x = OpImm (SizedValue8  x)
 pattern I16  x = OpImm (SizedValue16 x)
@@ -66,7 +79,15 @@ data Operands
   | Ops1 !Operand
   | Ops2 !Operand !Operand
   | Ops3 !Operand !Operand !Operand
-  deriving (Show,Eq,Ord)
+  deriving (Eq,Ord)
+
+instance Show Operands where
+  show = \case
+    Ops0 -> ""
+    Ops1 a -> show a
+    Ops2 a b -> show a ++","++ show b
+    Ops3 a b c -> show a ++","++ show b++","++show c
+
 
 instance IsList Operands where
   type Item Operands = Operand

@@ -3,6 +3,8 @@ module Haskus.Arch.X86_64.ISA.Encoding.Disp
   , dispSizeInBytes
   , writeDisp
   , hasDisp
+  , showDisp
+  , showDispMaybe
   )
 where
 
@@ -17,6 +19,18 @@ data Disp
   | Disp16 !I16
   | Disp32 !I32
   deriving (Show,Eq,Ord)
+
+showDisp :: Disp -> String
+showDisp = \case
+  NoDisp  -> ""
+  Disp8  i -> "imm8(" ++ show i ++ ")"
+  Disp16 i -> "imm16(" ++ show i ++ ")"
+  Disp32 i -> "imm32(" ++ show i ++ ")"
+
+showDispMaybe :: Disp -> Maybe String
+showDispMaybe = \case
+  NoDisp -> Nothing
+  o      -> Just (showDisp o)
 
 hasDisp :: Disp -> Bool
 hasDisp d = d /= NoDisp
