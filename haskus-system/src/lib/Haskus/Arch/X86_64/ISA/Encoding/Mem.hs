@@ -34,6 +34,9 @@ import Haskus.Arch.X86_64.ISA.Size
 import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Binary.Cast
 
+import Data.List (intercalate)
+import Haskus.Utils.Maybe (catMaybes,fromMaybe)
+
 encodeMem16 :: Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp)
 encodeMem16 base index disp
   -- base case
@@ -377,7 +380,24 @@ data Mem = Mem
   , memAddrSize :: !(Maybe AddressSize)    -- ^ Overloaded address size
   , memAddr     :: !MemAddr                -- ^ Memory address
   }
-  deriving (Show,Eq,Ord)
+  deriving (Eq,Ord)
+
+instance Show Mem where
+  show (Mem s sz l asz a) = concat
+    [ case asz of
+        Nothing   -> ""
+        Just asz' -> show asz' ++ "@"
+    , "["
+    , intercalate ":" $ catMaybes
+      [ fmap show s
+      , fmap (show . sizeInBits) sz
+      , case l of
+          Lock -> Just "lock"
+          NoLock -> Nothing
+      , Just (show a)
+      ]
+    , "]"
+    ]
 
 emptyMem :: Mem
 emptyMem = Mem
@@ -405,7 +425,19 @@ data MemAddr
   | MemRel
     { mrelDisp :: Disp -- ^ Displacement relative to rIP
     }
-  deriving (Show,Eq,Ord)
+  deriving (Eq,Ord)
+
+instance Show MemAddr where
+  show = \case
+    MemRel d -> intercalate " + " $ catMaybes [Just "RIP", showDispMaybe d]
+    MemAbs b s i d -> intercalate "+" $ catMaybes
+                        [ fmap show b
+                        , let sc = fromMaybe "" (fmap (++ "*") (showScaleMaybe s))
+                          in fmap (\x -> sc ++ show x) i
+                        , showDispMaybe d
+                        ]
+
+
 
 isMemAny :: Mem -> Maybe Mem
 isMemAny m = if memSize m == Nothing then Just m else Nothing

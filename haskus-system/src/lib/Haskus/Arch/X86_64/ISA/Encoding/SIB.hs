@@ -6,6 +6,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.SIB
   , writeSIB
   , Scale(..)
   , scaleU8
+  , showScaleMaybe
   )
 where
 
@@ -24,6 +25,13 @@ data Scale
   | Scale4
   | Scale8
   deriving (Show,Eq,Ord)
+
+showScaleMaybe :: Scale -> Maybe String
+showScaleMaybe = \case
+  Scale1 -> Nothing
+  Scale2 -> Just "2"
+  Scale4 -> Just "4"
+  Scale8 -> Just "8"
 
 scaleU8 :: Scale -> U8
 scaleU8 = \case
