@@ -35,7 +35,7 @@ import Haskus.Arch.X86_64.ISA.Context
 import Haskus.Binary.Cast
 
 import Data.List (intercalate)
-import Haskus.Utils.Maybe (catMaybes,fromMaybe)
+import Haskus.Utils.Maybe (catMaybes)
 
 encodeMem16 :: Maybe Reg -> Maybe Reg -> Disp -> Maybe (ModRM,Disp)
 encodeMem16 base index disp
@@ -432,8 +432,7 @@ instance Show MemAddr where
     MemRel d -> intercalate " + " $ catMaybes [Just "RIP", showDispMaybe d]
     MemAbs b s i d -> intercalate "+" $ catMaybes
                         [ fmap show b
-                        , let sc = fromMaybe "" (fmap (++ "*") (showScaleMaybe s))
-                          in fmap (\x -> sc ++ show x) i
+                        , fmap (\x -> showScale s ++ "*" ++ show x) i
                         , showDispMaybe d
                         ]
 
