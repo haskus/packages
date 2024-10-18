@@ -292,6 +292,19 @@ data Operation
 
   -- MOVMSKPD
   -- MOVMSKPS
+  -- SQRTPS...
+  -- RCPPS...
+  -- RSQRT
+  -- POR, PXOR, PTEST, PAND
+  -- PSLRW, PSLRD, PSLRQ, PSLRDQ
+  -- PADD, PSUB...
+  -- PUNPACKL, PUNPACKH
+  -- UNPACKL, UNPACKH
+  -- ROUNDPS
+  -- SERIALIZE
+  -- UCOMISS
+  -- CVTxx2yy
+  -- VCVTxx2yy
 
   -- XOP TBM:
   --
