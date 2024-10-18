@@ -178,6 +178,8 @@ data Operation
   | PAUSE     -- ^ Spin loop hint
   | NOP !U8   -- ^ No operation (size up to 9 bytes)
   | MWAIT     -- ^ Monitor wait
+  | RDRAND    -- ^ Read random number
+  | RDSEED    -- ^ Read random seed
   -- BOUND
   -- CRC32
   -- LLWPCB
@@ -185,8 +187,6 @@ data Operation
   -- LWPVAL
   -- MONITORX
   -- MWAITX
-  -- RDRAND
-  -- RDSEED
   -- SLWPCB
 
   ---------------------------------------
