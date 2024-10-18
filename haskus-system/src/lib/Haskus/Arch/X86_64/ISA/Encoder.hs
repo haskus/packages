@@ -296,6 +296,7 @@ encodeInsn !ctx !op !args = do
       rm_reg_reg r m = set_r_gpr r >> set_m_gpr m >> chk_regs r m
       mr_reg_reg m r = set_r_gpr r >> set_m_gpr m >> chk_regs r m
       mr_mem_reg m r = set_r_gpr r >> set_m_mem m
+      mr_mem_vec m r = set_r_vec r >> set_m_mem m
 
       --vrm_vec_vec_vec v r m = set_v_vec v >> set_r_vec r >> set_m_vec m
       rvm_vec_vec_vec r v m = set_v_vec v >> set_r_vec r >> set_m_vec m
@@ -2080,6 +2081,38 @@ encodeInsn !ctx !op !args = do
       [V128 a, V128 b] -> oc_F3_0F 0x5D >> rm_vec_vec a b
       _ -> invalidArgs
 
+    MOVAPD -> req_sse2 >> case args of
+      [V128 a, M128 b] -> oc_66_0F 0x28 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_66_0F 0x28 >> rm_vec_vec a b
+      [M128 a, V128 b] -> oc_66_0F 0x29 >> mr_mem_vec a b
+      -- redundant
+      -- [V128 a, V128 b] -> oc_66_0F 0x29 >> mr_vec_vec a b
+      _ -> invalidArgs
+
+    MOVAPS -> req_sse >> case args of
+      [V128 a, M128 b] -> oc_0F 0x28 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_0F 0x28 >> rm_vec_vec a b
+      [M128 a, V128 b] -> oc_0F 0x29 >> mr_mem_vec a b
+      -- redundant
+      -- [V128 a, V128 b] -> oc_0F 0x29 >> mr_vec_vec a b
+      _ -> invalidArgs
+
+    MOVUPD -> req_sse2 >> case args of
+      [V128 a, M128 b] -> oc_66_0F 0x10 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_66_0F 0x10 >> rm_vec_vec a b
+      [M128 a, V128 b] -> oc_66_0F 0x11 >> mr_mem_vec a b
+      -- redundant
+      -- [V128 a, V128 b] -> oc_66_0F 0x11 >> mr_vec_vec a b
+      _ -> invalidArgs
+
+    MOVUPS -> req_sse >> case args of
+      [V128 a, M128 b] -> oc_0F 0x10 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_0F 0x10 >> rm_vec_vec a b
+      [M128 a, V128 b] -> oc_0F 0x11 >> mr_mem_vec a b
+      -- redundant
+      -- [V128 a, V128 b] -> oc_0F 0x11 >> mr_vec_vec a b
+      _ -> invalidArgs
+
     ------------------------
     -- AVX
     ------------------------
@@ -2193,4 +2226,40 @@ encodeInsn !ctx !op !args = do
     VMINSS -> req_avx >> case args of
       [V128 a, V128 b, V128 c] -> vex_LIG_F3_0F_WIG 0x5D >> rvm_vec_vec_vec a b c
       [V128 a, V128 b, M32  c] -> vex_LIG_F3_0F_WIG 0x5D >> rvm_vec_vec_mem a b c
+      _ -> invalidArgs
+
+    VMOVAPD -> req_avx >> case args of
+      [V128 a, M128 b] -> vex_128_66_0F_WIG 0x28 >> rm_vec_mem a b
+      [V128 a, V128 b] -> vex_128_66_0F_WIG 0x28 >> rm_vec_vec a b
+      [M128 a, V128 b] -> vex_128_66_0F_WIG 0x29 >> mr_mem_vec a b
+      [V256 a, M256 b] -> vex_256_66_0F_WIG 0x28 >> rm_vec_mem a b
+      [V256 a, V256 b] -> vex_256_66_0F_WIG 0x28 >> rm_vec_vec a b
+      [M256 a, V256 b] -> vex_256_66_0F_WIG 0x29 >> mr_mem_vec a b
+      _ -> invalidArgs
+
+    VMOVAPS -> req_avx >> case args of
+      [V128 a, M128 b] -> vex_128_0F_WIG 0x28 >> rm_vec_mem a b
+      [V128 a, V128 b] -> vex_128_0F_WIG 0x28 >> rm_vec_vec a b
+      [M128 a, V128 b] -> vex_128_0F_WIG 0x29 >> mr_mem_vec a b
+      [V256 a, M256 b] -> vex_256_0F_WIG 0x28 >> rm_vec_mem a b
+      [V256 a, V256 b] -> vex_256_0F_WIG 0x28 >> rm_vec_vec a b
+      [M256 a, V256 b] -> vex_256_0F_WIG 0x29 >> mr_mem_vec a b
+      _ -> invalidArgs
+
+    VMOVUPD -> req_avx >> case args of
+      [V128 a, M128 b] -> vex_128_66_0F_WIG 0x10 >> rm_vec_mem a b
+      [V128 a, V128 b] -> vex_128_66_0F_WIG 0x10 >> rm_vec_vec a b
+      [M128 a, V128 b] -> vex_128_66_0F_WIG 0x11 >> mr_mem_vec a b
+      [V256 a, M256 b] -> vex_256_66_0F_WIG 0x10 >> rm_vec_mem a b
+      [V256 a, V256 b] -> vex_256_66_0F_WIG 0x10 >> rm_vec_vec a b
+      [M256 a, V256 b] -> vex_256_66_0F_WIG 0x11 >> mr_mem_vec a b
+      _ -> invalidArgs
+
+    VMOVUPS -> req_avx >> case args of
+      [V128 a, M128 b] -> vex_128_0F_WIG 0x10 >> rm_vec_mem a b
+      [V128 a, V128 b] -> vex_128_0F_WIG 0x10 >> rm_vec_vec a b
+      [M128 a, V128 b] -> vex_128_0F_WIG 0x11 >> mr_mem_vec a b
+      [V256 a, M256 b] -> vex_256_0F_WIG 0x10 >> rm_vec_mem a b
+      [V256 a, V256 b] -> vex_256_0F_WIG 0x10 >> rm_vec_vec a b
+      [M256 a, V256 b] -> vex_256_0F_WIG 0x11 >> mr_mem_vec a b
       _ -> invalidArgs
