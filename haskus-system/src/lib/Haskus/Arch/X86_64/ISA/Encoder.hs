@@ -145,6 +145,8 @@ encodeInsn !ctx !op !args = do
       vex_LZ_F2_0F38_W1 = set_vex mkVex_LZ_F2_0F38_W1
       vex_LZ_F3_0F38_W0 = set_vex mkVex_LZ_F3_0F38_W0
       vex_LZ_F3_0F38_W1 = set_vex mkVex_LZ_F3_0F38_W1
+      vex_LZ_66_0F38_W0 = set_vex mkVex_LZ_66_0F38_W0
+      vex_LZ_66_0F38_W1 = set_vex mkVex_LZ_66_0F38_W1
       vex_LZ_F2_0F3A_W0 = set_vex mkVex_LZ_F2_0F3A_W0
       vex_LZ_F2_0F3A_W1 = set_vex mkVex_LZ_F2_0F3A_W1
 
@@ -1861,6 +1863,11 @@ encodeInsn !ctx !op !args = do
       -- field is ignored). We use 0F AE E8.
       set_modrm 0xE8 << oc_0F 0xAE
 
+
+    ------------------------
+    -- BMI
+    ------------------------
+
     ANDN -> req_bmi1 >> case args of
       [R32 a, R32 b, R32 c] -> vex_LZ_0F38_W0 0xF2 >> rvm_reg_reg_reg a b c
       [R32 a, R32 b, M32 c] -> vex_LZ_0F38_W0 0xF2 >> rvm_reg_reg_mem a b c
@@ -1917,6 +1924,30 @@ encodeInsn !ctx !op !args = do
       [R64 a, M64 b, I8 c] -> vex_LZ_F2_0F3A_W1 0xF0 >> rm_reg_mem a b >> imm8 c
       _ -> invalidArgs
 
+    SARX -> req_bmi2 >> case args of
+      [R32 a, R32 b, R32 c] -> vex_LZ_F3_0F38_W0 0xF7 >> rmv_reg_reg_reg a b c
+      [R32 a, M32 b, R32 c] -> vex_LZ_F3_0F38_W0 0xF7 >> rmv_reg_mem_reg a b c
+      [R64 a, R64 b, R64 c] -> vex_LZ_F3_0F38_W1 0xF7 >> rmv_reg_reg_reg a b c
+      [R64 a, M64 b, R64 c] -> vex_LZ_F3_0F38_W1 0xF7 >> rmv_reg_mem_reg a b c
+      _ -> invalidArgs
+
+    SHLX -> req_bmi2 >> case args of
+      [R32 a, R32 b, R32 c] -> vex_LZ_66_0F38_W0 0xF7 >> rmv_reg_reg_reg a b c
+      [R32 a, M32 b, R32 c] -> vex_LZ_66_0F38_W0 0xF7 >> rmv_reg_mem_reg a b c
+      [R64 a, R64 b, R64 c] -> vex_LZ_66_0F38_W1 0xF7 >> rmv_reg_reg_reg a b c
+      [R64 a, M64 b, R64 c] -> vex_LZ_66_0F38_W1 0xF7 >> rmv_reg_mem_reg a b c
+      _ -> invalidArgs
+
+    SHRX -> req_bmi2 >> case args of
+      [R32 a, R32 b, R32 c] -> vex_LZ_F2_0F38_W0 0xF7 >> rmv_reg_reg_reg a b c
+      [R32 a, M32 b, R32 c] -> vex_LZ_F2_0F38_W0 0xF7 >> rmv_reg_mem_reg a b c
+      [R64 a, R64 b, R64 c] -> vex_LZ_F2_0F38_W1 0xF7 >> rmv_reg_reg_reg a b c
+      [R64 a, M64 b, R64 c] -> vex_LZ_F2_0F38_W1 0xF7 >> rmv_reg_mem_reg a b c
+      _ -> invalidArgs
+
+    ------------------------
+    -- SSE & AVX
+    ------------------------
 
     ADDPS -> req_sse >> case args of
       [V128 a, M128 b] -> oc_0F 0x58 >> rm_vec_mem a b

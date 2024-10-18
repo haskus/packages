@@ -14,14 +14,20 @@ module Haskus.Arch.X86_64.ISA.Encoding.Vex
   , mkVex_256_0F_WIG
   , mkVex_LZ_0F38_W0
   , mkVex_LZ_0F38_W1
-  , mkVex_LZ_F2_0F38_W0
-  , mkVex_LZ_F2_0F38_W1
+  , mkVex_LZ_66_0F38_W0
+  , mkVex_LZ_66_0F38_W1
   , mkVex_LZ_F3_0F38_W0
   , mkVex_LZ_F3_0F38_W1
-  , mkVex_LZ_F2_0F3A_W0
-  , mkVex_LZ_F2_0F3A_W1
+  , mkVex_LZ_F2_0F38_W0
+  , mkVex_LZ_F2_0F38_W1
+  , mkVex_LZ_0F3A_W0
+  , mkVex_LZ_0F3A_W1
+  , mkVex_LZ_66_0F3A_W0
+  , mkVex_LZ_66_0F3A_W1
   , mkVex_LZ_F3_0F3A_W0
   , mkVex_LZ_F3_0F3A_W1
+  , mkVex_LZ_F2_0F3A_W0
+  , mkVex_LZ_F2_0F3A_W1
   , extendVex
   , vexSetB
   , vexSetR
@@ -50,45 +56,51 @@ mkVex_128_0F_WIG :: Vex
 mkVex_256_0F_WIG :: Vex
 mkVex_LZ_0F38_W0 :: Vex
 mkVex_LZ_0F38_W1 :: Vex
+mkVex_LZ_66_0F38_W0 :: Vex
+mkVex_LZ_66_0F38_W1 :: Vex
 mkVex_LZ_F2_0F38_W0 :: Vex
 mkVex_LZ_F2_0F38_W1 :: Vex
 mkVex_LZ_F3_0F38_W0 :: Vex
 mkVex_LZ_F3_0F38_W1 :: Vex
+mkVex_LZ_0F3A_W0 :: Vex
+mkVex_LZ_0F3A_W1 :: Vex
+mkVex_LZ_66_0F3A_W0 :: Vex
+mkVex_LZ_66_0F3A_W1 :: Vex
 mkVex_LZ_F2_0F3A_W0 :: Vex
 mkVex_LZ_F2_0F3A_W1 :: Vex
 mkVex_LZ_F3_0F3A_W0 :: Vex
 mkVex_LZ_F3_0F3A_W1 :: Vex
 
-mkVex_LIG_F2_0F_WIG = Vex2 0b1_1111_0_11 -- R=1, vvvv=1111, L=0, pp=11
-mkVex_LIG_F3_0F_WIG = Vex2 0b1_1111_0_11 -- R=1, vvvv=1111, L=0, pp=10
-mkVex_128_66_0F_WIG = Vex2 0b1_1111_0_01 -- R=1, vvvv=1111, L=0, pp=01
-mkVex_256_66_0F_WIG = Vex2 0b1_1111_1_01 -- R=1, vvvv=1111, L=1, pp=01
-mkVex_128_F2_0F_WIG = Vex2 0b1_1111_0_11 -- R=1, vvvv=1111, L=0, pp=11
-mkVex_256_F2_0F_WIG = Vex2 0b1_1111_1_11 -- R=1, vvvv=1111, L=1, pp=11
-mkVex_128_F3_0F_WIG = Vex2 0b1_1111_0_10 -- R=1, vvvv=1111, L=0, pp=10
-mkVex_256_F3_0F_WIG = Vex2 0b1_1111_1_10 -- R=1, vvvv=1111, L=1, pp=10
-mkVex_128_0F_WIG    = Vex2 0b1_1111_0_00 -- R=1, vvvv=1111, L=0, pp=00
-mkVex_256_0F_WIG    = Vex2 0b1_1111_1_00 -- R=1, vvvv=1111, L=1, pp=00
-mkVex_LZ_0F38_W0    = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
-                           0b0_1111_0_00 -- W=0, vvvv=1111, L=0, pp=00
-mkVex_LZ_0F38_W1    = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
-                           0b1_1111_0_00 -- W=1, vvvv=1111, L=0, pp=00
-mkVex_LZ_F2_0F38_W0 = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
-                           0b0_1111_0_11 -- W=0, vvvv=1111, L=0, pp=11
-mkVex_LZ_F2_0F38_W1 = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
-                           0b1_1111_0_11 -- W=1, vvvv=1111, L=0, pp=11
-mkVex_LZ_F3_0F38_W0 = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
-                           0b0_1111_0_10 -- W=0, vvvv=1111, L=0, pp=10
-mkVex_LZ_F3_0F38_W1 = Vex3 0b111_00010   -- RXB=111, mmmmm=00010
-                           0b1_1111_0_10 -- W=1, vvvv=1111, L=0, pp=10
-mkVex_LZ_F2_0F3A_W0 = Vex3 0b111_00011   -- RXB=111, mmmmm=00011
-                           0b0_1111_0_11 -- W=0, vvvv=1111, L=0, pp=11
-mkVex_LZ_F2_0F3A_W1 = Vex3 0b111_00011   -- RXB=111, mmmmm=00011
-                           0b1_1111_0_11 -- W=1, vvvv=1111, L=0, pp=11
-mkVex_LZ_F3_0F3A_W0 = Vex3 0b111_00011   -- RXB=111, mmmmm=00011
-                           0b0_1111_0_10 -- W=0, vvvv=1111, L=0, pp=10
-mkVex_LZ_F3_0F3A_W1 = Vex3 0b111_00011   -- RXB=111, mmmmm=00011
-                           0b1_1111_0_10 -- W=1, vvvv=1111, L=0, pp=10
+                        --   R_vvvv_L_pp
+mkVex_LIG_F2_0F_WIG = Vex2 0b1_1111_0_11
+mkVex_LIG_F3_0F_WIG = Vex2 0b1_1111_0_11
+mkVex_128_66_0F_WIG = Vex2 0b1_1111_0_01
+mkVex_256_66_0F_WIG = Vex2 0b1_1111_1_01
+mkVex_128_F2_0F_WIG = Vex2 0b1_1111_0_11
+mkVex_256_F2_0F_WIG = Vex2 0b1_1111_1_11
+mkVex_128_F3_0F_WIG = Vex2 0b1_1111_0_10
+mkVex_256_F3_0F_WIG = Vex2 0b1_1111_1_10
+mkVex_128_0F_WIG    = Vex2 0b1_1111_0_00
+mkVex_256_0F_WIG    = Vex2 0b1_1111_1_00
+
+                          -- RXB_mmmmm   W_vvvv_L_pp
+mkVex_LZ_0F38_W0    = Vex3 0b111_00010 0b0_1111_0_00
+mkVex_LZ_0F38_W1    = Vex3 0b111_00010 0b1_1111_0_00
+mkVex_LZ_66_0F38_W0 = Vex3 0b111_00010 0b0_1111_0_01
+mkVex_LZ_66_0F38_W1 = Vex3 0b111_00010 0b1_1111_0_01
+mkVex_LZ_F3_0F38_W0 = Vex3 0b111_00010 0b0_1111_0_10
+mkVex_LZ_F3_0F38_W1 = Vex3 0b111_00010 0b1_1111_0_10
+mkVex_LZ_F2_0F38_W0 = Vex3 0b111_00010 0b0_1111_0_11
+mkVex_LZ_F2_0F38_W1 = Vex3 0b111_00010 0b1_1111_0_11
+                          -- RXB_mmmmm   W_vvvv_L_pp
+mkVex_LZ_0F3A_W0    = Vex3 0b111_00011 0b0_1111_0_00
+mkVex_LZ_0F3A_W1    = Vex3 0b111_00011 0b1_1111_0_00
+mkVex_LZ_66_0F3A_W0 = Vex3 0b111_00011 0b0_1111_0_01
+mkVex_LZ_66_0F3A_W1 = Vex3 0b111_00011 0b1_1111_0_01
+mkVex_LZ_F3_0F3A_W0 = Vex3 0b111_00011 0b0_1111_0_10
+mkVex_LZ_F3_0F3A_W1 = Vex3 0b111_00011 0b1_1111_0_10
+mkVex_LZ_F2_0F3A_W0 = Vex3 0b111_00011 0b0_1111_0_11
+mkVex_LZ_F2_0F3A_W1 = Vex3 0b111_00011 0b1_1111_0_11
 
 -- | Set vvvv field in given U8
 set_v :: U8 -> U8 -> U8
