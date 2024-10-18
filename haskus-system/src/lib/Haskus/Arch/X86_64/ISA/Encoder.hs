@@ -1731,6 +1731,22 @@ encodeInsn !ctx !op !args = do
       assert_no_args
       oc_0F_01 0xC9
 
+    RDRAND -> do
+      require_extension Ext.RDRAND
+      case args of
+        [R16 r] -> osz16 >> oc_0F 0xC7 >> rm_ext_reg 0x6 r
+        [R32 r] -> osz32 >> oc_0F 0xC7 >> rm_ext_reg 0x6 r
+        [R64 r] -> osz64 >> oc_0F 0xC7 >> rm_ext_reg 0x6 r
+        _ -> invalidArgs
+
+    RDSEED -> do
+      require_extension Ext.RDSEED
+      case args of
+        [R16 r] -> osz16 >> oc_0F 0xC7 >> rm_ext_reg 0x7 r
+        [R32 r] -> osz32 >> oc_0F 0xC7 >> rm_ext_reg 0x7 r
+        [R64 r] -> osz64 >> oc_0F 0xC7 >> rm_ext_reg 0x7 r
+        _ -> invalidArgs
+
     ADCX -> do
       require_extension Ext.ADX
       case args of
