@@ -251,6 +251,8 @@ data Operation
   | MOVAPS          -- ^ Move aligned packed F32 (SSE)
   | MOVUPD          -- ^ Move unaligned packed F64 (SSE)
   | MOVUPS          -- ^ Move unaligned packed F32 (SSE)
+  | MOVMSKPD        -- ^ Move sign bits of packed F64 (SSE)
+  | MOVMSKPS        -- ^ Move sign bits of packed F32 (SSE)
 
 
   | VADDPS          -- ^ Add packed F32 (AVX)
@@ -285,13 +287,12 @@ data Operation
   | VMINPD          -- ^ Minimum of packed F64 (AVX)
   | VMINSS          -- ^ Minimum of scalar F32 (AVX)
   | VMINSD          -- ^ Minimum of scalar F64 (AVX)
-  | VMOVAPD         -- ^ Move aligned packed F64 (SSE)
-  | VMOVAPS         -- ^ Move aligned packed F32 (SSE)
-  | VMOVUPD         -- ^ Move unaligned packed F64 (SSE)
-  | VMOVUPS         -- ^ Move unaligned packed F32 (SSE)
-
-  -- MOVMSKPD
-  -- MOVMSKPS
+  | VMOVAPD         -- ^ Move aligned packed F64 (AVX)
+  | VMOVAPS         -- ^ Move aligned packed F32 (AVX)
+  | VMOVUPD         -- ^ Move unaligned packed F64 (AVX)
+  | VMOVUPS         -- ^ Move unaligned packed F32 (AVX)
+  | VMOVMSKPD       -- ^ Move sign bits of packed F64 (AVX)
+  | VMOVMSKPS       -- ^ Move sign bits of packed F32 (AVX)
   -- SQRTPS...
   -- RCPPS...
   -- RSQRT

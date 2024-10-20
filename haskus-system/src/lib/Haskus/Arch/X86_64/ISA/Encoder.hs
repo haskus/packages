@@ -290,6 +290,7 @@ encodeInsn !ctx !op !args = do
       -- store opcode extension in ModRM.reg and reg in ModRM.rm
       rm_ext_reg r m = set_r_ext r >> set_m_gpr m
       rm_reg_mem r m = set_r_gpr r >> set_m_mem m
+      rm_reg_vec r m = set_r_gpr r >> set_m_vec m
       rm_ext_mem r m = set_r_ext r >> set_m_mem m
       rm_vec_mem r m = set_r_vec r >> set_m_mem m
       rm_vec_vec r m = set_r_vec r >> set_m_vec m
@@ -2209,6 +2210,16 @@ encodeInsn !ctx !op !args = do
       -- [V128 a, V128 b] -> oc_0F 0x11 >> mr_vec_vec a b
       _ -> invalidArgs
 
+    MOVMSKPD -> req_sse2 >> case args of
+      [R64 a, V128 b] | mode64     -> p_66 >> oc_0F 0x50 >> rm_reg_vec a b
+      [R32 a, V128 b] | not mode64 -> p_66 >> oc_0F 0x50 >> rm_reg_vec a b
+      _ -> invalidArgs
+
+    MOVMSKPS -> req_sse2 >> case args of
+      [R64 a, V128 b] | mode64     -> oc_0F 0x50 >> rm_reg_vec a b
+      [R32 a, V128 b] | not mode64 -> oc_0F 0x50 >> rm_reg_vec a b
+      _ -> invalidArgs
+
     ------------------------
     -- AVX
     ------------------------
@@ -2447,4 +2458,18 @@ encodeInsn !ctx !op !args = do
       [V256 a, M256 b] -> vex_256_0F_WIG 0x10 >> rm_vec_mem a b
       [V256 a, V256 b] -> vex_256_0F_WIG 0x10 >> rm_vec_vec a b
       [M256 a, V256 b] -> vex_256_0F_WIG 0x11 >> mr_mem_vec a b
+      _ -> invalidArgs
+
+    VMOVMSKPS -> req_avx >> case args of
+      [R64 a, V128 b] | mode64     -> vex_128_0F_WIG 0x50 >> rm_reg_vec a b
+      [R32 a, V128 b] | not mode64 -> vex_128_0F_WIG 0x50 >> rm_reg_vec a b
+      [R64 a, V256 b] | mode64     -> vex_256_0F_WIG 0x50 >> rm_reg_vec a b
+      [R32 a, V256 b] | not mode64 -> vex_256_0F_WIG 0x50 >> rm_reg_vec a b
+      _ -> invalidArgs
+
+    VMOVMSKPD -> req_avx >> case args of
+      [R64 a, V128 b] | mode64     -> vex_128_66_0F_WIG 0x50 >> rm_reg_vec a b
+      [R32 a, V128 b] | not mode64 -> vex_128_66_0F_WIG 0x50 >> rm_reg_vec a b
+      [R64 a, V256 b] | mode64     -> vex_256_66_0F_WIG 0x50 >> rm_reg_vec a b
+      [R32 a, V256 b] | not mode64 -> vex_256_66_0F_WIG 0x50 >> rm_reg_vec a b
       _ -> invalidArgs
