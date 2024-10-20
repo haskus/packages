@@ -49,7 +49,8 @@ architectures (all registers, 64-bit memory addressing, etc.).
 Can we just forget about 16-bit and 32-bit modes then? Sadly not completely:
 even the most recent x86-64 CPUs start in 16-bit mode when they are powered up.
 We need to use 16-bit mode assembly code to quickly switch to 32-bit mode and
-then similarly to 64-bit mode.
+then similarly to 64-bit mode.#footnote[See
+http://wiki.osdev.org/Setting_Up_Long_Mode]
 
 
 === Instruction list
