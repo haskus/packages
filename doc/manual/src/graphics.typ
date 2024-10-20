@@ -1,4 +1,4 @@
-= Computer Graphics <graphics>
+= Computer Graphics <volume-graphics>
 
 Computer Graphics is a vast topic. It encompasses most visual things we use a
 computer for:

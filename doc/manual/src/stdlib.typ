@@ -1,6 +1,4 @@
-#import "helpers.typ" as haskus
-
-= Programming in Haskell
+= Programming in Haskell <volume-stdlib>
 
 The Haskus standard library is a set of Haskell modules. It provides support for
 some common data structures.

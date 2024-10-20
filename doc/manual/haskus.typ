@@ -82,6 +82,7 @@
 
 #include "src/intro.typ"
 #include "src/stdlib.typ"
+#include "src/arch.typ"
 #include "src/system.typ"
 #include "src/compiler.typ"
 #include "src/graphics.typ"

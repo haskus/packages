@@ -1,4 +1,4 @@
-== x86 assembler
+== x86 architecture <arch-x86>
 
 The x86 architecture is a more than 50-year-old instruction set architecture
 (ISA). It is an evolution of Intel's 8-bit 8080 microprocessor from 1974. It has
@@ -35,8 +35,10 @@ most widespread one for high-end devices. Note that Intel indirectly
 acknowledged that this architecture was bad by designing the Itanium 64-bit
 architecture as a replacement in 2001. However the latter was a commercial
 failure and since then we have been stuck with the 64-bit incarnation of the x86
-architecture on high-end devices, while other devices have already switched to
-other architectures like ARM, RISC-V, etc.
+architecture (designed by Intel's competitor AMD!) on high-end devices, while
+other devices have already switched to other architectures like ARM, RISC-V,
+etc.
+
 
 
 === Instruction list
