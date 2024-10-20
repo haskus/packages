@@ -39,6 +39,17 @@ architecture (designed by Intel's competitor AMD!) on high-end devices, while
 other devices have already switched to other architectures like ARM, RISC-V,
 etc.
 
+=== Operating modes
+
+The x86 architecture supports several mode of operation: 16-bit mode, 32-bit
+mode, and 64-bit mode. For modern development we are only interested in the
+64-bit mode: this mode gives access to the full capabilities of the
+architectures (all registers, 64-bit memory addressing, etc.).
+
+Can we just forget about 16-bit and 32-bit modes then? Sadly not completely:
+even the most recent x86-64 CPUs start in 16-bit mode when they are powered up.
+We need to use 16-bit mode assembly code to quickly switch to 32-bit mode and
+then similarly to 64-bit mode.
 
 
 === Instruction list
