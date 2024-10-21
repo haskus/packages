@@ -265,6 +265,8 @@ data Operation
   | ROUNDPD         -- ^ Round packed F64 (SSE)
   | ROUNDSS         -- ^ Round scalar F32 (SSE)
   | ROUNDSD         -- ^ Round scalar F64 (SSE)
+  | UCOMISD         -- ^ Unordered compare scalar F64 (SSE)
+  | UCOMISS         -- ^ Unordered compare scalar F32 (SSE)
 
   | VADDPS          -- ^ Add packed F32 (AVX)
   | VADDPD          -- ^ Add packed F64 (AVX)
@@ -316,15 +318,22 @@ data Operation
   | VROUNDPD        -- ^ Round packed F64 (AVX)
   | VROUNDSS        -- ^ Round scalar F32 (AVX)
   | VROUNDSD        -- ^ Round scalar F64 (AVX)
+  | VUCOMISD        -- ^ Unordered compare scalar F64 (AVX)
+  | VUCOMISS        -- ^ Unordered compare scalar F32 (AVX)
   -- POR, PXOR, PTEST, PAND
   -- PSLRW, PSLRD, PSLRQ, PSLRDQ
   -- PADD, PSUB...
   -- PUNPACKL, PUNPACKH
   -- UNPACKL, UNPACKH
+  -- PSADW
+  -- PSHUF
+  -- PSIGN
   -- SERIALIZE
-  -- UCOMISS
   -- CVTxx2yy
   -- VCVTxx2yy
+  -- PCMPxx
+  -- PMAXxx, PMINxx
+  -- PMOVSX, PMOVZX
 
   -- XOP TBM:
   --

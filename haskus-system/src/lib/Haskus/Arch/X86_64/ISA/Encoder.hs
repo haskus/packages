@@ -136,12 +136,14 @@ encodeInsn !ctx !op !args = do
 
       set_vex mk_vex o    = set_oc (Op_Vex mk_vex o)
 
+      vex_LIG_66_0F_WIG   = set_vex mkVex_LIG_66_0F_WIG
       vex_LIG_F2_0F_WIG   = set_vex mkVex_LIG_F2_0F_WIG
       vex_LIG_F3_0F_WIG   = set_vex mkVex_LIG_F3_0F_WIG
       vex_128_66_0F_WIG   = set_vex mkVex_128_66_0F_WIG
       vex_256_66_0F_WIG   = set_vex mkVex_256_66_0F_WIG
       vex_128_F2_0F_WIG   = set_vex mkVex_128_F2_0F_WIG
       vex_256_F2_0F_WIG   = set_vex mkVex_256_F2_0F_WIG
+      vex_LIG_0F_WIG      = set_vex mkVex_LIG_0F_WIG
       vex_128_0F_WIG      = set_vex mkVex_128_0F_WIG
       vex_256_0F_WIG      = set_vex mkVex_256_0F_WIG
 
@@ -2288,6 +2290,16 @@ encodeInsn !ctx !op !args = do
       [V128 a, V128 b, I8 i] -> oc_66_0F3A 0x0A >> rm_vec_vec a b >> imm8 i
       _ -> invalidArgs
 
+    UCOMISD -> req_sse2 >> case args of
+      [V128 a, M64  b] -> oc_66_0F 0x2E >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_66_0F 0x2E >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    UCOMISS -> req_sse >> case args of
+      [V128 a, M32  b] -> oc_0F 0x2E >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_0F 0x2E >> rm_vec_vec a b
+      _ -> invalidArgs
+
 
     ------------------------
     -- AVX
@@ -2613,5 +2625,15 @@ encodeInsn !ctx !op !args = do
     VROUNDSS -> req_avx >> case args of
       [V128 a, V128 b, V128 c, I8 i] -> vex_LIG_66_0F3A_WIG 0x0A >> rvm_vec_vec_vec a b c >> imm8 i
       [V128 a, V128 b, M32  c, I8 i] -> vex_LIG_66_0F3A_WIG 0x0A >> rvm_vec_vec_mem a b c >> imm8 i
+      _ -> invalidArgs
+
+    VUCOMISD -> req_avx >> case args of
+      [V128 a, M64  b] -> vex_LIG_66_0F_WIG 0x2E >> rm_vec_mem a b
+      [V128 a, V128 b] -> vex_LIG_66_0F_WIG 0x2E >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    VUCOMISS -> req_avx >> case args of
+      [V128 a, M32  b] -> vex_LIG_0F_WIG 0x2E >> rm_vec_mem a b
+      [V128 a, V128 b] -> vex_LIG_0F_WIG 0x2E >> rm_vec_vec a b
       _ -> invalidArgs
 

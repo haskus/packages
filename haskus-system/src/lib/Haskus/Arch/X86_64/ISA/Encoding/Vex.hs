@@ -2,6 +2,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Vex
   ( Vex(..)
   , vexSize
   , writeVex
+  , mkVex_LIG_66_0F_WIG
   , mkVex_LIG_F2_0F_WIG
   , mkVex_LIG_F3_0F_WIG
   , mkVex_128_66_0F_WIG
@@ -10,6 +11,7 @@ module Haskus.Arch.X86_64.ISA.Encoding.Vex
   , mkVex_256_F2_0F_WIG
   , mkVex_128_F3_0F_WIG
   , mkVex_256_F3_0F_WIG
+  , mkVex_LIG_0F_WIG
   , mkVex_128_0F_WIG
   , mkVex_256_0F_WIG
   , mkVex_LZ_0F38_W0
@@ -47,6 +49,7 @@ data Vex
   | Vex3 !U8 !U8  -- ^ RXBmmmmm WvvvvLpp
   deriving (Show,Eq,Ord)
 
+mkVex_LIG_66_0F_WIG :: Vex
 mkVex_LIG_F2_0F_WIG :: Vex
 mkVex_LIG_F3_0F_WIG :: Vex
 mkVex_128_66_0F_WIG :: Vex
@@ -55,6 +58,7 @@ mkVex_128_F2_0F_WIG :: Vex
 mkVex_256_F2_0F_WIG :: Vex
 mkVex_128_F3_0F_WIG :: Vex
 mkVex_256_F3_0F_WIG :: Vex
+mkVex_LIG_0F_WIG :: Vex
 mkVex_128_0F_WIG :: Vex
 mkVex_256_0F_WIG :: Vex
 mkVex_LZ_0F38_W0 :: Vex
@@ -78,6 +82,7 @@ mkVex_128_66_0F3A_WIG :: Vex
 mkVex_256_66_0F3A_WIG :: Vex
 
                         --   R_vvvv_L_pp
+mkVex_LIG_66_0F_WIG = Vex2 0b1_1111_0_01
 mkVex_LIG_F2_0F_WIG = Vex2 0b1_1111_0_11
 mkVex_LIG_F3_0F_WIG = Vex2 0b1_1111_0_11
 mkVex_128_66_0F_WIG = Vex2 0b1_1111_0_01
@@ -86,6 +91,7 @@ mkVex_128_F2_0F_WIG = Vex2 0b1_1111_0_11
 mkVex_256_F2_0F_WIG = Vex2 0b1_1111_1_11
 mkVex_128_F3_0F_WIG = Vex2 0b1_1111_0_10
 mkVex_256_F3_0F_WIG = Vex2 0b1_1111_1_10
+mkVex_LIG_0F_WIG    = Vex2 0b1_1111_0_00
 mkVex_128_0F_WIG    = Vex2 0b1_1111_0_00
 mkVex_256_0F_WIG    = Vex2 0b1_1111_1_00
 
