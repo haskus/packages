@@ -2220,6 +2220,27 @@ encodeInsn !ctx !op !args = do
       [R32 a, V128 b] | not mode64 -> oc_0F 0x50 >> rm_reg_vec a b
       _ -> invalidArgs
 
+    SQRTPD -> req_sse2 >> case args of
+      [V128 a, M128 b] -> oc_66_0F 0x51 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_66_0F 0x51 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    SQRTPS -> req_sse >> case args of
+      [V128 a, M128 b] -> oc_0F 0x51 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_0F 0x51 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    SQRTSD -> req_sse2 >> case args of
+      [V128 a, M64  b] -> oc_F2_0F 0x51 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_F2_0F 0x51 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    SQRTSS -> req_sse >> case args of
+      [V128 a, M32  b] -> oc_F3_0F 0x51 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_F3_0F 0x51 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+
     ------------------------
     -- AVX
     ------------------------
@@ -2473,3 +2494,28 @@ encodeInsn !ctx !op !args = do
       [R64 a, V256 b] | mode64     -> vex_256_66_0F_WIG 0x50 >> rm_reg_vec a b
       [R32 a, V256 b] | not mode64 -> vex_256_66_0F_WIG 0x50 >> rm_reg_vec a b
       _ -> invalidArgs
+
+    VSQRTPD -> req_avx >> case args of
+      [V128 a, V128 b] -> vex_128_66_0F_WIG 0x51 >> rm_vec_vec a b
+      [V256 a, V256 b] -> vex_256_66_0F_WIG 0x51 >> rm_vec_vec a b
+      [V128 a, M128 b] -> vex_128_66_0F_WIG 0x51 >> rm_vec_mem a b
+      [V256 a, M256 b] -> vex_256_66_0F_WIG 0x51 >> rm_vec_mem a b
+      _ -> invalidArgs
+
+    VSQRTPS -> req_avx >> case args of
+      [V128 a, V128 b] -> vex_128_0F_WIG 0x51 >> rm_vec_vec a b
+      [V256 a, V256 b] -> vex_256_0F_WIG 0x51 >> rm_vec_vec a b
+      [V128 a, M128 b] -> vex_128_0F_WIG 0x51 >> rm_vec_mem a b
+      [V256 a, M256 b] -> vex_256_0F_WIG 0x51 >> rm_vec_mem a b
+      _ -> invalidArgs
+
+    VSQRTSD -> req_avx >> case args of
+      [V128 a, V128 b, V128 c] -> vex_LIG_F2_0F_WIG 0x51 >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M64  c] -> vex_LIG_F2_0F_WIG 0x51 >> rvm_vec_vec_mem a b c
+      _ -> invalidArgs
+
+    VSQRTSS -> req_avx >> case args of
+      [V128 a, V128 b, V128 c] -> vex_LIG_F3_0F_WIG 0x51 >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M32  c] -> vex_LIG_F3_0F_WIG 0x51 >> rvm_vec_vec_mem a b c
+      _ -> invalidArgs
+

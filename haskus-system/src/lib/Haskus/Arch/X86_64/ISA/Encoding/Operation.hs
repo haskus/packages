@@ -253,6 +253,10 @@ data Operation
   | MOVUPS          -- ^ Move unaligned packed F32 (SSE)
   | MOVMSKPD        -- ^ Move sign bits of packed F64 (SSE)
   | MOVMSKPS        -- ^ Move sign bits of packed F32 (SSE)
+  | SQRTPS          -- ^ Square root of packed F32 (SSE)
+  | SQRTPD          -- ^ Square root of packed F64 (SSE)
+  | SQRTSS          -- ^ Square root of scalar F32 (SSE)
+  | SQRTSD          -- ^ Square root of scalar F64 (SSE)
 
 
   | VADDPS          -- ^ Add packed F32 (AVX)
@@ -293,7 +297,10 @@ data Operation
   | VMOVUPS         -- ^ Move unaligned packed F32 (AVX)
   | VMOVMSKPD       -- ^ Move sign bits of packed F64 (AVX)
   | VMOVMSKPS       -- ^ Move sign bits of packed F32 (AVX)
-  -- SQRTPS...
+  | VSQRTPS         -- ^ Square root of packed F32 (AVX)
+  | VSQRTPD         -- ^ Square root of packed F64 (AVX)
+  | VSQRTSS         -- ^ Square root of scalar F32 (AVX)
+  | VSQRTSD         -- ^ Square root of scalar F64 (AVX)
   -- RCPPS...
   -- RSQRT
   -- POR, PXOR, PTEST, PAND
