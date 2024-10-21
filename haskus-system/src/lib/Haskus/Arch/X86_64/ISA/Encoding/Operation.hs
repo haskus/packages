@@ -257,7 +257,8 @@ data Operation
   | SQRTPD          -- ^ Square root of packed F64 (SSE)
   | SQRTSS          -- ^ Square root of scalar F32 (SSE)
   | SQRTSD          -- ^ Square root of scalar F64 (SSE)
-
+  | RSQRTPS         -- ^ Reciprocal of square root of packed F32 (SSE)
+  | RSQRTSS         -- ^ Reciprocal of square root of scalar F32 (SSE)
 
   | VADDPS          -- ^ Add packed F32 (AVX)
   | VADDPD          -- ^ Add packed F64 (AVX)
@@ -301,8 +302,9 @@ data Operation
   | VSQRTPD         -- ^ Square root of packed F64 (AVX)
   | VSQRTSS         -- ^ Square root of scalar F32 (AVX)
   | VSQRTSD         -- ^ Square root of scalar F64 (AVX)
+  | VRSQRTPS        -- ^ Reciprocal of square root of packed F32 (AVX)
+  | VRSQRTSS        -- ^ Reciprocal of square root of scalar F32 (AVX)
   -- RCPPS...
-  -- RSQRT
   -- POR, PXOR, PTEST, PAND
   -- PSLRW, PSLRD, PSLRQ, PSLRDQ
   -- PADD, PSUB...

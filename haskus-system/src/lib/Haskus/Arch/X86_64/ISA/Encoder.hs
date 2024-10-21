@@ -2240,6 +2240,18 @@ encodeInsn !ctx !op !args = do
       [V128 a, V128 b] -> oc_F3_0F 0x51 >> rm_vec_vec a b
       _ -> invalidArgs
 
+    RSQRTPS -> req_sse >> case args of
+      [V128 a, M128 b] -> oc_0F 0x52 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_0F 0x52 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+    RSQRTSS -> req_sse >> case args of
+      [V128 a, M32  b] -> oc_F3_0F 0x52 >> rm_vec_mem a b
+      [V128 a, V128 b] -> oc_F3_0F 0x52 >> rm_vec_vec a b
+      _ -> invalidArgs
+
+
+
 
     ------------------------
     -- AVX
@@ -2517,5 +2529,17 @@ encodeInsn !ctx !op !args = do
     VSQRTSS -> req_avx >> case args of
       [V128 a, V128 b, V128 c] -> vex_LIG_F3_0F_WIG 0x51 >> rvm_vec_vec_vec a b c
       [V128 a, V128 b, M32  c] -> vex_LIG_F3_0F_WIG 0x51 >> rvm_vec_vec_mem a b c
+      _ -> invalidArgs
+
+    VRSQRTPS -> req_avx >> case args of
+      [V128 a, V128 b] -> vex_128_0F_WIG 0x52 >> rm_vec_vec a b
+      [V256 a, V256 b] -> vex_256_0F_WIG 0x52 >> rm_vec_vec a b
+      [V128 a, M128 b] -> vex_128_0F_WIG 0x52 >> rm_vec_mem a b
+      [V256 a, M256 b] -> vex_256_0F_WIG 0x52 >> rm_vec_mem a b
+      _ -> invalidArgs
+
+    VRSQRTSS -> req_avx >> case args of
+      [V128 a, V128 b, V128 c] -> vex_LIG_F3_0F_WIG 0x52 >> rvm_vec_vec_vec a b c
+      [V128 a, V128 b, M32  c] -> vex_LIG_F3_0F_WIG 0x52 >> rvm_vec_vec_mem a b c
       _ -> invalidArgs
 
