@@ -1924,6 +1924,28 @@ encodeInsn !ctx !op !args = do
       -- field is ignored). We use 0F AE E8.
       set_modrm 0xE8 << oc_0F 0xAE
 
+    SERIALIZE -> do
+      assert_no_args
+      require_extension Ext.SERIALIZE
+      oc_0F_01 0xE8
+
+    CLDEMOTE -> do
+      require_extension Ext.CLDEMOTE
+      case args of
+        [OpMem m] -> oc_0F 0x1C >> rm_ext_mem 0x0 m
+        _ -> invalidArgs
+
+    CLFLUSH -> do
+      require_extension Ext.CLFLUSH
+      case args of
+        [OpMem m] -> oc_0F 0xAE >> rm_ext_mem 0x7 m
+        _ -> invalidArgs
+
+    CLFLUSHOPT -> do
+      require_extension Ext.CLFLUSHOPT
+      case args of
+        [OpMem m] -> oc_66_0F 0xAE >> rm_ext_mem 0x7 m
+        _ -> invalidArgs
 
     ------------------------
     -- BMI

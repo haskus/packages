@@ -43,7 +43,10 @@ data Extension
    | CLAC            -- ^ CLAC instruction
    | STAC            -- ^ STAC instruction
    | PREFETCHWT1     -- ^ PREFETCHWT1 instruction
+   | SERIALIZE       -- ^ SERIALIZE instruction
    | CLFLUSH         -- ^ CLFLUSH instruction
+   | CLFLUSHOPT      -- ^ CLFLUSHOPT instruction
+   | CLDEMOTE        -- ^ CLDEMOTE instruction
    | VEX             -- ^ VEX encoded instruction support
    | XOP             -- ^ XOP encoded instruction support
    | SMAP            -- ^ Supervisor Mode Access Prevention (SMAP)

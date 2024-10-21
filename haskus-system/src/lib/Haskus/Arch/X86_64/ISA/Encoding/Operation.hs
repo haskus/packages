@@ -166,8 +166,10 @@ data Operation
   | MFENCE            -- ^ Memory fence
   | LFENCE            -- ^ Load fence
   | SFENCE            -- ^ Store fence
-  -- CLFLUSH
-  -- CLFLUSHOPT
+  | SERIALIZE         -- ^ Serialize instruction execution
+  | CLDEMOTE          -- ^ Cache line demote
+  | CLFLUSH           -- ^ Flush cache line
+  | CLFLUSHOPT        -- ^ Flush cache line optimized
   -- CLWB
   -- CLZERO
   -- MCOMMIT
@@ -328,7 +330,6 @@ data Operation
   -- PSADW
   -- PSHUF
   -- PSIGN
-  -- SERIALIZE
   -- CVTxx2yy
   -- VCVTxx2yy
   -- PCMPxx
