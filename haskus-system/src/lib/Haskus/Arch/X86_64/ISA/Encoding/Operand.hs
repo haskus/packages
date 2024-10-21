@@ -79,6 +79,7 @@ data Operands
   | Ops1 !Operand
   | Ops2 !Operand !Operand
   | Ops3 !Operand !Operand !Operand
+  | Ops4 !Operand !Operand !Operand !Operand
   deriving (Eq,Ord)
 
 instance Show Operands where
@@ -87,6 +88,7 @@ instance Show Operands where
     Ops1 a -> show a
     Ops2 a b -> show a ++","++ show b
     Ops3 a b c -> show a ++","++ show b++","++show c
+    Ops4 a b c d -> show a ++","++ show b++","++show c++","++show d
 
 
 instance IsList Operands where
@@ -97,15 +99,17 @@ instance IsList Operands where
 
   {-# INLINE fromList #-}
   fromList = \case
-    []      -> Ops0
-    [a]     -> Ops1 a
-    [a,b]   -> Ops2 a b
-    [a,b,c] -> Ops3 a b c
+    []        -> Ops0
+    [a]       -> Ops1 a
+    [a,b]     -> Ops2 a b
+    [a,b,c]   -> Ops3 a b c
+    [a,b,c,d] -> Ops4 a b c d
     xs      -> error $ "Invalid list of operands (too long): " ++ show xs
   {-# INLINE toList #-}
   toList = \case
-    Ops0       -> []
-    Ops1 a     -> [a]
-    Ops2 a b   -> [a,b]
-    Ops3 a b c -> [a,b,c]
+    Ops0         -> []
+    Ops1 a       -> [a]
+    Ops2 a b     -> [a,b]
+    Ops3 a b c   -> [a,b,c]
+    Ops4 a b c d -> [a,b,c,d]
 

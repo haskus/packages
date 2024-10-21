@@ -111,12 +111,13 @@ encodeInsn !ctx !op !args = do
       assert_not_mode64   = when   mode64 $ efail ENotAvailableInMode64
       require_extension x = unless (extensionAvailable ctx x) $ efail (ERequireExtension x)
 
-      req_avx  = require_extension Ext.AVX
-      req_sse  = require_extension Ext.SSE
-      req_sse2 = require_extension Ext.SSE2
-      req_sse3 = require_extension Ext.SSE3
-      req_bmi1 = require_extension Ext.BMI1
-      req_bmi2 = require_extension Ext.BMI2
+      req_avx    = require_extension Ext.AVX
+      req_sse    = require_extension Ext.SSE
+      req_sse2   = require_extension Ext.SSE2
+      req_sse3   = require_extension Ext.SSE3
+      req_sse4_1 = require_extension Ext.SSE4_1
+      req_bmi1   = require_extension Ext.BMI1
+      req_bmi2   = require_extension Ext.BMI2
 
       assert_no_args = case args of
         [] -> pure ()
@@ -125,31 +126,38 @@ encodeInsn !ctx !op !args = do
       oc       o = set_oc (Op_Leg Map_Primary o)
       oc_0F    o = set_oc (Op_Leg Map_0F o)
       oc_0F38  o = set_oc (Op_Leg Map_0F38 o)
+      oc_0F3A  o = set_oc (Op_Leg Map_0F3A o)
       oc_0F_01 o = oc_0F 0x01 >> set_modrm o -- not really an opcode, but used like one
 
-      oc_F3_0F o = p_F3 >> oc_0F o
-      oc_F2_0F o = p_F2 >> oc_0F o
-      oc_66_0F o = p_66 >> oc_0F o
+      oc_F3_0F o   = p_F3 >> oc_0F o
+      oc_F2_0F o   = p_F2 >> oc_0F o
+      oc_66_0F o   = p_66 >> oc_0F o
+      oc_66_0F3A o = p_66 >> oc_0F3A o
 
-      set_vex mk_vex o  = set_oc (Op_Vex mk_vex o)
-      vex_LIG_F2_0F_WIG = set_vex mkVex_LIG_F2_0F_WIG
-      vex_LIG_F3_0F_WIG = set_vex mkVex_LIG_F3_0F_WIG
-      vex_128_66_0F_WIG = set_vex mkVex_128_66_0F_WIG
-      vex_256_66_0F_WIG = set_vex mkVex_256_66_0F_WIG
-      vex_128_F2_0F_WIG = set_vex mkVex_128_F2_0F_WIG
-      vex_256_F2_0F_WIG = set_vex mkVex_256_F2_0F_WIG
-      vex_128_0F_WIG    = set_vex mkVex_128_0F_WIG
-      vex_256_0F_WIG    = set_vex mkVex_256_0F_WIG
-      vex_LZ_0F38_W0    = set_vex mkVex_LZ_0F38_W0
-      vex_LZ_0F38_W1    = set_vex mkVex_LZ_0F38_W1
-      vex_LZ_F2_0F38_W0 = set_vex mkVex_LZ_F2_0F38_W0
-      vex_LZ_F2_0F38_W1 = set_vex mkVex_LZ_F2_0F38_W1
-      vex_LZ_F3_0F38_W0 = set_vex mkVex_LZ_F3_0F38_W0
-      vex_LZ_F3_0F38_W1 = set_vex mkVex_LZ_F3_0F38_W1
-      vex_LZ_66_0F38_W0 = set_vex mkVex_LZ_66_0F38_W0
-      vex_LZ_66_0F38_W1 = set_vex mkVex_LZ_66_0F38_W1
-      vex_LZ_F2_0F3A_W0 = set_vex mkVex_LZ_F2_0F3A_W0
-      vex_LZ_F2_0F3A_W1 = set_vex mkVex_LZ_F2_0F3A_W1
+      set_vex mk_vex o    = set_oc (Op_Vex mk_vex o)
+
+      vex_LIG_F2_0F_WIG   = set_vex mkVex_LIG_F2_0F_WIG
+      vex_LIG_F3_0F_WIG   = set_vex mkVex_LIG_F3_0F_WIG
+      vex_128_66_0F_WIG   = set_vex mkVex_128_66_0F_WIG
+      vex_256_66_0F_WIG   = set_vex mkVex_256_66_0F_WIG
+      vex_128_F2_0F_WIG   = set_vex mkVex_128_F2_0F_WIG
+      vex_256_F2_0F_WIG   = set_vex mkVex_256_F2_0F_WIG
+      vex_128_0F_WIG      = set_vex mkVex_128_0F_WIG
+      vex_256_0F_WIG      = set_vex mkVex_256_0F_WIG
+
+      vex_LZ_0F38_W0      = set_vex mkVex_LZ_0F38_W0
+      vex_LZ_0F38_W1      = set_vex mkVex_LZ_0F38_W1
+      vex_LZ_F2_0F38_W0   = set_vex mkVex_LZ_F2_0F38_W0
+      vex_LZ_F2_0F38_W1   = set_vex mkVex_LZ_F2_0F38_W1
+      vex_LZ_F3_0F38_W0   = set_vex mkVex_LZ_F3_0F38_W0
+      vex_LZ_F3_0F38_W1   = set_vex mkVex_LZ_F3_0F38_W1
+      vex_LZ_66_0F38_W0   = set_vex mkVex_LZ_66_0F38_W0
+      vex_LZ_66_0F38_W1   = set_vex mkVex_LZ_66_0F38_W1
+      vex_LZ_F2_0F3A_W0   = set_vex mkVex_LZ_F2_0F3A_W0
+      vex_LZ_F2_0F3A_W1   = set_vex mkVex_LZ_F2_0F3A_W1
+      vex_LIG_66_0F3A_WIG = set_vex mkVex_LIG_66_0F3A_WIG
+      vex_128_66_0F3A_WIG = set_vex mkVex_128_66_0F3A_WIG
+      vex_256_66_0F3A_WIG = set_vex mkVex_256_66_0F3A_WIG
 
       p_67 = modifyEnc \e -> e { encPrefixes = P_67 : encPrefixes e }
       p_66 = modifyEnc \e -> e { encPrefixes = P_66 : encPrefixes e }
@@ -2260,6 +2268,25 @@ encodeInsn !ctx !op !args = do
       [V128 a, V128 b] -> oc_F3_0F 0x53 >> rm_vec_vec a b
       _ -> invalidArgs
 
+    ROUNDPD -> req_sse4_1 >> case args of
+      [V128 a, M128 b, I8 i] -> oc_66_0F3A 0x09 >> rm_vec_mem a b >> imm8 i
+      [V128 a, V128 b, I8 i] -> oc_66_0F3A 0x09 >> rm_vec_vec a b >> imm8 i
+      _ -> invalidArgs
+
+    ROUNDPS -> req_sse4_1 >> case args of
+      [V128 a, M128 b, I8 i] -> oc_66_0F3A 0x08 >> rm_vec_mem a b >> imm8 i
+      [V128 a, V128 b, I8 i] -> oc_66_0F3A 0x08 >> rm_vec_vec a b >> imm8 i
+      _ -> invalidArgs
+
+    ROUNDSD -> req_sse4_1 >> case args of
+      [V128 a, M64  b, I8 i] -> oc_66_0F3A 0x0B >> rm_vec_mem a b >> imm8 i
+      [V128 a, V128 b, I8 i] -> oc_66_0F3A 0x0B >> rm_vec_vec a b >> imm8 i
+      _ -> invalidArgs
+
+    ROUNDSS -> req_sse4_1 >> case args of
+      [V128 a, M32  b, I8 i] -> oc_66_0F3A 0x0A >> rm_vec_mem a b >> imm8 i
+      [V128 a, V128 b, I8 i] -> oc_66_0F3A 0x0A >> rm_vec_vec a b >> imm8 i
+      _ -> invalidArgs
 
 
     ------------------------
@@ -2563,3 +2590,28 @@ encodeInsn !ctx !op !args = do
       [V128 a, V128 b, V128 c] -> vex_LIG_F3_0F_WIG 0x53 >> rvm_vec_vec_vec a b c
       [V128 a, V128 b, M32  c] -> vex_LIG_F3_0F_WIG 0x53 >> rvm_vec_vec_mem a b c
       _ -> invalidArgs
+
+    VROUNDPD -> req_avx >> case args of
+      [V128 a, V128 b, I8 i] -> vex_128_66_0F3A_WIG 0x09 >> rm_vec_vec a b >> imm8 i
+      [V256 a, V256 b, I8 i] -> vex_256_66_0F3A_WIG 0x09 >> rm_vec_vec a b >> imm8 i
+      [V128 a, M128 b, I8 i] -> vex_128_66_0F3A_WIG 0x09 >> rm_vec_mem a b >> imm8 i
+      [V256 a, M256 b, I8 i] -> vex_256_66_0F3A_WIG 0x09 >> rm_vec_mem a b >> imm8 i
+      _ -> invalidArgs
+
+    VROUNDPS -> req_avx >> case args of
+      [V128 a, V128 b, I8 i] -> vex_128_66_0F3A_WIG 0x08 >> rm_vec_vec a b >> imm8 i
+      [V256 a, V256 b, I8 i] -> vex_256_66_0F3A_WIG 0x08 >> rm_vec_vec a b >> imm8 i
+      [V128 a, M128 b, I8 i] -> vex_128_66_0F3A_WIG 0x08 >> rm_vec_mem a b >> imm8 i
+      [V256 a, M256 b, I8 i] -> vex_256_66_0F3A_WIG 0x08 >> rm_vec_mem a b >> imm8 i
+      _ -> invalidArgs
+
+    VROUNDSD -> req_avx >> case args of
+      [V128 a, V128 b, V128 c, I8 i] -> vex_LIG_66_0F3A_WIG 0x0B >> rvm_vec_vec_vec a b c >> imm8 i
+      [V128 a, V128 b, M64  c, I8 i] -> vex_LIG_66_0F3A_WIG 0x0B >> rvm_vec_vec_mem a b c >> imm8 i
+      _ -> invalidArgs
+
+    VROUNDSS -> req_avx >> case args of
+      [V128 a, V128 b, V128 c, I8 i] -> vex_LIG_66_0F3A_WIG 0x0A >> rvm_vec_vec_vec a b c >> imm8 i
+      [V128 a, V128 b, M32  c, I8 i] -> vex_LIG_66_0F3A_WIG 0x0A >> rvm_vec_vec_mem a b c >> imm8 i
+      _ -> invalidArgs
+

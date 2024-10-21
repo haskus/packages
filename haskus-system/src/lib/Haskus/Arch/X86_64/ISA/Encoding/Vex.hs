@@ -28,6 +28,9 @@ module Haskus.Arch.X86_64.ISA.Encoding.Vex
   , mkVex_LZ_F3_0F3A_W1
   , mkVex_LZ_F2_0F3A_W0
   , mkVex_LZ_F2_0F3A_W1
+  , mkVex_LIG_66_0F3A_WIG
+  , mkVex_128_66_0F3A_WIG
+  , mkVex_256_66_0F3A_WIG
   , extendVex
   , vexSetB
   , vexSetR
@@ -70,6 +73,9 @@ mkVex_LZ_F2_0F3A_W0 :: Vex
 mkVex_LZ_F2_0F3A_W1 :: Vex
 mkVex_LZ_F3_0F3A_W0 :: Vex
 mkVex_LZ_F3_0F3A_W1 :: Vex
+mkVex_LIG_66_0F3A_WIG :: Vex
+mkVex_128_66_0F3A_WIG :: Vex
+mkVex_256_66_0F3A_WIG :: Vex
 
                         --   R_vvvv_L_pp
 mkVex_LIG_F2_0F_WIG = Vex2 0b1_1111_0_11
@@ -83,24 +89,27 @@ mkVex_256_F3_0F_WIG = Vex2 0b1_1111_1_10
 mkVex_128_0F_WIG    = Vex2 0b1_1111_0_00
 mkVex_256_0F_WIG    = Vex2 0b1_1111_1_00
 
-                          -- RXB_mmmmm   W_vvvv_L_pp
-mkVex_LZ_0F38_W0    = Vex3 0b111_00010 0b0_1111_0_00
-mkVex_LZ_0F38_W1    = Vex3 0b111_00010 0b1_1111_0_00
-mkVex_LZ_66_0F38_W0 = Vex3 0b111_00010 0b0_1111_0_01
-mkVex_LZ_66_0F38_W1 = Vex3 0b111_00010 0b1_1111_0_01
-mkVex_LZ_F3_0F38_W0 = Vex3 0b111_00010 0b0_1111_0_10
-mkVex_LZ_F3_0F38_W1 = Vex3 0b111_00010 0b1_1111_0_10
-mkVex_LZ_F2_0F38_W0 = Vex3 0b111_00010 0b0_1111_0_11
-mkVex_LZ_F2_0F38_W1 = Vex3 0b111_00010 0b1_1111_0_11
-                          -- RXB_mmmmm   W_vvvv_L_pp
-mkVex_LZ_0F3A_W0    = Vex3 0b111_00011 0b0_1111_0_00
-mkVex_LZ_0F3A_W1    = Vex3 0b111_00011 0b1_1111_0_00
-mkVex_LZ_66_0F3A_W0 = Vex3 0b111_00011 0b0_1111_0_01
-mkVex_LZ_66_0F3A_W1 = Vex3 0b111_00011 0b1_1111_0_01
-mkVex_LZ_F3_0F3A_W0 = Vex3 0b111_00011 0b0_1111_0_10
-mkVex_LZ_F3_0F3A_W1 = Vex3 0b111_00011 0b1_1111_0_10
-mkVex_LZ_F2_0F3A_W0 = Vex3 0b111_00011 0b0_1111_0_11
-mkVex_LZ_F2_0F3A_W1 = Vex3 0b111_00011 0b1_1111_0_11
+                            -- RXB_mmmmm   W_vvvv_L_pp
+mkVex_LZ_0F38_W0      = Vex3 0b111_00010 0b0_1111_0_00
+mkVex_LZ_0F38_W1      = Vex3 0b111_00010 0b1_1111_0_00
+mkVex_LZ_66_0F38_W0   = Vex3 0b111_00010 0b0_1111_0_01
+mkVex_LZ_66_0F38_W1   = Vex3 0b111_00010 0b1_1111_0_01
+mkVex_LZ_F3_0F38_W0   = Vex3 0b111_00010 0b0_1111_0_10
+mkVex_LZ_F3_0F38_W1   = Vex3 0b111_00010 0b1_1111_0_10
+mkVex_LZ_F2_0F38_W0   = Vex3 0b111_00010 0b0_1111_0_11
+mkVex_LZ_F2_0F38_W1   = Vex3 0b111_00010 0b1_1111_0_11
+                            -- RXB_mmmmm   W_vvvv_L_pp
+mkVex_LZ_0F3A_W0      = Vex3 0b111_00011 0b0_1111_0_00
+mkVex_LZ_0F3A_W1      = Vex3 0b111_00011 0b1_1111_0_00
+mkVex_LZ_66_0F3A_W0   = Vex3 0b111_00011 0b0_1111_0_01
+mkVex_LZ_66_0F3A_W1   = Vex3 0b111_00011 0b1_1111_0_01
+mkVex_LZ_F3_0F3A_W0   = Vex3 0b111_00011 0b0_1111_0_10
+mkVex_LZ_F3_0F3A_W1   = Vex3 0b111_00011 0b1_1111_0_10
+mkVex_LZ_F2_0F3A_W0   = Vex3 0b111_00011 0b0_1111_0_11
+mkVex_LZ_F2_0F3A_W1   = Vex3 0b111_00011 0b1_1111_0_11
+mkVex_LIG_66_0F3A_WIG = Vex3 0b111_00011 0b0_1111_0_01
+mkVex_128_66_0F3A_WIG = Vex3 0b111_00011 0b0_1111_0_01
+mkVex_256_66_0F3A_WIG = Vex3 0b111_00011 0b0_1111_1_01
 
 -- | Set vvvv field in given U8
 set_v :: U8 -> U8 -> U8

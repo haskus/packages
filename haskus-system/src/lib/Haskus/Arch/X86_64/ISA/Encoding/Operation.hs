@@ -261,6 +261,10 @@ data Operation
   | RSQRTSS         -- ^ Reciprocal of square root of scalar F32 (SSE)
   | RCPPS           -- ^ Reciprocal of packed F32 (SSE)
   | RCPSS           -- ^ Reciprocal of scalar F32 (SSE)
+  | ROUNDPS         -- ^ Round packed F32 (SSE)
+  | ROUNDPD         -- ^ Round packed F64 (SSE)
+  | ROUNDSS         -- ^ Round scalar F32 (SSE)
+  | ROUNDSD         -- ^ Round scalar F64 (SSE)
 
   | VADDPS          -- ^ Add packed F32 (AVX)
   | VADDPD          -- ^ Add packed F64 (AVX)
@@ -308,12 +312,15 @@ data Operation
   | VRSQRTSS        -- ^ Reciprocal of square root of scalar F32 (AVX)
   | VRCPPS          -- ^ Reciprocal of packed F32 (AVX)
   | VRCPSS          -- ^ Reciprocal of scalar F32 (AVX)
+  | VROUNDPS        -- ^ Round packed F32 (AVX)
+  | VROUNDPD        -- ^ Round packed F64 (AVX)
+  | VROUNDSS        -- ^ Round scalar F32 (AVX)
+  | VROUNDSD        -- ^ Round scalar F64 (AVX)
   -- POR, PXOR, PTEST, PAND
   -- PSLRW, PSLRD, PSLRQ, PSLRDQ
   -- PADD, PSUB...
   -- PUNPACKL, PUNPACKH
   -- UNPACKL, UNPACKH
-  -- ROUNDPS
   -- SERIALIZE
   -- UCOMISS
   -- CVTxx2yy
